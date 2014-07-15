@@ -7,10 +7,8 @@ var http = require('http').Server(app);
 var   fs = require('fs');
 var sock = require('sockjs').createServer();
 var prvl = require('./prevalence.js');
-var   bl;	
-
-var PASSWD = {jk:[''],
-	      di:[''] }
+var   bl;
+var port;
 
 var PREVALENCE_DIR = 'prevalence';
 
@@ -18,6 +16,12 @@ if (argv.bl) { 			// business logic plugin
     bl = require(argv.bl);
 } else {
     bl = require('./bl.js');	// toy version
+}
+
+if (argv.p) {
+    port = parseInt(argv.p);
+} else {
+    port = 3000;
 }
 
 if (argv.init) {
@@ -55,6 +59,7 @@ function MalayaConnection(conn,options) {
     var name   = null;
     var passwd = options.passwd;
     var cmd    = options.cmd || function(js) {console.log("!!! one day, I'll handle "+JSON.stringify(js));};
+    var mc     = this;
     
     function write(js) {
 	conn.write(JSON.stringify(js));
@@ -81,7 +86,7 @@ function MalayaConnection(conn,options) {
 		var userinfo = passwd[js[1]]; // +++ replace with a QUERY +++
 		if (userinfo && userinfo[0]==js[2]) {
 		    name        = js[1];
-		    users[name] = this;
+		    users[name] = mc;
 		    console.log("hello, "+name);
 		    write(['HI',name]);
 		}
@@ -123,7 +128,7 @@ setInterval(function() {
 
 sock.installHandlers(http,{prefix:'/data'});
 
-http.listen(3000,function() {
+http.listen(port,function() {
     console.log('listening on *:3000');
 });
 
