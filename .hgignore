@@ -1,3 +1,9 @@
 syntax: glob
 
+*~
+\#*\#
+.\#*
+.nfs*
+
 node_modules/
+prevalence/

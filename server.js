@@ -1,10 +1,50 @@
+"use strict";
+
+var argv = require('minimist')(process.argv.slice(2));
+
 var  app = require('express')();
 var http = require('http').Server(app);
 var   fs = require('fs');
 var sock = require('sockjs').createServer();
+var prvl = require('./prevalence.js');
+var   bl;	
 
 var PASSWD = {jk:[''],
 	      di:[''] }
+
+var PREVALENCE_DIR = 'prevalence';
+
+if (argv.bl) { 			// business logic plugin
+    bl = require(argv.bl);
+} else {
+    bl = require('./bl.js');	// toy version
+}
+
+if (argv.init) {
+    try {
+	fs.statSync(PREVALENCE_DIR);
+	console.log("prevalence dir already exists, won't init");
+	process.exit();
+    } catch (err) {}
+    fs.mkdirSync(PREVALENCE_DIR);
+    prvl.init(PREVALENCE_DIR);
+    bl.init();
+    prvl.open(PREVALENCE_DIR);
+    prvl.save(bl.get_root());
+    prvl.close();
+}
+prvl.open(PREVALENCE_DIR);
+prvl.load(bl.set_root,bl.process);
+
+process.on('SIGINT',function() {
+    prvl.save(bl.get_root());
+    process.exit(1);
+});
+process.on('SIGHUP',function() {
+    prvl.save(bl.get_root());
+});
+process.on('exit',function(code) {
+});
 
 app.get('/',function(req,res) {
     res.sendfile('index.html');
@@ -60,7 +100,7 @@ function MalayaConnection(conn,options) {
     });
 }
 function broadcast(js) {
-    for (u in users) {
+    for (var u in users) {
 	users[u].write(js);
     }
 }
@@ -75,7 +115,10 @@ sock.on('connection',function(conn) {
 });
 
 setInterval(function() {
-    broadcast(['TICK']);
+    var cmd = ['EXEC',[],{user:'ticker'}];
+    prvl.journalise(cmd);
+    var n = bl.process(cmd);
+    broadcast(['TICK',n]);
 },1000);
 
 sock.installHandlers(http,{prefix:'/data'});
