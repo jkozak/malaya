@@ -5,9 +5,19 @@
 var root;
 
 function process(datum) {
-    root.user = datum[2].user;
-    root.n++;
-    return root.n;
+    switch (datum[0]) {
+    case 'I_AM':
+	if (datum[2]=='a')
+	    return ['HI',datum[1]];
+	return ['ERR',"nope"];
+    case 'TICK':
+	if (datum)
+	    root.user = datum[2].user;
+	root.n++;
+	return ['TICK',n];
+    default:
+	return ['ERR',"??? "+JSON.stringify(datum)];
+    }
 }
 
 exports.init = function() {
@@ -26,3 +36,4 @@ exports.set_root = function(root0) {
 exports.process = function(datum) {
     return process(datum);
 }
+
