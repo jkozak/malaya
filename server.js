@@ -9,6 +9,7 @@ var sock = require('sockjs').createServer();
 var prvl = require('./prevalence.js');
 var   bl;
 var port;
+var fe3p = 5110;
 
 var PREVALENCE_DIR = 'prevalence';
 
@@ -54,13 +55,16 @@ app.get('/',function(req,res) {
     res.sendfile('index.html');
 });
 
-var users = {};
+var conns = [];
 function MalayaConnection(conn,options) {
-    var name   = null;
     var passwd = options.passwd;
-    var cmd    = options.cmd || function(js) {console.log("!!! one day, I'll handle "+JSON.stringify(js));};
     var mc     = this;
-    
+    var events = {
+	data: function(js) {},
+	cmd:  function(js) {console.log("!!! one day, I'll handle "+JSON.stringify(js));}
+    };
+
+    this.name = null;
     function write(js) {
 	conn.write(JSON.stringify(js));
     };
@@ -70,6 +74,7 @@ function MalayaConnection(conn,options) {
     };
 
     this.write = write;
+    this.on    = function(what,handler) {events[what] = handler;};
 
     conn.on('data',function(data) {
 	var js;
@@ -79,34 +84,32 @@ function MalayaConnection(conn,options) {
 	if (js===undefined) {
 	    end("junk");
 	}
-	else if (name===null) {
-	    if (js.length!=3 || js[0]!='I_AM') {
-		end("ill-formed");
-	    } else {
-		var userinfo = passwd[js[1]]; // +++ replace with a QUERY +++
-		if (userinfo && userinfo[0]==js[2]) {
-		    name        = js[1];
-		    users[name] = mc;
-		    console.log("hello, "+name);
-		    write(['HI',name]);
-		}
-		else 
-		    end("bad user/pwd");
-	    }
-	} else {
-	    cmd(['EXEC',js,{user:name}]);
-	}
+	events['cmd'](['EXEC',js,{user:this.name}]);
     });
     conn.on('close',function() {
-	if (name) {
-	    console.log('farewell, '+name);
-	    delete users[name];
-	}
+	console.log('farewell, '+this.name);
+	conns.remove(mc);
     });
 }
-function broadcast(js) {
-    for (var u in users) {
-	users[u].write(js);
+conns.add = function(conn) {
+    conns.push(conn);
+    conn.on('cmd',function(js) {
+	console.log("*** malaya cmd: "+JSON.stringify(js));
+	conn.write(do_cmd(js))
+	// +++
+    });
+}
+conns.remove = function(x) {
+    for (var i=0;i<this.length;i++)
+	if (this[i]===x) {
+	    this.splice(i,1);
+	    return;
+	}
+    console.log("*** couldn't remove "+x);
+}
+conns.broadcast = function(js) {
+    for (var i=0;i<this.length;i++) {
+	this[i].write(js);
     }
 }
 
@@ -119,16 +122,34 @@ sock.on('connection',function(conn) {
 				       di:[''] } });
 });
 
-setInterval(function() {
-    var cmd = ['EXEC',[],{user:'ticker'}];
+function do_cmd(cmd) {
+    // +++ detect if query or update and maybe skip journalisation +++
     prvl.journalise(cmd);
-    var n = bl.process(cmd);
-    broadcast(['TICK',n]);
+    return bl.process(cmd);
+}
+
+setInterval(function() {
+    do_cmd(['EXEC',[],{user:'%ticker'}]);
 },1000);
 
 sock.installHandlers(http,{prefix:'/data'});
 
 http.listen(port,function() {
-    console.log('listening on *:3000');
+    console.log('http listening on *:'+port);
 });
 
+if (fe3p) {
+    var fe3 = require('./fe3.js').createServer({});
+    fe3.on('connect',function(mc) {
+	console.log("new FE3");
+	conns.add(mc);
+	mc.on('close',function() {
+	    console.log("farewell FE3");
+	    conns.remove(mc);
+	});
+    });
+    fe3.on('listening',function() {
+	console.log('fe3  listening on *:'+fe3p);
+    });
+    fe3.listen(fe3p);
+}

@@ -11,7 +11,7 @@ if (argv._.length!=1) {
 
 var sock = new SockJS(argv._[0]);
 
-function write(js) {
+var write = function(js) {
     sock.send(JSON.stringify(js));
 }
 
@@ -20,14 +20,14 @@ sock.onmessage = function(e) {
     console.log("received: "+JSON.stringify(js));
 };
 
+sock.onopen = function() {
+    write(['I_AM','jk','']);
+}
+
 var rl = readline.createInterface({
     input:  process.stdin,
     output: process.stdout
 });
-
-sock.onopen = function() {
-    write(['I_AM','jk','']);
-}
 
 rl.question("> ",function(answer) {
     // +++
