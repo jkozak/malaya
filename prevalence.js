@@ -40,9 +40,9 @@ var t       = null;		// consistent timey thing
 function serialise(v) {
     return JSON.stringify(v,function(k,v) {
 	if (v instanceof Date)
-	    return "date:"+JSON.stringify(v);
+	    return "date:"+v;
 	else if (typeof v==="string")
-	    return ":"+JSON.stringify(v);
+	    return ":"+v;
 	else
 	    return v;
     });
@@ -53,8 +53,8 @@ function deserialise(s) {
 	    return v;
 	else if (v.charAt(0)==':')
 	    return v.substring(1);
-	else if (v.startsWith("date:")==':')
-	    return new Date(v.substring(5));
+	else if (v.startsWith("date:"))
+	    return new Date(v.substring(5)); // "date:".length===5
 	else
 	    return v;
     });
