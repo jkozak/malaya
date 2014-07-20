@@ -79,7 +79,7 @@ function readFileLinesSync(path,fn) {
     fs.closeSync(fd);
 }
 
-exports.init = function(dirname) {
+function init(dirname) {
     // prepare a directory to be a store
     fs.mkdirSync(dirname+"/state");
     fs.writeFileSync( dirname+"/state/world",serialise(0)+"\n");
@@ -89,7 +89,7 @@ exports.init = function(dirname) {
     t   = 0;
 };
 
-exports.open = function(dirname) {
+function open(dirname) {
     // open an existing store
     if (dir!==null)
 	throw new Error("already open");
@@ -111,7 +111,7 @@ exports.open = function(dirname) {
     date    = null;
 };
 
-exports.close = function(dirname) {
+function close(dirname) {
     // close a store (quickly)
     if (journal)
 	fs.closeSync(journal);
@@ -121,7 +121,7 @@ exports.close = function(dirname) {
     t       = null;
 };
 
-exports.journalise = function(datum) {
+function journalise(datum) {
     // write a journal entry
     if (journal===null)
 	throw new Error("journal is closed");
@@ -147,7 +147,7 @@ exports.date = function() {
     return date;
 };
 
-exports.save = function(root) {
+function save(root) {
     // close a store by writing a new image (slow)
     if (dir===null)
 	throw new Error("must be open to save");
@@ -170,7 +170,7 @@ exports.save = function(root) {
     date    = null;
 };
 
-exports.load = function(fn_root,fn_datum) {
+function load(fn_root,fn_datum) {
     // load a store
     if (dir===null)
 	throw new Error("must be open to load");
@@ -197,26 +197,26 @@ exports.load = function(fn_root,fn_datum) {
 exports.wrap = function(dir,bl) {
     return {
 	init:function() {
-	    exports.init(dir);
+	    init(dir);
 	    bl.init();
 	},
 	open:function() {
-	    exports.open(dir);
+	    open(dir);
 	},
 	save:function() {
-	    exports.save(bl.get_root());
+	    save(bl.get_root());
 	},
 	close:function() {
-	    exports.close();
+	    close();
 	},
 	load:function() {
-	    exports.load(bl.set_root,bl.update); // +++ process s/be update
+	    load(bl.set_root,bl.update); // +++ process s/be update
 	},
 	query:function(q) {
 	    return bl.query(q);
 	},
 	update:function(u) {
-	    exports.journalise(u);
+	    journalise(u);
 	    return bl.update(u);
 	}
     };

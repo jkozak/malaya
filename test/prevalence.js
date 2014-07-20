@@ -6,16 +6,6 @@ var fs     = require('fs');
 
 temp.track();			// auto-cleanup at exit
 
-// +++
-
-describe('init()',function() {
-    it("should do basic init",function() {
-	var dir = temp.mkdirSync();
-	prvl.init(dir);
-	assert.ok(fs.statSync(dir+'/state'));
-    })
-});
-
 function BL() {
     var root;
     this.init = function() {
@@ -84,5 +74,31 @@ describe('wrap()',function() {
 	assert.equal(wbl.query('n'),104);
 	wbl.update('tick');
 	assert.equal(wbl.query('n'),105);
+    });
+});
+
+describe('time()',function() {
+    it("should provide a stable tick",function() {
+	var  bl = new BL();
+	var dir = temp.mkdirSync();
+	var wbl = prvl.wrap(dir,bl);
+	var   t;
+	wbl.init();
+	assert.equal(prvl.time(),0);
+	wbl.open();
+	t = prvl.time(); wbl.update('tick'); assert.ok(prvl.time()>t);
+	t = prvl.time(); wbl.update('tick'); assert.ok(prvl.time()>t);
+	t = prvl.time(); wbl.update('tick'); assert.ok(prvl.time()>t);
+	t = prvl.time(); wbl.update('tick'); assert.ok(prvl.time()>t);
+	t = prvl.time();
+	wbl.save();
+	wbl.close();
+	wbl = prvl.wrap(dir,bl);
+	wbl.open();
+	wbl.load();
+	assert.equal(prvl.time(),t);
+    });
+    it("should provide a stable date",function() {
+	// +++
     });
 });

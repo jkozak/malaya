@@ -20,6 +20,7 @@ if (argv.bl) { 			// business logic plugin
 } else {
     bl = require('./bl.js');	// toy version
 }
+bl = prvl.wrap(PREVALENCE_DIR,bl);
 
 if (argv.p) {
     port = parseInt(argv.p);
@@ -34,21 +35,20 @@ if (argv.init) {
 	process.exit();
     } catch (err) {}
     fs.mkdirSync(PREVALENCE_DIR);
-    prvl.init(PREVALENCE_DIR);
     bl.init();
-    prvl.open(PREVALENCE_DIR);
-    prvl.save(bl.get_root());
-    prvl.close();
+    bl.open();
+    bl.save();
+    bl.close();
 }
-prvl.open(PREVALENCE_DIR);
-prvl.load(bl.set_root,bl.update);
+bl.open(PREVALENCE_DIR);
+bl.load(bl.set_root,bl.update);
 
 process.on('SIGINT',function() {
-    prvl.save(bl.get_root());
+    bl.save();
     process.exit(1);
 });
 process.on('SIGHUP',function() {
-    prvl.save(bl.get_root());
+    bl.save();
 });
 process.on('exit',function(code) {
 });
@@ -126,7 +126,6 @@ sock.on('connection',function(conn) {
 
 function do_cmd(cmd) {
     // +++ detect if query or update and maybe skip journalisation +++
-    prvl.journalise(cmd);
     return bl.update(cmd);
 }
 
