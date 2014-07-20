@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 "use strict";
 
 var argv = require('minimist')(process.argv.slice(2));
@@ -11,7 +13,7 @@ var   bl;
 var port;
 var fe3p = 5110;
 
-var PREVALENCE_DIR = 'prevalence';
+var PREVALENCE_DIR = argv.d || '.prevalence';
 
 if (argv.bl) { 			// business logic plugin
     bl = require(argv.bl);
@@ -39,7 +41,7 @@ if (argv.init) {
     prvl.close();
 }
 prvl.open(PREVALENCE_DIR);
-prvl.load(bl.set_root,bl.process);
+prvl.load(bl.set_root,bl.update);
 
 process.on('SIGINT',function() {
     prvl.save(bl.get_root());
@@ -125,7 +127,7 @@ sock.on('connection',function(conn) {
 function do_cmd(cmd) {
     // +++ detect if query or update and maybe skip journalisation +++
     prvl.journalise(cmd);
-    return bl.process(cmd);
+    return bl.update(cmd);
 }
 
 setInterval(function() {
