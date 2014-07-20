@@ -85,7 +85,8 @@ exports.init = function(dirname) {
     fs.writeFileSync( dirname+"/state/world",serialise(0)+"\n");
     fs.appendFileSync(dirname+"/state/world",serialise([])+"\n");
     fs.writeFileSync( dirname+"/state/journal","");
-    t = 0;
+    dir = null;
+    t   = 0;
 };
 
 exports.open = function(dirname) {
@@ -196,25 +197,26 @@ exports.load = function(fn_root,fn_datum) {
 exports.wrap = function(dir,bl) {
     return {
 	init:function() {
-	    prvl.init(dir);
+	    exports.init(dir);
 	    bl.init();
 	},
 	open:function() {
-	    prvl.open(dir);
+	    exports.open(dir);
 	},
 	save:function() {
-	    prvl.save(bl.get_root());
+	    exports.save(bl.get_root());
 	},
 	close:function() {
-	    prvl.close();
+	    exports.close();
 	},
 	load:function() {
-	    prvl.load(bl.set_root,bl.update); // +++ process s/be update
+	    exports.load(bl.set_root,bl.update); // +++ process s/be update
 	},
 	query:function(q) {
 	    return bl.query(q);
 	},
 	update:function(u) {
+	    exports.journalise(u);
 	    return bl.update(u);
 	}
     };
