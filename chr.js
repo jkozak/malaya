@@ -18,6 +18,8 @@
 
 "use strict";
 
+var _ = require('underscore');
+
 function Variable(name) {
     this.name = name;
 }
@@ -26,8 +28,14 @@ function VariableRest(name) {
     this.name = name;
 }
 
-// context is a map of names to objects
+function copy_context(context) {
+    var ans = {};
+    for (k in context)
+	ans[k] = context[k];
+    return ans;
+}
 
+// context is a map of names to objects
 function match(term,datum,context) {
     var bind = function(n,v) {
 	var bound = context[n];
@@ -38,36 +46,53 @@ function match(term,datum,context) {
 	    return true;
 	}
     }
-    if (datum===undefined)
+    if (datum===undefined)	// undefined can't match anything
 	return false;
     if (term instanceof Variable) {
 	return bind(term.name,datum,context);
     } else if (term instanceof VariableRest) {
 	throw new Error("can't handle this here");
     } else if (term instanceof Array) {
-	if (!datum instanceof Array)
+	var rest_taken = false;
+	if (!(datum instanceof Array))
 	    return false;
-	for (var i=0;i<term.length;i++) {
+	for (var i=0,j=0;i<term.length;i++,j++) {
+	    //console.log("*** matching "+i+","+j+" "+term[i]+" "+datum[j]);
 	    if (term[i] instanceof VariableRest) {
-		var n_end_terms = (datum.length-i-1); // #taken at end
-		var var_terms   = term.slice(i,-n_end_terms);
-		if (!bind(term[i].name,var_terms,context))
+		if (rest_taken)
+		    throw new Error("only one VariableRest per match");
+		rest_taken = true;
+		//console.log("**** VariableRest");
+		var n_end_data = term.length-i-1;        // #taken at end
+		var var_data   = datum.slice(j,j+datum.length-term.length+1);
+		//console.log("**** VariableRest 2: "+n_end_data+" "+JSON.stringify(var_data));
+		if (!bind(term[i].name,var_data,context))
 		    return false;
-		i += var_terms.length;
-	    } else if (!match(term[i],datum[i],context))
+		//console.log("**** VariableRest 3");
+		j += var_data.length-1;
+	    } else if (!match(term[i],datum[j],context))
 		return false;
 	}
-	return term.length==datum.length;
+	//console.log("**** i,j: "+i+","+j+" term.length: "+term.length+" datum.length: "+datum.length);
+	//console.log("**** context: "+JSON.stringify(context));
+	return term.length==i && datum.length==j;
     } else if (term instanceof Object) {
-	if (!datum instanceof Object)
+	if (!(datum instanceof Object))
 	    return false;
-	for (var k in term) {	// k==null for VariableRest
-	    if (k===null) {
-		if (!(term[k] instanceof VariableRest))
-		    throw new Error("ill-formed map matcher");
-		// +++ VariableRest +++
+	for (var k in term) {	// k=='' for VariableRest
+	    var m = term[k];
+	    if (m instanceof VariableRest) {
+		if (k!='')
+		    throw new Error("VariableRest key must be ''");
+		var rest = _.difference(_.keys(datum),_.keys(term));
+		var  obj = {};
+		for (var n in rest)
+		    obj[rest[n]] = datum[rest[n]];
+		if (!bind(term[k].name,obj,context))
+		    return false;
 	    } else {
-		// +++
+		if (!bind(term[k].name,datum[k],context))
+		    return false;
 	    }
 	}
 	return true;
@@ -75,15 +100,28 @@ function match(term,datum,context) {
 	return term==datum;
 }
 
+function Rule(matches,deletes,guards,asserts,adds) {
+}
+
+function Store(rules) {
+    this.init = function() {
+    };
+    this.get_root = function(root0) {
+	throw new Error("NYI");
+    };
+    this.set_root = function(root0) {
+	throw new Error("NYI");
+    };
+    this.update = function(u) {
+	throw new Error("NYI");
+    }
+    this.query = function(q) {
+	throw new Error("NYI");
+    }
+}
+
 exports.match        = match
 exports.Variable     = Variable
 exports.VariableRest = VariableRest
-
-function copy_context(context) {
-    var ans = {};
-    for (k in context)
-	ans[k] = context[k];
-    return ans;
-}
 
 //N.B. top-level

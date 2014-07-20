@@ -20,18 +20,21 @@ function FE3Connection(sock,options) {
     var recved      = new Buffer(0);
     var NUL         = new Buffer('\0');
 
+    // these are potentially stateful
     var toMalaya = function(js) {	// from FE3 XML-ish json
 	if (js.root!==undefined)
 	    throw new Error("ill-formed FE3 packet: "+JSON.stringify(js));
 	else if (js.logon!==undefined) 
 	    return ['I_AM',js.logon.$.user,js.logon.$.pw];
+	else if (js.start!==undefined)
+	    return ['REQUEST_CONTEXT'];
 	else
 	    throw new Error("unknown FE3 packet: "+JSON.stringify(js));
     }
     var fromMalaya = function(js) {	// to FE3 XML-ish json
 	if (js[0]=='ERR') {
 	    if (mc.name===null) 	// not logged on
-		return {logon:{$:{OK:0,error_code:72}}};
+		return {logon:{$:{OK:0,error_code:999,text:js[1]}}};
 	    else
 		throw new Error("unknown error to FE3ify: "+JSON.stringify(js));
 	} else if (js[0]=='HI')

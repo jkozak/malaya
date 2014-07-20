@@ -192,3 +192,30 @@ exports.load = function(fn_root,fn_datum) {
 	return true;
     });
 }
+
+exports.wrap = function(dir,bl) {
+    return {
+	init:function() {
+	    prvl.init(dir);
+	    bl.init();
+	},
+	open:function() {
+	    prvl.open(dir);
+	},
+	save:function() {
+	    prvl.save(bl.get_root());
+	},
+	close:function() {
+	    prvl.close();
+	},
+	load:function() {
+	    prvl.load(bl.set_root,bl.update); // +++ process s/be update
+	},
+	query:function(q) {
+	    return bl.query(q);
+	},
+	update:function(u) {
+	    return bl.update(u);
+	}
+    };
+}
