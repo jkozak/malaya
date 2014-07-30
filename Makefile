@@ -7,6 +7,6 @@ build: 	init
 
 
 tests:	init
-	./node_modules/.bin/mocha -C
+	NODE_ENV=test ./node_modules/.bin/mocha -C
 
 

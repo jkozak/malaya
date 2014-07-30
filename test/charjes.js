@@ -303,6 +303,10 @@ describe('charjes.parser',function() {
 	});
 	assert.deepEqual(failures,[]);
     });
+    it("should preserve plain js code on translation",function() {
+	var code = "function fn(a) {\n    return a;\n}"
+	assert.equal(charjes.translate(code),code);
+    });
 });
 
 // +++ `charjes` specific tests +++
