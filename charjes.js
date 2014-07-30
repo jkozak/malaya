@@ -53,6 +53,16 @@ parseLeftHandSideExpression: true,
 parseUnaryExpression: true,
 parseStatement: true, parseSourceElement: true */
 
+var escodegen = require('escodegen');
+
+function compile(code) {
+    // +++ input and output are in esprima parsed format +++
+    // +++ compile chr-augmented code to plain js +++
+    // +++ store statement, may contain +++
+    // +++       rule statement         +++
+    return code;
+}
+
 (function (root, factory) {
     'use strict';
 
@@ -3506,23 +3516,35 @@ parseStatement: true, parseSourceElement: true */
     // charjes
 
     function parseStoreStatement() {
-        var test, body, oldInIteration;
+        var name, args, body, tmp;
 
         expectKeyword('store');
 
-	// +++
+	// +++ name +++
+
+	// +++ heads are <datum> or -<datum> +++
+	tmp = parseParams(true);
+	args = tmp.args
+
+	// +++ body +++
 	
-        return delegate.createStoreStatement(test, body);
+        return delegate.createStoreStatement(name, args, body);
     }
     
     function parseRuleStatement() {
-        var test, body, oldInIteration;
+        var name, heads, body, tmp;
 
         expectKeyword('rule');
 
-	// +++
+	// +++ name +++
 	
-        return delegate.createRuleStatement(test, body);
+	tmp = parseParams(true);
+	args = tmp.args
+
+	// +++ body +++
+	// +++   repeated normal js statement or +<datum> (possibly in an `if`) +++
+	
+        return delegate.createRuleStatement(name, heads, body);
     }
     
 
@@ -3780,11 +3802,17 @@ parseStatement: true, parseSourceElement: true */
     }
 
     // Sync with *.json manifests.
-    exports.version = '1.2.2';
+    exports.version = '1.2.2';	// esprima version
 
     exports.tokenize = tokenize;
 
     exports.parse = parse;
+
+    exports.translate = function(code,options) {
+	var code1 = parse(code,options);
+	var code2 = compile(code1); // +++ compile code1 -> code2 +++
+	return escodegen.generate(code2);
+    };
 
     // Deep copy.
    /* istanbul ignore next */
@@ -3810,4 +3838,7 @@ parseStatement: true, parseSourceElement: true */
 
 }));
 
-
+require.extensions['.charjes'] = function(module,filename) {
+    var content = fs.readFileSync(jsname, 'utf8');
+    return compile(content);
+}

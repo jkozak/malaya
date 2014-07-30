@@ -28,6 +28,7 @@ function VariableRest(name) {
     this.name = name;
 }
 
+// context is a map of names to objects
 function copy_context(context) {
     var ans = {};
     for (k in context)
@@ -35,7 +36,6 @@ function copy_context(context) {
     return ans;
 }
 
-// context is a map of names to objects
 function match(term,datum,context) {
     var bind = function(n,v) {
 	var bound = context[n];
@@ -103,25 +103,63 @@ function match(term,datum,context) {
 function Rule(matches,deletes,guards,asserts,adds) {
 }
 
-function Store(rules) {
-    this.init = function() {
-    };
-    this.get_root = function(root0) {
-	throw new Error("NYI");
-    };
-    this.set_root = function(root0) {
-	throw new Error("NYI");
-    };
-    this.update = function(u) {
-	throw new Error("NYI");
-    }
-    this.query = function(q) {
-	throw new Error("NYI");
-    }
+function Index(type) {
+    this.type = type===undefined ? 'string' : type;
+    if (!['string','number'].contains(this.type))
+	throw new Error("unknown type to index");
+    // +++ also want Date, bignum then a proper JSONy type system +++
 }
 
-exports.match        = match
-exports.Variable     = Variable
-exports.VariableRest = VariableRest
+function Store(rules) {
+    this.t       = 0;
+    this.facts   = [];
+    this.rules   = [];
+    this.indices = [];
+}
+Store.prototype._rebuild = function() {
+    // +++ rebuild indices &c +++
+    throw new Error("NYI");
+};
+Store.prototype.add_rule = function(rule) {
+    if (this.facts)
+	throw new Error("can't add rules to an active Store");
+    this.rules.push(rule);
+    this._rebuild();
+};
+Store.prototype.lastUpdate = function() {
+    return this.t;
+};
+// BusinessLogic protocol
+Store.prototype.get_root = function() {
+    return {t:    this.t,
+	    facts:this.facts};
+};
+Store.prototype.set_root = function(r) {
+    this.t     = r.t;
+    this.facts = r.facts;
+    this._rebuild();
+};
+Store.prototype.add_index = function(idx) {
+    this.indices.push(idx);
+    this._rebuild();
+};
+Store.prototype.update = function(u) {
+    throw new Error("NYI");
+};
+Store.prototype.query = function(q) {
+    var   t = this.lastUpdate();
+    var ans = this.update(q);
+    if (this.lastUpdate()!=t)
+	throw new Error("query has updated store");
+    return ans;
+};
 
-//N.B. top-level
+exports.Variable     = Variable;
+exports.VariableRest = VariableRest;
+exports.Rule         = Rule;
+exports.Store        = Store;
+exports.Index        = Index;
+
+if (process.env.NODE_ENV==='test') 
+    exports._private = {match:       match,
+			copy_context:copy_context};
