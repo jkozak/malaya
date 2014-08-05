@@ -35,7 +35,9 @@ var t       = null;		// consistent timey thing
 
 var audit      = false;
 var hash_store;
+var bl_src;
 var bl_files;
+var bl_running;
 
 // object stashing format:
 //  JSON with extra encoding:
@@ -227,7 +229,7 @@ function wrap(dir,bl,options) {
 	open:function() {
 	    open(dir);
 	    if (audit) {
-		journalise('logic',bl_files);
+		journalise('logic',[bl_src,bl_files]);
 	    }
 	},
 	save:function() {
@@ -240,17 +242,27 @@ function wrap(dir,bl,options) {
 	    load(bl.set_root,bl.update);
 	},
 	query:function(q) {
-	    return bl.query(q);
+	    try {
+		bl_running = true;
+		return bl.query(q);
+	    } finally {
+		bl_running = false;
+	    }
 	},
 	update:function(u) {
-	    journalise('update',u);
-	    return bl.update(u);
+	    try {
+		bl_running = true;
+		journalise('update',u);
+		return bl.update(u);
+	    } finally {
+		bl_running = false;
+	    }
 	}
     };
 };
 
 exports.wrap = function(dir,bl,options) {
-    var loading_bl = true;
+    bl_running = true;
     if (options==undefined)
 	options = {audit:true};	        // default options
     audit = options.audit;
@@ -260,7 +272,7 @@ exports.wrap = function(dir,bl,options) {
 	for (var k in require.extensions) {
 	    require.extensions[k] = (function(ext) {
 		return function(module,filename) {
-		    if (loading_bl) {
+		    if (bl_running) {
 			bl_files[filename] = hash_store.putFileSync(filename);
 			return ext(module,filename);
 		    }
@@ -270,15 +282,14 @@ exports.wrap = function(dir,bl,options) {
 		} })(require.extensions[k]);
 	}
     }
-    if (typeof(bl)==='string') {
-	bl = require(bl);	        // bl is a filename
-    } else if (bl===undefined) {
-	bl = require('./bl.js');	// default to a toy version
+    bl_src = bl===undefined ? './bl.js' : bl;
+    if (typeof(bl_src)==='string') {
+	bl = require(bl_src);	        // bl is a filename
     } else {				// prebuilt business logic object
 	if (audit)
 	    throw new Error("auditing required and source code not found");
     }
-    loading_bl = false;
+    bl_running = false;
     return wrap(dir,bl,options);
 };
 

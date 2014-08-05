@@ -2,6 +2,7 @@
 
 "use strict";
 
+var util = require('util');
 var  net = require('net');
 var  x2j = require('xml2js');
 
@@ -15,7 +16,7 @@ function FE3Connection(sock,options) {
     var events      = {
 	data:  function(js) {events['cmd'](toMalaya(js));}, 
 	close: function() {},
-	cmd:   function(js) {console.log("!!! cmd FE3 can't: "+JSON.stringify(js));} };
+	cmd:   function(js) {util.error("!!! cmd FE3 can't: "+JSON.stringify(js));} };
     var xml_builder = new x2j.Builder({headless:true});
     var recved      = new Buffer(0);
     var NUL         = new Buffer('\0');
@@ -32,12 +33,12 @@ function FE3Connection(sock,options) {
 	    throw new Error("unknown FE3 packet: "+JSON.stringify(js));
     }
     var fromMalaya = function(js) {	// to FE3 XML-ish json
-	if (js[0]=='ERR') {
+	if (js[0]==='ERR') {
 	    if (mc.name===null) 	// not logged on
 		return {logon:{$:{OK:0,error_code:999,text:js[1]}}};
 	    else
 		throw new Error("unknown error to FE3ify: "+JSON.stringify(js));
-	} else if (js[0]=='HI')
+	} else if (js[0]==='HI')
 	    return {logon:{$:{OK:1,session_key:0}}};
 	else
 	    throw new Error("can't FE3ify: "+JSON.stringify(js));
@@ -85,10 +86,10 @@ function FE3Connection(sock,options) {
 		    break;
 		}
 		case AP_HEARTBEAT:
-		    console.log("*** heartbeat");
+		    util.debug("heartbeat");
 		    break;
 		default:
-		    console.log("*** unknown FE3 pkt type: "+type);
+		    util.error("unknown FE3 pkt type: "+type);
 		    // +++ maybe drop connection? +++
 		}
 		recved = recved.slice(FE3_HDR_LENGTH+cbData); // processed, forget
@@ -97,7 +98,7 @@ function FE3Connection(sock,options) {
         //console.log('DATA '+sock.remoteAddress+': '+data.toString('hex'));
     });
     sock.on('error',function(err) {
-	console.log("*** socket error: "+err);
+	util.error("socket error: "+err);
 	sock.destroy();		// ???
     });
     sock.on('close',function() {

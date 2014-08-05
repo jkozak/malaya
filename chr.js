@@ -18,7 +18,8 @@
 
 "use strict";
 
-var _ = require('underscore');
+var    _ = require('underscore');
+var util = require('util');
 
 function Variable(name) {
     this.name = name;
@@ -82,7 +83,7 @@ function match(term,datum,context) {
 	for (var k in term) {	// k=='' for VariableRest
 	    var m = term[k];
 	    if (m instanceof VariableRest) {
-		if (k!='')
+		if (k!=='')
 		    throw new Error("VariableRest key must be ''");
 		var rest = _.difference(_.keys(datum),_.keys(term));
 		var  obj = {};

@@ -3,6 +3,7 @@
 var crypto = require('crypto');
 var stream = require('stream');
 var fs     = require('fs');
+var util   = require('util');
 
 module.exports = function(algorithm) {
     var ans = {
@@ -30,8 +31,12 @@ module.exports = function(algorithm) {
 		    return store.putSync(fs.readFileSync(filename));
 		},
 		putSync: function(x) {
-		    var h = ans.hash(x);
-		    fs.writeFileSync(store.makeFilename(h),x);
+		    var h  = ans.hash(x);
+		    var fn = store.makeFilename(h);
+		    if (!fs.existsSync(fn)) {
+			util.debug("adding new hash to store: "+h);
+			fs.writeFileSync(fn,x);
+		    }
 		    return h;
 		},
 		getSync: function(h) {
