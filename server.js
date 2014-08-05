@@ -4,6 +4,8 @@
 
 var argv = require('minimist')(process.argv.slice(2));
 
+var util = require('util');
+
 var  app = require('express')();
 var http = require('http').Server(app);
 var   fs = require('fs');
@@ -21,11 +23,13 @@ if (argv.p) {
     port = 3000;
 }
 
+// +++ require charjes here or earlier +++
+
 var bl;
 if (argv.init) {
     try {
 	fs.statSync(PREVALENCE_DIR);
-	console.log("prevalence state dir already exists, won't init");
+	util.error("prevalence state dir already exists, won't init");
 	process.exit();
     } catch (err) {}
     fs.mkdirSync(PREVALENCE_DIR);
@@ -63,7 +67,7 @@ function MalayaConnection(conn,options) {
     var mc     = this;
     var events = {
 	data: function(js) {},
-	cmd:  function(js) {console.log("!!! one day, I'll handle "+JSON.stringify(js));}
+	cmd:  function(js) {util.error("!!! one day, I'll handle "+JSON.stringify(js));}
     };
 
     this.name = null;
@@ -89,14 +93,14 @@ function MalayaConnection(conn,options) {
 	events['cmd'](['EXEC',js,{user:this.name}]);
     });
     conn.on('close',function() {
-	console.log('farewell, '+this.name);
+	util.debug('farewell, '+this.name);
 	conns.remove(mc);
     });
 }
 conns.add = function(conn) {
     conns.push(conn);
     conn.on('cmd',function(js) {
-	console.log("*** malaya cmd: "+JSON.stringify(js));
+	util.debug("*** malaya cmd: "+JSON.stringify(js));
 	conn.write(do_cmd(js))
 	// +++
     });
@@ -107,7 +111,7 @@ conns.remove = function(x) {
 	    this.splice(i,1);
 	    return;
 	}
-    console.log("*** couldn't remove "+x);
+    util.debug("*** couldn't remove "+x);
 }
 conns.broadcast = function(js) {
     for (var i=0;i<this.length;i++) {
@@ -116,7 +120,7 @@ conns.broadcast = function(js) {
 }
 
 sock.on('connection',function(conn) {
-    console.log("connection from: "+conn.remoteAddress+":"+conn.remotePort);
+    util.debug("connection from: "+conn.remoteAddress+":"+conn.remotePort);
     // +++ pass a `cmd` arg through in `options` below +++
     // +++ this to invoke a prevalent handler +++
     // +++ which in turn invokes the core business logic +++
@@ -136,21 +140,21 @@ setInterval(function() {
 sock.installHandlers(http,{prefix:'/data'});
 
 http.listen(port,function() {
-    console.log('http listening on *:'+port);
+    util.debug('http listening on *:'+port);
 });
 
 if (fe3p) {
     var fe3 = require('./fe3.js').createServer({});
     fe3.on('connect',function(mc) {
-	console.log("new FE3");
+	util.debug("new FE3");
 	conns.add(mc);
 	mc.on('close',function() {
-	    console.log("farewell FE3");
+	    util.debug("farewell FE3");
 	    conns.remove(mc);
 	});
     });
     fe3.on('listening',function() {
-	console.log('fe3  listening on *:'+fe3p);
+	util.debug('fe3  listening on *:'+fe3p);
     });
     fe3.listen(fe3p);
 }

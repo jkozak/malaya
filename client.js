@@ -1,11 +1,12 @@
 "use strict";
 
 var     argv = require('minimist')(process.argv.slice(2));
+var     util = require('util');
 var   SockJS = require('node-sockjs-client');
 var readline = require('readline');
 
 if (argv._.length!=1) {
-    console.log("wrong number of args");
+    util.error("wrong number of args");
     process.exit(100);
 }
 
@@ -17,7 +18,7 @@ var write = function(js) {
 
 sock.onmessage = function(e) {
     var js = JSON.parse(e.data);
-    console.log("received: "+JSON.stringify(js));
+    util.error("received: "+JSON.stringify(js));
 };
 
 sock.onopen = function() {
