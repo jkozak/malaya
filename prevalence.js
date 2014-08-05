@@ -26,11 +26,16 @@
 
 var fs    = require("fs");
 var rm_rf = require("rimraf");
+var hash  = require("./hash.js")('sha1');
 
 var dir     = null;
 var journal = null;		// file descriptor
 var date    = null;		// effective Date object
 var t       = null;		// consistent timey thing
+
+var audit      = false;
+var hash_store;
+var bl_files;
 
 // object stashing format:
 //  JSON with extra encoding:
@@ -79,12 +84,13 @@ function readFileLinesSync(path,fn) {
     fs.closeSync(fd);
 }
 
-function init(dirname) {
+function init(dirname,options) {
     // prepare a directory to be a store
     fs.mkdirSync(dirname+"/state");
     fs.writeFileSync( dirname+"/state/world",serialise(0)+"\n");
+    fs.appendFileSync(dirname+"/state/world",serialise(null)+"\n");
     fs.appendFileSync(dirname+"/state/world",serialise([])+"\n");
-    fs.writeFileSync( dirname+"/state/journal","");
+    fs.writeFileSync( dirname+"/state/journal",serialise(journal_entry('init',options))+"\n");
     dir = null;
     t   = 0;
 };
@@ -121,12 +127,17 @@ function close(dirname) {
     t       = null;
 };
 
-function journalise(datum) {
+function journal_entry(type,datum) {
+    date = new Date();
+    return [date,type,datum];
+}
+
+function journalise(type,datum) {
     // write a journal entry
     if (journal===null)
 	throw new Error("journal is closed");
     date = new Date();
-    var s = serialise([date,datum]);
+    var s = serialise(journal_entry(type,datum));
     fs.writeSync(journal,s,   s.length,null);
     fs.writeSync(journal,'\n',1,       null);
     fs.fsyncSync(journal);
@@ -154,15 +165,21 @@ function save(root) {
     var dir_cur = dir+"/state"
     var dir_new = dir+"/state-NEW";
     var dir_old = dir+"/state-OLD";
+    var syshash = null;
     fs.closeSync(journal);
     journal = null;
+    if (audit) 
+	syshash = hash_store.putFileSync(dir_cur+"/journal");
     rm_rf.sync(dir_new);
     fs.mkdirSync(dir_new);
-    fs.writeFileSync( dir_new+"/world",serialise(t));
+    fs.writeFileSync( dir_new+"/world",serialise(t));    // tick
     fs.appendFileSync(dir_new+"/world","\n");
-    fs.appendFileSync(dir_new+"/world",serialise(root));
+    fs.appendFileSync(dir_new+"/world",serialise(syshash));
     fs.appendFileSync(dir_new+"/world","\n");
-    fs.writeFileSync( dir_new+"/journal","");
+    fs.appendFileSync(dir_new+"/world",serialise(root)); // root
+    fs.appendFileSync(dir_new+"/world","\n");
+    fs.writeFileSync( dir_new+"/journal",serialise(journal_entry('previous',syshash)));
+    fs.appendFileSync(dir_new+"/journal","\n");
     rm_rf.sync(dir_old);
     fs.renameSync(dir_cur,dir_old);
     fs.renameSync(dir_new,dir_cur);
@@ -171,37 +188,47 @@ function save(root) {
 };
 
 function load(fn_root,fn_datum) {
+    var world_file   = dir+"/state/world";
+    var journal_file = dir+"/state/journal";
+    var lineno       = 1;
     // load a store
     if (dir===null)
 	throw new Error("must be open to load");
-    var lineno = 1;
-    readFileLinesSync(dir+"/state/world",function(line) {
+    readFileLinesSync(world_file,function(line) {
 	switch (lineno++) {
 	case 1:
 	    t = deserialise(line);
 	    return true;
 	case 2:
+	    // human use only
+	    return true;
+	case 3:
 	    fn_root(deserialise(line));
 	    return false;
 	}
     });
-    readFileLinesSync(dir+"/state/journal",function(line) {
+    // +++ handle case where journal file not found +++
+    readFileLinesSync(journal_file,function(line) {
 	var di = deserialise(line);
 	date = di[0];
-	fn_datum(di[1]);
+	if (di[1]=='update')
+	    fn_datum(di[2]);
 	date = null;
 	return true;
     });
-}
+};
 
-exports.wrap = function(dir,bl) {
+function wrap(dir,bl,options) {
     return {
 	init:function() {
-	    init(dir);
+	    init(dir,options);
 	    bl.init();
 	},
 	open:function() {
 	    open(dir);
+	    if (audit) {
+		journalise('logic',bl_files);
+	    }
 	},
 	save:function() {
 	    save(bl.get_root());
@@ -210,14 +237,51 @@ exports.wrap = function(dir,bl) {
 	    close();
 	},
 	load:function() {
-	    load(bl.set_root,bl.update); // +++ process s/be update
+	    load(bl.set_root,bl.update);
 	},
 	query:function(q) {
 	    return bl.query(q);
 	},
 	update:function(u) {
-	    journalise(u);
+	    journalise('update',u);
 	    return bl.update(u);
 	}
     };
-}
+};
+
+exports.wrap = function(dir,bl,options) {
+    var loading_bl = true;
+    if (options==undefined)
+	options = {audit:true};	        // default options
+    audit = options.audit;
+    if (audit) {
+	bl_files   = {};
+	hash_store = hash.make_store(dir+'/hashes');
+	for (var k in require.extensions) {
+	    require.extensions[k] = (function(ext) {
+		return function(module,filename) {
+		    if (loading_bl) {
+			bl_files[filename] = hash_store.putFileSync(filename);
+			return ext(module,filename);
+		    }
+		    else {
+			return ext(module,filename);
+		    }
+		} })(require.extensions[k]);
+	}
+    }
+    if (typeof(bl)==='string') {
+	bl = require(bl);	        // bl is a filename
+    } else if (bl===undefined) {
+	bl = require('./bl.js');	// default to a toy version
+    } else {				// prebuilt business logic object
+	if (audit)
+	    throw new Error("auditing required and source code not found");
+    }
+    loading_bl = false;
+    return wrap(dir,bl,options);
+};
+
+if (process.env.NODE_ENV==='test')
+    exports._private = {wrap: wrap};
+

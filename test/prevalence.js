@@ -31,14 +31,14 @@ describe('wrap()',function() {
     it("should init",function() {
 	var  bl = new BL();
 	var dir = temp.mkdirSync();
-	var wbl = prvl.wrap(dir,bl);
+	var wbl = prvl._private.wrap(dir,bl,{audit:false});
 	wbl.init();
 	assert.equal(wbl.query('n'),100);
     });
     it("should save and reload",function() {
 	var  bl = new BL();
 	var dir = temp.mkdirSync();
-	var wbl = prvl.wrap(dir,bl);
+	var wbl = prvl._private.wrap(dir,bl,{audit:false});
 	wbl.init();
 	wbl.open();
 	wbl.update('tick');
@@ -48,7 +48,7 @@ describe('wrap()',function() {
 	assert.equal(wbl.query('n'),104);
 	wbl.save();
 	wbl.close();
-	wbl = prvl.wrap(dir,bl);
+	wbl = prvl._private.wrap(dir,bl,{audit:false});
 	wbl.open();
 	wbl.load();
 	assert.equal(wbl.query('n'),104);
@@ -58,7 +58,7 @@ describe('wrap()',function() {
     it("should restore from journal",function() {
 	var  bl = new BL();
 	var dir = temp.mkdirSync();
-	var wbl = prvl.wrap(dir,bl);
+	var wbl = prvl._private.wrap(dir,bl,{audit:false});
 	wbl.init();
 	wbl.open();
 	wbl.save();
@@ -68,7 +68,7 @@ describe('wrap()',function() {
 	wbl.update('tick');
 	assert.equal(wbl.query('n'),104);
 	wbl.close();
-	wbl = prvl.wrap(dir,bl);
+	wbl = prvl._private.wrap(dir,bl,{audit:false});
 	wbl.open();
 	wbl.load();
 	assert.equal(wbl.query('n'),104);
@@ -81,7 +81,7 @@ describe('time()',function() {
     it("should provide a stable tick",function() {
 	var  bl = new BL();
 	var dir = temp.mkdirSync();
-	var wbl = prvl.wrap(dir,bl);
+	var wbl = prvl._private.wrap(dir,bl,{audit:false});
 	var   t;
 	wbl.init();
 	assert.equal(prvl.time(),0);
@@ -93,7 +93,7 @@ describe('time()',function() {
 	t = prvl.time();
 	wbl.save();
 	wbl.close();
-	wbl = prvl.wrap(dir,bl);
+	wbl = prvl._private.wrap(dir,bl,{audit:false});
 	wbl.open();
 	wbl.load();
 	assert.equal(prvl.time(),t);
