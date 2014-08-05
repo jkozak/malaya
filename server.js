@@ -9,18 +9,11 @@ var http = require('http').Server(app);
 var   fs = require('fs');
 var sock = require('sockjs').createServer();
 var prvl = require('./prevalence.js');
-var   bl;
 var port;
 var fe3p = 5110;
+var opts = {audit:true};
 
 var PREVALENCE_DIR = argv.d || '.prevalence';
-
-if (argv.bl) { 			// business logic plugin
-    bl = require(argv.bl);
-} else {
-    bl = require('./bl.js');	// toy version
-}
-bl = prvl.wrap(PREVALENCE_DIR,bl);
 
 if (argv.p) {
     port = parseInt(argv.p);
@@ -28,23 +21,30 @@ if (argv.p) {
     port = 3000;
 }
 
+var bl;
 if (argv.init) {
     try {
 	fs.statSync(PREVALENCE_DIR);
-	console.log("prevalence dir already exists, won't init");
+	console.log("prevalence state dir already exists, won't init");
 	process.exit();
     } catch (err) {}
     fs.mkdirSync(PREVALENCE_DIR);
+    bl = prvl.wrap(PREVALENCE_DIR,argv.bl,opts);
     bl.init();
     bl.open();
     bl.save();
     bl.close();
+} else {
+    bl = prvl.wrap(PREVALENCE_DIR,argv.bl,opts);
 }
 bl.open(PREVALENCE_DIR);
 bl.load(bl.set_root,bl.update);
 
 process.on('SIGINT',function() {
     bl.save();
+    process.exit(1);
+});
+process.on('SIGQUIT',function() {
     process.exit(1);
 });
 process.on('SIGHUP',function() {
