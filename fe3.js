@@ -2,7 +2,7 @@
 
 "use strict";
 
-var util = require('util');
+var util = require('./util.js');
 var  net = require('net');
 var  x2j = require('xml2js');
 
