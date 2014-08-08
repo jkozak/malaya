@@ -4,7 +4,7 @@
 
 var argv = require('minimist')(process.argv.slice(2));
 
-var util = require('util');
+var util = require('./util.js');
 
 var  app = require('express')();
 var http = require('http').Server(app);
@@ -44,6 +44,12 @@ if (argv.init) {
 bl.open(PREVALENCE_DIR);
 bl.load(bl.set_root,bl.update);
 
+if (bl.transform!==undefined) {
+    bl.transform();
+    bl.save()
+    process.exit(0);
+}
+
 process.on('SIGINT',function() {
     bl.save();
     process.exit(1);
@@ -67,7 +73,7 @@ function MalayaConnection(conn,options) {
     var mc     = this;
     var events = {
 	data: function(js) {},
-	cmd:  function(js) {util.error("!!! one day, I'll handle "+JSON.stringify(js));}
+	cmd:  function(js) {util.error("!!! one day, I'll handle %s",js);}
     };
 
     this.name = null;
@@ -93,14 +99,14 @@ function MalayaConnection(conn,options) {
 	events['cmd'](['EXEC',js,{user:this.name}]);
     });
     conn.on('close',function() {
-	util.debug('farewell, '+this.name);
+	util.debug('farewell, %s',this.name);
 	conns.remove(mc);
     });
 }
 conns.add = function(conn) {
     conns.push(conn);
     conn.on('cmd',function(js) {
-	util.debug("*** malaya cmd: "+JSON.stringify(js));
+	util.debug("*** malaya cmd: %j",js);
 	conn.write(do_cmd(js))
 	// +++
     });
@@ -111,7 +117,7 @@ conns.remove = function(x) {
 	    this.splice(i,1);
 	    return;
 	}
-    util.debug("*** couldn't remove "+x);
+    util.debug("*** couldn't remove %j",x);
 }
 conns.broadcast = function(js) {
     for (var i=0;i<this.length;i++) {
@@ -120,7 +126,7 @@ conns.broadcast = function(js) {
 }
 
 sock.on('connection',function(conn) {
-    util.debug("connection from: "+conn.remoteAddress+":"+conn.remotePort);
+    util.debug("connection from: %s:%s",conn.remoteAddress,conn.remotePort);
     // +++ pass a `cmd` arg through in `options` below +++
     // +++ this to invoke a prevalent handler +++
     // +++ which in turn invokes the core business logic +++
@@ -140,7 +146,7 @@ setInterval(function() {
 sock.installHandlers(http,{prefix:'/data'});
 
 http.listen(port,function() {
-    util.debug('http listening on *:'+port);
+    util.debug('http listening on *:%s',port);
 });
 
 if (fe3p) {
@@ -154,7 +160,7 @@ if (fe3p) {
 	});
     });
     fe3.on('listening',function() {
-	util.debug('fe3  listening on *:'+fe3p);
+	util.debug('fe3  listening on *:%s',fe3p);
     });
     fe3.listen(fe3p);
 }

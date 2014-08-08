@@ -67,8 +67,7 @@ function deserialise(s) {
     });
 }
 
-function readFileLinesSync(path,fn) {
-    var fd         = fs.openSync(path,"r");
+function readFdLinesSync(fd,fn) {
     var bufferSize = 1024;
     var buffer     = new Buffer(bufferSize);
     var leftOver   = '';
@@ -83,7 +82,15 @@ function readFileLinesSync(path,fn) {
 	}
 	leftOver = leftOver.substring(idxStart);
     }
-    fs.closeSync(fd);
+}
+
+function readFileLinesSync(path,fn) {
+    var fd = fs.openSync(path,"r+");
+    try {
+	readFdLinesSync(fd,fn);
+    } finally {
+	fs.closeSync(fd);
+    }
 }
 
 function init(dirname,options) {
@@ -193,6 +200,7 @@ function load(fn_root,fn_datum) {
     var world_file   = dir+"/state/world";
     var journal_file = dir+"/state/journal";
     var lineno       = 1;
+    var syshash      = null;
     // load a store
     if (dir===null)
 	throw new Error("must be open to load");
@@ -202,14 +210,13 @@ function load(fn_root,fn_datum) {
 	    t = deserialise(line);
 	    return true;
 	case 2:
-	    // human use only
+	    syshash = deserialise(line); // only used by humans so far
 	    return true;
 	case 3:
 	    fn_root(deserialise(line));
 	    return false;
 	}
     });
-    // +++ handle case where journal file not found +++
     readFileLinesSync(journal_file,function(line) {
 	var di = deserialise(line);
 	date = di[0];
@@ -218,10 +225,12 @@ function load(fn_root,fn_datum) {
 	date = null;
 	return true;
     });
+    // +++ don't create journal-file in `save` +++
+    // +++ add `previous` line to journal here +++
 };
 
 function wrap(dir,bl,options) {
-    return {
+    var ans = {
 	init:function() {
 	    init(dir,options);
 	    bl.init();
@@ -259,6 +268,20 @@ function wrap(dir,bl,options) {
 	    }
 	}
     };
+    if (bl.transform!==undefined) {
+	if (bl.query!==undefined || bl.update!==undefined)
+	    throw new Error("business logic should only define one of query+update or transform");
+	ans.transform = function() {
+	    try {
+		bl_running = true;
+		journalise('transform',null);
+		return bl.transform();
+	    } finally {
+		bl_running = false;
+	    }
+	};
+    }
+    return ans;
 };
 
 exports.wrap = function(dir,bl,options) {

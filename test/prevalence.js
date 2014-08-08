@@ -3,8 +3,11 @@ var prvl   = require("../prevalence.js");
 var assert = require("assert");
 var temp   = require('temp');  
 var fs     = require('fs');
+var util   = require('../util.js')
 
 temp.track();			// auto-cleanup at exit
+
+util.verbosity = 1;		// suppress debug msgs
 
 function BL() {
     var root;

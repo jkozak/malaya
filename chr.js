@@ -19,7 +19,7 @@
 "use strict";
 
 var    _ = require('underscore');
-var util = require('util');
+var util = require('./util.js');
 
 function Variable(name) {
     this.name = name;

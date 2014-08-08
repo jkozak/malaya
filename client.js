@@ -1,7 +1,7 @@
 "use strict";
 
 var     argv = require('minimist')(process.argv.slice(2));
-var     util = require('util');
+var     util = require('./util.js');
 var   SockJS = require('node-sockjs-client');
 var readline = require('readline');
 
