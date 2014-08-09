@@ -11,6 +11,10 @@ var http = require('http').Server(app);
 var   fs = require('fs');
 var sock = require('sockjs').createServer();
 var prvl = require('./prevalence.js');
+
+require("sweet.js");		    // support for .sjs files
+var chrjs = require("./chrjs.sjs"); // support for .chrjs files
+
 var port;
 var fe3p = 5110;
 var opts = {audit:true};
@@ -22,8 +26,6 @@ if (argv.p) {
 } else {
     port = 3000;
 }
-
-// +++ require charjes here or earlier +++
 
 var bl;
 if (argv.init) {

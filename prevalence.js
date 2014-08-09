@@ -27,6 +27,8 @@
 var fs    = require("fs");
 var rm_rf = require("rimraf");
 var hash  = require("./hash.js")('sha1');
+var path  = require("path");
+var util  = require("./util.js");
 
 var dir     = null;
 var journal = null;		// file descriptor
@@ -305,9 +307,11 @@ exports.wrap = function(dir,bl,options) {
 		} })(require.extensions[k]);
 	}
     }
-    bl_src = bl===undefined ? './bl.js' : bl;
+    bl_src = bl===undefined ? 'bl' : bl;
     if (typeof(bl_src)==='string') {
-	bl = require(bl_src);	        // bl is a filename
+	if (path.resolve(bl_src)!==path.normalize(bl_src)) // relative path?
+	    bl_src = './'+bl_src;			   // be explicit if so
+	bl = require(bl_src);
     } else {				// prebuilt business logic object
 	if (audit)
 	    throw new Error("auditing required and source code not found");
