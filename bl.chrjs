@@ -25,17 +25,17 @@ function update(datum) {
 exports.init = function() {
     root = {user:null,
 	    n:   0};
-}
+};
 
 exports.get_root = function() {
     return root;
-}
+};
 
 exports.set_root = function(root0) {
     root = root0;
-}
+};
 
 exports.update = function(datum) {
     return update(datum);
-}
+};
 
