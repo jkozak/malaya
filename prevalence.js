@@ -41,6 +41,8 @@ var bl_src;
 var bl_files;
 var bl_running;
 
+var source_version = util.source_version();
+
 // object stashing format:
 //  JSON with extra encoding:
 //     string "abc" is encoded as ":abc"
@@ -240,7 +242,7 @@ function wrap(dir,bl,options) {
 	open:function() {
 	    open(dir);
 	    if (audit) {
-		journalise('logic',[bl_src,bl_files]);
+		journalise('logic',[source_version,bl_src,bl_files]);
 	    }
 	},
 	save:function() {
