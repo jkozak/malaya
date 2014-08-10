@@ -40,11 +40,11 @@ exports.source_version = (function() {
 
 exports.regime = (function() {
     var regime = process.env.NODE_REGIME;
-    if (regime=='production')
+    if (regime==='production')
 	regime = 'prod';
-    if (regime=='')
+    if (regime==='' || regime===undefined)
 	regime = 'dev';
-    if (['dev','prod','test'].filter(function(x) {return x===regime;})===[])
+    if (!{dev:true,prod:true,test:true}[regime])
 	throw new Error(_util.format("bad regime: %j",regime));
     return regime;
 })();
