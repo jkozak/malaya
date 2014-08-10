@@ -41,7 +41,7 @@ var bl_src;
 var bl_files;
 var bl_running;
 
-var source_version = util.source_version();
+var source_version = util.source_version;
 
 // object stashing format:
 //  JSON with extra encoding:
@@ -322,6 +322,6 @@ exports.wrap = function(dir,bl,options) {
     return wrap(dir,bl,options);
 };
 
-if (process.env.NODE_ENV==='test')
+if (util.regime==='test')
     exports._private = {wrap: wrap};
 

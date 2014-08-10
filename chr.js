@@ -161,6 +161,6 @@ exports.Rule         = Rule;
 exports.Store        = Store;
 exports.Index        = Index;
 
-if (process.env.NODE_ENV==='test') 
+if (util.regime==='test')
     exports._private = {match:       match,
 			copy_context:copy_context};
