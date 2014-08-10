@@ -1,5 +1,6 @@
 var _util = require('util');
 var shell = require('shelljs');
+var    fs = require('fs');
 
 exports.verbosity = 2;
 
@@ -15,7 +16,7 @@ exports.error  = function (msg) {
 	_util.error(_util.format.apply(null,arguments));
 };
 
-exports.source_version = function() {
+exports.source_version = (function() {
     var cmd;
     var out;
     cmd = shell.exec("hg id -t",{silent:true});
@@ -25,6 +26,20 @@ exports.source_version = function() {
     cmd = shell.exec("hg id -i",{silent:true});
     if (cmd.code===0)
 	return cmd.output.trim();
-    // +++ try other VCSs to make generic
-    // +++ if all fails, use value from package.json +++
-};
+
+    return JSON.parse(fs.readFileSync('./package.json')).version;
+})();
+
+exports.regime = (function() {
+    var regime = process.env.NODE_REGIME;
+    if (regime=='production')
+	regime = 'prod';
+    if (regime=='')
+	regime = 'dev';
+    if (['dev','prod','test'].filter(function(x) {return x===regime;})===[])
+	throw new Error(_util.format("bad regime: %j",regime));
+    return regime;
+})();
+
+if (exports.regime==='prod' && exports.source_version.slice(-1)==='+')
+    throw new Error("must run registered code in production");
