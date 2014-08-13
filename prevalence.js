@@ -128,6 +128,7 @@ function open(dirname) {
     journal = fs.openSync(dirname+"/state/journal","a");
     dir     = dirname;
     date    = null;
+    t       = 0;
 };
 
 function close(dirname) {
@@ -320,6 +321,45 @@ exports.wrap = function(dir,bl,options) {
     }
     bl_running = false;
     return wrap(dir,bl,options);
+};
+
+exports.installHandlers = function(app,options) {
+    var express = require('express');
+    options        = options || {};
+    options.prefix = options.prefix || '/replication';
+    if (audit) {
+	app.get(options.prefix+'/hashes',function(req,res) {
+	    fs.readdir(dir+'/hashes',function(err,files) {
+		if (err) {
+		    res.writeHead(500,"can't list hashes directory");
+		} else {
+		    res.writeHead(200,{'Content-Type':'application/json'});
+		    res.write(JSON.stringify(files));
+		}
+		res.end();
+	    });
+	});
+	app.use(options.prefix+'/hash',express.static(dir+'/hashes'));
+    }
+    app.get(options.prefix+'/journal',function(req,res) {
+	var   live = req.param('live')==='1';
+	var resume = req.param('resume');
+	if (resume) {
+	    // +++ format is <size-in-bytes>,<hash> +++
+	    throw new Error("WriteMe");
+	}
+	// +++ if `live` lock journal from writing until sent +++
+	// +++ better to use `readFileSync` to get locking for free? +++
+	// +++ or use `createReadStream` on `journal` fd +++
+	// +++ or take journal lines one-by-one and use `t` to sync +++
+	// +++ with streaming journal +++
+	var input = fs.createReadStream(dir+'/state/journal');
+	var wpipe = input.pipe(res);
+	if (live) {
+	    // +++ append live stream to `wpipe` +++
+	    throw new Error("WriteMe");
+	}
+    });
 };
 
 if (util.regime==='test')

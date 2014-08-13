@@ -128,12 +128,16 @@ conns.broadcast = function(js) {
 }
 
 sock.on('connection',function(conn) {
-    util.debug("connection from: %s:%s",conn.remoteAddress,conn.remotePort);
-    // +++ pass a `cmd` arg through in `options` below +++
-    // +++ this to invoke a prevalent handler +++
-    // +++ which in turn invokes the core business logic +++
-    new MalayaConnection(conn,{passwd:{jk:[''],
-				       di:[''] } });
+    switch (conn.prefix) {
+    case '/data':
+	util.debug("client connection from: %s:%s to %s",conn.remoteAddress,conn.remotePort,conn.prefix);
+	// +++ pass a `cmd` arg through in `options` below +++
+	// +++ this to invoke a prevalent handler +++
+	// +++ which in turn invokes the core business logic +++
+	new MalayaConnection(conn,{passwd:{jk:[''],
+					   di:[''] } });
+	break;
+    };
 });
 
 function do_cmd(cmd) {
@@ -146,6 +150,8 @@ setInterval(function() {
 },1000);
 
 sock.installHandlers(http,{prefix:'/data'});
+
+prvl.installHandlers(app, {prefix:'/replication'});
 
 http.listen(port,function() {
     util.debug('http listening on *:%s',port);
