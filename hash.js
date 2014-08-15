@@ -29,15 +29,18 @@ module.exports = function(algorithm) {
 		makeFilename: function(h) {
 		    return dirname+'/'+h;
 		},
+		contains: function(h) {
+		    return fs.existsSync(store.makeFilename(h));
+		},
 		putFileSync: function(filename) {
 		    return store.putSync(fs.readFileSync(filename));
 		},
 		putSync: function(x) {
-		    var h  = ans.hash(x);
-		    var fn = store.makeFilename(h);
-		    if (!fs.existsSync(fn)) {
+		    var        h = ans.hash(x);
+		    var filename = store.makeFilename(h);
+		    if (!fs.existsSync(filename)) {
 			util.debug("adding new hash to store: %s",h);
-			fs.writeFileSync(fn,x);
+			fs.writeFileSync(filename,x);
 		    }
 		    return h;
 		},
@@ -47,28 +50,38 @@ module.exports = function(algorithm) {
 		getHashes:function() {
 		    return fs.readdirSync(dirname);
 		},
-		sanityCheck:function(hash) {
+		sanityCheck:function(options) {
 		    var hashes = store.getHashes();
 		    for (var k in hashes) { // check all hashes are sound
 			var h = hashes[k];
 			if (ans.hash(store.getSync(h))!==h)
 			    throw new Error("broken hash: "+h);
 		    }
-		    while (hash) {          // ensure there is a full history for this hash 
-			util.readFileLinesSync(dirname+'/'+hash,function(line) {
+		    var hash = options.hash;
+		    while (hash) {          // ensure there is a full history for this hash
+			var i = 0;
+			util.readFileLinesSync(store.makeFilename(hash),function(line) {
 			    var js = util.deserialise(line);
-			    switch (js[1]) {
-			    case 'init':
-				hash = null;
-				break;
-			    case 'previous':
-				hash = js[2];
-				break;
-			    default:
-				throw new Error(util.format("bad log file hash: %s",hash));
+			    if (i++===0) {
+				switch (js[1]) {
+				case 'init':
+				    hash = null;
+				    break;
+				case 'previous':
+				    hash = js[2];
+				    break;
+				default:
+				    throw new Error(util.format("bad log file hash: %s",hash));
+				}
+			    } else if (options.code) {
+				if (js[1]==='code') {
+				    for (var k in js[2][2]) {
+					if (!store.contains(js[2][2][k]))
+					    throw new Error("can't find source code for %s",k);
+				    }
+				}
 			    }
-			    // +++ if super-paranoid check hashes in 'logic' items +++
-			    return false; // only read first line
+			    return options.code; // only read whole file if checking `code` items
 			});
 		    }
 		}
