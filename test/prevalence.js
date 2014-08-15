@@ -3,7 +3,7 @@ var prvl   = require("../prevalence.js");
 var assert = require("assert");
 var temp   = require('temp');  
 var fs     = require('fs');
-var util   = require('../util.js')
+var util   = require('../util.js');
 
 temp.track();			// auto-cleanup at exit
 
@@ -57,6 +57,7 @@ describe('wrap()',function() {
 	assert.equal(wbl.query('n'),104);
 	wbl.update('tick');
 	assert.equal(wbl.query('n'),105);
+	wbl.close();
     });
     it("should restore from journal",function() {
 	var  bl = new BL();
@@ -80,28 +81,3 @@ describe('wrap()',function() {
     });
 });
 
-describe('time()',function() {
-    it("should provide a stable tick",function() {
-	var  bl = new BL();
-	var dir = temp.mkdirSync();
-	var wbl = prvl._private.wrap(dir,bl,{audit:false});
-	var   t;
-	wbl.init();
-	assert.equal(prvl.time(),0);
-	wbl.open();
-	t = prvl.time(); wbl.update('tick'); assert.ok(prvl.time()>t);
-	t = prvl.time(); wbl.update('tick'); assert.ok(prvl.time()>t);
-	t = prvl.time(); wbl.update('tick'); assert.ok(prvl.time()>t);
-	t = prvl.time(); wbl.update('tick'); assert.ok(prvl.time()>t);
-	t = prvl.time();
-	wbl.save();
-	wbl.close();
-	wbl = prvl._private.wrap(dir,bl,{audit:false});
-	wbl.open();
-	wbl.load();
-	assert.equal(prvl.time(),t);
-    });
-    it("should provide a stable date",function() {
-	// +++
-    });
-});

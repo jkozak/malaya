@@ -31,9 +31,9 @@ var path  = require("path");
 var util  = require("./util.js");
 
 var dir     = null;
-var journal = null;		// file descriptor
+var fd_jrnl = null;		// file descriptor
 var date    = null;		// effective Date object
-var t       = null;		// consistent timey thing
+var t_jrnl  = null;		// #lines in active journal
 
 var audit      = false;
 var hash_store;
@@ -41,71 +41,18 @@ var bl_src;
 var bl_files;
 var bl_running;
 
+var sanity_check = true;	// default to true if running production
+
 var source_version = util.source_version;
-
-// object stashing format:
-//  JSON with extra encoding:
-//     string "abc" is encoded as ":abc"
-//     date   DDD   is encoded as "date:"+DDD
-//     ...
-function serialise(v) {
-    return JSON.stringify(v,function(k,v) {
-	if (v instanceof Date)
-	    return "date:"+v;
-	else if (typeof v==="string")
-	    return ":"+v;
-	else
-	    return v;
-    });
-}
-function deserialise(s) {
-    return JSON.parse(s,function(k,v) {
-	if (typeof v!=="string")
-	    return v;
-	else if (v.charAt(0)==':')
-	    return v.substring(1);
-	else if (v.startsWith("date:"))
-	    return new Date(v.substring(5)); // "date:".length===5
-	else
-	    return v;
-    });
-}
-
-function readFdLinesSync(fd,fn) {
-    var bufferSize = 1024;
-    var buffer     = new Buffer(bufferSize);
-    var leftOver   = '';
-    var read,line,idxStart,idx;
-    while ((read=fs.readSync(fd,buffer,0,bufferSize,null))!==0) {
-	leftOver += buffer.toString('utf8',0,read);
-	idxStart  = 0
-	while ((idx=leftOver.indexOf("\n",idxStart))!==-1) {
-	    line = leftOver.substring(idxStart,idx);
-	    fn(line);
-	    idxStart = idx+1;
-	}
-	leftOver = leftOver.substring(idxStart);
-    }
-}
-
-function readFileLinesSync(path,fn) {
-    var fd = fs.openSync(path,"r+");
-    try {
-	readFdLinesSync(fd,fn);
-    } finally {
-	fs.closeSync(fd);
-    }
-}
 
 function init(dirname,options) {
     // prepare a directory to be a store
     fs.mkdirSync(dirname+"/state");
-    fs.writeFileSync( dirname+"/state/world",serialise(0)+"\n");
-    fs.appendFileSync(dirname+"/state/world",serialise(null)+"\n");
-    fs.appendFileSync(dirname+"/state/world",serialise([])+"\n");
-    fs.writeFileSync( dirname+"/state/journal",serialise(journal_entry('init',options))+"\n");
-    dir = null;
-    t   = 0;
+    fs.writeFileSync(dirname+"/state/world",util.serialise(null)+"\n");
+    fs.appendFileSync(dirname+"/state/world",util.serialise({})+"\n");
+    open(dirname);
+    journalise('init',options);
+    close();
 };
 
 function open(dirname) {
@@ -125,44 +72,31 @@ function open(dirname) {
 	    }
 	}
     }
-    journal = fs.openSync(dirname+"/state/journal","a");
+    fd_jrnl = fs.openSync(dirname+"/state/journal","a");
     dir     = dirname;
     date    = null;
-    t       = 0;
+    t_jrnl  = null;
 };
 
-function close(dirname) {
+function close() {
     // close a store (quickly)
-    if (journal)
-	fs.closeSync(journal);
-    journal = null;
+    if (fd_jrnl)
+	fs.closeSync(fd_jrnl);
+    fd_jrnl = null;
     dir     = null;
     date    = null;
-    t       = null;
+    t_jrnl  = null;
 };
-
-function journal_entry(type,datum) {
-    date = new Date();
-    return [date,type,datum];
-}
 
 function journalise(type,datum) {
     // write a journal entry
-    if (journal===null)
+    if (fd_jrnl===null)
 	throw new Error("journal is closed");
     date = new Date();
-    var s = serialise(journal_entry(type,datum));
-    fs.writeSync(journal,s,   s.length,null);
-    fs.writeSync(journal,'\n',1,       null);
-    fs.fsyncSync(journal);
-    t++;
-};
-
-exports.time = function() {
-    // get timer tick
-    if (t===null)
-	throw new Error("t unset");
-    return t;
+    t_jrnl++;
+    var s = util.serialise([date,type,datum])+'\n';
+    fs.writeSync(fd_jrnl,s,s.length,null);
+    fs.fsyncSync(fd_jrnl);
 };
 
 exports.date = function() {
@@ -176,29 +110,25 @@ function save(root) {
     // close a store by writing a new image (slow)
     if (dir===null)
 	throw new Error("must be open to save");
+    var dir_sav = dir;
     var dir_cur = dir+"/state"
     var dir_new = dir+"/state-NEW";
     var dir_old = dir+"/state-OLD";
     var syshash = null;
-    fs.closeSync(journal);
-    journal = null;
+    close();
     if (audit) 
 	syshash = hash_store.putFileSync(dir_cur+"/journal");
     rm_rf.sync(dir_new);
     fs.mkdirSync(dir_new);
-    fs.writeFileSync( dir_new+"/world",serialise(t));    // tick
+    fs.writeFileSync( dir_new+"/world",util.serialise(syshash));
     fs.appendFileSync(dir_new+"/world","\n");
-    fs.appendFileSync(dir_new+"/world",serialise(syshash));
+    fs.appendFileSync(dir_new+"/world",util.serialise(root));
     fs.appendFileSync(dir_new+"/world","\n");
-    fs.appendFileSync(dir_new+"/world",serialise(root)); // root
-    fs.appendFileSync(dir_new+"/world","\n");
-    fs.writeFileSync( dir_new+"/journal",serialise(journal_entry('previous',syshash)));
-    fs.appendFileSync(dir_new+"/journal","\n");
     rm_rf.sync(dir_old);
     fs.renameSync(dir_cur,dir_old);
     fs.renameSync(dir_new,dir_cur);
-    journal = fs.openSync(dir_cur+"/journal","a");
-    date    = null;
+    open(dir_sav);
+    journalise('previous',syshash);
 };
 
 function load(fn_root,fn_datum) {
@@ -209,29 +139,41 @@ function load(fn_root,fn_datum) {
     // load a store
     if (dir===null)
 	throw new Error("must be open to load");
-    readFileLinesSync(world_file,function(line) {
+    util.readFileLinesSync(world_file,function(line) {
 	switch (lineno++) {
 	case 1:
-	    t = deserialise(line);
+	    syshash = util.deserialise(line); // only used by humans so far
 	    return true;
 	case 2:
-	    syshash = deserialise(line); // only used by humans so far
-	    return true;
-	case 3:
-	    fn_root(deserialise(line));
+	    fn_root(util.deserialise(line));
 	    return false;
 	}
     });
-    readFileLinesSync(journal_file,function(line) {
-	var di = deserialise(line);
-	date = di[0];
-	if (di[1]=='update')
-	    fn_datum(di[2]);
-	date = null;
-	return true;
-    });
+    try {
+	t_jrnl = 0;
+	util.readFileLinesSync(journal_file,function(line) {
+	    var di = util.deserialise(line);
+	    date = di[0];
+	    if (di[1]=='update')
+		fn_datum(di[2]);
+	    date = null;
+	    t_jrnl++;
+	    return true;
+	});
+	if (t_jrnl===0)
+	    journalise('previous',syshash);
+    } catch (e) {
+	if (e.code==='ENOENT')
+	    journalise('previous',syshash);
+	else
+	    throw e;
+    }
     // +++ don't create journal-file in `save` +++
     // +++ add `previous` line to journal here +++
+    if (audit && sanity_check) {
+	util.debug("sanity checking...");
+	hash_store.sanityCheck(syshash);
+    }
 };
 
 function wrap(dir,bl,options) {
@@ -265,8 +207,8 @@ function wrap(dir,bl,options) {
 	},
 	update:function(u) {
 	    try {
-		bl_running = true;
 		journalise('update',u);
+		bl_running = true;
 		return bl.update(u);
 	    } finally {
 		bl_running = false;
@@ -349,10 +291,10 @@ exports.installHandlers = function(app,options) {
 	    throw new Error("WriteMe");
 	}
 	// +++ if `live` lock journal from writing until sent +++
-	// +++ better to use `readFileSync` to get locking for free? +++
+	// +++ better to use `util.readFileSync` to get locking for free? +++
 	// +++ or use `createReadStream` on `journal` fd +++
-	// +++ or take journal lines one-by-one and use `t` to sync +++
-	// +++ with streaming journal +++
+	// +++ or take journal lines one-by-one and use `t_jrnl` to sync +++
+	// +++ with streaming journal (use `byline` for enlining) +++
 	var input = fs.createReadStream(dir+'/state/journal');
 	var wpipe = input.pipe(res);
 	if (live) {

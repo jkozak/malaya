@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 "use strict";
 
 var     argv = require('minimist')(process.argv.slice(2));
@@ -8,6 +10,7 @@ var readline = require('readline');
 if (argv._.length!=1) {
     util.error("wrong number of args");
     process.exit(100);
+    // connection URL you want is probably `http://localhost:3000/data`
 }
 
 var sock = new SockJS(argv._[0]);
