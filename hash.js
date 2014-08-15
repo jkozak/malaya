@@ -10,15 +10,17 @@ module.exports = function(algorithm) {
 	init: function(dirname) {
 	    try {		// if dirname doesn't exist, create it
 		var st = fs.statSync(dirname);
-		// +++ check it's a directory +++
-		// +++ delete any staging files therein +++
+		if (!st.isDirectory())
+		    throw new Error(util.format("hash store %j exists and is not a directory",dirname));
 	    } catch (err) {
-		// +++ check `err` is "file not found" +++
-		try {
-		    fs.mkdirSync(dirname);
-		} catch (err1) {
-		    throw new Error("can't find or open a hashstore at: "+JSON.stringify(dirname));
-		}
+		if (err.code==='ENOENT') {
+		    try {
+			fs.mkdirSync(dirname);
+		    } catch (err1) {
+			throw new Error(util.format("can't find or open a hashstore at: %j",dirname));
+		    }
+		} else
+		    throw err;
 	    }
 	},
 	make_store: function(dirname) {
@@ -45,10 +47,29 @@ module.exports = function(algorithm) {
 		getHashes:function() {
 		    return fs.readdirSync(dirname);
 		},
-		sanityCheck:function() {
-		    for (var k in store.getHashes()) {
-			if (ans.hash(store.getSync(k))!==k)
-			    throw new Error("broken hash: "+k);
+		sanityCheck:function(hash) {
+		    var hashes = store.getHashes();
+		    for (var k in hashes) { // check all hashes are sound
+			var h = hashes[k];
+			if (ans.hash(store.getSync(h))!==h)
+			    throw new Error("broken hash: "+h);
+		    }
+		    while (hash) {          // ensure there is a full history for this hash 
+			util.readFileLinesSync(dirname+'/'+hash,function(line) {
+			    var js = util.deserialise(line);
+			    switch (js[1]) {
+			    case 'init':
+				hash = null;
+				break;
+			    case 'previous':
+				hash = js[2];
+				break;
+			    default:
+				throw new Error(util.format("bad log file hash: %s",hash));
+			    }
+			    // +++ if super-paranoid check hashes in 'logic' items +++
+			    return false; // only read first line
+			});
 		    }
 		}
 	    };
