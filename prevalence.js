@@ -172,7 +172,7 @@ function load(fn_root,fn_datum) {
     // +++ add `previous` line to journal here +++
     if (audit && sanity_check) {
 	util.debug("sanity checking...");
-	hash_store.sanityCheck(syshash);
+	hash_store.sanityCheck({hash:syshash,code:true});
     }
 };
 
@@ -185,7 +185,7 @@ function wrap(dir,bl,options) {
 	open:function() {
 	    open(dir);
 	    if (audit) {
-		journalise('logic',[source_version,bl_src,bl_files]);
+		journalise('code',[source_version,bl_src,bl_files]);
 	    }
 	},
 	save:function() {

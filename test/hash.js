@@ -2,6 +2,7 @@ var hash   = require("../hash.js");
 
 var assert = require("assert");
 var temp   = require('temp');  
+var util   = require('../util.js');  
 var fs     = require('fs');
 
 temp.track();			// auto-cleanup at exit
@@ -38,6 +39,23 @@ describe("hash('sha1')",function() {
 	assert.notEqual(store.getHashes().indexOf("da39a3ee5e6b4b0d3255bfef95601890afd80709"),-1);
 	assert.notEqual(store.getHashes().indexOf("02e0182ae38f90d11be647e337665e67f9243817"),-1);
     });
-    it("",function() {
+    it("should detect containment",function() {
+	var   dir = temp.mkdirSync();
+	var store = hash('sha1').make_store(dir);
+	assert.ok( store.contains(store.putSync('this is a test line')));
+	assert.ok(!store.contains(hash('sha1').hash('')));
+	assert.ok( store.contains(store.putSync('')));
+    });
+    it("should check store for consistency",function() {
+	var   dir = temp.mkdirSync();
+	var store = hash('sha1').make_store(dir);
+	var     h = store.putSync('this is the right line');
+	assert.doesNotThrow(function() {
+	    store.sanityCheck({});
+	});
+	fs.writeFileSync(store.makeFilename(h),"this is the wrong line");
+	assert.throws(function() {
+	    store.sanityCheck({});
+	});
     });
 });
