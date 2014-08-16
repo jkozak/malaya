@@ -24,6 +24,8 @@ var opts = {audit:true};
 var PREVALENCE_DIR = argv.d || '.prevalence';
 var        WEB_DIR = 'www';
 
+var   WANT_LOGGING = true;
+
 if (argv.p) {
     port = parseInt(argv.p);
 } else {
@@ -147,6 +149,9 @@ function do_cmd(cmd) {
 setInterval(function() {
     do_cmd(['EXEC',[],{user:'%ticker'}]);
 },1000);
+
+if (WANT_LOGGING)
+    app.use(require('morgan')(":remote-addr - :remote-user [:date] \":method :url HTTP/:http-version\" :status :res[content-length] \":referrer\" \":user-agent\" :res[etag]"));
 
 sock.installHandlers(http,{prefix:'/data'});
 
