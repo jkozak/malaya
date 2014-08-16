@@ -2,15 +2,17 @@
 
 "use strict";
 
-var argv = require('minimist')(process.argv.slice(2));
+var    argv = require('minimist')(process.argv.slice(2));
 
-var util = require('./util.js');
+var    util = require('./util.js');
 
-var  app = require('express')();
-var http = require('http').Server(app);
-var   fs = require('fs');
-var sock = require('sockjs').createServer();
-var prvl = require('./prevalence.js');
+var express = require('express');
+
+var     app = express();
+var    http = require('http').Server(app);
+var      fs = require('fs');
+var    sock = require('sockjs').createServer();
+var    prvl = require('./prevalence.js');
 
 require("sweet.js");		    // support for .sjs files
 var chrjs = require("./chrjs.sjs"); // support for .chrjs files
@@ -20,6 +22,7 @@ var fe3p = 5110;
 var opts = {audit:true};
 
 var PREVALENCE_DIR = argv.d || '.prevalence';
+var        WEB_DIR = 'www';
 
 if (argv.p) {
     port = parseInt(argv.p);
@@ -63,10 +66,6 @@ process.on('SIGHUP',function() {
     bl.save();
 });
 process.on('exit',function(code) {
-});
-
-app.get('/',function(req,res) {
-    res.sendfile('index.html');
 });
 
 var conns = [];
@@ -152,6 +151,13 @@ setInterval(function() {
 sock.installHandlers(http,{prefix:'/data'});
 
 prvl.installHandlers(app, {prefix:'/replication'});
+
+app.get('/',function(req,res) {
+    res.redirect('/index.html');
+});
+if (opts.audit)
+    app.use((WEB_DIR,prvl.createExpressMiddleware(WEB_DIR)));
+app.use(express.static(WEB_DIR));
 
 http.listen(port,function() {
     util.debug('http listening on *:%s',port);

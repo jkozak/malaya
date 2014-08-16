@@ -171,8 +171,41 @@ function load(fn_root,fn_datum) {
     // +++ don't create journal-file in `save` +++
     // +++ add `previous` line to journal here +++
     if (audit && sanity_check) {
+	var deep_check = true;
 	util.debug("sanity checking...");
-	hash_store.sanityCheck({hash:syshash,code:true});
+	hash_store.sanityCheck();
+	for (var hash=syshash;hash;) {          // ensure there is a full history for this hash
+	    var i = 0;
+	    util.readFileLinesSync(hash_store.makeFilename(hash),function(line) {
+		var js = util.deserialise(line);
+		if (i++===0) {
+		    switch (js[1]) {
+		    case 'init':
+			hash = null;
+			break;
+		    case 'previous':
+			hash = js[2];
+			break;
+		    default:
+			throw new Error(util.format("bad log file hash: %s",hash));
+		    }
+		} else if (deep_check) {
+		    switch (js[1]) {
+		    case 'code':
+			for (var k in js[2][2]) {
+			    if (!hash_store.contains(js[2][2][k]))
+				throw new Error("can't find source code for %s",k);
+			}
+			break;
+		    case 'http':
+			if (!hash_store.contains(js[2][1]))
+			    throw new Error(util.format("can't find http item for %s",k));
+			break;
+		    }
+		}
+		return deep_check; // only read whole file if checking `code` items
+	    })
+	}
     }
 };
 
@@ -263,6 +296,40 @@ exports.wrap = function(dir,bl,options) {
     }
     bl_running = false;
     return wrap(dir,bl,options);
+};
+
+exports.createExpressMiddleware = function(path) {
+    var express = require('express');
+    var    seen = {};
+    var encache = function(url,filename,entry) {
+	entry.hash = hash_store.putFileSync(filename);
+	journalise('http',[url,entry.hash]);
+	seen[url] = entry;
+    };
+    return function(req,res,next) {
+	if (req.method==='GET' || req.method==='HEAD') {
+	    try {
+		var sn = seen[req.url];
+		var fn = path+req.url;
+		var st = fs.statSync(fn);
+		var en = {mtime:st.mtime,size:st.size};
+		if (sn) {
+		    if (st.size!==sn.size || st.mtime.getTime()!==sn.mtime.getTime()) // has base file changed?
+			encache(req.url,fn,en);
+		} else
+		    encache(req.url,fn,en);
+		sn = seen[req.url];
+		res.setHeader("Content-Type",express.static.mime.lookup(req.url));
+		res.setHeader("ETag",        sn.hash);
+		res.status(200).sendfile(hash_store.makeFilename(sn.hash));
+		return;
+	    } catch (e) {
+		if (e.code!=='ENOENT')
+		    throw e;
+	    }
+	}
+	next();
+    };
 };
 
 exports.installHandlers = function(app,options) {
