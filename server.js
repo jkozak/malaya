@@ -6,12 +6,7 @@ var    argv = require('minimist')(process.argv.slice(2));
 
 var    util = require('./util.js');
 
-var express = require('express');
-
-var     app = express();
-var    http = require('http').Server(app);
 var      fs = require('fs');
-var    sock = require('sockjs').createServer();
 var    prvl = require('./prevalence.js');
 
 require("sweet.js");		    // support for .sjs files
@@ -128,19 +123,6 @@ conns.broadcast = function(js) {
     }
 }
 
-sock.on('connection',function(conn) {
-    switch (conn.prefix) {
-    case '/data':
-	util.debug("client connection from: %s:%s to %s",conn.remoteAddress,conn.remotePort,conn.prefix);
-	// +++ pass a `cmd` arg through in `options` below +++
-	// +++ this to invoke a prevalent handler +++
-	// +++ which in turn invokes the core business logic +++
-	new MalayaConnection(conn,{passwd:{jk:[''],
-					   di:[''] } });
-	break;
-    };
-});
-
 function do_cmd(cmd) {
     // +++ detect if query or update and maybe skip journalisation +++
     return bl.update(cmd);
@@ -150,23 +132,43 @@ setInterval(function() {
     do_cmd(['EXEC',[],{user:'%ticker'}]);
 },1000);
 
-if (WANT_LOGGING)
-    app.use(require('morgan')(":remote-addr - :remote-user [:date] \":method :url HTTP/:http-version\" :status :res[content-length] \":referrer\" \":user-agent\" :res[etag]"));
+if (port) {
+    var express = require('express');
+    var     app = express();
+    var    http = require('http').Server(app);
+    var    sock = require('sockjs').createServer();
+    
+    if (WANT_LOGGING)
+	app.use(require('morgan')(":remote-addr - :remote-user [:date] \":method :url HTTP/:http-version\" :status :res[content-length] \":referrer\" \":user-agent\" :res[etag]"));
 
-sock.installHandlers(http,{prefix:'/data'});
+    sock.on('connection',function(conn) {
+	switch (conn.prefix) {
+	case '/data':
+	    util.debug("client connection from: %s:%s to %s",conn.remoteAddress,conn.remotePort,conn.prefix);
+	    // +++ pass a `cmd` arg through in `options` below +++
+	    // +++ this to invoke a prevalent handler +++
+	    // +++ which in turn invokes the core business logic +++
+	    new MalayaConnection(conn,{passwd:{jk:[''],
+					       di:[''] } });
+	    break;
+	};
+    });
 
-prvl.installHandlers(app, {prefix:'/replication'});
+    sock.installHandlers(http,{prefix:'/data'});
 
-app.get('/',function(req,res) {
-    res.redirect('/index.html');
-});
-if (opts.audit)
-    app.use((WEB_DIR,prvl.createExpressMiddleware(WEB_DIR)));
-app.use(express.static(WEB_DIR));
+    prvl.installHandlers(app, {prefix:'/replication'});
 
-http.listen(port,function() {
-    util.debug('http listening on *:%s',port);
-});
+    app.get('/',function(req,res) {
+	res.redirect('/index.html');
+    });
+    if (opts.audit)
+	app.use((WEB_DIR,prvl.createExpressMiddleware(WEB_DIR)));
+    app.use(express.static(WEB_DIR));
+
+    http.listen(port,function() {
+	util.debug('http listening on *:%s',port);
+    });
+}
 
 if (fe3p) {
     var fe3 = require('./fe3.js').createServer({});
