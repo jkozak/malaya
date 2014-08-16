@@ -95,7 +95,7 @@ exports.source_version = (function() {
 })();
 
 exports.regime = (function() {
-    var regime = process.env.NODE_REGIME;
+    var regime = process.env.NODE_ENV;
     if (regime==='production')
 	regime = 'prod';
     if (regime==='' || regime===undefined)
