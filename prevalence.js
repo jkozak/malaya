@@ -371,6 +371,6 @@ exports.installHandlers = function(app,options) {
     });
 };
 
-if (util.regime==='test')
+if (util.env==='test')
     exports._private = {wrap: wrap};
 
