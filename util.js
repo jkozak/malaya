@@ -94,16 +94,16 @@ exports.source_version = (function() {
     return JSON.parse(fs.readFileSync('./package.json')).version;
 })();
 
-exports.regime = (function() {
-    var regime = process.env.NODE_ENV;
-    if (regime==='production')
-	regime = 'prod';
-    if (regime==='' || regime===undefined)
-	regime = 'dev';
-    if (!{dev:true,prod:true,test:true}[regime])
-	throw new Error(_util.format("bad regime: %j",regime));
-    return regime;
+exports.env = (function() {
+    var env = process.env.NODE_ENV;
+    if (env==='production')
+	env = 'prod';
+    if (env==='' || env===undefined)
+	env = 'dev';
+    if (!{dev:true,prod:true,test:true}[env])
+	throw new Error(_util.format("bad NODE_ENV: %j",env));
+    return env;
 })();
 
-if (exports.regime==='prod' && exports.source_version.slice(-1)==='+')
+if (exports.env==='prod' && exports.source_version.slice(-1)==='+')
     throw new Error("must run registered code in production");
