@@ -162,7 +162,7 @@ if (port) {
 	res.redirect('/index.html');
     });
     if (opts.audit)
-	app.use((WEB_DIR,prvl.createExpressMiddleware(WEB_DIR)));
+	app.use(prvl.createExpressMiddleware(WEB_DIR));
     app.use(express.static(WEB_DIR));
 
     http.listen(port,function() {

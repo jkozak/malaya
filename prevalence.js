@@ -275,13 +275,9 @@ exports.wrap = function(dir,bl,options) {
 	for (var k in require.extensions) {
 	    require.extensions[k] = (function(ext) {
 		return function(module,filename) {
-		    if (bl_running) {
+		    if (bl_running) 
 			bl_files[filename] = hash_store.putFileSync(filename);
-			return ext(module,filename);
-		    }
-		    else {
-			return ext(module,filename);
-		    }
+		    return ext(module,filename);
 		} })(require.extensions[k]);
 	}
     }
@@ -372,5 +368,7 @@ exports.installHandlers = function(app,options) {
 };
 
 if (util.env==='test')
-    exports._private = {wrap: wrap};
+    exports._private = {wrap:         wrap,
+			getHashStore: function() {return hash_store;},
+			hash:         hash};
 
