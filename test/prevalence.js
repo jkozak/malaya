@@ -5,6 +5,7 @@ var temp   = require('temp');
 var fs     = require('fs');
 var util   = require('../util.js');
 var path   = require('path');
+var qc     = require('quickcheck');
 
 temp.track();			// auto-cleanup at exit
 
