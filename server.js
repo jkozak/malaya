@@ -9,8 +9,7 @@ var    util = require('./util.js');
 var      fs = require('fs');
 var    prvl = require('./prevalence.js');
 
-require("sweet.js");		    // support for .sjs files
-var chrjs = require("./chrjs.sjs"); // support for .chrjs files
+var   chrjs = require("./chrjs.js");  // adds support for .chrjs files
 
 var port;
 var fe3p = 5110;

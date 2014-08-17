@@ -1,9 +1,3 @@
-
-var util    = require("./util.js");
-var sweet   = require("sweet.js");
-var codegen = require('escodegen');
-var fs      = require('fs');
-
 macroclass head {
     pattern {
 	rule { [ $heads:head (,) ...] }
@@ -15,10 +9,7 @@ macroclass head {
 	rule { [ $[...] $rest:id] }
     }
     pattern {
-	rule { $l:lit }
-    }
-    pattern {
-	rule { $id:id }
+	rule { $x:expr }
     }
 };
 
@@ -52,17 +43,21 @@ macroclass chr_body_term {
     }
 };
 
+// !!! should be when {...} not when (...)  !!!
 macroclass chr_rule {
     pattern {
-	rule { when { $heads:term (;) ...} $body:chr_body_term }
+	rule { when ( $heads:term (;) ... ) $body:chr_body_term }
     }
 };
 
 macro store {
-    rule { $rules:chr_rule (;) ... }
+    rule { { $rules:chr_rule (;) ... } }
 };
 
-require.extensions['.chrjs'] = function(module,filename) {
-    var content = fs.readFileSync(filename,'utf8');
-    module._compile(codegen.generate(sweet.parse(content,sweet.loadedMacros)),filename);
+
+// testing only
+macro foo {
+    rule { $x } => { $x + 'rule1' }
 };
+
+
