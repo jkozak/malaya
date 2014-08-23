@@ -1,6 +1,7 @@
 var _util = require('util');
 var shell = require('shelljs');
 var    fs = require('fs');
+var    ds = require('data-structures');
 
 exports.verbosity = 3;
 
@@ -104,6 +105,18 @@ exports.env = (function() {
 	throw new Error(_util.format("bad NODE_ENV: %j",env));
     return env;
 })();
+
+exports.Set = function() {
+    this.map  = new ds.Map();
+    this.size = this.map.size;
+    return this;
+};
+exports.Set.prototype.has     = function(k) {return this.map.has(k);};
+exports.Set.prototype.add     = function(k) {this.map.set(k,null);this.size=this.map.size;};
+exports.Set.prototype.delete  = function(k) {this.map.delete(k);this.size=this.map.size;};
+exports.Set.prototype.forEach = function(f) {this.map.forEach(f);};
+
+exports.Map = ds.Map;
 
 if (exports.env==='prod' && exports.source_version.slice(-1)==='+')
     throw new Error("must run registered code in production");
