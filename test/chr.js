@@ -100,7 +100,7 @@ describe('match()',function() {
 });
 
 describe('Store',function() {
-    it("should add and remove facts",function() {
+    it("should add and delete facts",function() {
 	var store = new chr.Store();
 	assert.equal(store.size(),0);
 	var t1 = store.add([1,2,3]);
@@ -114,13 +114,13 @@ describe('Store',function() {
 	var t4 = store.add({a:1,b:2});
 	assert.ok(t4>t3);
 	assert.equal(store.size(),4);	    // multiset
-	store.remove(t1);
+	store.delete(t1);
 	assert.equal(store.size(),3);
-	store.remove(t2);
+	store.delete(t2);
 	assert.equal(store.size(),2);
-	store.remove(t4);
+	store.delete(t4);
 	assert.equal(store.size(),1);
-	store.remove(t3);
+	store.delete(t3);
 	assert.equal(store.size(),0);
     });
     describe('Aggregate',function() {
@@ -185,4 +185,55 @@ describe('Store',function() {
 	    assert.equal(store.aggregate(aggr),90);
 	});
     });
+    describe('Select',function() {
+	var total;
+	it("should guard firmly",function() {
+	    var store = new chr.Store();
+	    var  seen = false;
+	    var   sel = new chr.Select([["X",new chr.Variable('x')]],
+				       function(_){return false;},
+				       function(ctx){seen=true;} );
+	    store.add(["X",100]);
+	    store.select(sel);
+	    assert.ok(!seen);
+	});
+	it("should match a single head",function() {
+	    var store = new chr.Store();
+	    var   sel = new chr.Select([["X",new chr.Variable('x')]],
+				       function(ctx){total+=ctx['x'];} );
+	    total=0; store.select(sel); assert.equal(total,0);
+	    store.add(["X",100]);
+	    total=0; store.select(sel); assert.equal(total,100);
+	    store.add(["X",1]);
+	    total=0; store.select(sel); assert.equal(total,101);
+	    store.add(["Y",99]);
+	    total=0; store.select(sel); assert.equal(total,101);
+	});
+	it("should match dual heads",function() {
+	    var store = new chr.Store();
+	    var   sel = new chr.Select([["X",new chr.Variable('x'),new chr.Variable('p')],
+					["X",new chr.Variable('x'),new chr.Variable('q')] ],
+				       function(ctx){return ctx['p']>ctx['q'];},
+				       function(ctx){total+=ctx['p']+ctx['q'];} );
+	    store.add(["X",1,10]);
+	    store.add(["X",2,20]);
+	    store.add(["X",2,30]);
+	    total=0; store.select(sel); assert.equal(total,50);
+	});
+	it("should match triple heads",function() {
+	    var store = new chr.Store();
+	    var   sel = new chr.Select([["X",new chr.Variable('x'),new chr.Variable('p')],
+					["X",new chr.Variable('x'),new chr.Variable('q')],
+					["X",new chr.Variable('x'),new chr.Variable('r')]],
+				       function(ctx){return ctx['p']>ctx['q'] && ctx['q']>ctx['r'];},
+				       function(ctx){total+=ctx['p']+ctx['q']+ctx['r'];} );
+	    store.add(["X",1,10]);
+	    store.add(["X",1,10]);
+	    store.add(["X",2,20]);
+	    store.add(["X",2,30]);
+	    total=0; store.select(sel); assert.equal(total,0);
+	    store.add(["X",2,40]);
+	    total=0; store.select(sel); assert.equal(total,90);
+	});
+    });    
 });

@@ -19,16 +19,9 @@
 "use strict";
 
 var    _ = require('underscore');
-var  Map = require('data-structures').Map;
 var util = require('./util.js');
-
-function Set() {
-    this.map = new Map();
-    return this;
-}
-Set.prototype.has    = function(k) {return this.map.has(k);};
-Set.prototype.add    = function(k) {this.map.set(k,null);}
-Set.prototype.remove = function(k) {this.map.delete(k);}
+var  Map = util.Map;
+var  Set = util.Set;
 
 function Variable(name) {
     this.name = name;
@@ -106,6 +99,7 @@ function match(term,datum,context) {
 
 function Aggregate(matches,guard,zero,accumulate) {
     // +++ accumulate(value,term,context) >> value+value(term,context) +++
+    // +++ replace `accumulate` with forEach +++
     this.matches    = matches;
     this.guard      = guard;
     this.zero       = zero;
@@ -113,7 +107,26 @@ function Aggregate(matches,guard,zero,accumulate) {
     return this;
 }
 
-function Rule(matches,deletes,guards,asserts,adds) {
+function Select(matches,guard,forEach) {
+    if (forEach===undefined) {
+	forEach = guard;
+	guard   = true;
+    }
+    if (guard==true)
+	guard = function(_){return true;};
+    this.matches = matches;
+    this.guard   = guard;
+    this.forEach = forEach
+    return this;
+}
+
+function Rule(matches,deletes,guard,bindings,adds) {
+    this.matches    = matches;
+    this.deletes    = deletes;
+    this.guard      = guard;
+    this.bindings   = bindings;
+    this.adds       = adds;
+    return this;
 }
 
 function Index(type) {
@@ -128,7 +141,7 @@ function Store(rules) {
     this.facts        = new Map();
     this.rules        = [];
     this.indices      = [];
-    this.active       = new Set();	// of fact indices (+++ s/be in a Context +++)
+    this.in_play      = new Set();	// of fact indices (+++ s/be in a Context +++)
     this.compilations = new Map();
     return this;
 }
@@ -156,7 +169,7 @@ Store.prototype.add = function(fact) {
     this.facts.set(this.t,fact);
     return this.t;
 };
-Store.prototype.remove = function(t) {
+Store.prototype.delete = function(t) {
     this.facts.delete(t);
 };
 Store.prototype.size = function() {
@@ -165,12 +178,12 @@ Store.prototype.size = function() {
 Store.prototype.match_single_term = function(term,context,consume) {
     var self = this;
     this.facts.forEach(function(t,fact) {
-	if (!self.active.has(t)) {
-	    self.active.add(t);
+	if (!self.in_play.has(t)) {
+	    self.in_play.add(t);
 	    var ctx = copy_context(context);
 	    if (match(term,fact,ctx)) 
 		consume(fact,ctx);
-	    self.active.remove(t);
+	    self.in_play.delete(t);
 	}
     });
 };
@@ -185,14 +198,25 @@ Store.prototype.match_terms = function(terms,context,consume) {
 			       });
 };
 Store.prototype.aggregate = function(aggr,context) {
-    var value   = aggr.zero;
-    var context = {}
+    var value = aggr.zero;
+    context = context || {};
     this.match_terms(aggr.matches,context,
 		     function(term,context) {
 			 if (aggr.guard(context))
 			     value = aggr.accumulate(value,term,context);
 		     });
     return value;
+};
+Store.prototype.select = function(sel,context) {
+    context = context || {};
+    this.match_terms(sel.matches,context,
+		     function(term,context) {
+			 if (sel.guard(context))
+			     sel.forEach(context);
+		     });
+};
+Store.prototype.apply_rule_to_term = function(rule,t,context) {
+    throw new Error("NYI");
 };
 // BusinessLogic protocol (so can do `module.exports = <store>;`)
 Store.prototype.get_root = function() {
@@ -217,9 +241,12 @@ exports.Variable     = Variable;
 exports.VariableRest = VariableRest;
 exports.Rule         = Rule;
 exports.Aggregate    = Aggregate;
+exports.Select       = Select;
 exports.Store        = Store;
 exports.Index        = Index;
 
 if (util.env==='test')
-    exports._private = {match:       match,
+    exports._private = {Set:         Set,
+			Map:         Map,
+			match:       match,
 			copy_context:copy_context};
