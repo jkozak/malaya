@@ -139,7 +139,7 @@ describe('Store',function() {
 	    var  aggr = new chr.Aggregate([["X",new chr.Variable('x')]],
 					  function(_){return false;},
 					  0,
-					  function(v,_,ctx){return v+ctx['x'];} );
+					  function(v,ctx){return v+ctx['x'];} );
 	    store.add(["X",100]);
 	    assert.equal(store.aggregate(aggr),0);
 	});
@@ -148,8 +148,33 @@ describe('Store',function() {
 	    var  aggr = new chr.Aggregate([["X",new chr.Variable('x')]],
 					  function(_){return true;},
 					  0,
-					  function(v,_,ctx){return v+ctx['x'];} );
+					  function(v,ctx){return v+ctx['x'];} );
 	    assert.equal(store.aggregate(aggr),0);
+	    store.add(["X",100]);
+	    assert.equal(store.aggregate(aggr),100);
+	    store.add(["X",1]);
+	    assert.equal(store.aggregate(aggr),101);
+	    store.add(["Y",99]);
+	    assert.equal(store.aggregate(aggr),101);
+	});
+	it("should match a single head (tersely)",function() {
+	    var store = new chr.Store();
+	    var  aggr = new chr.Aggregate([["X",new chr.Variable('x')]],
+					  function(v,ctx){return (v||0)+ctx['x'];} );
+	    assert.equal(store.aggregate(aggr),undefined);
+	    store.add(["X",100]);
+	    assert.equal(store.aggregate(aggr),100);
+	    store.add(["X",1]);
+	    assert.equal(store.aggregate(aggr),101);
+	    store.add(["Y",99]);
+	    assert.equal(store.aggregate(aggr),101);
+	});
+	it("should match a single head (quite tersely)",function() {
+	    var store = new chr.Store();
+	    var  aggr = new chr.Aggregate([["X",new chr.Variable('x')]],
+					  true,
+					  function(v,ctx){return (v||0)+ctx['x'];} );
+	    assert.equal(store.aggregate(aggr),undefined);
 	    store.add(["X",100]);
 	    assert.equal(store.aggregate(aggr),100);
 	    store.add(["X",1]);
@@ -163,7 +188,7 @@ describe('Store',function() {
 					   ["X",new chr.Variable('x'),new chr.Variable('q')] ],
 					  function(ctx){return ctx['p']>ctx['q'];},
 					  0,
-					  function(v,_,ctx){return v+ctx['p']+ctx['q'];} );
+					  function(v,ctx){return v+ctx['p']+ctx['q'];} );
 	    store.add(["X",1,10]);
 	    store.add(["X",2,20]);
 	    store.add(["X",2,30]);
@@ -176,7 +201,7 @@ describe('Store',function() {
 					   ["X",new chr.Variable('x'),new chr.Variable('r')]],
 					  function(ctx){return ctx['p']>ctx['q'] && ctx['q']>ctx['r'];},
 					  0,
-					  function(v,_,ctx){return v+ctx['p']+ctx['q']+ctx['r'];} );
+					  function(v,ctx){return v+ctx['p']+ctx['q']+ctx['r'];} );
 	    store.add(["X",1,10]);
 	    store.add(["X",2,20]);
 	    store.add(["X",2,30]);

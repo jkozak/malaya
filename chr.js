@@ -98,8 +98,17 @@ function match(term,datum,context) {
 }
 
 function Aggregate(matches,guard,zero,accumulate) {
-    // +++ accumulate(value,term,context) >> value+value(term,context) +++
-    // +++ replace `accumulate` with forEach +++
+    // +++ accumulate(value,context) >> value+value(context) +++
+    if (zero===undefined && accumulate===undefined) {
+	accumulate = guard;
+	guard      = true;
+	zero       = undefined;
+    } else if (accumulate===undefined) {
+	accumulate = zero;
+	zero       = undefined;
+    }
+    if (guard===true)
+	guard = function(_){return true;};
     this.matches    = matches;
     this.guard      = guard;
     this.zero       = zero;
@@ -112,7 +121,7 @@ function Select(matches,guard,forEach) {
 	forEach = guard;
 	guard   = true;
     }
-    if (guard==true)
+    if (guard===true)
 	guard = function(_){return true;};
     this.matches = matches;
     this.guard   = guard;
@@ -202,8 +211,9 @@ Store.prototype.aggregate = function(aggr,context) {
     context = context || {};
     this.match_terms(aggr.matches,context,
 		     function(term,context) {
-			 if (aggr.guard(context))
-			     value = aggr.accumulate(value,term,context);
+			 if (aggr.guard(context)) {
+			     value = aggr.accumulate(value,context);
+			 }
 		     });
     return value;
 };
