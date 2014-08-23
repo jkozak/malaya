@@ -1,12 +1,12 @@
 {
   "name": "malaya",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "tiny vegetarian mosquito",
   "dependencies": {
+    "data-structures": "^1.4.2",
     "escodegen": "^1.3.3",
     "express": "^4.6.1",
     "minimist": "^0.2.0",
-    "mocha": "^1.20.1",
     "morgan": "^1.2.2",
     "node-sockjs-client": "^1.0.7",
     "quickcheck": "0.0.4",
@@ -19,8 +19,14 @@
     "underscore": "^1.6.0",
     "xml2js": "^0.4.4"
   },
+  "devDependencies": {
+    "mocha": "^1.20.1"
+  },
   "repository": {
     "type": "hg",
     "url": "ssh://pooka.vm.bytemark.co.uk/malaya"
+  },
+  "scripts": {
+    "test": "NODE_ENV=test mocha -C"
   }
 }
