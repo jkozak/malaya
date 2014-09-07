@@ -56,11 +56,13 @@ exports.createServer = function(opts) {
     var bl      = null;		// business logic
     var syshash = null;		// at startup
     var conns   = [];
+    var timer   = null;
     var events  = {
 	makeConnection: function(mc)   {},
 	loseConnection: function(mc)   {},
 	loaded:         function(hash) {},
-	closed:         function(hash) {}
+	closed:         function(hash) {},
+	ready:          function()     {}
     };
 
     var server = {
@@ -131,7 +133,7 @@ exports.createServer = function(opts) {
 		return bl.update(cmd);
 	    }
 
-	    setInterval(function() {
+	    timer = setInterval(function() {
 		do_cmd(['EXEC',[],{user:'%ticker'}]);
 	    },1000);
 
@@ -175,6 +177,7 @@ exports.createServer = function(opts) {
 
 		http.listen(port,function() {
 		    util.debug('http listening on *:%s',port);
+		    events.ready(); // !!! should also wait on FE3 port !!!
 		});
 	    }
 	    if (fe3p) {
@@ -203,6 +206,10 @@ exports.createServer = function(opts) {
 		conns_[i].end();
 	    var syshash = bl.save();
 	    http = fe3 = null;
+	    console.log(util.format("*** timer: %j",timer));
+	    if (timer)		// +++ tidy up timers +++
+		clearInterval(timer);
+	    bl.close();
 	    events.closed(syshash);
 	}
     };
