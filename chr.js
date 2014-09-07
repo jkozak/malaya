@@ -25,10 +25,18 @@ var  Set = util.Set;
 
 function Variable(name) {
     this.name = name;
+    return this;
 }
 
 function VariableRest(name) {
     this.name = name;
+    return this;
+}
+
+function Binding(name,fn) {
+    this.name = (name instanceof Variable) ? name.name : name;
+    this.fn   = (fn instanceof Function) ? fn : function() {return fn;};
+    return this;
 }
 
 // context is a map of names to objects
@@ -55,6 +63,8 @@ function match(term,datum,context) {
 	return bind(term.name,datum,context);
     } else if (term instanceof VariableRest) {
 	throw new Error("can't handle this here");
+    } else if (term instanceof Binding) {
+	return bind(term.name,term.fn(context));
     } else if (term instanceof Array) {
 	var rest_taken = false;
 	if (!(datum instanceof Array))
@@ -146,12 +156,37 @@ function Index(type) {
 }
 
 function Store(rules) {
-    this.t            = 0;
-    this.facts        = new Map();
-    this.rules        = [];
-    this.indices      = [];
-    this.in_play      = new Set();	// of fact indices (+++ s/be in a Context +++)
-    this.compilations = new Map();
+    var store = this;
+    this.t             = 0;
+    this.facts         = new Map();     // <t> -> <<fact>
+    this.rules         = rules || [];
+    this.indices       = [];
+    this.in_play       = new Set();	// of fact indices (+++ s/be in a Context +++)
+    this.compilations  = new Map();     // !!! not used yet !!!
+    this.createContext = function() {   // !!! not used yet !!!
+	var context = this;
+	this.bindings = {};
+	this.in_play  = Set();
+	
+	this.prototype.bind = function(n,v) {
+	    var bound = context.bindings[n];
+	    if (bound!==undefined)
+		return match(bound,v,context);
+	    else {
+		context.bindings[n] = v;
+		return true;
+	    }
+	};
+	this.prototype.clone = function() {
+	    var ans = new Context();
+	    for (var n in context.bindings)
+		ans.bindings[n] = context.bindings[v];
+	    for (var x in context.in_play) 
+		ans.in_play.add(x);
+	    return ans;
+	};
+	return this;
+    };
     return this;
 }
 Store.prototype._rebuild = function() {
@@ -181,9 +216,7 @@ Store.prototype.add = function(fact) {
 Store.prototype.delete = function(t) {
     this.facts.delete(t);
 };
-Store.prototype.size = function() {
-    return this.facts.size;
-};
+Object.defineProperty(Store.prototype,'size',{get:function() {return this.facts.size;}});
 Store.prototype.match_single_term = function(term,context,consume) {
     var self = this;
     this.facts.forEach(function(t,fact) {
@@ -249,6 +282,7 @@ Store.prototype.query = function(q) {
 
 exports.Variable     = Variable;
 exports.VariableRest = VariableRest;
+exports.Binding      = Binding;
 exports.Rule         = Rule;
 exports.Aggregate    = Aggregate;
 exports.Select       = Select;

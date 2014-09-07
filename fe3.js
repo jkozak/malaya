@@ -2,9 +2,10 @@
 
 "use strict";
 
-var util = require('./util.js');
-var  net = require('net');
-var  x2j = require('xml2js');
+var   util = require('./util.js');
+var    net = require('net');
+var    x2j = require('xml2js');
+var events = require('events');
 
 var FE3_HDR_LENGTH = 24;
 var AP_HEARTBEAT   = 909;
@@ -59,7 +60,7 @@ function FE3Connection(sock,options) {
 	sock.write(xml,'ascii');
 	sock.write(NUL);
     };
-    this.end = function() {
+    this.close = function() {
 	sock.end();
     }
     sock.on('data',function(data) {
@@ -115,11 +116,14 @@ exports.createServer = function(options) {
 	events['connect'](conn);
     });
     this.listen = function(p,h) {
-	server.on('listening',events['listening']);
 	server.listen(p,h);
+	server.on('listening',events['listening']);
     };
     this.on     = function(what,handler) {
 	events[what] = handler;
     }
+    this.close  = function() {
+	server.close();
+    };
     return this;
 }

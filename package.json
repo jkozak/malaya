@@ -1,6 +1,6 @@
 {
   "name": "malaya",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "tiny vegetarian mosquito",
   "dependencies": {
     "data-structures": "^1.4.2",
@@ -27,6 +27,8 @@
     "url": "ssh://pooka.vm.bytemark.co.uk/malaya"
   },
   "scripts": {
-    "test": "NODE_ENV=test mocha -C"
-  }
+      "test":  "NODE_ENV=test mocha -C",
+      "start": "node malaya.js"
+  },
+  "main":"malaya.js"
 }

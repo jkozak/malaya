@@ -24,8 +24,12 @@ module.exports = function(algorithm) {
 	    }
 	},
 	make_store: function(dirname) {
+	    var events = {
+		add:function(hash) {}
+	    };
 	    ans.init(dirname);
 	    var store = {
+		on: function(name,handler) {events[name]=handler;},
 		makeFilename: function(h) {
 		    return dirname+'/'+h;
 		},
@@ -39,7 +43,7 @@ module.exports = function(algorithm) {
 		    var        h = ans.hash(x);
 		    var filename = store.makeFilename(h);
 		    if (!fs.existsSync(filename)) {
-			util.debug("adding new hash to store: %s",h);
+			events.add(h);
 			fs.writeFileSync(filename,x);
 		    }
 		    return h;

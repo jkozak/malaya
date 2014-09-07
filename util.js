@@ -9,7 +9,7 @@ exports.format = _util.format;
 
 exports.debug = function (msg) {
     if (exports.verbosity>2)
-	_util.debug(_util.format.apply(null,arguments));
+	console.warn(_util.format.apply(null,arguments));
 };
 
 exports.info = function (msg) {
@@ -107,14 +107,16 @@ exports.env = (function() {
 })();
 
 exports.Set = function() {
-    this.map  = new ds.Map();
-    this.size = this.map.size;
+    this.map = new ds.Map();
     return this;
 };
 exports.Set.prototype.has     = function(k) {return this.map.has(k);};
-exports.Set.prototype.add     = function(k) {this.map.set(k,null);this.size=this.map.size;};
-exports.Set.prototype.delete  = function(k) {this.map.delete(k);this.size=this.map.size;};
+exports.Set.prototype.add     = function(k) {this.map.set(k,null);};
+exports.Set.prototype.delete  = function(k) {this.map.delete(k);};
 exports.Set.prototype.forEach = function(f) {this.map.forEach(f);};
+Object.defineProperty(exports.Set.prototype,'size',{
+    get:function() {return this.map.size;}
+});
 
 exports.Map = ds.Map;
 
