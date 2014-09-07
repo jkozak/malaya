@@ -1,2 +1,39 @@
 John's new trading system
 
+CHR should visualise quite well:
+
+ store         rule
+  ...       ... ... ... 
+  ...       ... ...
+  ...       ... ... ... ....
+           (one ... per term)
+
+Highlight active term in store and rule in red
+and matching terms in store in other colours.
+Rest grey?
+non-quiescent facts glow.
+Glow new arrivals and fade to merely active.
+Animate deletions.
+reflow at end of input/transaction.
+
+Show each term as a box containing first element,
+
+Control panel showing full versions of current rule
+and active fact.
+
+Use emoji for a quick visual "type".  Or just a
+plain old icon library.
+
+It's a Hollywood interface!
+
+Forced-directed layout:
+ * Facts repel each other.
+ * Facts are attracted:
+  * to one another when joined
+  * to the centre when:
+   * mentioned in a rule (small)
+   * mentioned in a fired rule (big)
+
+Set icons by a rule; also context menu items as
+<name>,<binding-match>,<fact>
+

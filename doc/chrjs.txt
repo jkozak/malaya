@@ -1,0 +1,77 @@
+example syntax for rules
+------------------------
+
+rule ( ['delete-bid-prices',user],
+       ['user',{name:user}],
+      -['price',{owner:user,bid}],
+      ?bid);
+rule (-['delete-bid-prices',_]);
+
+rule ( ['double-user-prices',user],    // equivalent to next
+       ['user',{name:user}],
+      -['price',{owner:user,volume,...rest}],
+      +['_price',{owner:user,volume:2*volume,...rest}]);
+rule (-['double-user-prices',_]);
+rule (-['_price',...rest],
+      +['price',...rest]);
+
+rule ( ['double-user-prices',user],    // equivalent to previous
+       ['price',{owner:user}],
+      +['d/u/p-price',user]);
+rule (-['double-user-prices',_]);
+rule (-['d/u/p-price',user],
+      -['price',{owner:user,volume,...rest}],
+      +['price',{owner:user,volume:2*volume,...rest}]);
+
+rule (-['auction-state',...]#t1,
+       ['auction-state',...]#t,
+       ['market-state',ms],
+      ?t1>t && ms!=='open');
+rule ( ['auction-state',state1,states]#t1,
+      -['auction-state',state, states]#t,
+      ?t1>t && states.indexOf(state1)!=-1);
+rule ( ['auction-state',...],
+       ['auction-state',...],
+       fail);
+
+rule (['auction-state',...],           // alternative to first rule in stanza above
+      ['auction-state',...],
+      ['market-state',ms],
+      ?ms!=='open',
+      fail);
+
+
+snap(['price',{instrument,volume}];v) v===undefined ? 0 : v+volume;
+
+snap(['price',{instrument,volume}];v=0) v+volume;
+
+snap(['price',{instrument,bid,volume}];v) {
+    if (v===undefined)
+       v = new Map();
+    else if (v[(instrument,bid)]===undefined)
+       v.set([instrument,bid],volume);
+    else
+       v.set([instrument,bid],v.get([instrument,bid]),volume);
+    return v;
+}
+
+store s1 {
+    // invoke the following as e.g. `s1.queries.user_prices("Sid Strong")`
+    query user_prices(user;['price',{owner:user,instrument,bid,volume}];v=[]) 
+	    v.concat([[instrument,bid,volume]]);
+    // also invoke as a stream e.g. `s1.streams.user_prices("Sid Strong",function(x) {...})`
+}
+
+Maybe things that remain in the store must be JSON, but "virtual"
+entries that exist only within a transaction can contain non-JSON
+items such as functions?
+
+Can do "virtual facts" by a naming convention: a virtual fact has the
+form ['_<string>',...] and their destruction can be enforced by
+having, as a final-ish rule:
+
+rule ( [x,...],
+      ?typeof(x)=='string' && x[0]==='_',
+      fail("virtual fact survives") );
+
+
