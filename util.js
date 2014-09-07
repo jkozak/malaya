@@ -26,6 +26,8 @@ exports.printf  = function (msg) {
     _util.print(_util.format.apply(null,arguments));
 };
 
+exports.inherit = _util.inherit;
+
 exports.readFdLinesSync = function(fd,fn) {
     var bufferSize = 1024;
     var buffer     = new Buffer(bufferSize);
