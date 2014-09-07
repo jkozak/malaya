@@ -129,6 +129,7 @@ function save(root) {
     fs.renameSync(dir_new,dir_cur);
     open(dir_sav);
     journalise('previous',syshash);
+    return syshash;
 };
 
 function load(fn_root,fn_datum) {
@@ -207,6 +208,7 @@ function load(fn_root,fn_datum) {
 	    })
 	}
     }
+    return syshash;
 };
 
 function wrap(dir,bl,options) {
@@ -222,13 +224,13 @@ function wrap(dir,bl,options) {
 	    }
 	},
 	save:function() {
-	    save(bl.get_root());
+	    return save(bl.get_root());
 	},
 	close:function() {
 	    close();
 	},
 	load:function() {
-	    load(bl.set_root,bl.update);
+	    return load(bl.set_root,bl.update);
 	},
 	query:function(q) {
 	    try {

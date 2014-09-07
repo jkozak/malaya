@@ -97,31 +97,36 @@ describe('match()',function() {
 	assert.ok(match({'':ps},{r:'a',s:1},context));
 	assert.deepEqual(context,{ps:{r:'a',s:1}});
     });
+    it("binds variables",function() {
+	context = {};
+	assert.ok(match(new chr.Binding('z',73),null,context));
+	assert.equal(context['z'],73);
+    });
 });
 
 describe('Store',function() {
     it("should add and delete facts",function() {
 	var store = new chr.Store();
-	assert.equal(store.size(),0);
+	assert.equal(store.size,0);
 	var t1 = store.add([1,2,3]);
-	assert.equal(store.size(),1);
+	assert.equal(store.size,1);
 	var t2 = store.add([1,2,3]);
 	assert.ok(t2>t1);
-	assert.equal(store.size(),2);	    // multiset
+	assert.equal(store.size,2);	    // multiset
 	var t3 = store.add({a:1,b:2});
 	assert.ok(t3>t2);
-	assert.equal(store.size(),3);
+	assert.equal(store.size,3);
 	var t4 = store.add({a:1,b:2});
 	assert.ok(t4>t3);
-	assert.equal(store.size(),4);	    // multiset
+	assert.equal(store.size,4);	    // multiset
 	store.delete(t1);
-	assert.equal(store.size(),3);
+	assert.equal(store.size,3);
 	store.delete(t2);
-	assert.equal(store.size(),2);
+	assert.equal(store.size,2);
 	store.delete(t4);
-	assert.equal(store.size(),1);
+	assert.equal(store.size,1);
 	store.delete(t3);
-	assert.equal(store.size(),0);
+	assert.equal(store.size,0);
     });
     describe('Aggregate',function() {
 	it("should zero gracefully",function() {
