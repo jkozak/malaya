@@ -31,6 +31,9 @@ var path  = require("path");
 var util  = require("./util.js");
 
 var consts = process.binding('constants');
+if (consts.O_DSYNC===undefined)
+    // !!! this is probably only true for linux !!!
+    consts.O_DSYNC = 4096;	// octal 00010000 from /usr/include
 
 var dir     = null;
 var fd_jrnl = null;		// file descriptor
@@ -43,7 +46,7 @@ var bl_src;
 var bl_files;
 var bl_running;
 
-var sync_journal = 'fsync';
+var sync_journal = 'kludge';
 
 var sanity_check = true;	// default to true if running production
 
@@ -76,7 +79,12 @@ function open(dirname) {
 	    }
 	}
     }
-    var flg =  (sync_journal==='o_sync') ? consts.O_APPEND|consts.O_CREAT|consts.O_WRONLY|consts.O_SYNC: 'a'
+    var flg;
+    switch (sync_journal) {
+    case 'o_sync':  flg=consts.O_APPEND|consts.O_CREAT|consts.O_WRONLY|consts.O_SYNC;  break;
+    case 'o_dsync': flg=consts.O_APPEND|consts.O_CREAT|consts.O_WRONLY|consts.O_DSYNC; break;
+    default:        flg="a"; break;
+    }
     fd_jrnl = fs.openSync(dirname+"/state/journal",flg);
     dir     = dirname;
     date    = null;
@@ -103,7 +111,17 @@ function journalise(type,datum) {
     fs.writeSync(fd_jrnl,s,s.length,null);
     if (sync_journal==='fsync')
 	fs.fsyncSync(fd_jrnl);
+    else if (sync_journal==='kludge') {
+	var time = Date.now();
+	if (journalise.count++%journalise.kludge_count==0 || time-journalise.time>1000) {
+	    journalise.time = time;
+	    fs.fsyncSync(fd_jrnl);
+	}
+    }
 };
+journalise.kludge_count = 16;	// !!! magic number !!!
+journalise.count        = 0;
+journalise.time         = Date.now();
 
 exports.date = function() {
     // get date
@@ -280,7 +298,7 @@ exports.wrap = function(dir,bl,options) {
     sync_journal = options.sync_journal;
     if (sync_journal===undefined)
 	sync_journal = 'o_sync';
-    if (['fsync','o_sync','none'].indexOf(sync_journal)==-1)
+    if (['fsync','o_sync','o_dsync','none','kludge'].indexOf(sync_journal)==-1)
 	throw new Error("bad sync_journal option: "+sync_journal);
     audit = !!options.audit;
     if (audit) {
@@ -384,5 +402,11 @@ exports.installHandlers = function(app,options) {
 if (util.env==='test')
     exports._private = {wrap:         wrap,
 			getHashStore: function() {return hash_store;},
-			hash:         hash};
+			hash:         hash,
+			consts:       consts,
+			init:         init,
+			open:         open,
+			set_syncjrnl: function(f) {sync_journal=f;},
+		        close:        close,
+		        journalise:   journalise};
 
