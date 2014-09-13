@@ -30,6 +30,8 @@ var hash  = require("./hash.js")('sha1');
 var path  = require("path");
 var util  = require("./util.js");
 
+var consts = process.binding('constants');
+
 var dir     = null;
 var fd_jrnl = null;		// file descriptor
 var date    = null;		// effective Date object
@@ -40,6 +42,8 @@ var hash_store;
 var bl_src;
 var bl_files;
 var bl_running;
+
+var sync_journal = 'fsync';
 
 var sanity_check = true;	// default to true if running production
 
@@ -72,7 +76,8 @@ function open(dirname) {
 	    }
 	}
     }
-    fd_jrnl = fs.openSync(dirname+"/state/journal","a");
+    var flg =  (sync_journal==='o_sync') ? consts.O_APPEND|consts.O_CREAT|consts.O_WRONLY|consts.O_SYNC: 'a'
+    fd_jrnl = fs.openSync(dirname+"/state/journal",flg);
     dir     = dirname;
     date    = null;
     t_jrnl  = null;
@@ -96,7 +101,8 @@ function journalise(type,datum) {
     t_jrnl++;
     var s = util.serialise([date,type,datum])+'\n';
     fs.writeSync(fd_jrnl,s,s.length,null);
-    fs.fsyncSync(fd_jrnl);
+    if (sync_journal==='fsync')
+	fs.fsyncSync(fd_jrnl);
 };
 
 exports.date = function() {
@@ -269,8 +275,14 @@ function wrap(dir,bl,options) {
 exports.wrap = function(dir,bl,options) {
     bl_running = true;
     if (options==undefined)
-	options = {audit:true};	        // default options
-    audit = options.audit;
+	options = {audit:        true,
+		   sync_journal: fsync};	        // default options
+    sync_journal = options.sync_journal;
+    if (sync_journal===undefined)
+	sync_journal = 'o_sync';
+    if (['fsync','o_sync','none'].indexOf(sync_journal)==-1)
+	throw new Error("bad sync_journal option: "+sync_journal);
+    audit = !!options.audit;
     if (audit) {
 	bl_files   = {};
 	hash_store = hash.make_store(dir+'/hashes');
