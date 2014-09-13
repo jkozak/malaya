@@ -45,4 +45,12 @@ Perhaps I should use `immutable-js` for the fact store:
  https://github.com/facebook/immutable-js
 
 
+Performance
+-----------
+
+Using an SSD (the one on `renn`) get just below 1k updates/sec
+journalised (as opposed to about 20 on a rotary drive!).  Using the
+'kludge' setting get 14k.  Should get a factor of four speedup using
+the technique in ticket b2594b10848c4aec, so expect 4k updates/sec on
+cheap stock hardware.
 
