@@ -1,4 +1,8 @@
 John's new trading system
+=========================
+
+Visualisation
+-------------
 
 CHR should visualise quite well:
 
@@ -36,4 +40,9 @@ Forced-directed layout:
 
 Set icons by a rule; also context menu items as
 <name>,<binding-match>,<fact>
+
+Perhaps I should use `immutable-js` for the fact store:
+ https://github.com/facebook/immutable-js
+
+
 

@@ -1,0 +1,12 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Sat, 13 Sep 2014 09:50:42 +0100
+Subject: fastjournal
+State: new
+Message-Id: <b2594b10848c4aec-0-artemis@renn>
+
+Journal writes with sync are slow.  Under posix, try this:
+don't open log O_APPEND, open it O_WRITE and allocate
+sector buffers which are initially zeroed.  Fill this up as
+per normal, and write out the full sector.  This means
+we don't need to rewrite the metadata each time (because
+the file size hasn't changed); saves a seek.

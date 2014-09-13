@@ -276,7 +276,7 @@ exports.wrap = function(dir,bl,options) {
     bl_running = true;
     if (options==undefined)
 	options = {audit:        true,
-		   sync_journal: fsync};	        // default options
+		   sync_journal: 'fsync'};	        // default options
     sync_journal = options.sync_journal;
     if (sync_journal===undefined)
 	sync_journal = 'o_sync';
