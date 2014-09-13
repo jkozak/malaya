@@ -29,7 +29,7 @@ function MalayaConnection(conn,options) {
 
     this.write = write;
     this.on    = function(what,handler) {events[what] = handler;};
-    this.end   = function() {throw new Error("WriteMe - close connection");}
+    this.end   = function() {conn.end();}
 
     conn.on('data',function(data) {
 	var js;
@@ -156,7 +156,7 @@ exports.createServer = function(opts) {
 			// +++ which in turn invokes the core business logic +++
 			var mc = new MalayaConnection(conn,{passwd:{jk:[''],
 								    di:[''] } });
-			events.makeConnection(mc); // +++ should loseConnection somewhere +++
+			events.makeConnection(mc);
 			mc.on('close',function() {
 			    events.loseConnection(mc);
 			});
@@ -206,7 +206,6 @@ exports.createServer = function(opts) {
 		conns_[i].end();
 	    var syshash = bl.save();
 	    http = fe3 = null;
-	    console.log(util.format("*** timer: %j",timer));
 	    if (timer)		// +++ tidy up timers +++
 		clearInterval(timer);
 	    bl.close();
