@@ -60,7 +60,7 @@ function init(dirname,options) {
     open(dirname);
     journalise('init',options);
     close();
-};
+}
 
 function open(dirname) {
     // open an existing store
@@ -89,7 +89,7 @@ function open(dirname) {
     dir     = dirname;
     date    = null;
     t_jrnl  = null;
-};
+}
 
 function close() {
     // close a store (quickly)
@@ -99,7 +99,7 @@ function close() {
     dir     = null;
     date    = null;
     t_jrnl  = null;
-};
+}
 
 function journalise(type,datum) {
     // write a journal entry
@@ -111,6 +111,8 @@ function journalise(type,datum) {
     fs.writeSync(fd_jrnl,s,s.length,null);
     if (sync_journal==='fsync')
 	fs.fsyncSync(fd_jrnl);
+    else if (sync_journal==='fdatasync')
+	fs.fdatasyncSync(fd_jrnl);
     else if (sync_journal==='kludge') {
 	var time = Date.now();
 	if (journalise.count++%journalise.kludge_count==0 || time-journalise.time>1000) {
@@ -118,7 +120,42 @@ function journalise(type,datum) {
 	    fs.fsyncSync(fd_jrnl);
 	}
     }
-};
+}
+function journaliseAsync(type,datum,callback) { // not used yet
+    // write a journal entry
+    if (fd_jrnl===null)
+	callback(new Error("journal is closed"),null);
+    else {
+	date = new Date();
+	t_jrnl++;
+	var s = util.serialise([date,type,datum])+'\n';
+	fs.write(fd_jrnl,s,s.length,null,function(err,x) {
+	    if (err)
+		callback(err,null);
+	    else 
+		switch (sync_journal) {
+		case 'fsync':
+		    fs.fsync(fd_jrnl,callback);
+		    break;
+		case 'fdatasync':
+		    fs.fdatasync(fd_jrnl,callback);
+		    break;
+		case 'kludge':
+		    {
+			var time = Date.now();
+			if (journalise.count++%journalise.kludge_count==0 || time-journalise.time>1000) {
+			    journalise.time = time;
+			    fs.fsync(fd_jrnl,callback);
+			    break;
+			}
+		    }
+		    // fallthrough
+		default:
+		    callback(null,null);
+		}
+	});
+    }
+}
 journalise.kludge_count = 16;	// !!! magic number !!!
 journalise.count        = 0;
 journalise.time         = Date.now();
@@ -154,7 +191,7 @@ function save(root) {
     open(dir_sav);
     journalise('previous',syshash);
     return syshash;
-};
+}
 
 function load(fn_root,fn_datum) {
     var world_file   = dir+"/state/world";
@@ -233,7 +270,7 @@ function load(fn_root,fn_datum) {
 	}
     }
     return syshash;
-};
+}
 
 function wrap(dir,bl,options) {
     var ans = {
@@ -288,17 +325,17 @@ function wrap(dir,bl,options) {
 	};
     }
     return ans;
-};
+}
 
 exports.wrap = function(dir,bl,options) {
     bl_running = true;
     if (options==undefined)
 	options = {audit:        true,
-		   sync_journal: 'fsync'};	        // default options
+		   sync_journal: 'kludge'};	        // default options
     sync_journal = options.sync_journal;
     if (sync_journal===undefined)
 	sync_journal = 'o_sync';
-    if (['fsync','o_sync','o_dsync','none','kludge'].indexOf(sync_journal)==-1)
+    if (['fsync','fdatasync','o_sync','o_dsync','none','kludge'].indexOf(sync_journal)==-1)
 	throw new Error("bad sync_journal option: "+sync_journal);
     audit = !!options.audit;
     if (audit) {
