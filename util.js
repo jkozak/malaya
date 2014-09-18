@@ -108,6 +108,7 @@ exports.env = (function() {
     return env;
 })();
 
+// !!! this is really slow, avoid !!!
 exports.Set = function() {
     this.map = new ds.Map();
     return this;

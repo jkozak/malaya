@@ -4,9 +4,19 @@ var assert = require("assert");
 var   util = require('../util.js');
 
 describe('match()',function() {
+    var   store = chr.Store();
     var context;
 
-    var   match = chr._private.match;
+    var   match = function(term,datum,bindings) {
+	// make compatible with old interface to save re-writing these tests
+	assert.deepEqual(bindings,{});          // +++ might need to fix this later +++
+	var ctx = store.createContext();
+	var ans = chr._private.match(term,datum,ctx);
+	ctx.bindings.forEach(function(v,k) {
+	    context[k] = v;
+	});
+	return ans;
+    }
     
     var       p = new chr.Variable('p');       // make the testing a bit tidier  
     var       q = new chr.Variable('q');
@@ -97,14 +107,16 @@ describe('match()',function() {
 	assert.ok(match({'':ps},{r:'a',s:1},context));
 	assert.deepEqual(context,{ps:{r:'a',s:1}});
     });
-    it("binds variables",function() {
-	context = {};
-	assert.ok(match(new chr.Binding('z',73),null,context));
-	assert.equal(context['z'],73);
-    });
 });
 
 describe('Store',function() {
+    var Match  = chr._private.ItemMatch;
+    var Guard  = chr._private.ItemGuard;
+    var Delete = chr._private.ItemDelete;
+    var Add    = chr._private.ItemAdd;
+    var Bind   = chr._private.ItemBind;
+    var Fail   = chr._private.ItemFail;
+    
     it("should add and delete facts",function() {
 	var store = new chr.Store();
 	assert.equal(store.size,0);
@@ -128,142 +140,155 @@ describe('Store',function() {
 	store.delete(t3);
 	assert.equal(store.size,0);
     });
-    describe('Aggregate',function() {
+    describe('match_items()',function() {
+	it("should bind variables",function() {
+	    var   store = new chr.Store();
+	    var      ok = false;
+	    store.match_items([new Bind('x',function(_){return 23;})],
+			      store.createContext(),
+			      function(item,context) {
+				  assert.equal(context.get('x'),23);
+				  ok = true;
+			      });
+	    assert(ok);
+	    ok = false;
+	    store.match_items([new Bind('x',function(_){return 23;}), // idempotent
+			       new Bind('x',function(_){return 23;}) ],
+			      store.createContext(),
+			      function(item,context) {
+				  assert.equal(context.get('x'),23);
+				  ok = true;
+			      });
+	    assert(ok);
+	    store.match_items([new Bind('x',function(_){return 23;}),
+			       new Bind('x',function(_){return 24;}) ],
+			      store.createContext(),
+			      function() {ssert.ok(false);} );
+	});
+	it("should match bound variables to store",function() {
+	    var   store = new chr.Store();
+	    var      ok = false;
+	    store.match_items([new Bind('x',function(_){return 23;}),
+			       new Match(['X',new chr.Variable('x')])],
+			      store.createContext(),
+			      function() {assert.ok(false);} );
+	    store.match_items([new Match(['X',new chr.Variable('x')]),
+			       new Bind('x',function(_){return 23;}) ],
+			      store.createContext(),
+			      function() {assert.ok(false);} );
+	    store.add(['X',23]);
+	    ok = false;
+	    store.match_items([new Bind('x',function(_){return 23;}),
+			       new Match(['X',new chr.Variable('x')])],
+			      store.createContext(),
+			      function(item,context) {
+				  assert.equal(context.get('x'),23);
+				  ok = true;
+			      });
+	    assert.ok(ok);
+	    ok = false;
+	    store.match_items([new Match(['X',new chr.Variable('x')]),
+			       new Bind('x',function(_){return 23;}) ],
+			      store.createContext(),
+			      function(item,context) {
+				  assert.equal(context.get('x'),23);
+				  ok = true;
+			      });
+	    assert.ok(ok);
+	    store.match_items([new Match(['X',new chr.Variable('x')]),
+			       new Bind('x',function(_){return 24;}) ],
+			      store.createContext(),
+			      function() {assert.ok(false);} );
+	    store.match_items([new Bind('x',function(_){return 24;}),
+			       new Match(['X',new chr.Variable('x')]) ],
+			      store.createContext(),
+			      function() {assert.ok(false);} );
+	});
+    });
+    describe('Snap()',function() {
 	it("should zero gracefully",function() {
 	    var store = new chr.Store();
-	    var  aggr = new chr.Aggregate([["X",new chr.Variable('x')]],
-					  function(_){return true;},
-					  1337,
-					  function(v,_,ctx){return v+ctx['x'];} );
-	    assert.equal(store.aggregate(aggr),1337);
+	    var  snap = new chr.Snap([new Match(["X",new chr.Variable('x')])],
+				     1337,
+				     function(v,ctx){return v+ctx.get('x');} );
+	    assert.equal(store.snap(snap),1337);
 	    store.add(["Y",100]);
-	    assert.equal(store.aggregate(aggr),1337);
+	    assert.equal(store.snap(snap),1337);
 	});
 	it("should guard firmly",function() {
 	    var store = new chr.Store();
-	    var  aggr = new chr.Aggregate([["X",new chr.Variable('x')]],
-					  function(_){return false;},
-					  0,
-					  function(v,ctx){return v+ctx['x'];} );
+	    var  snap = new chr.Snap([new Match(["X",new chr.Variable('x')]),
+				      new Guard(function(){return false;}) ],
+				     0,
+				     function(v,ctx){return v+ctx.get('x');} );
 	    store.add(["X",100]);
-	    assert.equal(store.aggregate(aggr),0);
+	    assert.equal(store.snap(snap),0);
 	});
 	it("should match a single head",function() {
 	    var store = new chr.Store();
-	    var  aggr = new chr.Aggregate([["X",new chr.Variable('x')]],
-					  function(_){return true;},
-					  0,
-					  function(v,ctx){return v+ctx['x'];} );
-	    assert.equal(store.aggregate(aggr),0);
+	    var  snap = new chr.Snap([new Match(["X",new chr.Variable('x')])],
+				     0,
+				     function(v,ctx){return v+ctx.get('x');} );
+	    assert.equal(store.snap(snap),0);
 	    store.add(["X",100]);
-	    assert.equal(store.aggregate(aggr),100);
+	    assert.equal(store.snap(snap),100);
 	    store.add(["X",1]);
-	    assert.equal(store.aggregate(aggr),101);
+	    assert.equal(store.snap(snap),101);
 	    store.add(["Y",99]);
-	    assert.equal(store.aggregate(aggr),101);
+	    assert.equal(store.snap(snap),101);
 	});
 	it("should match a single head (tersely)",function() {
 	    var store = new chr.Store();
-	    var  aggr = new chr.Aggregate([["X",new chr.Variable('x')]],
-					  function(v,ctx){return (v||0)+ctx['x'];} );
-	    assert.equal(store.aggregate(aggr),undefined);
+	    var  snap = new chr.Snap([new Match(["X",new chr.Variable('x')])],
+				     function(v,ctx){return (v||0)+ctx.get('x');} );
+	    assert.equal(store.snap(snap),undefined);
 	    store.add(["X",100]);
-	    assert.equal(store.aggregate(aggr),100);
+	    assert.equal(store.snap(snap),100);
 	    store.add(["X",1]);
-	    assert.equal(store.aggregate(aggr),101);
+	    assert.equal(store.snap(snap),101);
 	    store.add(["Y",99]);
-	    assert.equal(store.aggregate(aggr),101);
+	    assert.equal(store.snap(snap),101);
 	});
 	it("should match a single head (quite tersely)",function() {
 	    var store = new chr.Store();
-	    var  aggr = new chr.Aggregate([["X",new chr.Variable('x')]],
-					  true,
-					  function(v,ctx){return (v||0)+ctx['x'];} );
-	    assert.equal(store.aggregate(aggr),undefined);
+	    var  snap = new chr.Snap([new Match(["X",new chr.Variable('x')])],
+				     undefined,
+				     function(v,ctx){return (v||0)+ctx.get('x');} );
+	    assert.equal(store.snap(snap),undefined);
 	    store.add(["X",100]);
-	    assert.equal(store.aggregate(aggr),100);
+	    assert.equal(store.snap(snap),100);
 	    store.add(["X",1]);
-	    assert.equal(store.aggregate(aggr),101);
+	    assert.equal(store.snap(snap),101);
 	    store.add(["Y",99]);
-	    assert.equal(store.aggregate(aggr),101);
+	    assert.equal(store.snap(snap),101);
 	});
 	it("should match dual heads",function() {
 	    var store = new chr.Store();
-	    var  aggr = new chr.Aggregate([["X",new chr.Variable('x'),new chr.Variable('p')],
-					   ["X",new chr.Variable('x'),new chr.Variable('q')] ],
-					  function(ctx){return ctx['p']>ctx['q'];},
-					  0,
-					  function(v,ctx){return v+ctx['p']+ctx['q'];} );
+	    var  snap = new chr.Snap([new Match(["X",new chr.Variable('x'),new chr.Variable('p')]),
+				      new Match(["X",new chr.Variable('x'),new chr.Variable('q')]),
+				      new Guard(function(ctx){return ctx.get('p')>ctx.get('q');}) ],
+				     0,
+				     function(v,ctx){return v+ctx.get('p')+ctx.get('q');} );
 	    store.add(["X",1,10]);
 	    store.add(["X",2,20]);
 	    store.add(["X",2,30]);
-	    assert.equal(store.aggregate(aggr),50);
+	    assert.equal(store.snap(snap),50);
 	});
 	it("should match triple heads",function() {
 	    var store = new chr.Store();
-	    var  aggr = new chr.Aggregate([["X",new chr.Variable('x'),new chr.Variable('p')],
-					   ["X",new chr.Variable('x'),new chr.Variable('q')],
-					   ["X",new chr.Variable('x'),new chr.Variable('r')]],
-					  function(ctx){return ctx['p']>ctx['q'] && ctx['q']>ctx['r'];},
-					  0,
-					  function(v,ctx){return v+ctx['p']+ctx['q']+ctx['r'];} );
+	    var  snap = new chr.Snap([new Match(["X",new chr.Variable('x'),new chr.Variable('p')]),
+				      new Match(["X",new chr.Variable('x'),new chr.Variable('q')]),
+				      new Match(["X",new chr.Variable('x'),new chr.Variable('r')]),
+				      new Guard(function(ctx){return ctx.get('p')>ctx.get('q') &&
+							      ctx.get('q')>ctx.get('r');}) ],
+				     0,
+				     function(v,ctx){return v+ctx.get('p')+ctx.get('q')+ctx.get('r');} );
 	    store.add(["X",1,10]);
 	    store.add(["X",2,20]);
 	    store.add(["X",2,30]);
-	    assert.equal(store.aggregate(aggr),0);
+	    assert.equal(store.snap(snap),0);
 	    store.add(["X",2,40]);
-	    assert.equal(store.aggregate(aggr),90);
+	    assert.equal(store.snap(snap),90);
 	});
     });
-    describe('Select',function() {
-	var total;
-	it("should guard firmly",function() {
-	    var store = new chr.Store();
-	    var  seen = false;
-	    var   sel = new chr.Select([["X",new chr.Variable('x')]],
-				       function(_){return false;},
-				       function(ctx){seen=true;} );
-	    store.add(["X",100]);
-	    store.select(sel);
-	    assert.ok(!seen);
-	});
-	it("should match a single head",function() {
-	    var store = new chr.Store();
-	    var   sel = new chr.Select([["X",new chr.Variable('x')]],
-				       function(ctx){total+=ctx['x'];} );
-	    total=0; store.select(sel); assert.equal(total,0);
-	    store.add(["X",100]);
-	    total=0; store.select(sel); assert.equal(total,100);
-	    store.add(["X",1]);
-	    total=0; store.select(sel); assert.equal(total,101);
-	    store.add(["Y",99]);
-	    total=0; store.select(sel); assert.equal(total,101);
-	});
-	it("should match dual heads",function() {
-	    var store = new chr.Store();
-	    var   sel = new chr.Select([["X",new chr.Variable('x'),new chr.Variable('p')],
-					["X",new chr.Variable('x'),new chr.Variable('q')] ],
-				       function(ctx){return ctx['p']>ctx['q'];},
-				       function(ctx){total+=ctx['p']+ctx['q'];} );
-	    store.add(["X",1,10]);
-	    store.add(["X",2,20]);
-	    store.add(["X",2,30]);
-	    total=0; store.select(sel); assert.equal(total,50);
-	});
-	it("should match triple heads",function() {
-	    var store = new chr.Store();
-	    var   sel = new chr.Select([["X",new chr.Variable('x'),new chr.Variable('p')],
-					["X",new chr.Variable('x'),new chr.Variable('q')],
-					["X",new chr.Variable('x'),new chr.Variable('r')]],
-				       function(ctx){return ctx['p']>ctx['q'] && ctx['q']>ctx['r'];},
-				       function(ctx){total+=ctx['p']+ctx['q']+ctx['r'];} );
-	    store.add(["X",1,10]);
-	    store.add(["X",1,10]);
-	    store.add(["X",2,20]);
-	    store.add(["X",2,30]);
-	    total=0; store.select(sel); assert.equal(total,0);
-	    store.add(["X",2,40]);
-	    total=0; store.select(sel); assert.equal(total,90);
-	});
-    });    
 });
