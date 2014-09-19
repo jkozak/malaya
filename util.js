@@ -122,6 +122,7 @@ Object.defineProperty(exports.Set.prototype,'size',{
 });
 
 exports.Map = ds.Map;
+Object.defineProperty(ds.Map.prototype,'length',{get:function() {return this.size;}});
 
 if (exports.env==='prod' && exports.source_version.slice(-1)==='+')
     throw new Error("must run registered code in production");
