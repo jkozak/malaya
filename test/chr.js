@@ -205,6 +205,44 @@ describe('Store',function() {
 			      function() {assert.ok(false);} );
 	});
     });
+    describe('Context.instantiate()',function() {
+	var     Var = chr.Variable;
+	var VarRest = chr.VariableRest;
+	var   store = new chr.Store();
+	var context = store.createContext();
+	context.set('p',18);
+	context.set('q',23);
+	context.set('r',[111,112]);
+	context.set('s',{a:777,b:888});
+	it("should instantiate a constant term",function() {
+	    assert.equal(18,context.instantiate(18));
+	});
+	it("should instantiate a single term",function() {
+	    assert.equal(18,context.instantiate(new Var('p')));
+	});
+	it("should instantiate a list",function() {
+	    assert.deepEqual([18],      context.instantiate([new Var('p')]));
+	    assert.deepEqual([18,19,23],context.instantiate([new Var('p'),19,new Var('q')]));
+	});
+	it("should instantiate a map",function() {
+	    assert.deepEqual({p:18},     context.instantiate({p:new Var('p')}));
+	    assert.deepEqual({p:18,q:23},context.instantiate({q:new Var('q'),p:new Var('p')}));
+	});
+	it("should instantiate a list with terminal VariableRest",function() {
+	    assert.deepEqual([111,112],context.instantiate([new VarRest('r')]));
+	    assert.deepEqual([18,111,112],context.instantiate([new Var('p'),new VarRest('r')]));
+	});
+	it("should instantiate a list with medial VariableRest",function() {
+	    assert.deepEqual([18,111,112,23],context.instantiate([new Var('p'),new VarRest('r'),new Var('q')]));
+	});
+	it("should instantiate a map with VariableRest",function() {
+	    assert.deepEqual({a:777,b:888},context.instantiate({'':new VarRest('s')}));
+	    assert.deepEqual({a:777,b:888,c:999},context.instantiate({c:999,'':new VarRest('s')}));
+	});
+	it("should instantiate nested structures",function() {
+	    assert.deepEqual([1,[{a:777,b:888}],2],context.instantiate([1,[{'':new VarRest('s')}],2]));
+	});
+    });
     describe('Snap()',function() {
 	it("should zero gracefully",function() {
 	    var store = new chr.Store();
