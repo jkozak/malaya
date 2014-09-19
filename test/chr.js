@@ -5,6 +5,7 @@ var   util = require('../util.js');
 
 var   Store = chr.Store;	// save some typing
 var    Snap = chr.Snap;
+var    Rule = chr.Rule;
 var     Var = chr.Variable;
 var VarRest = chr.VariableRest;
 var   Match = chr._private.ItemMatch;
@@ -13,7 +14,7 @@ var  Delete = chr._private.ItemDelete;
 var     Add = chr._private.ItemAdd;
 var    Bind = chr._private.ItemBind;
 var    Fail = chr._private.ItemFail;
-    
+
 
 describe('match()',function() {
     var   store = new Store();
@@ -122,92 +123,99 @@ describe('match()',function() {
 });
 
 describe('Store',function() {
-    it("should add and delete facts",function() {
+    it("should add and delete facts using internal methods",function() {
 	var store = new Store();
-	assert.equal(store.size,0);
-	var t1 = store.add([1,2,3]);
-	assert.equal(store.size,1);
-	var t2 = store.add([1,2,3]);
+	assert.equal(store.length,0);
+	var t1 = store._add([1,2,3]);
+	assert.equal(store.length,1);
+	var t2 = store._add([1,2,3]);
 	assert.ok(t2>t1);
-	assert.equal(store.size,2);	    // multiset
-	var t3 = store.add({a:1,b:2});
+	assert.equal(store.length,2);	    // multiset
+	var t3 = store._add({a:1,b:2});
 	assert.ok(t3>t2);
-	assert.equal(store.size,3);
-	var t4 = store.add({a:1,b:2});
+	assert.equal(store.length,3);
+	var t4 = store._add({a:1,b:2});
 	assert.ok(t4>t3);
-	assert.equal(store.size,4);	    // multiset
-	store.delete(t1);
-	assert.equal(store.size,3);
-	store.delete(t2);
-	assert.equal(store.size,2);
-	store.delete(t4);
-	assert.equal(store.size,1);
-	store.delete(t3);
-	assert.equal(store.size,0);
+	assert.equal(store.length,4);	    // multiset
+	store._delete(t1);
+	assert.equal(store.length,3);
+	store._delete(t2);
+	assert.equal(store.length,2);
+	store._delete(t4);
+	assert.equal(store.length,1);
+	store._delete(t3);
+	assert.equal(store.length,0);
+    });
+    it("should add and test existence of facts using external methods",function() {
+	var store = new Store();
+	assert.equal(store.length,0);
+	store.add(["X",18]);
+	assert.equal(store.length,1);
+	assert.ok(store.has(["X",18]));
     });
     describe('match_items()',function() {
 	it("should bind variables",function() {
 	    var   store = new Store();
 	    var      ok = false;
-	    store.match_items([new Bind('x',function(_){return 23;})],
-			      store.createContext(),
-			      function(item,context) {
-				  assert.equal(context.get('x'),23);
-				  ok = true;
-			      });
+	    store._match_items([new Bind('x',function(_){return 23;})],
+			       store.createContext(),
+			       function(item,context) {
+				   assert.equal(context.get('x'),23);
+				   ok = true;
+			       });
 	    assert(ok);
 	    ok = false;
-	    store.match_items([new Bind('x',function(_){return 23;}), // idempotent
-			       new Bind('x',function(_){return 23;}) ],
-			      store.createContext(),
-			      function(item,context) {
-				  assert.equal(context.get('x'),23);
-				  ok = true;
-			      });
+	    store._match_items([new Bind('x',function(_){return 23;}), // idempotent
+				new Bind('x',function(_){return 23;}) ],
+			       store.createContext(),
+			       function(item,context) {
+				   assert.equal(context.get('x'),23);
+				   ok = true;
+			       });
 	    assert(ok);
-	    store.match_items([new Bind('x',function(_){return 23;}),
-			       new Bind('x',function(_){return 24;}) ],
-			      store.createContext(),
-			      function() {ssert.ok(false);} );
+	    store._match_items([new Bind('x',function(_){return 23;}),
+				new Bind('x',function(_){return 24;}) ],
+			       store.createContext(),
+			       function() {ssert.ok(false);} );
 	});
 	it("should match bound variables to store",function() {
 	    var   store = new Store();
 	    var      ok = false;
-	    store.match_items([new Bind('x',function(_){return 23;}),
-			       new Match(['X',new Var('x')])],
-			      store.createContext(),
-			      function() {assert.ok(false);} );
-	    store.match_items([new Match(['X',new Var('x')]),
-			       new Bind('x',function(_){return 23;}) ],
-			      store.createContext(),
-			      function() {assert.ok(false);} );
-	    store.add(['X',23]);
+	    store._match_items([new Bind('x',function(_){return 23;}),
+				new Match(['X',new Var('x')])],
+			       store.createContext(),
+			       function() {assert.ok(false);} );
+	    store._match_items([new Match(['X',new Var('x')]),
+				new Bind('x',function(_){return 23;}) ],
+			       store.createContext(),
+			       function() {assert.ok(false);} );
+	    store._add(['X',23]);
 	    ok = false;
-	    store.match_items([new Bind('x',function(_){return 23;}),
-			       new Match(['X',new Var('x')])],
-			      store.createContext(),
-			      function(item,context) {
-				  assert.equal(context.get('x'),23);
-				  ok = true;
-			      });
+	    store._match_items([new Bind('x',function(_){return 23;}),
+				new Match(['X',new Var('x')])],
+			       store.createContext(),
+			       function(item,context) {
+				   assert.equal(context.get('x'),23);
+				   ok = true;
+			       });
 	    assert.ok(ok);
 	    ok = false;
-	    store.match_items([new Match(['X',new Var('x')]),
-			       new Bind('x',function(_){return 23;}) ],
-			      store.createContext(),
-			      function(item,context) {
-				  assert.equal(context.get('x'),23);
-				  ok = true;
-			      });
+	    store._match_items([new Match(['X',new Var('x')]),
+				new Bind('x',function(_){return 23;}) ],
+			       store.createContext(),
+			       function(item,context) {
+				   assert.equal(context.get('x'),23);
+				   ok = true;
+			       });
 	    assert.ok(ok);
-	    store.match_items([new Match(['X',new Var('x')]),
-			       new Bind('x',function(_){return 24;}) ],
-			      store.createContext(),
-			      function() {assert.ok(false);} );
-	    store.match_items([new Bind('x',function(_){return 24;}),
-			       new Match(['X',new Var('x')]) ],
-			      store.createContext(),
-			      function() {assert.ok(false);} );
+	    store._match_items([new Match(['X',new Var('x')]),
+				new Bind('x',function(_){return 24;}) ],
+			       store.createContext(),
+			       function() {assert.ok(false);} );
+	    store._match_items([new Bind('x',function(_){return 24;}),
+				new Match(['X',new Var('x')]) ],
+			       store.createContext(),
+			       function() {assert.ok(false);} );
 	});
     });
     describe('Context.instantiate()',function() {
@@ -253,7 +261,7 @@ describe('Store',function() {
 				 1337,
 				 function(v,ctx){return v+ctx.get('x');} );
 	    assert.equal(store.snap(snap),1337);
-	    store.add(["Y",100]);
+	    store._add(["Y",100]);
 	    assert.equal(store.snap(snap),1337);
 	});
 	it("should guard firmly",function() {
@@ -262,7 +270,7 @@ describe('Store',function() {
 				  new Guard(function(){return false;}) ],
 				 0,
 				 function(v,ctx){return v+ctx.get('x');} );
-	    store.add(["X",100]);
+	    store._add(["X",100]);
 	    assert.equal(store.snap(snap),0);
 	});
 	it("should match a single head",function() {
@@ -271,11 +279,11 @@ describe('Store',function() {
 				 0,
 				 function(v,ctx){return v+ctx.get('x');} );
 	    assert.equal(store.snap(snap),0);
-	    store.add(["X",100]);
+	    store._add(["X",100]);
 	    assert.equal(store.snap(snap),100);
-	    store.add(["X",1]);
+	    store._add(["X",1]);
 	    assert.equal(store.snap(snap),101);
-	    store.add(["Y",99]);
+	    store._add(["Y",99]);
 	    assert.equal(store.snap(snap),101);
 	});
 	it("should match a single head (tersely)",function() {
@@ -283,11 +291,11 @@ describe('Store',function() {
 	    var  snap = new Snap([new Match(["X",new Var('x')])],
 				 function(v,ctx){return (v||0)+ctx.get('x');} );
 	    assert.equal(store.snap(snap),undefined);
-	    store.add(["X",100]);
+	    store._add(["X",100]);
 	    assert.equal(store.snap(snap),100);
-	    store.add(["X",1]);
+	    store._add(["X",1]);
 	    assert.equal(store.snap(snap),101);
-	    store.add(["Y",99]);
+	    store._add(["Y",99]);
 	    assert.equal(store.snap(snap),101);
 	});
 	it("should match a single head (quite tersely)",function() {
@@ -296,11 +304,11 @@ describe('Store',function() {
 				 undefined,
 				 function(v,ctx){return (v||0)+ctx.get('x');} );
 	    assert.equal(store.snap(snap),undefined);
-	    store.add(["X",100]);
+	    store._add(["X",100]);
 	    assert.equal(store.snap(snap),100);
-	    store.add(["X",1]);
+	    store._add(["X",1]);
 	    assert.equal(store.snap(snap),101);
-	    store.add(["Y",99]);
+	    store._add(["Y",99]);
 	    assert.equal(store.snap(snap),101);
 	});
 	it("should match dual heads",function() {
@@ -310,9 +318,9 @@ describe('Store',function() {
 				  new Guard(function(ctx){return ctx.get('p')>ctx.get('q');}) ],
 				 0,
 				 function(v,ctx){return v+ctx.get('p')+ctx.get('q');} );
-	    store.add(["X",1,10]);
-	    store.add(["X",2,20]);
-	    store.add(["X",2,30]);
+	    store._add(["X",1,10]);
+	    store._add(["X",2,20]);
+	    store._add(["X",2,30]);
 	    assert.equal(store.snap(snap),50);
 	});
 	it("should match triple heads",function() {
@@ -324,12 +332,134 @@ describe('Store',function() {
 							  ctx.get('q')>ctx.get('r');}) ],
 				 0,
 				 function(v,ctx){return v+ctx.get('p')+ctx.get('q')+ctx.get('r');} );
-	    store.add(["X",1,10]);
-	    store.add(["X",2,20]);
-	    store.add(["X",2,30]);
+	    store._add(["X",1,10]);
+	    store._add(["X",2,20]);
+	    store._add(["X",2,30]);
 	    assert.equal(store.snap(snap),0);
-	    store.add(["X",2,40]);
+	    store._add(["X",2,40]);
 	    assert.equal(store.snap(snap),90);
 	});
     });
+    describe('ItemAdd',function() {
+	it("should add fact when appropriate",function() {
+	    var store = new Store();
+	    var    ok = false;
+	    store._add(["X",17]);
+	    store._match_items([new Match(["X",new Var('x')]),
+     				new Add(["Y",new Var('x')]) ],
+			       store.createContext(),
+			       function(t,context) {
+				   assert.equal(context.adds.length,   1);
+				   assert.equal(context.deletes.length,0);
+				   context.install(); // put it in the store
+				   ok = true;
+			       });
+	    assert.ok(ok);
+	    assert.equal(store.length,2);
+	});
+	it("should not add facts inappropriately",function() {
+	    var store = new Store();
+	    store._add(["Y",17]);
+	    store._match_items([new Match(["X",new Var('x')]),
+     				new Add(["Y",new Var('x')]) ],
+			       store.createContext(),
+			       function(t,context) {
+				   assert.ok(false);
+			       });
+	    assert.equal(store.length,1);
+	});
+	it("should add multiple facts",function() {
+	    var store = new Store();
+	    var   ctx;
+	    store._add(["X",17]);
+	    store._add(["X",18]);
+	    store._match_items([new Match(["X",new Var('x')]),
+     				new Add(["Y",new Var('x')]) ],
+			       store.createContext(),
+			       function(t,context) {
+				   context.install();
+			       });
+	    assert.equal(store.length,4);
+	});
+	it("should add facts guardedly",function() {
+	    var store = new Store();
+	    var   ctx;
+	    store._add(["X",17]);
+	    store._add(["X",18]);
+	    store._match_items([new Match(["X",new Var('x')]),
+     				new Add(["Y",new Var('x')]),
+				new Guard(function(ctx){return ctx.get('x')>17}) ],
+			       store.createContext(),
+			       function(t,context) {
+				   context.install();
+			       });
+	    assert.equal(store.length,3);
+	    assert.ok(store.has(["X",17]));
+	    assert.ok(store.has(["X",18]));
+	    assert.ok(store.has(["Y",18]));
+	});
+    });
+    describe('ItemDelete',function() {
+	it("should delete fact",function() {
+	    var store = new Store();
+	    var    ok = false;
+	    store._add(["X",17]);
+	    assert.equal(store.length,1);
+	    store._match_items([new Delete(["X",new Var('x')])],
+			       store.createContext(),
+			       function(t,context) {
+				   assert.equal(context.adds.length,   0);
+				   assert.equal(context.deletes.length,1);
+				   context.install(); // remove it from store
+				   ok = true;
+			       });
+	    assert.ok(ok);
+	    assert.equal(store.length,0);
+	});
+	it("should delete multiple facts",function() {
+	    var store = new Store();
+	    var   ctx;
+	    store._add(["X",17]);
+	    store._add(["X",18]);
+	    store._add(["X",19]);
+	    store._add(["Y",20]);
+	    assert.equal(store.length,4);
+	    store._match_items([new Delete(["X",new Var('x')])],
+			       store.createContext(),
+			       function(t,context) {
+				   context.install();
+			       });
+	    assert.equal(store.length,1);
+	    assert.ok(store.has(["Y",20]));
+	});
+	it("should delete facts guardedly",function() {
+	    var store = new Store();
+	    var   ctx;
+	    store._add(["X",17]);
+	    store._add(["X",18]);
+	    store._add(["X",19]);
+	    store._add(["Y",20]);
+	    assert.equal(store.length,4);
+	    store._match_items([new Delete(["X",new Var('x')]),
+				new Guard(function(ctx){return ctx.get('x')>18}) ],
+			       store.createContext(),
+			       function(t,context) {
+				   context.install();
+			       });
+	    assert.equal(store.length,3);
+	});
+    });
+    // +++ uncomment me +++
+    // describe('Rule()',function() {
+    // 	it("should add new facts",function() {
+    // 	    var store = new Store();
+    // 	    store._add_rule(new Rule([new Match(["X",new Var('x')]),
+    // 				      new Add(["Y",new Var('x')]) ]));
+    // 	    assert.equal(store.length,0);
+    // 	    store.add(["X",17]);
+    // 	    assert.equal(store.length,2);
+    // 	    assert.ok(store.has(["X",17]));
+    // 	    assert.ok(store.has(["Y",17]));
+    // 	});
+    // });
 });

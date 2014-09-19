@@ -25,7 +25,7 @@
 var         _ = require('underscore');
 var      util = require('./util.js');
 var       Map = util.Map;
-var Immutable = require('immutable');
+var Immutable = require('immutable'); 
 var    assert = require('assert');
 
 function Variable(name) {
@@ -105,8 +105,8 @@ function ItemMatch(terms) {	// e.g. ["user",{name}]
     this.terms = terms;
     return this;
 }
-function ItemDelete(match) {	// e.g. -["user",{name:"cole"}]
-    this.match = match;
+function ItemDelete(terms) {	// e.g. -["user",{name:"cole"}]
+    this.terms = terms;
     return this;
 }
 function ItemGuard(expr) {	// e.g. ?name=='jimson'
@@ -118,8 +118,8 @@ function ItemBind(name,expr) {	// e.g. new_name="mr "+name
     this.expr = expr;
     return this;
 }
-function ItemAdd(match) {	// e.g. +["user",{name:"watts"}]
-    this.match = match;
+function ItemAdd(terms) {	// e.g. +["user",{name:"watts"}]
+    this.terms = terms;
     return this;
 }
 function ItemFail(msg) {
@@ -156,15 +156,14 @@ ItemGuard.prototype.match_single_item = function(context,consume) {
 };
 ItemAdd.prototype.match_single_item = function(context,consume) {
     var item = this;
-    match_single_item_match(this,context,function(t,context) {
-	context.add_fact(context.instantiate(item.match.terms));
-	consume(item,context);
-    });
+    context.add_fact(context.instantiate(item.terms));
+    consume(null,context);
 };
 ItemDelete.prototype.match_single_item = function(context,consume) {
-    match_single_item_match(this,context,function(t,context) {
+    var item = this;
+    match_single_item_match(item,context,function(t,context) {
 	context.delete_fact(t);
-	consume(item,context);
+	consume(t,context);
     });
 };
 ItemBind.prototype.match_single_item = function(context,consume) {
@@ -203,7 +202,7 @@ function Store(rules) {
     var store = this;
     this.t             = 0;
     this.facts         = new Map();           // t -> fact
-    this.rules         = rules || [];
+    this.rules         = [];
     this.indices       = [];
     this.Context       = function() {
 	this.store    = store;
@@ -278,27 +277,35 @@ function Store(rules) {
     this.Context.prototype.install = function() {
 	var context = this;
 	var   store = context.store;
-	context.adds = this.adds.map(function(v,k) {
+	var    adds = new Immutable.Set();
+	var deletes = new Immutable.Set();
+	context.adds.forEach(function(v) {
 	    assert.equal(v[0],null);
-	    return [store.add_fact(v[1]),v[1]];
+	    adds = adds.add([store._add(v[1]),v[1]]);
 	});
-	context.deletes = this.deletes.map(function(v,k) {
+	context.adds = adds;
+	context.deletes.forEach(function(v) {
 	    assert.equal(v[1],null);
-	    return [v[0],store.delete_fact(v[0])];
+	    deletes = deletes.add([v[0],store._delete(v[0])]);
 	});
+	context.deletes = deletes;
     };
     this.Context.prototype.uninstall = function() {
 	var context = this;
 	var   store = context.store;
-	context.adds = this.adds.map(function(v,k) {
+	var    adds = new Immutable.Set();
+	var deletes = new Immutable.Set();
+	context.adds.forEach(function(v) {
 	    assert.notEqual(v[0],null);
 	    store.delete_fact(v[0])
-	    return [null,v[1]];
+	    adds = adds.add([null,v[1]]);
 	});
-	context.deletes = this.deletes.map(function(v,k) {
+	context.adds = adds;
+	context.deletes.forEach(function(v) {
 	    assert.notEqual(v[1],null);
-	    return [store.add_fact(v[1]),null];
+	    deletes.add([store.add_fact(v[1]),null]);
 	});
+	context.deletes = deletes;
     };
     this.createContext = function() {return new store.Context();};
     return this;
@@ -307,31 +314,49 @@ Store.prototype._rebuild = function() {
     // +++ rebuild indices &c +++
     throw new Error("NYI");
 };
-Store.prototype.add_rule = function(rule) {
-    if (this.facts)
+Store.prototype._add_rule = function(rule) {
+    if (this.facts.length!=0)
 	throw new Error("can't add rules to an active Store");
     this.rules.push(rule);
-    this._rebuild();
 };
-Store.prototype.add_index = function(idx) {
+Store.prototype._add_index = function(idx) {
     this.indices.push(idx);
     this._rebuild();
 };
 Store.prototype.lastUpdate = function() {
     return this.t;
 };
-Store.prototype.add = function(fact) {
+Store.prototype._add = function(fact) { // internal use only 
     this.t++;
     this.facts.set(this.t,fact);
     return this.t;
 };
-Store.prototype.delete = function(t) {
+Store.prototype._delete = function(t) { // internal use only
     var fact = this.facts.get(t);
     this.facts.delete(t);
     return fact;
 };
-Object.defineProperty(Store.prototype,'size',{get:function() {return this.facts.size;}});
-Store.prototype.match_items_indexed = function(items,i,context,consume) {
+Store.prototype.has = function(fact) { // slow (only for testing?)
+    var ans = false;
+    this.facts.forEach(function(t,f) {
+	if (_.isEqual(fact,f))
+	    ans = true;
+    });
+    return ans;
+};
+Store.prototype.add = function(fact) { // external use, runs rules
+    var store = this;
+    if (this.rules.length!==0) {
+	var context = store.createContext();
+	var       t = context.add_fact(fact);
+	context.install();
+	context.in_play.add(t);
+	throw new Error('NYI');
+    } else
+	store._add(fact);
+};
+Object.defineProperty(Store.prototype,'length',{get:function() {return this.facts.length;}});
+Store.prototype._match_items_indexed = function(items,i,context,consume) {
     var store = this;
     if (i>=items.length)
 	consume(null,context);
@@ -339,20 +364,20 @@ Store.prototype.match_items_indexed = function(items,i,context,consume) {
 	context.index = i;
 	items[i].match_single_item(context,
 				   function(t,context) {
-				       store.match_items_indexed(items,i+1,context,consume);
+				       store._match_items_indexed(items,i+1,context,consume);
 				   });
     }
 };
-Store.prototype.match_items = function(items,context,consume) {
-    this.match_items_indexed(items,0,context,consume);
+Store.prototype._match_items = function(items,context,consume) {
+    this._match_items_indexed(items,0,context,consume);
 }
 Store.prototype.snap = function(snap,context) {
     var value = snap.zero;
     context = context || this.createContext();
-    this.match_items(snap.items,context,
-		     function(t,context) {
-			 value = snap.accumulate(value,context.bindings);
-		     });
+    this._match_items(snap.items,context,
+		      function(t,context) {
+			  value = snap.accumulate(value,context.bindings);
+		      });
     return value;
 };
 Store.prototype.apply_rule_item_to_fact = function(rule,i,fact) {
@@ -372,10 +397,10 @@ Store.prototype.apply_rule_item_to_fact = function(rule,i,fact) {
 Store.prototype.rollback = function(t_adds,t_deletes) {
     var store = this;
     t_adds.forEach(function(t_add) {
-	store.delete(t_add[0]);
+	store._delete(t_add[0]);
     });
     t_deletes.forEach(function(t_delete) {
-	store.add(t_delete[1]);
+	store._add(t_delete[1]);
     });
 };
 Store.prototype._merge_results = function(res,res1) {
@@ -387,10 +412,10 @@ Store.prototype._merge_results = function(res,res1) {
 	return false;
     } else {
 	res1[1].forEach(function(t_add) {
-	    t_add[0] = store.add(t_add[1]);
+	    t_add[0] = store._add(t_add[1]);
 	});
 	res1[2].forEach(function(t_delete) {
-	    store.delete(t_delete[0]);
+	    store._delete(t_delete[0]);
 	});
 	res[1].concat(res1[1]);
 	res[2].concat(res1[2]);
