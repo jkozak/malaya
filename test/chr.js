@@ -3,8 +3,20 @@ var chr    = require("../chr.js");
 var assert = require("assert");
 var   util = require('../util.js');
 
+var   Store = chr.Store;	// save some typing
+var    Snap = chr.Snap;
+var     Var = chr.Variable;
+var VarRest = chr.VariableRest;
+var   Match = chr._private.ItemMatch;
+var   Guard = chr._private.ItemGuard;
+var  Delete = chr._private.ItemDelete;
+var     Add = chr._private.ItemAdd;
+var    Bind = chr._private.ItemBind;
+var    Fail = chr._private.ItemFail;
+    
+
 describe('match()',function() {
-    var   store = chr.Store();
+    var   store = new Store();
     var context;
 
     var   match = function(term,datum,bindings) {
@@ -18,10 +30,10 @@ describe('match()',function() {
 	return ans;
     }
     
-    var       p = new chr.Variable('p');       // make the testing a bit tidier  
-    var       q = new chr.Variable('q');
-    var      ps = new chr.VariableRest('ps');
-    var      qs = new chr.VariableRest('qs');
+    var       p = new Var('p');       // make the testing a bit tidier  
+    var       q = new Var('q');
+    var      ps = new VarRest('ps');
+    var      qs = new VarRest('qs');
 
     it("should match simple terms",function() {
 	context = {};
@@ -110,15 +122,8 @@ describe('match()',function() {
 });
 
 describe('Store',function() {
-    var Match  = chr._private.ItemMatch;
-    var Guard  = chr._private.ItemGuard;
-    var Delete = chr._private.ItemDelete;
-    var Add    = chr._private.ItemAdd;
-    var Bind   = chr._private.ItemBind;
-    var Fail   = chr._private.ItemFail;
-    
     it("should add and delete facts",function() {
-	var store = new chr.Store();
+	var store = new Store();
 	assert.equal(store.size,0);
 	var t1 = store.add([1,2,3]);
 	assert.equal(store.size,1);
@@ -142,7 +147,7 @@ describe('Store',function() {
     });
     describe('match_items()',function() {
 	it("should bind variables",function() {
-	    var   store = new chr.Store();
+	    var   store = new Store();
 	    var      ok = false;
 	    store.match_items([new Bind('x',function(_){return 23;})],
 			      store.createContext(),
@@ -166,20 +171,20 @@ describe('Store',function() {
 			      function() {ssert.ok(false);} );
 	});
 	it("should match bound variables to store",function() {
-	    var   store = new chr.Store();
+	    var   store = new Store();
 	    var      ok = false;
 	    store.match_items([new Bind('x',function(_){return 23;}),
-			       new Match(['X',new chr.Variable('x')])],
+			       new Match(['X',new Var('x')])],
 			      store.createContext(),
 			      function() {assert.ok(false);} );
-	    store.match_items([new Match(['X',new chr.Variable('x')]),
+	    store.match_items([new Match(['X',new Var('x')]),
 			       new Bind('x',function(_){return 23;}) ],
 			      store.createContext(),
 			      function() {assert.ok(false);} );
 	    store.add(['X',23]);
 	    ok = false;
 	    store.match_items([new Bind('x',function(_){return 23;}),
-			       new Match(['X',new chr.Variable('x')])],
+			       new Match(['X',new Var('x')])],
 			      store.createContext(),
 			      function(item,context) {
 				  assert.equal(context.get('x'),23);
@@ -187,7 +192,7 @@ describe('Store',function() {
 			      });
 	    assert.ok(ok);
 	    ok = false;
-	    store.match_items([new Match(['X',new chr.Variable('x')]),
+	    store.match_items([new Match(['X',new Var('x')]),
 			       new Bind('x',function(_){return 23;}) ],
 			      store.createContext(),
 			      function(item,context) {
@@ -195,20 +200,18 @@ describe('Store',function() {
 				  ok = true;
 			      });
 	    assert.ok(ok);
-	    store.match_items([new Match(['X',new chr.Variable('x')]),
+	    store.match_items([new Match(['X',new Var('x')]),
 			       new Bind('x',function(_){return 24;}) ],
 			      store.createContext(),
 			      function() {assert.ok(false);} );
 	    store.match_items([new Bind('x',function(_){return 24;}),
-			       new Match(['X',new chr.Variable('x')]) ],
+			       new Match(['X',new Var('x')]) ],
 			      store.createContext(),
 			      function() {assert.ok(false);} );
 	});
     });
     describe('Context.instantiate()',function() {
-	var     Var = chr.Variable;
-	var VarRest = chr.VariableRest;
-	var   store = new chr.Store();
+	var   store = new Store();
 	var context = store.createContext();
 	context.set('p',18);
 	context.set('q',23);
@@ -245,28 +248,28 @@ describe('Store',function() {
     });
     describe('Snap()',function() {
 	it("should zero gracefully",function() {
-	    var store = new chr.Store();
-	    var  snap = new chr.Snap([new Match(["X",new chr.Variable('x')])],
-				     1337,
-				     function(v,ctx){return v+ctx.get('x');} );
+	    var store = new Store();
+	    var  snap = new Snap([new Match(["X",new Var('x')])],
+				 1337,
+				 function(v,ctx){return v+ctx.get('x');} );
 	    assert.equal(store.snap(snap),1337);
 	    store.add(["Y",100]);
 	    assert.equal(store.snap(snap),1337);
 	});
 	it("should guard firmly",function() {
-	    var store = new chr.Store();
-	    var  snap = new chr.Snap([new Match(["X",new chr.Variable('x')]),
-				      new Guard(function(){return false;}) ],
-				     0,
-				     function(v,ctx){return v+ctx.get('x');} );
+	    var store = new Store();
+	    var  snap = new Snap([new Match(["X",new Var('x')]),
+				  new Guard(function(){return false;}) ],
+				 0,
+				 function(v,ctx){return v+ctx.get('x');} );
 	    store.add(["X",100]);
 	    assert.equal(store.snap(snap),0);
 	});
 	it("should match a single head",function() {
-	    var store = new chr.Store();
-	    var  snap = new chr.Snap([new Match(["X",new chr.Variable('x')])],
-				     0,
-				     function(v,ctx){return v+ctx.get('x');} );
+	    var store = new Store();
+	    var  snap = new Snap([new Match(["X",new Var('x')])],
+				 0,
+				 function(v,ctx){return v+ctx.get('x');} );
 	    assert.equal(store.snap(snap),0);
 	    store.add(["X",100]);
 	    assert.equal(store.snap(snap),100);
@@ -276,9 +279,9 @@ describe('Store',function() {
 	    assert.equal(store.snap(snap),101);
 	});
 	it("should match a single head (tersely)",function() {
-	    var store = new chr.Store();
-	    var  snap = new chr.Snap([new Match(["X",new chr.Variable('x')])],
-				     function(v,ctx){return (v||0)+ctx.get('x');} );
+	    var store = new Store();
+	    var  snap = new Snap([new Match(["X",new Var('x')])],
+				 function(v,ctx){return (v||0)+ctx.get('x');} );
 	    assert.equal(store.snap(snap),undefined);
 	    store.add(["X",100]);
 	    assert.equal(store.snap(snap),100);
@@ -288,10 +291,10 @@ describe('Store',function() {
 	    assert.equal(store.snap(snap),101);
 	});
 	it("should match a single head (quite tersely)",function() {
-	    var store = new chr.Store();
-	    var  snap = new chr.Snap([new Match(["X",new chr.Variable('x')])],
-				     undefined,
-				     function(v,ctx){return (v||0)+ctx.get('x');} );
+	    var store = new Store();
+	    var  snap = new Snap([new Match(["X",new Var('x')])],
+				 undefined,
+				 function(v,ctx){return (v||0)+ctx.get('x');} );
 	    assert.equal(store.snap(snap),undefined);
 	    store.add(["X",100]);
 	    assert.equal(store.snap(snap),100);
@@ -301,26 +304,26 @@ describe('Store',function() {
 	    assert.equal(store.snap(snap),101);
 	});
 	it("should match dual heads",function() {
-	    var store = new chr.Store();
-	    var  snap = new chr.Snap([new Match(["X",new chr.Variable('x'),new chr.Variable('p')]),
-				      new Match(["X",new chr.Variable('x'),new chr.Variable('q')]),
-				      new Guard(function(ctx){return ctx.get('p')>ctx.get('q');}) ],
-				     0,
-				     function(v,ctx){return v+ctx.get('p')+ctx.get('q');} );
+	    var store = new Store();
+	    var  snap = new Snap([new Match(["X",new Var('x'),new Var('p')]),
+				  new Match(["X",new Var('x'),new Var('q')]),
+				  new Guard(function(ctx){return ctx.get('p')>ctx.get('q');}) ],
+				 0,
+				 function(v,ctx){return v+ctx.get('p')+ctx.get('q');} );
 	    store.add(["X",1,10]);
 	    store.add(["X",2,20]);
 	    store.add(["X",2,30]);
 	    assert.equal(store.snap(snap),50);
 	});
 	it("should match triple heads",function() {
-	    var store = new chr.Store();
-	    var  snap = new chr.Snap([new Match(["X",new chr.Variable('x'),new chr.Variable('p')]),
-				      new Match(["X",new chr.Variable('x'),new chr.Variable('q')]),
-				      new Match(["X",new chr.Variable('x'),new chr.Variable('r')]),
-				      new Guard(function(ctx){return ctx.get('p')>ctx.get('q') &&
-							      ctx.get('q')>ctx.get('r');}) ],
-				     0,
-				     function(v,ctx){return v+ctx.get('p')+ctx.get('q')+ctx.get('r');} );
+	    var store = new Store();
+	    var  snap = new Snap([new Match(["X",new Var('x'),new Var('p')]),
+				  new Match(["X",new Var('x'),new Var('q')]),
+				  new Match(["X",new Var('x'),new Var('r')]),
+				  new Guard(function(ctx){return ctx.get('p')>ctx.get('q') &&
+							  ctx.get('q')>ctx.get('r');}) ],
+				 0,
+				 function(v,ctx){return v+ctx.get('p')+ctx.get('q')+ctx.get('r');} );
 	    store.add(["X",1,10]);
 	    store.add(["X",2,20]);
 	    store.add(["X",2,30]);
