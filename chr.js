@@ -148,31 +148,48 @@ function match_single_item_match(item,context,consume) {
 	});
 }
 ItemMatch.prototype.match_single_item = function(context,consume) {
-    match_single_item_match(this,context,consume);
+    if (context.fail)
+	consume(null,context);
+    else 
+	match_single_item_match(this,context,consume);
 };
 ItemGuard.prototype.match_single_item = function(context,consume) {
-    if (this.expr(context.bindings))
+    if (context.fail)
 	consume(null,context);
+    else if (this.expr(context.bindings))
+	    consume(null,context);
 };
 ItemAdd.prototype.match_single_item = function(context,consume) {
-    var item = this;
-    context.add_fact(context.instantiate(item.terms));
-    consume(null,context);
+    if (context.fail)
+	consume(null,context);
+    else {
+	var item = this;
+	context.add_fact(context.instantiate(item.terms));
+	consume(null,context);
+    }
 };
 ItemDelete.prototype.match_single_item = function(context,consume) {
-    var item = this;
-    match_single_item_match(item,context,function(t,context) {
-	context.delete_fact(t);
-	consume(t,context);
-    });
+    if (context.fail)
+	consume(null,context);
+    else {
+	var item = this;
+	match_single_item_match(item,context,function(t,context) {
+	    context.delete_fact(t);
+	    consume(t,context);
+	});
+    }
 };
 ItemBind.prototype.match_single_item = function(context,consume) {
-    if (context.bind(this.name,this.expr(context)))
+    if (context.fail)
+	consume(null,context);
+    else if (context.bind(this.name,this.expr(context)))
 	consume(null,context);
 };
 ItemFail.prototype.match_single_item = function(context,consume) {
+    // +++ maybe thisshould just throw itself?
+    // +++ saves all the propagation code above
     context.fail = this.msg;
-    consume(null,ctx);
+    consume(null,context);
 };
 
 function Snap(items,zero,accumulate) {
@@ -186,7 +203,7 @@ function Snap(items,zero,accumulate) {
     return this;
 }
 
-function Rule(items) {		// item is one of RHead,RDelete,RGuard,RBind,RAdd
+function Rule(items) {		// `item` is one of Item* above
     this.items = items;
     return this;
 }
@@ -337,23 +354,35 @@ Store.prototype._delete = function(t) { // internal use only
     return fact;
 };
 Store.prototype.has = function(fact) { // slow (only for testing?)
-    var ans = false;
+    var ans = 0;
     this.facts.forEach(function(t,f) {
 	if (_.isEqual(fact,f))
-	    ans = true;
+	    ans++;
     });
     return ans;
 };
 Store.prototype.add = function(fact) { // external use, runs rules
-    var store = this;
-    if (this.rules.length!==0) {
-	var context = store.createContext();
-	var       t = context.add_fact(fact);
-	context.install();
-	context.in_play.add(t);
-	throw new Error('NYI');
-    } else
-	store._add(fact);
+    var   store = this;
+    var context = store.createContext();
+    var       t = context.add_fact(fact);
+    context.install();
+    context.in_play.add(t);
+    store.rules.forEach(function(rule) {
+	for (var i=0;i<rule.items;i++) 
+	    if (rule.items[i] instanceof ItemMatch || rule.items[i] instanceof ItemDelete) 
+		context.sources[i] = t;
+	store._match_items(rule.items,context,
+			   function(t,ctx) {
+			       if (ctx.fail) {
+				   context.uninstall();
+				   throw new Error('fail: '+ctx.fail);
+			       } else {
+				   ctx.install();
+				   context.adds    = context.adds   .union(ctx.adds);
+				   context.deletes = context.deletes.union(ctx.deletes);
+			       }
+			   });
+    });
 };
 Object.defineProperty(Store.prototype,'length',{get:function() {return this.facts.length;}});
 Store.prototype._match_items_indexed = function(items,i,context,consume) {
@@ -380,77 +409,7 @@ Store.prototype.snap = function(snap,context) {
 		      });
     return value;
 };
-Store.prototype.apply_rule_item_to_fact = function(rule,i,fact) {
-    var context = this.createContext();
-    var    item = rule.items[i];
-    if (item instanceof ItemMatch || item instanceof ItemDelete)
-    {
-	// +++ match fact against item
-	// +++ for item' in rule.items
-	// +++   if item' is not item
-	// +++      match item' against store
-	// +++ return [fail|null,[[null,add],...],[[t,delete],...]]
-	throw new Error("NYI");
-    } else
-	return [null,[],[]];
-};
-Store.prototype.rollback = function(t_adds,t_deletes) {
-    var store = this;
-    t_adds.forEach(function(t_add) {
-	store._delete(t_add[0]);
-    });
-    t_deletes.forEach(function(t_delete) {
-	store._add(t_delete[1]);
-    });
-};
-Store.prototype._merge_results = function(res,res1) {
-    var store = this;
-    assert.equal(res[0],null);
-    if (res1[0]!==null) {
-	store.rollback(res1[1],res1[2]);
-	res = [res1[0],[],[]];
-	return false;
-    } else {
-	res1[1].forEach(function(t_add) {
-	    t_add[0] = store._add(t_add[1]);
-	});
-	res1[2].forEach(function(t_delete) {
-	    store._delete(t_delete[0]);
-	});
-	res[1].concat(res1[1]);
-	res[2].concat(res1[2]);
-    }
-    return true;
-};
-Store.prototype.apply_rule_to_fact = function(rule,fact) {
-    var   store = this;
-    var   res = [null,[],[]];	// return [fail|null,[[t,add],...],[[t,delete],...]]
-    // !!! this should be using a r/w variant of `match_items` !!!
-    throw new Error('NYI');
-    for (var i in rule.items) {
-	var res1 = this.apply_rule_item_to_fact(rule,i,fact);
-	if (!store._merge_results(res,res1))
-	    return res;
-    }
-    return res;
-};
-Store.prototype.apply_fact = function(fact) {
-    var store = this;
-    var   res = [null,[],[]];	// return [fail|null,[[t,add],...],[[t,delete],...]]
-    // !!! WRONG - fact must be put in store                   !!!
-    // !!!         create a Context and put it in as `in_play` !!!
-    //             apply rule then:
-    //                * delete each delete
-    //                * apply_fact each add
-    //             rollback via immutable facts
-    throw new Error('NYI');
-    store.rules.forEach(function(rule) {
-	var res1 = this.apply_rule_to_fact(rule,fact);
-	if (!store._merge_results(res,res1))
-	    return res;
-    });
-    return res;
-};
+
 // BusinessLogic protocol (so can do `module.exports = <store>;`)
 Store.prototype.get_root = function() {
     return {t:    this.t,
@@ -462,7 +421,13 @@ Store.prototype.set_root = function(r) {
     this._rebuild();
 };
 Store.prototype.update = function(u) {
-    this.add(u);
+    try {
+	this.add(u);
+	return [true,null];
+    } catch (e) {
+	console.log(e);
+	return [false,e];
+    }
 };
 Store.prototype.query = function(q) {
     if (!(q instanceof Snap))
