@@ -448,18 +448,57 @@ describe('Store',function() {
 			       });
 	    assert.equal(store.length,3);
 	});
+	it("should de-dupe tersely",function() {
+	    var store = new Store();
+	    var   ctx;
+	    store._add(["X",17]);
+	    store._add(["X",17]);
+	    store._add(["X",17]);
+	    assert.equal(store.length,3);
+	    store._match_items([new Match(new Var('x')),
+		                new Delete(new Var('x')) ],
+			       store.createContext(),
+			       function(t,context) {
+				   context.install();
+			       });
+	    assert.equal(store.length,1);
+	});
     });
-    // +++ uncomment me +++
-    // describe('Rule()',function() {
-    // 	it("should add new facts",function() {
-    // 	    var store = new Store();
-    // 	    store._add_rule(new Rule([new Match(["X",new Var('x')]),
-    // 				      new Add(["Y",new Var('x')]) ]));
-    // 	    assert.equal(store.length,0);
-    // 	    store.add(["X",17]);
-    // 	    assert.equal(store.length,2);
-    // 	    assert.ok(store.has(["X",17]));
-    // 	    assert.ok(store.has(["Y",17]));
-    // 	});
-    // });
+    describe('ItemFail',function() {
+	it("should leave a trace",function() {
+	    var store = new Store();
+	    var    ok = false;
+	    store._match_items([new Fail("oh dear")],
+			       store.createContext(),
+			       function(t,context) {
+				   assert(context.fail=="oh dear");
+				   ok = true;
+			       });
+	    assert.ok(ok);
+	});
+	it("should propagate its trace",function() {
+	    var store = new Store();
+	    var    ok = false;
+	    store._match_items([new Fail("oh dear"),
+				new Guard(function(_){return false;}) ],
+			       store.createContext(),
+			       function(t,context) {
+				   assert(context.fail=="oh dear");
+				   ok = true;
+			       });
+	    assert.ok(ok);
+	});
+    });
+    describe('Rule()',function() {
+    	it("should add new facts via rules",function() {
+    	    var store = new Store();
+    	    store._add_rule(new Rule([new Match(["X",new Var('x')]),
+    				      new Add(["Y",new Var('x')]) ]));
+    	    assert.equal(store.length,0);
+    	    store.add(["X",17]);
+    	    assert.equal(store.length,2);
+    	    assert.ok(store.has(["X",17])); // the one we put in 
+    	    assert.ok(store.has(["Y",17])); // added by the rule above
+    	});
+    });
 });
