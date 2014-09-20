@@ -1,63 +1,45 @@
-macroclass head {
-    pattern {
-	rule { [ $heads:head (,) ...] }
-    }
-    pattern {
-	rule { [ $heads:head (,) ... , $[...] $rest:id] }
-    }
-    pattern {
-	rule { [ $[...] $rest:id] }
-    }
-    pattern {
-	rule { $x:expr }
-    }
-};
+macro obj_term {
+    rule { $[...] $id:ident }    => { ''  : __VR($id) }
+    rule { $id:ident : $t:expr } => { $id : $t }
+}
 
-macroclass term {
-    pattern {
-	rule { $t:() $x:head }
-    }
-    pattern {
-	rule { $t:(+)$x:head }
-    }
-    pattern {
-	rule { $t:(-)$x:head }
-    }
-};
+macro arr_term {
+    rule { $[...] $id:ident }  => { __VR($id) }
+    rule { $term }             => { $term }
+}
 
-macroclass chr_body_term {
-    pattern {
-	rule { {$terms:chr_body_terms (;) ...} }
+macro term {
+    rule { [ $terms:arr_term (,) ... ] } => {
+	[ $terms (,) ...]
     }
-    pattern {
-	rule { $x:term }
-    }
-    pattern {
-	rule { if ( $guard:expr ) $t:chr_body_term }
-    }
-    pattern {
-	rule { if ( $guard:expr ) $t:chr_body_term else $f:chr_body_term }
-    }
-    pattern {
-	rule { $x:expr }
-    }
-};
+    rule { { $terms:obj_term (,) ... } } => { { $terms (,) ... } }
+    rule { $e:expr }
+}
 
-// !!! should be when {...} not when (...)  !!!
-macroclass chr_rule {
-    pattern {
-	rule { when ( $heads:term (;) ... ) $body:chr_body_term }
+macro rule_item {
+    rule { + $t:term     } => { __ADD($t)    }
+    rule { - $t:term     } => { __DELETE($t) }
+    rule { ( $e:expr )   } => { __GUARD($e)  }
+    rule {   $t:term     } => { __MATCH($t)  }
+}
+
+macro rule_ {
+    rule { rule { $items:rule_item (;) ... } } => {
+	$items (,) ...
     }
-};
+}
+
+macro store_item {
+    rule { $r:rule_ } => { ['rule',$r] }
+    rule { $t:term  } => { ['term',$t] }
+}
 
 macro store {
-    rule { { $rules:chr_rule (;) ... } }
-};
-
-
-// testing only
-macro foo {
-    rule { $x } => { $x + 'rule1' }
-};
-
-
+    rule { { $items:store_item (;) ... } } => {
+	(function() {
+	    var items = [
+		$items (,) ...
+	    ];
+	})();
+    }
+}
