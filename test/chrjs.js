@@ -22,4 +22,8 @@ describe('chrjs parser',function() {
 	var x = chrjs._private.compile("store { rule { +['A',a,...r1];(a==100);{B:a,...r2}} };");
 	//console.log(util.format("\n*** macro expands to: %j",x));
     });
+    it("should parse named store",function() {
+	var x = chrjs._private.compile("store fred { rule { +['A',a,...r1];(a==100);b=10;{B:a,...r2}} };");
+	//console.log(util.format("\n*** macro expands to: %j",x));
+    });
 });
