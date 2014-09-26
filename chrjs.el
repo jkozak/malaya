@@ -2,14 +2,9 @@
 
 (require 'js)
 
-(define-derived-mode chrjs-mode js-mode "CHRjs"
-    "chrjs mode is a major mode for editing chrjs files"
-  
-    ;; you again used quote when you had '((mydsl-hilite))
-    ;; I just updated the variable to have the proper nesting (as noted above)
-    ;; and use the value directly here
-    ;(setq font-lock-defaults mydsl-font-lock-defaults)
-  
-    )
-  
+(define-derived-mode chrjs-mode js-mode
+  "chrjs-mode"
+  "chrjs mode is a major mode for editing chrjs files"
+  (font-lock-add-keywords nil '(("\\_<\\(store\\|query\\|snap\\|rule\\)\\_>" . 'font-lock-keyword-face))) )
+
 (provide 'chrjs-mode)
