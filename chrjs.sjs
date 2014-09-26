@@ -24,6 +24,14 @@ macro expr_ {
     case { _ $l:lit }    => {return #{$l};}
 }
 
+// +++ snap +++
+
+macro query {
+    rule { $name:ident ( $vars:ident (,) ... ; $fat_term (,) ... ; $accum:ident ) $init:lit : $iter:expr } => {
+	// +++ 
+    }
+}
+
 macro rule_item {
     case { _ + $t:term           } => {
 	return #{new chr.ItemAdd($t)};
@@ -36,6 +44,11 @@ macro rule_item {
 	return #{new chr.ItemDelete($t)};
     }
     case { _ ( $e:expr )         } => {
+	var vars = new require('immutable').Set();
+	// +++ walk AST pulling out variable names into vars +++
+	// +++ avoiding e.g. function name in calls as we go +++
+	// +++ call below is then something like:
+	//     (function($vars (,) ...) {return $e;})(ctx.get(makeString($vars) (,) ...))
 	return #{new chr.ItemGuard(function(ctx) {return $e;})};
     } 
     case { _   $t:fat_term       } => {
@@ -50,8 +63,9 @@ macro rule_ {
 }
 
 macro store_item {
-    rule { $r:rule_ } => { ['rule',$r] }
-    rule { $t:term  } => { ['fact',$t] }
+    rule { $r:rule_ } => { ['rule', $r] }
+    rule { $q:query } => { ['query',$q] }
+    rule { $t:term  } => { ['fact', $t] }
 }
 
 macro store {
