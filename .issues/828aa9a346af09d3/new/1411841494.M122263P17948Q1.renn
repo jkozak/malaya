@@ -1,0 +1,8 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Sat, 27 Sep 2014 19:11:34 +0100
+Subject: # and ^ operators
+State: new
+Message-Id: <828aa9a346af09d3-0-artemis@renn>
+
+# is store-index, per normal CHR
+^ is ORDER-BY

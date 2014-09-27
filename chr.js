@@ -101,24 +101,26 @@ function match(term,datum,context) {
 	return term==datum;
 }
 
-function ItemMatch(terms) {	// e.g. ["user",{name}]    
+function ItemMatch(terms,rank) {  // e.g. ["user",{name}]    
     this.terms = terms;
+    this.rank  = rank;	          // ctx -> number;  used to rank in sorting
     return this;
 }
-function ItemDelete(terms) {	// e.g. -["user",{name:"cole"}]
+function ItemDelete(terms,rank) { // e.g. -["user",{name:"cole"}]
     this.terms = terms;
+    this.rank  = rank;
     return this;
 }
-function ItemGuard(expr) {	// e.g. ?name=='jimson'
+function ItemGuard(expr) {	  // e.g. ?name=='jimson'
     this.expr = expr;
     return this;
 }
-function ItemBind(name,expr) {	// e.g. new_name="mr "+name
+function ItemBind(name,expr) {	  // e.g. new_name="mr "+name
     this.name = name;
     this.expr = expr;
     return this;
 }
-function ItemAdd(terms) {	// e.g. +["user",{name:"watts"}]
+function ItemAdd(terms) {	  // e.g. +["user",{name:"watts"}]
     this.terms = terms;
     return this;
 }
@@ -130,22 +132,32 @@ function match_single_item_match(item,context,consume) {
     var t = null;
     if (item.sources) 
 	t = item.sources.get(context.index);
-    if (t!==null) {
+    if (t!==null) {		           // t specified by caller
 	var ctx = context.bump();
 	assert.ok(context.in_play.has(t)); // should have been set up already
 	if (match(item.terms,context.store.facts.get(t),ctx)) {
 	    consume(t,ctx);
 	}
-    } else 
+    } else {			           // caller has not specified t, iterate over all
+	var tctxs = [];			   // only used if sorting
+	var rank  = item['rank'];
 	context.store.facts.forEach(function(t,fact) {
 	    if (!context.in_play.has(t)) {
 		var ctx = context.bump();
 		ctx.in_play = context.in_play.add(t);
 		if (match(item.terms,fact,ctx)) {
-		    consume(t,ctx);
+		    if (rank) 
+			tctxs.push([t,ctx]); // save to be sorted and consumed later
+		    else
+			consume(t,ctx);
 		}
 	    }
 	});
+	if (rank) {
+	    var cmp = function(tctx1,tctx2) {return rank(tctx1[1])-rank(tctx2[1]);};
+	    tctxs.sort(cmp).forEach(function(tctx) {consume(tctx[0],tctx[1]);});
+	}
+    }
 }
 ItemMatch.prototype.match_single_item = function(context,consume) {
     if (context.fail)
@@ -215,7 +227,7 @@ function Index(type) {
     // +++ also want Date, bignum then a proper JSONy type system +++
 }
 
-function Store(rules) {
+function Store() {
     var store = this;
     this.t             = 0;
     this.facts         = new Map();           // t -> fact
@@ -431,7 +443,7 @@ Store.prototype.update = function(u) {
 };
 Store.prototype.query = function(q) {
     if (!(q instanceof Snap))
-	throw new Error("query argument must be an Snap");
+	throw new Error("query argument must be a Snap");
     return this.snap(q,{});
 };
 
