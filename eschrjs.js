@@ -2677,7 +2677,8 @@ parseStatement: true, parseSourceElement: true */
 
         expr = parseAssignmentExpression();
 
-        if (match(',')) {
+	// comma operator doesn't make sense in chrjs, as no side-effects
+        if (!state.inStore && match(',')) {
             expr = delegate.createSequenceExpression([ expr ]);
 
             while (index < length) {
@@ -3878,21 +3879,20 @@ parseStatement: true, parseSourceElement: true */
 	var item;
 	if (match('+')) {
 	    expect('+');
-	    return delegate.createItemExpression('+',null,parseExpression());
+	    return delegate.createItemExpression('+',null,parseChrjsFullTerm());
 	} else if (match('-')) {
 	    expect('-');
-	    return delegate.createItemExpression('-',null,parseExpression());
+	    return delegate.createItemExpression('-',null,parseChrjsFullTerm());
 	} else if (match('[') || match('{')) {
-	    return delegate.createItemExpression('M',null,parseExpression());
+	    return delegate.createItemExpression('M',null,parseChrjsFullTerm());
 	} else if (lookahead.type===Token.Identifier) {
-	    var id = parseVariableIdentifier();
-	    if (match('=')) {
-		expect('=');
-		var id = parseVariableIdentifier();
-		return delegate.createItemExpression('=',id,parseExpression());
-	    } else {
-		return delegate.createItemExpression('?',null,parseExpression());
-	    }
+	    var expr = parseAssignmentExpression();
+	    if (expr.type=='AssignmentExpression')
+		return delegate.createItemExpression('=',null,expr);                    // bind
+	    else
+		return delegate.createItemExpression('?',null,expr);                    // guard
+	} else if (match('(')) {
+	    return delegate.createItemExpression('?',null,parseAssignmentExpression()); // guard
 	} else
 	    throwUnexpected(lex());
     }
@@ -3929,7 +3929,7 @@ parseStatement: true, parseSourceElement: true */
 	expect(')');
 	qsb.init = parsePrimaryExpression();
 	expect(':');
-	qsb.fold = parseExpression();
+	qsb.fold = parseBinaryExpression();
 	return qsb;
     }
     
