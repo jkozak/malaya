@@ -326,7 +326,7 @@ parseStatement: true, parseSourceElement: true */
         case 4:
             return (id === 'this') || (id === 'else') || (id === 'case') ||
                 (id === 'void') || (id === 'with') || (id === 'enum') ||
-		(id === 'rule');		// chrjs
+		(id === 'rule') || (id === 'snap');		// chrjs
         case 5:
             return (id === 'while') || (id === 'break') || (id === 'catch') ||
                 (id === 'throw') || (id === 'const') || (id === 'yield') ||
@@ -2059,7 +2059,7 @@ parseStatement: true, parseSourceElement: true */
                 lex();
                 elements.push(null);
             } else {
-		if (match('...')) {
+		if (state.inStore && match('...')) { // chrjs
 		    expect('...');
 		    elements.push(delegate.createBindRest(parseVariableIdentifier()));
 		} else
@@ -2115,7 +2115,7 @@ parseStatement: true, parseSourceElement: true */
         token = lookahead;
         startToken = lookahead;
 
-	if (match('...')) {	// chrjs
+	if (state.inStore && match('...')) {	// chrjs
 	    expect('...');
             key = parseVariableIdentifier();
             return delegate.markEnd(delegate.createProperty('bindRest', key, key), startToken);
@@ -2152,7 +2152,7 @@ parseStatement: true, parseSourceElement: true */
 		value = parseAssignmentExpression();
 		return delegate.markEnd(delegate.createProperty('init', id, value), startToken);
 	    } else {		// chrjs
-		if (match(',') || match('}'))
+		if (state.inStore && (match(',') || match('}')))
 		    return delegate.markEnd(delegate.createProperty('bindOne', id, value), startToken);
 		else
 		    throwUnexpected(token);
@@ -2262,6 +2262,9 @@ parseStatement: true, parseSourceElement: true */
         } else if (type === Token.Keyword) {
             if (matchKeyword('function')) {
                 return parseFunctionExpression();
+            }
+	    if (state.inStore && matchKeyword('snap')) {          // chrjs
+                return parseSnapExpression();
             }
             if (matchKeyword('this')) {
                 lex();
@@ -3677,7 +3680,8 @@ parseStatement: true, parseSourceElement: true */
             inFunctionBody: false,
             inIteration: false,
             inSwitch: false,
-            lastCommentStart: -1
+            lastCommentStart: -1,
+	    inStore: false	// chrjs
         };
 
         extra = {};
@@ -3819,6 +3823,8 @@ parseStatement: true, parseSourceElement: true */
     function parseStoreBodyElement() {
 	if (matchKeyword('rule'))
 	    return parseRuleStatement();
+	else if (matchKeyword('query'))
+	    return parseQueryStatement();
 	else if (match('[')) 
 	    return parseArrayInitialiser();
 	else if (match('{'))
@@ -3843,14 +3849,19 @@ parseStatement: true, parseSourceElement: true */
     }
 
     function parseStoreStatement() {
-	var   id = null;
-	expectKeyword('store');
-	if (!match('{'))
-	    id = parseVariableIdentifier();
-	expect("{");
-	var body = parseStoreBodyList();
-	expect("}");
-        return delegate.createStoreStatement(id,body);
+	state.inStore = true;
+	try {
+	    var   id = null;
+	    expectKeyword('store');
+	    if (!match('{'))
+		id = parseVariableIdentifier();
+	    expect("{");
+	    var body = parseStoreBodyList();
+	    expect("}");
+            return delegate.createStoreStatement(id,body);
+	} finally {
+	    state.inStore = false;
+	}
     }
 
     function parseChrjsFullTerm() {
@@ -3903,31 +3914,45 @@ parseStatement: true, parseSourceElement: true */
     }
 
     function parseQuerySnapBackend() {
-	var items = parseChrjsItems();
-	expectKeyword(';');
-	var accum = parseVariableIdentifier(false);
-	expectKeyword(')');
-	var init = parsePrimaryExpression();
-	expectKeyword(':');
-	var accum = parseExpression();
-	// +++
+	var qsb = {items:[],init:null,accum:null,fold:null}
+        if (!match(';')) {
+            while (index<length) {
+                qsb.items.push(parseChrjsItem());
+                if (match(';')) 
+                    break;
+                expect(',');
+            }
+        }
+	expect(';');
+	qsb.accum = parseVariableIdentifier();
+	expect(')');
+	qsb.init = parsePrimaryExpression();
+	expect(':');
+	qsb.fold = parseExpression();
+	return qsb;
     }
     
     function parseQueryStatement() {
-	var items = [];
+	var args = [];
 	expectKeyword('query');
-	var name = parseVariableIdentifier(false);
-	expectKeyword('(');
-	// +++ get args (comma-separated list of id) +++
-	expectKeyword(';');
+	var id = parseVariableIdentifier();
+	expect('(');
+        if (!match(';')) {
+            while (index<length) {
+                args.push(parseChrjsItem());
+                if (match(';')) 
+                    break;
+                expect(',');
+            }
+        }
+	expect(';');
 	var qsb = parseQuerySnapBackend();
-        return delegate.createQueryStatement(name,args,qsb.items,qsb.init,qsb.fold);
+        return delegate.createQueryStatement(id,args,qsb.items,qsb.init,qsb.fold);
     }
 
     function parseSnapExpression() {
-	var items = [];
 	expectKeyword('snap');
-	expectKeyword('(');
+	expect('(');
 	var qsb = parseQuerySnapBackend();
         return delegate.createSnapExpression(qsb.items,qsb.init,qsb.fold);
     }
