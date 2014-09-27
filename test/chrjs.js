@@ -25,4 +25,29 @@ temp.track();
  	 var x = chrjs._private.parse("store fred { rule ( +['A',a,...r1],(a==100),b=10,{B:a,...r2}); };");
  	 //console.log(util.format("\n*** macro expands to: %j",x));
      });
+     it("should parse query",function() {
+ 	 var x = chrjs._private.parse("store fred { query q(;['A',x];a) 0:a+x; };");
+ 	 //console.log(util.format("\n*** macro expands to: %j",x));
+     });
+     it("should parse snap",function() {
+ 	 var x = chrjs._private.parse("store fred { rule (['A',x],+['B',10*snap(['C',x];a) 0:a+x] ); };");
+ 	 //console.log(util.format("\n*** macro expands to: %j",x));
+     });
+     it("should reject chrjs extensions outside store",function() {
+	 assert.throws(function() {
+ 	     chrjs._private.parse("snap(['C',x];a) 0:a+x;");
+	 });
+	 assert.throws(function() {
+ 	     chrjs._private.parse("rule(['C',x]);");
+	 });
+	 assert.throws(function() {
+ 	     chrjs._private.parse("var x = [...rs];");
+	 });
+	 assert.throws(function() {
+ 	     chrjs._private.parse("var x = {...rs};");
+	 });
+	 assert.throws(function() {
+ 	     chrjs._private.parse("var x = {s};");
+	 });
+     });
 });
