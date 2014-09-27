@@ -346,22 +346,22 @@ describe("esprima-based parser",function() {
 		testParse(esprima, code, result);
 	    }
 	};
-	_.extend(testFixture,chrjsTestFixture); // add in tests for chrJS
+	delete testFixture['Invalid syntax']['i #= 42']; // not invalid now
+	delete testFixture['API']['Syntax'];		 // we have added to `Syntax`
+	_.extend(testFixture,chrjsTestFixture);          // add in tests for chrJS
 	Object.keys(testFixture).forEach(function(category) {
             Object.keys(testFixture[category]).forEach(function(source) {
-		if (!(category==='API' && source==='Syntax')) { // this test will fail
-                    var expected = testFixture[category][source];
-                    total += 1;
-		    try {
-			runTest(eschrjs,source,expected);
-		    } catch (e) {
-			console.log("!!! "+e);
-			e.source = source;
-			// massage this into something I can actually read
-			console.log(util.format("\n%s.%s fails:\n wanted: %j\n got:    %j",
-						category,source,e.expected,e.actual));
-			failures.push(e);
-		    }
+                var expected = testFixture[category][source];
+                total += 1;
+		try {
+		    runTest(eschrjs,source,expected);
+		} catch (e) {
+		    console.log("!!! "+e);
+		    e.source = source;
+		    // massage this into something I can actually read
+		    console.log(util.format("\n%s.%s fails:\n wanted: %j\n got:    %j",
+					    category,source,e.expected,e.actual));
+		    failures.push(e);
 		}
             });
 	});

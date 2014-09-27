@@ -111,7 +111,8 @@ parseStatement: true, parseSourceElement: true */
                     // binary/unary operators
                     '+', '-', '*', '/', '%', '++', '--', '<<', '>>', '>>>', '&',
                     '|', '^', '!', '~', '&&', '||', '?', ':', '===', '==', '>=',
-                    '<=', '<', '>', '!=', '!=='];
+                    '<=', '<', '>', '!=', '!==',
+		    '#'];	// chrjs
 
     Syntax = {
         AssignmentExpression: 'AssignmentExpression',
@@ -654,6 +655,7 @@ parseStatement: true, parseSourceElement: true */
         switch (code) {
 
         // Check for most common single-character punctuators.
+	case 0x23:  // # (chrjs)
         case 0x28:  // ( open bracket
         case 0x29:  // ) close bracket
         case 0x3B:  // ; semicolon
@@ -3867,16 +3869,27 @@ parseStatement: true, parseSourceElement: true */
     }
 
     function parseChrjsFullTerm() {
+	var expr;
 	if (match('[')) 
-	    return parseArrayInitialiser();
+	    expr = parseArrayInitialiser();
 	else if (match('{'))
-	    return parseObjectInitialiser();
+	    expr = parseObjectInitialiser();
 	else
 	    throwUnexpected(lex());
+	while (true) {
+	    if (match('^')) {
+		expect('^');
+		expr = delegate.createBinaryExpression('^',expr,parseConditionalExpression());
+	    } else if (match('#')) {
+		expect('#');
+		expr = delegate.createBinaryExpression('#',expr,parseConditionalExpression());
+	    } else
+		break;
+	}
+	return expr;
     }
 
     function parseChrjsItem() {
-	var item;
 	if (match('+')) {
 	    expect('+');
 	    return delegate.createItemExpression('+',null,parseChrjsFullTerm());

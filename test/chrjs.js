@@ -51,4 +51,12 @@ describe('chrjs parser',function() {
  	     chrjs._private.parse("var x = {s};");
 	 });
      });
+     it("should parse ^ operator",function() {
+ 	 var x = chrjs._private.parse("store { rule (['X',19,{a:1},b]^b);};");
+ 	 //console.log(util.format("*** macro expands to: %j",x));
+     });
+     it("should parse # operator",function() {
+ 	 var x = chrjs._private.parse("store { rule (['X',19,{a:1},b]#t);};");
+ 	 console.log(util.format("*** macro expands to: %j",x));
+     });
 });

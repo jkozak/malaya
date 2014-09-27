@@ -1,8 +1,9 @@
 From: John Kozak <jk@thameslighter.net>
 Date: Sat, 27 Sep 2014 19:11:34 +0100
 Subject: # and ^ operators
-State: new
+State: resolved
 Message-Id: <828aa9a346af09d3-0-artemis@renn>
+resolution: fixed
 
 # is store-index, per normal CHR
 ^ is ORDER-BY
