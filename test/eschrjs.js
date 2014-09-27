@@ -13,17 +13,17 @@ temp.track();
 var chrjsTestFixture = {	// see esprima/test/test.js for format
     'ChrJS expressions': {
         'store{};': {
-            type: 'StoreStatement',
+	    type: 'StoreDeclaration',
 	    id: null,
-            body: [],
-            range: [0, 7],
-            loc: {
-                start: { line: 1, column: 0 },
-                end: { line: 1, column: 7 }
-            }
-        },
+	    body: [],
+	    range: [0, 7],
+	    loc: {
+		start: { line: 1, column: 0 },
+		end: { line: 1, column: 7 }
+	    }
+	},
         'store{[]};': {
-            type: 'StoreStatement',
+            type: 'StoreDeclaration',
 	    id: null,
             body: [
 		{
@@ -41,7 +41,7 @@ var chrjsTestFixture = {	// see esprima/test/test.js for format
             }
         },
         'store{{}};': {
-            type: 'StoreStatement',
+            type: 'StoreDeclaration',
 	    id: null,
             body: [
 		{
@@ -58,8 +58,7 @@ var chrjsTestFixture = {	// see esprima/test/test.js for format
                 end: { line: 1, column: 9 }
             }
         }
-
-    }
+     }
 };
 
 describe("esprima-based parser",function() {
@@ -348,7 +347,6 @@ describe("esprima-based parser",function() {
 	    }
 	};
 	_.extend(testFixture,chrjsTestFixture); // add in tests for chrJS
-	//testFixture = chrjsTestFixture;           // !!! just testing mine for now !!!
 	Object.keys(testFixture).forEach(function(category) {
             Object.keys(testFixture[category]).forEach(function(source) {
 		if (!(category==='API' && source==='Syntax')) { // this test will fail
@@ -357,6 +355,7 @@ describe("esprima-based parser",function() {
 		    try {
 			runTest(eschrjs,source,expected);
 		    } catch (e) {
+			console.log("!!! "+e);
 			e.source = source;
 			// massage this into something I can actually read
 			console.log(util.format("\n%s.%s fails:\n wanted: %j\n got:    %j",
