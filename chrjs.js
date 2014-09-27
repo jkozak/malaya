@@ -3,10 +3,16 @@ var codegen = require('escodegen');
 var eschrjs = require('./eschrjs.js');
 var fs      = require('fs');
 var path    = require('path');
+var assert  = require('assert');
+
+function transformToInterpreter(chrjs) {
+    assert.strictEqual(chrjs.type,'Program');
+    return chrjs;
+}
 
 function transform(chrjs) {
     // +++ transform chrjs to plain js
-    return chrjs;
+    return transformToInterpreter(chrjs);
 }
 
 require.extensions['.chrjs'] = function(module,filename) {

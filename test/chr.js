@@ -501,4 +501,22 @@ describe('Store',function() {
     	    assert.ok(store.has(["Y",17])); // added by the rule above
     	});
     });
+    describe('OrderBy',function() {
+	it("should sort if asked",function() {
+    	    var store = new Store();
+    	    store.add(["X",17]);
+    	    store.add(["X",18]);
+    	    store.add(["X",19]);
+	    assert.deepEqual(store.snap(new Snap([new Match(["X",new Var('x')],
+							    function(ctx) {return ctx.get('x');} )],
+						  [],
+						  function(v,ctx){return v.concat([ctx.get('x')]);} )),
+			     [17,18,19]); // sort ascending
+	    assert.deepEqual(store.snap(new Snap([new Match(["X",new Var('x')],
+							    function(ctx) {return -ctx.get('x');} )],
+						  [],
+						  function(v,ctx){return v.concat([ctx.get('x')]);} )),
+			     [19,18,17]); // sort descending
+	});
+    });
 });

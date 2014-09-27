@@ -1,0 +1,23 @@
+store IDB {
+    ['user',{name:"John Kozak",company:"Acecomp"}];
+    ['user',{name:"Val Wardlaw",company:"Perluceo"}];
+    
+    ['instrument',{name:"IL21"}];
+
+    rule (-['match-price',{volume:0}]);
+    
+    rule (-['match-price',{user,      instrument,volume,        isBuy,       t,   ...mtRest}]^t,
+ 	   ["user",{user:user,company}],
+	  -['match-price',{user:user1,instrument,volume:volume1,isBuy:isBuy1,t:t1,...mtRest1}]^t1,
+ 	   ["user",{user:user1,company:company1}],
+	  company!==company1 && isBuy!==isBuy1,
+	  tradeVolume = Math.min(volume,volume1),
+	  buyer  = isBuy ? user  : user1,
+	  seller = isBuy ? user1 : user,
+	  +['match-trade',{buyer,seller,volume:tradeVolume}],
+	  +['match-price',{user,      instrument,volume:volume-tradeVolume, isBuy,       ...mtRest}],
+	  +['match-price',{user:user1,instrument,volume:volume1-tradeVolume,isBuy:isBuy1,...mtRest1}] );
+	  
+}
+
+// ^ is "order-by" 
