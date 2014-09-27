@@ -156,7 +156,7 @@ parseStatement: true, parseSourceElement: true */
         WithStatement: 'WithStatement',
 	// additions for chrjs
 	BindRest:       'BindRest',
-	StoreStatement: 'StoreStatement',
+	StoreDeclaration: 'StoreDeclaration',
 	RuleStatement: 'RuleStatement',
 	QueryStatement: 'QueryStatement',
 	SnapExpression: 'SnapExpression',
@@ -1827,9 +1827,9 @@ parseStatement: true, parseSourceElement: true */
 	    };
 	},
 
-	createStoreStatement: function(id, body) {
+	createStoreDeclaration: function(id, body) {
 	    return {
-		type: Syntax.StoreStatement,
+		type: Syntax.StoreDeclaration,
 		id: id,
 		body: body
 	    };
@@ -3333,8 +3333,6 @@ parseStatement: true, parseSourceElement: true */
                 return delegate.markEnd(parseWhileStatement(), startToken);
             case 'with':
                 return delegate.markEnd(parseWithStatement(), startToken);
-            case 'store':
-                return delegate.markEnd(parseStoreStatement(), startToken);
             default:
                 break;
             }
@@ -3575,6 +3573,8 @@ parseStatement: true, parseSourceElement: true */
                 return parseConstLetDeclaration(lookahead.value);
             case 'function':
                 return parseFunctionDeclaration();
+	    case 'store':
+		return parseStoreDeclaration();
             default:
                 return parseStatement();
             }
@@ -3848,17 +3848,18 @@ parseStatement: true, parseSourceElement: true */
 	return body;
     }
 
-    function parseStoreStatement() {
+    function parseStoreDeclaration() {
 	state.inStore = true;
 	try {
-	    var   id = null;
+	    var         id = null;
+            var startToken = lookahead;
 	    expectKeyword('store');
 	    if (!match('{'))
 		id = parseVariableIdentifier();
 	    expect("{");
 	    var body = parseStoreBodyList();
 	    expect("}");
-            return delegate.createStoreStatement(id,body);
+            return delegate.markEnd(delegate.createStoreDeclaration(id,body),startToken);
 	} finally {
 	    state.inStore = false;
 	}

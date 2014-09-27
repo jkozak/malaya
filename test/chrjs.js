@@ -5,10 +5,11 @@ var    temp = require('temp');
 var    util = require('../util.js');
 var    path = require('path');
 var      fs = require('fs');
+var  pretty = require('prettyjson');
 
 temp.track();
 
- describe('chrjs parser',function() {
+describe('chrjs parser',function() {
      it("should parse map",function() {
  	 var x = chrjs._private.parse("store { {a:[],c:22};};");
  	 //console.log(util.format("*** macro expands to: %j",x));
@@ -31,7 +32,7 @@ temp.track();
      });
      it("should parse snap",function() {
  	 var x = chrjs._private.parse("store fred { rule (['A',x],+['B',10*snap(['C',x];a) 0:a+x] ); };");
- 	 //console.log(util.format("\n*** macro expands to: %j",x));
+ 	 //console.log(util.format("\n*** macro expands to: \n"+pretty.render(x,{noColor:true})));
      });
      it("should reject chrjs extensions outside store",function() {
 	 assert.throws(function() {
