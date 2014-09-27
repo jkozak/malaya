@@ -1837,12 +1837,13 @@ parseStatement: true, parseSourceElement: true */
 	    };
 	},
 
-	createItemExpression: function(op,id,expr) {
+	createItemExpression: function(op,expr) {
 	    return {
 		type: Syntax.ItemExpression,
 		op:op,
-		id: id,
-		expr: expr
+		expr: expr,
+		t: null,
+		rank: null
 	    };
 	},
 
@@ -3869,20 +3870,23 @@ parseStatement: true, parseSourceElement: true */
     }
 
     function parseChrjsFullTerm() {
-	var expr;
 	if (match('[')) 
-	    expr = parseArrayInitialiser();
+	    return parseArrayInitialiser();
 	else if (match('{'))
-	    expr = parseObjectInitialiser();
+	    return parseObjectInitialiser();
 	else
 	    throwUnexpected(lex());
+    }
+
+    function parseChrjsFullTermItemExpression(op) {
+	var expr = delegate.createItemExpression(op,parseChrjsFullTerm());
 	while (true) {
 	    if (match('^')) {
 		expect('^');
-		expr = delegate.createBinaryExpression('^',expr,parseConditionalExpression());
+		expr.rank = parseConditionalExpression();
 	    } else if (match('#')) {
 		expect('#');
-		expr = delegate.createBinaryExpression('#',expr,parseConditionalExpression());
+		expr.t = parseConditionalExpression();
 	    } else
 		break;
 	}
@@ -3892,20 +3896,20 @@ parseStatement: true, parseSourceElement: true */
     function parseChrjsItem() {
 	if (match('+')) {
 	    expect('+');
-	    return delegate.createItemExpression('+',null,parseChrjsFullTerm());
+	    return delegate.createItemExpression('+',parseChrjsFullTerm()); //N.B. no suffix ops
 	} else if (match('-')) {
 	    expect('-');
-	    return delegate.createItemExpression('-',null,parseChrjsFullTerm());
+	    return parseChrjsFullTermItemExpression('-');
 	} else if (match('[') || match('{')) {
-	    return delegate.createItemExpression('M',null,parseChrjsFullTerm());
+	    return parseChrjsFullTermItemExpression('M');
 	} else if (lookahead.type===Token.Identifier) {
 	    var expr = parseAssignmentExpression();
 	    if (expr.type=='AssignmentExpression')
-		return delegate.createItemExpression('=',null,expr);                    // bind
+		return delegate.createItemExpression('=',expr);                    // bind
 	    else
-		return delegate.createItemExpression('?',null,expr);                    // guard
+		return delegate.createItemExpression('?',expr);                    // guard
 	} else if (match('(')) {
-	    return delegate.createItemExpression('?',null,parseAssignmentExpression()); // guard
+	    return delegate.createItemExpression('?',parseAssignmentExpression()); // guard
 	} else
 	    throwUnexpected(lex());
     }
