@@ -81,6 +81,7 @@ describe('chrjs transformer (interpreter)',function() {
  	 var x = chrjs._private.compile("store S1 {rule ([1,a]);};");
  	 var y = chrjs._private.compile("store S1 {rule ([1,a],-[2,a],{...rs},b=a+23)};");
  	 var z = chrjs._private.compile("store S1 {rule ([1,a],-[2,a],{...rs},b=a+23,b>a)};");
- 	 console.log(util.format("*** macro expands to: %j",z));
+ 	 var t = chrjs._private.compile("store S1 {rule ([1,a]^a);};");
+ 	 console.log(util.format("*** macro expands to: %j",t));
      });
 });
