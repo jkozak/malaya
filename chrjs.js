@@ -31,15 +31,37 @@ function transformToInterpreter(chrjs) {
 	case 'Property':
 	    if (expr.kind==='bindRest') {
 		return {
-		    type:   'NewExpression',
-		    callee: chrThing('VarRest'),
-		    arguments: [
-			{
-			    type:  'Literal',
-			    value: expr.key.name,
-			    raw:   "'"+expr.key.name+"'"
-			}
-		    ]
+		    type: 'Property',
+		    kind: 'init',
+		    key:  {type:'Literal',value:'',raw:"''"},
+		    value: {
+			type:   'NewExpression',
+			callee: chrThing('VariableRest'),
+			arguments: [
+			    {
+				type:  'Literal',
+				value: expr.key.name,
+				raw:   "'"+expr.key.name+"'"
+			    }
+			]
+		    }
+		}
+	    } else if (expr.kind==='bindOne') {
+		return {
+		    type: 'Property',
+		    kind: 'init',
+		    key:  expr.key,
+		    value: {
+			type:   'NewExpression',
+			callee: chrThing('Variable'),
+			arguments: [
+			    {
+				type:  'Literal',
+				value: expr.key.name,
+				raw:   "'"+expr.key.name+"'"
+			    }
+			]
+		    }
 		}
 	    } else {
 		expr       = _.clone(expr);
@@ -61,7 +83,7 @@ function transformToInterpreter(chrjs) {
 	case 'BindRest':
 	    return {
 		type:   'NewExpression',
-		callee: chrThing('VarRest'),
+		callee: chrThing('VariableRest'),
 		arguments: [
 		    {
 			type:  'Literal',
@@ -70,12 +92,13 @@ function transformToInterpreter(chrjs) {
 		    }
 		]
 	    };
-	case 'MemberExpression':
-	    expr        = _.clone(expr);
-	    expr.object = tfmItemMatch(expr.object);
-	    return expr;
 	case 'Literal':
 	    return expr;
+	case 'MemberExpression':
+	case 'UnaryExpression':
+	case 'BinaryExpression':
+	case 'CallExpression':
+	    return tfmFunctionalise(expr);
 	default:
 	    throw new Error("tfmItemMatch: not handled (yet): "+expr.type);
 	    return expr;
@@ -143,7 +166,7 @@ function transformToInterpreter(chrjs) {
 	    };
 	case '-': {
 	    var arguments = [tfmItemMatch(item.expr)];
-	    if (item.rank)
+	    if (item.rank) 
 		arguments.push(tfmFunctionalise(item.rank));
 	    return {
 		type:   'NewExpression',
@@ -178,17 +201,14 @@ function transformToInterpreter(chrjs) {
 	    return {
 		type:   'NewExpression',
 		callee: chrThing('ItemGuard'),
-		arguments: [{
-		    type:  'Literal',
-		    value: item.expr.left.name,
-		    raw:   "'"+item.expr.left.name+"'"},
-			    tfmFunctionalise(item.expr) ]
+		arguments: [tfmFunctionalise(item.expr)]
 	    };
 	default:
 	    throw new Error("not handled (yet): "+item.op);
 	}
     };
     var tfmRuleStatement = function(rule) {
+	assert.equal(rule.type,'RuleStatement');
 	var items = [];
 	rule.items.forEach(function(item) {
 	    items.push(tfmItem(item));
@@ -224,6 +244,7 @@ function transformToInterpreter(chrjs) {
 	    var ss = chrjs.body[i];
 	    // +++
 	    if (ss.id) {
+		var reqChr = path.resolve(__dirname,'./chr.js');
 		ss.type         = 'VariableDeclaration';
 		ss.kind         = 'var'; // ??? maybe `const`? ???
 		ss.declarations = [
@@ -256,8 +277,8 @@ function transformToInterpreter(chrjs) {
 							arguments: [
 							    {
 								type:  'Literal',
-								value: './chr.js',
-								raw:   '"./chr.js"'
+								value: reqChr,
+								raw:   "'"+reqChr+"'"
 							    }
 							]
 						    }
@@ -305,10 +326,10 @@ function transformToInterpreter(chrjs) {
 			};
 			break;
 		    case 'RuleStatement': 
-			stmt = tfmRuleStatement(ss.body[i]);
+			stmt = tfmRuleStatement(ss.body[j]);
 			break;
 		    case 'QueryStatement':
-			stmt = tfmQueryStatement(ss.body[i]);
+			stmt = tfmQueryStatement(ss.body[j]);
 			break;
 		    default:
 			throw new Error("not handled (yet): "+ss.body[j].type);
@@ -329,6 +350,7 @@ function transform(chrjs) {
 
 require.extensions['.chrjs'] = function(module,filename) {
     var content = fs.readFileSync(filename,'utf8');
+    console.log(codegen.generate(transform(eschrjs.parse(content))));
     module._compile(codegen.generate(transform(eschrjs.parse(content))),filename);
 };
 

@@ -8,12 +8,12 @@ var    Snap = chr.Snap;
 var    Rule = chr.Rule;
 var     Var = chr.Variable;
 var VarRest = chr.VariableRest;
-var   Match = chr._private.ItemMatch;
-var   Guard = chr._private.ItemGuard;
-var  Delete = chr._private.ItemDelete;
-var     Add = chr._private.ItemAdd;
-var    Bind = chr._private.ItemBind;
-var    Fail = chr._private.ItemFail;
+var   Match = chr.ItemMatch;
+var   Guard = chr.ItemGuard;
+var  Delete = chr.ItemDelete;
+var     Add = chr.ItemAdd;
+var    Bind = chr.ItemBind;
+var    Fail = chr.ItemFail;
 
 
 describe('match()',function() {
@@ -253,6 +253,9 @@ describe('Store',function() {
 	it("should instantiate nested structures",function() {
 	    assert.deepEqual([1,[{a:777,b:888}],2],context.instantiate([1,[{'':new VarRest('s')}],2]));
 	});
+	it("should instantiate Function",function() {
+	    assert.deepEqual([19],context.instantiate(function(ctx){return [ctx.get('p')+1];}));
+	});
     });
     describe('Snap()',function() {
 	it("should zero gracefully",function() {
@@ -463,6 +466,24 @@ describe('Store',function() {
 			       });
 	    assert.equal(store.length,1);
 	});
+	it("should not delete excessively (bug test)",function() {
+	    var store = new Store();
+	    var   ctx;
+	    store._add(["X",{a:17}]);
+	    assert.equal(store.length,1);
+	    store._match_items([new Delete(["X",{a:0}])],
+			       store.createContext(),
+			       function(t,context) {
+				   context.install();
+			       });
+	    assert.equal(store.length,1);
+	    store._match_items([new Delete(["X",{a:17}])],
+			       store.createContext(),
+			       function(t,context) {
+				   context.install();
+			       });
+	    assert.equal(store.length,0);
+	});
     });
     describe('ItemFail',function() {
 	it("should leave a trace",function() {
@@ -500,6 +521,28 @@ describe('Store',function() {
     	    assert.ok(store.has(["X",17])); // the one we put in 
     	    assert.ok(store.has(["Y",17])); // added by the rule above
     	});
+    	it("should delete and add new facts via rules",function() {
+	    console.log("### 0");
+    	    var store = new Store();
+    	    store._add_rule(new Rule([new Delete(["X",new Var('x')]),
+				      new Match(["Z",new Var('y')]),
+				      new Guard(function(ctx){return true;}),
+    				      new Add(["Y",new Var('x')]) ]));
+    	    store.add(["Z",0]);
+    	    assert.equal(store.length,1);
+    	    store.add(["X",17]);
+    	    assert.equal(store.length,2);
+    	    assert.ok(store.has(["Y",17])); // added by the rule above
+    	});
+    	it("should add new facts in presence of irrelevant rules",function() {
+    	    var store = new Store();
+    	    store._add_rule(new Rule([new Match(["X",new Var('x')]),
+    				      new Add(["Y",new Var('x')]) ]));
+    	    assert.equal(store.length,0);
+    	    store.add(["Z",17]);
+    	    assert.equal(store.length,1);
+    	    assert.ok(store.has(["Z",17])); // the one we put in 
+    	});
     });
     describe('OrderBy',function() {
 	it("should sort if asked",function() {
@@ -518,5 +561,25 @@ describe('Store',function() {
 						  function(v,ctx){return v.concat([ctx.get('x')]);} )),
 			     [19,18,17]); // sort descending
 	});
+    });
+});
+
+describe('business logic interface',function() {
+    it("should save and load via JSON",function() {
+    	var store = new Store();
+    	store.add(["X",17]);
+    	store.add(["X",18]);
+    	store.add(["X",19]);
+	assert.equal(store.length,3);
+	assert.ok(store.has(["X",17]));
+	assert.ok(store.has(["X",18]));
+	assert.ok(store.has(["X",19]));
+	var js = JSON.stringify(store.get_root());
+	store = new Store();
+	store.set_root(JSON.parse(js));
+	assert.equal(store.length,3);
+	assert.ok(store.has(["X",17]));
+	assert.ok(store.has(["X",18]));
+	assert.ok(store.has(["X",19]));
     });
 });

@@ -24,7 +24,6 @@
 
 var         _ = require('underscore');
 var      util = require('./util.js');
-var       Map = util.Map;
 var Immutable = require('immutable'); 
 var    assert = require('assert');
 
@@ -92,7 +91,7 @@ function match(term,datum,context) {
 		if (!context.bind(term[k].name,obj))
 		    return false;
 	    } else {
-		if (!context.bind(term[k].name,datum[k]))
+		if (!match(term[k],datum[k],context))
 		    return false;
 	    }
 	}
@@ -135,13 +134,14 @@ function match_single_item_match(item,context,consume) {
     if (t!==null) {		           // t specified by caller
 	var ctx = context.bump();
 	assert.ok(context.in_play.has(t)); // should have been set up already
-	if (match(item.terms,context.store.facts.get(t),ctx)) {
+	if (match(item.terms,context.store.facts[t],ctx)) {
 	    consume(t,ctx);
 	}
     } else {			           // caller has not specified t, iterate over all
 	var tctxs = [];			   // only used if sorting
 	var rank  = item['rank'];
-	context.store.facts.forEach(function(t,fact) {
+	_.each(context.store.facts,function(fact,t) {
+	    t = parseInt(t);
 	    if (!context.in_play.has(t)) {
 		var ctx = context.bump();
 		ctx.in_play = context.in_play.add(t);
@@ -169,7 +169,7 @@ ItemGuard.prototype.match_single_item = function(context,consume) {
     if (context.fail)
 	consume(null,context);
     else if (this.expr(context.bindings))
-	    consume(null,context);
+	consume(null,context);
 };
 ItemAdd.prototype.match_single_item = function(context,consume) {
     if (context.fail)
@@ -186,6 +186,7 @@ ItemDelete.prototype.match_single_item = function(context,consume) {
     else {
 	var item = this;
 	match_single_item_match(item,context,function(t,context) {
+	    console.log("*** deleting fact: "+JSON.stringify(t));
 	    context.delete_fact(t);
 	    consume(t,context);
 	});
@@ -198,7 +199,7 @@ ItemBind.prototype.match_single_item = function(context,consume) {
 	consume(null,context);
 };
 ItemFail.prototype.match_single_item = function(context,consume) {
-    // +++ maybe thisshould just throw itself?
+    // +++ maybe this should just throw itself?
     // +++ saves all the propagation code above
     context.fail = this.msg;
     consume(null,context);
@@ -230,9 +231,10 @@ function Index(type) {
 function Store() {
     var store = this;
     this.t             = 0;
-    this.facts         = new Map();           // t -> fact
+    this.facts         = {};                  // t -> fact
     this.rules         = [];
     this.indices       = [];
+    this.needs_rebuild = false;
     this.Context       = function() {
 	this.store    = store;
 	this.index    = null;	              // item # in rule, 0-based 
@@ -261,6 +263,7 @@ function Store() {
     };
     this.Context.prototype.bump = function() {
 	var ctx = store.createContext();
+	ctx.parent   = this;
 	ctx.sources  = this.sources;
 	ctx.bindings = this.bindings;
 	ctx.in_play  = this.in_play;
@@ -269,9 +272,11 @@ function Store() {
     };
     this.Context.prototype.add_fact = function(fact) {
 	this.adds = this.adds.add([null,fact]);
+	console.log("*** ctx 0 adds: "+this.adds);
     };
     this.Context.prototype.delete_fact = function(t) {
 	this.deletes = this.deletes.add([t,null]);
+	console.log("*** ctx 0 deletes: "+this.deletes);
     };
     this.Context.prototype.instantiate = function(term) {
 	var context = this;
@@ -286,6 +291,8 @@ function Store() {
 	    return ins;
 	} else if (term instanceof Variable) {
 	    return context.get(term.name);
+	} else if (term instanceof Function) {
+	    return term(context);
 	} else if (term instanceof Object) {
 	    var ins = {};
 	    for (var k in term) 
@@ -308,6 +315,8 @@ function Store() {
 	var   store = context.store;
 	var    adds = new Immutable.Set();
 	var deletes = new Immutable.Set();
+	console.log("*** ctx 1 install adds:    "+context.adds.toString());
+	console.log("*** ctx 1 install deletes: "+context.deletes.toString());
 	context.adds.forEach(function(v) {
 	    assert.equal(v[0],null);
 	    adds = adds.add([store._add(v[1]),v[1]]);
@@ -332,42 +341,48 @@ function Store() {
 	context.adds = adds;
 	context.deletes.forEach(function(v) {
 	    assert.notEqual(v[1],null);
-	    deletes.add([store.add_fact(v[1]),null]);
+	    deletes = deletes.add([store.add_fact(v[1]),null]);
 	});
 	context.deletes = deletes;
     };
-    this.createContext = function() {return new store.Context();};
+    this.createContext = function() {
+	if (this.needs_rebuild)
+	    this.rebuild();
+	return new store.Context();
+    };
     return this;
 }
-Store.prototype._rebuild = function() {
+Store.prototype.rebuild = function() {
     // +++ rebuild indices &c +++
-    throw new Error("NYI");
+    this.needs_rebuild = false;
 };
 Store.prototype._add_rule = function(rule) {
-    if (this.facts.length!=0)
-	throw new Error("can't add rules to an active Store");
+    //if (this.length!=0)
+    //	throw new Error("can't add rules to an active Store");
     this.rules.push(rule);
+    this.needs_rebuild = true;
 };
 Store.prototype._add_index = function(idx) {
     this.indices.push(idx);
-    this._rebuild();
+    this.needs_rebuild = true;
 };
 Store.prototype.lastUpdate = function() {
     return this.t;
 };
 Store.prototype._add = function(fact) { // internal use only 
     this.t++;
-    this.facts.set(this.t,fact);
+    this.facts[this.t] = fact;
     return this.t;
 };
 Store.prototype._delete = function(t) { // internal use only
-    var fact = this.facts.get(t);
-    this.facts.delete(t);
+    console.log("*** _delete fact: "+JSON.stringify(t));
+    var fact = this.facts[t];
+    delete this.facts[t];
     return fact;
 };
 Store.prototype.has = function(fact) { // slow (only for testing?)
     var ans = 0;
-    this.facts.forEach(function(t,f) {
+    _.each(this.facts,function(f,t) {
 	if (_.isEqual(fact,f))
 	    ans++;
     });
@@ -389,22 +404,27 @@ Store.prototype.add = function(fact) { // external use, runs rules
 				   context.uninstall();
 				   throw new Error('fail: '+ctx.fail);
 			       } else {
-				   ctx.install();
-				   context.adds    = context.adds   .union(ctx.adds);
-				   context.deletes = context.deletes.union(ctx.deletes);
+				   for (var ctx1=ctx;ctx1!==context;ctx1=ctx1.parent) {
+				       ctx1.install();
+				       context.adds    = context.adds   .union(ctx1.adds);
+				       context.deletes = context.deletes.union(ctx1.deletes);
+				   }
 			       }
 			   });
     });
+    // +++ loop to try rules against facts just added +++
 };
-Object.defineProperty(Store.prototype,'length',{get:function() {return this.facts.length;}});
+Object.defineProperty(Store.prototype,'length',{get:function() {return _.size(this.facts);}});
 Store.prototype._match_items_indexed = function(items,i,context,consume) {
     var store = this;
     if (i>=items.length)
 	consume(null,context);
     else {
 	context.index = i;
+	//console.log("*** matching: %j",items[i]);
 	items[i].match_single_item(context,
 				   function(t,context) {
+				       //console.log("**** matched: %j",context.bindings);
 				       store._match_items_indexed(items,i+1,context,consume);
 				   });
     }
@@ -430,7 +450,7 @@ Store.prototype.get_root = function() {
 Store.prototype.set_root = function(r) {
     this.t     = r.t;
     this.facts = r.facts;
-    this._rebuild();
+    this.needs_rebuild = true;
 };
 Store.prototype.update = function(u) {
     try {
@@ -453,14 +473,14 @@ exports.Rule         = Rule;
 exports.Snap         = Snap;
 exports.Store        = Store;
 exports.Index        = Index;
+exports.ItemMatch    = ItemMatch,
+exports.ItemDelete   = ItemDelete,
+exports.ItemAdd      = ItemAdd,
+exports.ItemGuard    = ItemGuard,
+exports.ItemBind     = ItemBind,
+exports.ItemFail     = ItemFail
+
 
 if (util.env==='test')
-    exports._private = {Map:         Map,
-			match:       match,
-			ItemMatch:   ItemMatch,
-			ItemDelete:  ItemDelete,
-			ItemAdd:     ItemAdd,
-			ItemGuard:   ItemGuard,
-			ItemBind:    ItemBind,
-			ItemFail:    ItemFail
+    exports._private = {match:       match,
 		       };
