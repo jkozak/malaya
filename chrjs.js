@@ -141,22 +141,26 @@ function transformToInterpreter(chrjs) {
 		callee: chrThing('ItemAdd'),
 		arguments: [tfmItemMatch(item.expr)]
 	    };
-	case '-':
+	case '-': {
+	    var arguments = [tfmItemMatch(item.expr)];
+	    if (item.rank)
+		arguments.push(tfmFunctionalise(item.rank));
 	    return {
 		type:   'NewExpression',
 		callee: chrThing('ItemDelete'),
-		arguments: [tfmItemMatch(item.expr)
-			    // +++ `rank`
-			   ]
+		arguments: arguments
 	    };
-	case 'M':
+	}
+	case 'M': {
+	    var arguments = [tfmItemMatch(item.expr)];
+	    if (item.rank)
+		arguments.push(tfmFunctionalise(item.rank));
 	    return {
 		type:   'NewExpression',
 		callee: chrThing('ItemMatch'),  
-		arguments: [tfmItemMatch(item.expr)
-			    // +++ `rank`
-			   ] 
+		arguments: arguments
 	    };
+	}
 	case '=':
 	    assert.strictEqual(item.expr.type,    'AssignmentExpression');
 	    assert.strictEqual(item.expr.operator,'=');
