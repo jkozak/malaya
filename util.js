@@ -1,7 +1,7 @@
 var _util = require('util');
 var shell = require('shelljs');
 var    fs = require('fs');
-var    ds = require('data-structures');
+var  path = require('path');
 
 exports.verbosity = 3;
 
@@ -94,7 +94,11 @@ exports.source_version = (function() {
     cmd = shell.exec("hg id -i",{silent:true});
     if (cmd.code===0)
 	return cmd.output.trim();
-    return JSON.parse(fs.readFileSync('./package.json')).version;
+    try {
+	return JSON.parse(fs.readFileSync(path.resolve(__dirname,'./package.json'))).version;
+    } catch (e) {
+	return "???";
+    }
 })();
 
 exports.env = (function() {
@@ -107,22 +111,6 @@ exports.env = (function() {
 	throw new Error(_util.format("bad NODE_ENV: %j",env));
     return env;
 })();
-
-// !!! this is really slow, avoid !!!
-exports.Set = function() {
-    this.map = new ds.Map();
-    return this;
-};
-exports.Set.prototype.has     = function(k) {return this.map.has(k);};
-exports.Set.prototype.add     = function(k) {this.map.set(k,null);};
-exports.Set.prototype.delete  = function(k) {this.map.delete(k);};
-exports.Set.prototype.forEach = function(f) {this.map.forEach(f);};
-Object.defineProperty(exports.Set.prototype,'size',{
-    get:function() {return this.map.size;}
-});
-
-exports.Map = ds.Map;
-Object.defineProperty(ds.Map.prototype,'length',{get:function() {return this.size;}});
 
 exports.inspect = _util.inspect;
 
