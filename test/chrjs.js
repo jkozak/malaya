@@ -67,3 +67,20 @@ describe('chrjs parser',function() {
  	 //console.log(util.format("*** macro expands to: %j",x));
      });
 });
+
+describe('chrjs transformer (interpreter)',function() {
+     it("should compile trivial store",function() {
+ 	 var x = chrjs._private.compile("store S1 {};");
+ 	 //console.log(util.format("*** macro expands to: %j",x));
+     });
+     it("should compile store with contents",function() {
+ 	 var x = chrjs._private.compile("store S1 {[1];{a:17}};");
+ 	 //console.log(util.format("*** macro expands to: %j",x));
+     });
+     it("should compile store with simple rules",function() {
+ 	 var x = chrjs._private.compile("store S1 {rule ([1,a]);};");
+ 	 var y = chrjs._private.compile("store S1 {rule ([1,a],-[2,a],{...rs},b=a+23)};");
+ 	 var z = chrjs._private.compile("store S1 {rule ([1,a],-[2,a],{...rs},b=a+23,b>a)};");
+ 	 console.log(util.format("*** macro expands to: %j",z));
+     });
+});
