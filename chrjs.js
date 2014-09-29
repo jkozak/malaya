@@ -2,9 +2,11 @@ var       _ = require('underscore');
 var util    = require('./util.js');
 var codegen = require('escodegen');
 var eschrjs = require('./eschrjs.js');
+var chr     = require('./chr.js');
 var fs      = require('fs');
 var path    = require('path');
 var assert  = require('assert');
+var vm      = require('vm');
 
 function transformToInterpreter(chrjs) {
     assert.strictEqual(chrjs.type,'Program');

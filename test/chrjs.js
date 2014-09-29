@@ -1,5 +1,18 @@
 var   chrjs = require("../chrjs.js");
 
+var     chr = require("../chr.js");
+var   Store = chr.Store;	// save some typing
+var    Snap = chr.Snap;
+var    Rule = chr.Rule;
+var     Var = chr.Variable;
+var VarRest = chr.VariableRest;
+var   Match = chr.ItemMatch;
+var   Guard = chr.ItemGuard;
+var  Delete = chr.ItemDelete;
+var     Add = chr.ItemAdd;
+var    Bind = chr.ItemBind;
+var    Fail = chr.ItemFail;
+
 var       _ = require('underscore');
 var  assert = require("assert");
 var    temp = require('temp');
