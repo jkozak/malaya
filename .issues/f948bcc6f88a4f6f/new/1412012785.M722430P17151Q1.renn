@@ -1,0 +1,30 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Mon, 29 Sep 2014 18:46:25 +0100
+Subject: Optimisation: bespoke per-store `_prepare`
+State: resolved
+Message-Id: <f948bcc6f88a4f6f-0-artemis@renn>
+resolution: fixed
+
+function(fact) {
+    if (fact instanceof Array && fact.length>0) {
+	var store = this;
+	var addenda = [];
+	var delenda = [];
+	var       t = store._add(fact);
+	var context = store.createContext();
+	context.in_play = context.in_play.add(t);
+	switch (fact[0]) {
+	case 'example1':
+	    this._prepare_rule_position(fact,context,RULE1,POS1,addenda,delenda);
+	    // ...
+	    break;
+	// ...
+	default:
+	    // moan that this is a pointless insert if no catchall rules
+	}
+	this._prepare_rule_position(fact,context,CATCHALL_RULE1,CATCHALL_POS1,addenda,delenda);
+	// ...
+	return {err:null,t:t,addenda:addenda,delenda:delenda};
+    } else
+	return this.prototype._prepare(fact);
+}

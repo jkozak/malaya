@@ -592,3 +592,26 @@ describe('business logic interface',function() {
 	assert.ok(store.has(["X",19]));
     });
 });
+
+describe("bespoke `_prepare` compiler",function() {
+    it("should produce a function",function() {
+	var store = new chr.Store();
+	store._genPrepare();
+	assert.strictEqual((typeof store._prepare),'function');
+    });
+    it("should produce a function with useful contents",function() {
+    	var store = new Store();
+    	store._add_rule(new Rule([new Delete(["X",new Var('x')]),
+				  new Match(["Z",new Var('y')]),
+				  new Guard(function(ctx){return true;}),
+    				  new Add(["Y",new Var('x')]) ]));
+	store._genPrepare();
+    	store.add(["Z",0]);
+    	assert.equal(store.length,1);
+    	store.add(["X",37]);
+    	assert.equal(store.length,2);
+    	assert.ok(store.has(["Y",37])); // added by the rule above
+    });
+});
+
+

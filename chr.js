@@ -26,6 +26,7 @@ var         _ = require('underscore');
 var      util = require('./util.js');
 var Immutable = require('immutable'); 
 var    assert = require('assert');
+var        vm = require('vm');
 
 function Variable(name) {
     this.name = name;
@@ -395,6 +396,28 @@ Store.prototype.forEach = function(fn) { // only for testing?
 	fn(f,intParse(t));
     });
 };
+Store.prototype.clear = function() {
+    this.t     = 0;
+    this.facts = {};
+};
+Store.prototype._prepare_rule_position = function(fact,context,r,i,addenda,delenda) {
+    var store = this;
+    var  rule = store.rules[r];
+    //console.log("*** %j %j %j %j %j %j",fact,context,r,i,addenda,delenda);
+    store._match_items(rule.items,context,
+		       function(t,ctx) {
+			   if (ctx.fail) {
+			       throw new Error("bugger");
+			   } else {
+			       for (var ctx1=ctx;ctx1!==context;ctx1=ctx1.parent) {
+				   ctx1.addenda.forEach(function(a) {addenda.push(a);});
+				   ctx1.delenda.forEach(function(d) {delenda.push(d);});
+			       }
+			   }
+		       });
+};
+// +++ compile code to go straight to the rule/pos as needed +++
+// +++ plug it into the instance as a new `_prepare`         +++
 Store.prototype._prepare = function(fact) { // adds `fact`, returns addenda and delenda to follow
     var   store = this;
     var addenda = [];
@@ -402,25 +425,16 @@ Store.prototype._prepare = function(fact) { // adds `fact`, returns addenda and 
     var       t = store._add(fact);
     var context = store.createContext();
     context.in_play = context.in_play.add(t);
-    store.rules.forEach(function(rule) {
+    for (var r in store.rules) {
+	var rule = store.rules[r];
 	for (var i in rule.items) {
 	    if (rule.items[i] instanceof ItemMatch || rule.items[i] instanceof ItemDelete) {
 		context.sources[i] = t;
-		store._match_items(rule.items,context,
-				   function(t,ctx) {
-				       if (ctx.fail) {
-					   return {err:ctx.fail};
-				       } else {
-					   for (var ctx1=ctx;ctx1!==context;ctx1=ctx1.parent) {
-					       addenda = addenda.concat(ctx1.addenda.toArray());
-					       delenda = delenda.concat(ctx1.delenda.toArray());
-					   }
-				       }
-				   });
-		context.sources[i] = null;
+		store._prepare_rule_position(fact,context,r,i,addenda,delenda);
 	    }
+	    context.sources[i] = null;
 	}
-    });
+    }
     return {err:null,t:t,addenda:addenda,delenda:delenda};
 };
 Store.prototype.add = function(fact) {
@@ -475,6 +489,60 @@ Store.prototype.snap = function(snap,context) {
 			  value = snap.accumulate(value,context.bindings);
 		      });
     return value;
+};
+Store.prototype._genPrepare = function() {
+    // Optimisation that assumes we're using the  [<table>,...] style
+    // Generates a `_prepare` method customised for our rule set.
+    var    store = this;
+    var generics = [];
+    var   tables = {};		// first parm -> [[r,i] ...]
+    for (var r in store.rules) {
+	var rule = store.rules[r];
+	for (var i in rule.items) {
+	    var item = rule.items[i];
+	    if (item instanceof ItemMatch || item instanceof ItemDelete) {
+		if ((typeof item.terms[0])==='string') {
+		    if (!tables[item.terms[0]])
+			tables[item.terms[0]] = [];
+		    tables[item.terms[0]].push([r,i]);
+		} else
+		    generics.push([r,i]); // don't know what it is, be safe
+	    }
+	}
+    }
+    //N.B. it's a bit much mixing strings with esprima, but it's a _lot_ more convenient!
+    var prep = "_prepare = function(fact) {\n";
+    prep    += "    if (fact instanceof Array && fact.length>0) {\n"
+    prep    += "        var store = this;\n";
+    prep    += "        var addenda = [];\n";
+    prep    += "        var delenda = [];\n";
+    prep    += "        var       t = store._add(fact);\n";
+    prep    += "        var context = store.createContext();\n";
+    prep    += "        context.in_play = context.in_play.add(t);\n";
+    prep    += "        switch (fact[0]) {\n";
+
+    Object.keys(tables).forEach(function(t) {
+	prep +="        case '"+t+"':\n";
+	tables[t].forEach(function(ri) {
+	    prep +="            context.sources["+ri[1]+"] = t;\n";
+	    prep += "           this._prepare_rule_position(fact,context,"+ri[0]+","+ri[1]+",addenda,delenda);;\n";
+	});
+	prep +="            break;\n"; 
+    });
+    
+    prep    += "        default:\n";
+
+    //if (generics.length===0) 
+    //	prep +="            console.log('no-one will ever see this:'+JSON.stringify(fact))\n";
+    
+    prep    += "            break;\n"; 
+    prep    += "        }\n";
+    
+    prep    += "        return {err:null,t:t,addenda:addenda,delenda:delenda};\n";
+    prep    += "    } else \n";
+    prep    += "        return this.prototype._prepare(fact);\n";
+    prep    += "}\n";
+    store._prepare = vm.runInThisContext(prep).bind(store);
 };
 
 // BusinessLogic protocol (so can do `module.exports = <store>;`)
