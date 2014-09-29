@@ -2,11 +2,11 @@
 
 var chr = require('../chr.js');
 
-var Match  = chr._private.ItemMatch; // +++ replace these with chrjs notation +++
-var Guard  = chr._private.ItemGuard;
-var Delete = chr._private.ItemDelete;
-var Add    = chr._private.ItemAdd;
-var Fail   = chr._private.ItemFail;
+var Match  = chr.ItemMatch; // +++ replace these with chrjs notation +++
+var Guard  = chr.ItemGuard;
+var Delete = chr.ItemDelete;
+var Add    = chr.ItemAdd;
+var Fail   = chr.ItemFail;
 
 suite('query',function() {
     var   total = 0;
@@ -20,7 +20,7 @@ suite('query',function() {
 	bench("1 headed, store"+n,function() {
 	    store.snap(new chr.Snap([new Match(["X",new chr.Variable('x'),new chr.Variable('p')])],
 				    0,
-				    function(x,ctx){return x+ctx['p'];} ));
+				    function(x,ctx){return x+ctx.get('p');} ));
 	});
     });
     samples.forEach(function(n) {
@@ -34,7 +34,7 @@ suite('query',function() {
 				     new Match(["X",new chr.Variable('x'),new chr.Variable('q')]),
 				     new Guard(function(ctx){return ctx['p']>ctx['q'];}) ],
 				    0,
-				    function(x,ctx){return x+ctx['p']+ctx['q'];} ));
+				    function(x,ctx){return x+ctx.get('p')+ctx.get('q');} ));
 	});
     });
     samples.forEach(function(n) {
@@ -48,9 +48,9 @@ suite('query',function() {
 	    store.snap(new chr.Snap([new Match(["X",new chr.Variable('x'),new chr.Variable('p')]),
 				     new Match(["X",new chr.Variable('x'),new chr.Variable('q')]),
 				     new Match(["X",new chr.Variable('x'),new chr.Variable('r')]),
-				     new Guard(function(ctx){return ctx['p']>ctx['q'] && ctx['q']>ctx['r'];}) ],
+				     new Guard(function(ctx){return ctx.get('p')>ctx.get('q') && ctx.get('q')>ctx.get('r');}) ],
 				    0,
-				    function(x,ctx){return x+ctx['p']+ctx['q']+ctx['r'];} ));
+		       function(x,ctx){return x+ctx.get('p')+ctx.get('q')+ctx.get('r');} ));
 	});
     });
 });
