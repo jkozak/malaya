@@ -492,7 +492,7 @@ Store.prototype.snap = function(snap,context) {
 };
 Store.prototype._genPrepare = function() {
     // Optimisation that assumes we're using the  [<table>,...] style
-    // Generates a `_prepare` method customised for our rule set.
+    // Installs a `_prepare` method specialised for this rule set.
     var    store = this;
     var generics = [];
     var   tables = {};		// first parm -> [[r,i] ...]
@@ -540,9 +540,10 @@ Store.prototype._genPrepare = function() {
     
     prep    += "        return {err:null,t:t,addenda:addenda,delenda:delenda};\n";
     prep    += "    } else \n";
-    prep    += "        return this.prototype._prepare(fact);\n";
+    prep    += "        return this._prepare.Store.prototype._prepare.call(this,fact);\n";
     prep    += "}\n";
     store._prepare = vm.runInThisContext(prep).bind(store);
+    store._prepare.Store = Store; // !!! must be a better way !!!
 };
 
 // BusinessLogic protocol (so can do `module.exports = <store>;`)

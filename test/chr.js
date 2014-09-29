@@ -612,6 +612,17 @@ describe("bespoke `_prepare` compiler",function() {
     	assert.equal(store.length,2);
     	assert.ok(store.has(["Y",37])); // added by the rule above
     });
+    it("should produce a function which handles the unexpected",function() {
+    	var store = new Store();
+    	store._add_rule(new Rule([new Delete(["X",new Var('x')]),
+				  new Match(["Z",new Var('y')]),
+				  new Guard(function(ctx){return true;}),
+    				  new Add(["Y",new Var('x')]) ]));
+	store._genPrepare();
+    	store.add({});
+    	assert.equal(store.length,1);
+    	assert.ok(store.has({}));
+    });
 });
 
 
