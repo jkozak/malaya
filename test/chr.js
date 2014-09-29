@@ -516,13 +516,12 @@ describe('Store',function() {
     	    store._add_rule(new Rule([new Match(["X",new Var('x')]),
     				      new Add(["Y",new Var('x')]) ]));
     	    assert.equal(store.length,0);
-    	    store.add(["X",17]);
+    	    store.add(["X",7]);
     	    assert.equal(store.length,2);
-    	    assert.ok(store.has(["X",17])); // the one we put in 
-    	    assert.ok(store.has(["Y",17])); // added by the rule above
+    	    assert.ok(store.has(["X",7]));  // the one we put in 
+    	    assert.ok(store.has(["Y",7]));  // added by the rule above
     	});
     	it("should delete and add new facts via rules",function() {
-	    console.log("### 0");
     	    var store = new Store();
     	    store._add_rule(new Rule([new Delete(["X",new Var('x')]),
 				      new Match(["Z",new Var('y')]),
@@ -530,18 +529,28 @@ describe('Store',function() {
     				      new Add(["Y",new Var('x')]) ]));
     	    store.add(["Z",0]);
     	    assert.equal(store.length,1);
-    	    store.add(["X",17]);
+    	    store.add(["X",37]);
     	    assert.equal(store.length,2);
-    	    assert.ok(store.has(["Y",17])); // added by the rule above
+    	    assert.ok(store.has(["Y",37])); // added by the rule above
     	});
     	it("should add new facts in presence of irrelevant rules",function() {
     	    var store = new Store();
     	    store._add_rule(new Rule([new Match(["X",new Var('x')]),
     				      new Add(["Y",new Var('x')]) ]));
     	    assert.equal(store.length,0);
-    	    store.add(["Z",17]);
+    	    store.add(["Z",57]);
     	    assert.equal(store.length,1);
-    	    assert.ok(store.has(["Z",17])); // the one we put in 
+    	    assert.ok(store.has(["Z",57])); // the one we put in 
+    	});
+    	it("should process new facts through rules",function() {
+    	    var store = new Store();
+    	    store._add_rule(new Rule([new Delete(["Y",new Var('x')]) ]));
+    	    store._add_rule(new Rule([new Match(["X",new Var('x')]),
+    				      new Add(["Y",new Var('x')]) ]));
+    	    assert.equal(store.length,0);
+    	    store.add(["X",27]); // creates a Y which should be re-processed and deleted
+    	    assert.equal(store.length,1);
+    	    assert.ok(store.has(["X",27]));
     	});
     });
     describe('OrderBy',function() {

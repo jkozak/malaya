@@ -129,11 +129,11 @@ function ItemFail(msg) {
 }
 function match_single_item_match(item,context,consume) {
     var t = null;
-    if (item.sources) 
-	t = item.sources.get(context.index);
-    if (t!==null) {		           // t specified by caller
+    if (context.index!==null) 
+	t = context.sources[context.index];
+    if (t) {	                           // t specified by caller (and never 0)
 	var ctx = context.bump();
-	assert.ok(context.in_play.has(t)); // should have been set up already
+	assert.ok(context.in_play.has(t));
 	if (match(item.terms,context.store.facts[t],ctx)) {
 	    consume(t,ctx);
 	}
@@ -186,7 +186,6 @@ ItemDelete.prototype.match_single_item = function(context,consume) {
     else {
 	var item = this;
 	match_single_item_match(item,context,function(t,context) {
-	    console.log("*** deleting fact: "+JSON.stringify(t));
 	    context.delete_fact(t);
 	    consume(t,context);
 	});
@@ -230,20 +229,22 @@ function Index(type) {
 
 function Store() {
     var store = this;
-    this.t             = 0;
+    this.t             = 0;	              // but first `t` must be > 0
     this.facts         = {};                  // t -> fact
     this.rules         = [];
     this.indices       = [];
     this.needs_rebuild = false;
     this.Context       = function() {
 	this.store    = store;
-	this.index    = null;	              // item # in rule, 0-based 
-	this.sources  = null;	              // index->t
+	this.index    = null;	              // null or item # in rule, 0-based 
+	this.sources  = {};	              // index->t
 	this.bindings = new Immutable.Map(); 
 	this.in_play  = new Immutable.Set();  // t,...
 	this.fail     = null;
 	this.adds     = new Immutable.Set();  // [t,fact],...
 	this.deletes  = new Immutable.Set();  // [t,fact],...
+	this.addenda  = new Immutable.Set();  // fact,...
+	this.delenda  = new Immutable.Set();  // t,...
 	return this;
     };
     this.Context.prototype.bind = function(n,v) {
@@ -265,6 +266,7 @@ function Store() {
 	var ctx = store.createContext();
 	ctx.parent   = this;
 	ctx.sources  = this.sources;
+	ctx.index    = this.index;
 	ctx.bindings = this.bindings;
 	ctx.in_play  = this.in_play;
 	ctx.fail     = this.fail;
@@ -272,11 +274,11 @@ function Store() {
     };
     this.Context.prototype.add_fact = function(fact) {
 	this.adds = this.adds.add([null,fact]);
-	console.log("*** ctx 0 adds: "+this.adds);
+	this.addenda = this.addenda.add(fact);
     };
     this.Context.prototype.delete_fact = function(t) {
 	this.deletes = this.deletes.add([t,null]);
-	console.log("*** ctx 0 deletes: "+this.deletes);
+	this.delenda = this.delenda.add(t);
     };
     this.Context.prototype.instantiate = function(term) {
 	var context = this;
@@ -315,8 +317,6 @@ function Store() {
 	var   store = context.store;
 	var    adds = new Immutable.Set();
 	var deletes = new Immutable.Set();
-	console.log("*** ctx 1 install adds:    "+context.adds.toString());
-	console.log("*** ctx 1 install deletes: "+context.deletes.toString());
 	context.adds.forEach(function(v) {
 	    assert.equal(v[0],null);
 	    adds = adds.add([store._add(v[1]),v[1]]);
@@ -370,12 +370,11 @@ Store.prototype.lastUpdate = function() {
     return this.t;
 };
 Store.prototype._add = function(fact) { // internal use only 
-    this.t++;
+    this.t++;				// first fact#t is 1
     this.facts[this.t] = fact;
     return this.t;
 };
 Store.prototype._delete = function(t) { // internal use only
-    console.log("*** _delete fact: "+JSON.stringify(t));
     var fact = this.facts[t];
     delete this.facts[t];
     return fact;
@@ -388,31 +387,67 @@ Store.prototype.has = function(fact) { // slow (only for testing?)
     });
     return ans;
 };
-Store.prototype.add = function(fact) { // external use, runs rules
-    var   store = this;
-    var context = store.createContext();
-    var       t = context.add_fact(fact);
-    context.install();
-    context.in_play.add(t);
-    store.rules.forEach(function(rule) {
-	for (var i=0;i<rule.items;i++) 
-	    if (rule.items[i] instanceof ItemMatch || rule.items[i] instanceof ItemDelete) 
-		context.sources[i] = t;
-	store._match_items(rule.items,context,
-			   function(t,ctx) {
-			       if (ctx.fail) {
-				   context.uninstall();
-				   throw new Error('fail: '+ctx.fail);
-			       } else {
-				   for (var ctx1=ctx;ctx1!==context;ctx1=ctx1.parent) {
-				       ctx1.install();
-				       context.adds    = context.adds   .union(ctx1.adds);
-				       context.deletes = context.deletes.union(ctx1.deletes);
-				   }
-			       }
-			   });
+Store.prototype.get = function(t) { // only for testing?
+    return this.facts[t];
+};
+Store.prototype.forEach = function(fn) { // only for testing?
+    Object.keys(this.facts).forEach(function(f,t) {
+	fn(f,intParse(t));
     });
-    // +++ loop to try rules against facts just added +++
+};
+Store.prototype._prepare = function(fact) { // adds `fact`, returns addenda and delenda to follow
+    var   store = this;
+    var addenda = [];
+    var delenda = [];
+    var       t = store._add(fact);
+    var context = store.createContext();
+    context.in_play = context.in_play.add(t);
+    store.rules.forEach(function(rule) {
+	for (var i in rule.items) {
+	    if (rule.items[i] instanceof ItemMatch || rule.items[i] instanceof ItemDelete) {
+		context.sources[i] = t;
+		store._match_items(rule.items,context,
+				   function(t,ctx) {
+				       if (ctx.fail) {
+					   return {err:ctx.fail};
+				       } else {
+					   for (var ctx1=ctx;ctx1!==context;ctx1=ctx1.parent) {
+					       addenda = addenda.concat(ctx1.addenda.toArray());
+					       delenda = delenda.concat(ctx1.delenda.toArray());
+					   }
+				       }
+				   });
+		context.sources[i] = null;
+	    }
+	}
+    });
+    return {err:null,t:t,addenda:addenda,delenda:delenda};
+};
+Store.prototype.add = function(fact) {
+    var   store = this;
+    var    adds = {};      // t -> fact
+    var    dels = {};      // t -> fact
+    var addenda = [fact];  // fact ...
+    var delenda = [];      //    t ...
+
+    while (addenda.length>0) {
+	fact = addenda.pop();
+	var  prep = store._prepare(fact);
+	if (prep.err) {
+	    // +++ unwind adds and dels +++
+	    return {err:prep.err};
+	}
+	adds[prep.t] = fact;
+	prep.delenda.forEach(function(t) {
+	    var fact1 = store._delete(t);
+	    if (adds.hasOwnProperty(t)) // nett adds and deletes
+		delete adds[t];
+	    else
+		dels[t] = fact;
+	});
+	addenda = addenda.concat(prep.addenda);
+    }
+    return {err:null,adds:adds,dels:dels};
 };
 Object.defineProperty(Store.prototype,'length',{get:function() {return _.size(this.facts);}});
 Store.prototype._match_items_indexed = function(items,i,context,consume) {
@@ -421,12 +456,12 @@ Store.prototype._match_items_indexed = function(items,i,context,consume) {
 	consume(null,context);
     else {
 	context.index = i;
-	//console.log("*** matching: %j",items[i]);
 	items[i].match_single_item(context,
 				   function(t,context) {
-				       //console.log("**** matched: %j",context.bindings);
+				       context.index = null;
 				       store._match_items_indexed(items,i+1,context,consume);
 				   });
+	context.index = null;
     }
 };
 Store.prototype._match_items = function(items,context,consume) {
@@ -453,13 +488,7 @@ Store.prototype.set_root = function(r) {
     this.needs_rebuild = true;
 };
 Store.prototype.update = function(u) {
-    try {
-	this.add(u);
-	return [true,null];
-    } catch (e) {
-	console.log(e);
-	return [false,e];
-    }
+    return this.add(u);
 };
 Store.prototype.query = function(q) {
     if (!(q instanceof Snap))

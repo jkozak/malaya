@@ -1,5 +1,6 @@
 var   chrjs = require("../chrjs.js");
 
+var       _ = require('underscore');
 var  assert = require("assert");
 var    temp = require('temp');
 var    util = require('../util.js');
@@ -108,15 +109,25 @@ describe('chrjs transformer (interpreter)',function() {
     });
 });
 
+// +++ move this into a chrjs test file +++
 describe("real-world-ish: match",function() {
     it("should work for simple trades",function() {
 	var store = require('./bl/match.chrjs'); // this isn't consistent with prevalence tests
 	var  size = store.length;
-	console.log(util.format("\n*** %j",store.get_root()));
-	store.update(['match-price', {user:"John Kozak",  instrument:"IL21", volume:10000000, isBuy:true,  t:1}]);
-	console.log(util.format("*** %j",store.get_root()));
-	assert.equal(store.length,size+1);
-	store.update(['match-price', {user:"Val Wardlaw", instrument:"IL21", volume: 9000000, isBuy:false, t:2}]);
-	console.log(util.format("*** %j",store.get_root()));
+	var     x;
+	x = store.update(['match-price',{user:"John Kozak", instrument:"IL21", volume:10000000, isBuy:true,  t:1}]);
+	assert.strictEqual(x.err,null);
+	assert.strictEqual(_.size(x.adds),1); // one fact added
+	assert.strictEqual(_.size(x.dels),0);
+	assert.equal(store.length,size+1);    // one fact added 
+	x = store.update(['match-price',{user:"Val Wardlaw",instrument:"IL21", volume: 9000000, isBuy:false, t:2}]);
+	assert.strictEqual(_.size(x.adds),2); // two facts added
+	assert.strictEqual(_.size(x.dels),1); // delete original JK price
+	var nT = 0;			      // +++ do this better in chrjs +++
+	_.each(x.adds,function(v) {
+	    if (v[0]==='match-trade')
+		nT++;
+	})
+	assert.equal(nT,1);
     });
 });
