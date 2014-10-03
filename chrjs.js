@@ -32,6 +32,8 @@ function transformToInterpreter(chrjs) {
 	    return expr;
 	case 'Property':
 	    if (expr.kind==='bindRest') {
+		if (expr.value.type!=='Identifier')
+		    throw new Error("only bindRest to arbitrary expr in compiler");
 		return {
 		    type: 'Property',
 		    kind: 'init',
@@ -42,8 +44,8 @@ function transformToInterpreter(chrjs) {
 			arguments: [
 			    {
 				type:  'Literal',
-				value: expr.key.name,
-				raw:   "'"+expr.key.name+"'"
+				value: expr.value.name,
+				raw:   "'"+expr.value.name+"'"
 			    }
 			]
 		    }
@@ -59,8 +61,8 @@ function transformToInterpreter(chrjs) {
 			arguments: [
 			    {
 				type:  'Literal',
-				value: expr.key.name,
-				raw:   "'"+expr.key.name+"'"
+				value: expr.value,
+				raw:   "'"+expr.value+"'"
 			    }
 			]
 		    }

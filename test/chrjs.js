@@ -122,7 +122,6 @@ describe('chrjs transformer (interpreter)',function() {
     });
 });
 
-// +++ move this into a chrjs test file +++
 describe("real-world-ish: match",function() {
     it("should work for simple trades",function() {
 	var store = require('./bl/match.chrjs'); // this isn't consistent with prevalence tests
@@ -134,7 +133,7 @@ describe("real-world-ish: match",function() {
 	assert.strictEqual(_.size(x.dels),0);
 	assert.equal(store.length,size+1);    // one fact added 
 	x = store.update(['match-price',{user:"Val Wardlaw",instrument:"IL21", volume: 9000000, isBuy:false, t:2}]);
-	assert.strictEqual(_.size(x.adds),2); // two facts added
+	assert.strictEqual(_.size(x.adds),2); // two facts added (1 trade and 1 residual price)
 	assert.strictEqual(_.size(x.dels),1); // delete original JK price
 	var nT = 0;			      // +++ do this better in chrjs +++
 	_.each(x.adds,function(v) {
