@@ -43,6 +43,8 @@ parseLeftHandSideExpression: true,
 parseUnaryExpression: true,
 parseStatement: true, parseSourceElement: true */
 
+var util = require('./util.js');
+
 (function (root, factory) {
     'use strict';
 
@@ -2064,7 +2066,7 @@ parseStatement: true, parseSourceElement: true */
             } else {
 		if (state.inStore && match('...')) { // chrjs
 		    expect('...');
-		    elements.push(delegate.createBindRest(parseVariableIdentifier()));
+		    elements.push(delegate.createBindRest(parseAssignmentExpression()));
 		} else
                     elements.push(parseAssignmentExpression());
                 if (!match(']')) {
@@ -2120,8 +2122,8 @@ parseStatement: true, parseSourceElement: true */
 
 	if (state.inStore && match('...')) {	// chrjs
 	    expect('...');
-            key = parseVariableIdentifier();
-            return delegate.markEnd(delegate.createProperty('bindRest', key, key), startToken);
+            value = parseVariableIdentifier();
+            return delegate.markEnd(delegate.createProperty('bindRest', '', value), startToken);
 	} else if (token.type === Token.Identifier) {
 
             id = parseObjectPropertyKey();
@@ -2153,10 +2155,13 @@ parseStatement: true, parseSourceElement: true */
 	    if (match(':')) {
 		expect(':');
 		value = parseAssignmentExpression();
-		return delegate.markEnd(delegate.createProperty('init', id, value), startToken);
+		if (value.type==='Identifier')
+		    return delegate.markEnd(delegate.createProperty('bindOne', id, value.name), startToken);
+		else
+		    return delegate.markEnd(delegate.createProperty('init', id, value), startToken);
 	    } else {		// chrjs
 		if (state.inStore && (match(',') || match('}')))
-		    return delegate.markEnd(delegate.createProperty('bindOne', id, value), startToken);
+		    return delegate.markEnd(delegate.createProperty('bindOne', id, id.name), startToken);
 		else
 		    throwUnexpected(token);
 	    }
@@ -4003,6 +4008,47 @@ parseStatement: true, parseSourceElement: true */
 
         return types;
     }());
+
+    if (util.env==='test')
+	exports._private = {
+	    setupParse: function(code) {
+		delegate = SyntaxTreeDelegate;
+		source = code;
+		index = 0;
+		lineNumber = (source.length > 0) ? 1 : 0;
+		lineStart = 0;
+		length = source.length;
+		lookahead = null;
+		state = {
+		    allowIn: true,
+		    labelSet: {},
+		    inFunctionBody: false,
+		    inIteration: false,
+		    inSwitch: false,
+		    lastCommentStart: -1
+		};
+		extra = {};
+		skipComment();
+		peek();
+		strict = false;
+	    },
+	    parseRuleStatement: function() {
+		state.inStore = true;
+		try {
+		    return parseRuleStatement();
+		} finally {
+		    state.inStore = false;
+		}
+	    },
+	    parseExpression: function() {
+		state.inStore = true;
+		try {
+		    return parseExpression();
+		} finally {
+		    state.inStore = false;
+		}
+	    }
+	};
 
 }));
 /* vim: set sw=4 ts=4 et tw=80 : */

@@ -355,6 +355,8 @@ function Store() {
 }
 Store.prototype.rebuild = function() {
     // +++ rebuild indices &c +++
+    if (this.hasOwnProperty('_prepare'))
+	this._genPrepare();
     this.needs_rebuild = false;
 };
 Store.prototype._add_rule = function(rule) {

@@ -12,6 +12,7 @@
     "node-sockjs-client": "^1.0.7",
     "quickcheck": "0.0.4",
     "readline": "0.0.3",
+    "recast": "^0.7.2",
     "rimraf": "^2.2.8",
     "shelljs": "^0.3.0",
     "sockjs": "^0.3.9",
