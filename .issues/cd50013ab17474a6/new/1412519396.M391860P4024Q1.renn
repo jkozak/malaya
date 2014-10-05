@@ -1,0 +1,6 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Sun, 05 Oct 2014 15:29:56 +0100
+Subject: Bug: can use extended data syntax (... and {a}) in normal code within rules and queries
+State: new
+Message-Id: <cd50013ab17474a6-0-artemis@renn>
+

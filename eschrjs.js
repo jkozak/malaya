@@ -2172,7 +2172,10 @@ var util = require('./util.js');
             key = parseObjectPropertyKey();
 	    expect(':');
 	    value = parseAssignmentExpression();
-	    return delegate.markEnd(delegate.createProperty('init', key, value), startToken);
+	    if (value.type==='Identifier')
+		return delegate.markEnd(delegate.createProperty('bindOne', key, value.name), startToken);
+	    else
+		return delegate.markEnd(delegate.createProperty('init', key, value), startToken);
         }
     }
 

@@ -2,8 +2,12 @@ var     chr = require("../chr1.js");
 
 var eschrjs = require("../eschrjs.js");
 var  assert = require("assert");
+var  recast = require("recast");
 var    util = require('../util.js');
+var      fs = require('fs');
 var       _ = require('underscore');
+
+var       b = recast.types.builders;
 
 var parseRule = function(code) {
     eschrjs._private.setupParse(code);
@@ -15,7 +19,7 @@ var parseExpression = function(code) {
     return eschrjs._private.parseExpression();
 };
 
-function equalUnordered(s1,s2) {
+function equalU(s1,s2) {	// unordered equal (set-like)
     return _.difference(s1,s2).length===0 && _.difference(s2,s1).length===0;
 }
 
@@ -38,33 +42,154 @@ describe("exprContainsVariable",function() {
 describe("exprGetFreeVariables",function() {
     var gfv = chr._private.exprGetFreeVariables;
     it("should detect variables",function() {
-	assert(equalUnordered(['a'],    gfv(parseExpression("a"))));
-	assert(equalUnordered(['a'],    gfv(parseExpression("1+a"))));
-	assert(equalUnordered(['a'],    gfv(parseExpression("a+1"))));
-	assert(equalUnordered(['a','b'],gfv(parseExpression("a+b"))));
-	assert(equalUnordered(['a'],    gfv(parseExpression("a+a"))));
-	assert(equalUnordered([],       gfv(parseExpression("f()"))));
-	assert(equalUnordered(['a'],    gfv(parseExpression("f(a)"))));
-	assert(equalUnordered([],       gfv(parseExpression("['a',{b:1,c:'23'}]"))));
-	assert(equalUnordered([],       gfv(parseExpression("['a',{b:a,c:'23'}]"))));
-	assert(equalUnordered([],       gfv(parseExpression("true?1:0"))));
-	assert(equalUnordered(['a'],    gfv(parseExpression("true?a:0"))));
-	assert(equalUnordered(['a'],    gfv(parseExpression("true?0:a"))));
-	assert(equalUnordered(['a'],    gfv(parseExpression("a?0:a"))));
-	assert(equalUnordered([],       gfv(parseExpression("new A()"))));
-	assert(equalUnordered(['a'],    gfv(parseExpression("function(p,q,r){return a+p+q+r;}"))));
-	assert(equalUnordered(['a'],    gfv(parseExpression("function f(p,q,r){return a+p+q+r;}"))));
+	assert(equalU(['a'],    gfv(parseExpression("a"))));
+	assert(equalU(['a'],    gfv(parseExpression("1+a"))));
+	assert(equalU(['a'],    gfv(parseExpression("a+1"))));
+	assert(equalU(['a','b'],gfv(parseExpression("a+b"))));
+	assert(equalU(['a'],    gfv(parseExpression("a+a"))));
+	assert(equalU([],       gfv(parseExpression("f()"))));
+	assert(equalU(['a'],    gfv(parseExpression("f(a)"))));
+	assert(equalU([],       gfv(parseExpression("['a',{b:1,c:'23'}]"))));
+	assert(equalU([],       gfv(parseExpression("['a',{b:a,c:'23'}]"))));
+	assert(equalU([],       gfv(parseExpression("true?1:0"))));
+	assert(equalU(['a'],    gfv(parseExpression("true?a:0"))));
+	assert(equalU(['a'],    gfv(parseExpression("true?0:a"))));
+	assert(equalU(['a'],    gfv(parseExpression("a?0:0"))));
+	assert(equalU([],       gfv(parseExpression("new A()"))));
+	assert(equalU(['a'],    gfv(parseExpression("function(p,q,r){return a+p+q+r;}"))));
+	assert(equalU(['a'],    gfv(parseExpression("function f(p,q,r){return a+p+q+r;}"))));
     });
     it("should ignore variable bindings",function() {
-	assert(equalUnordered([],       gfv(parseRule("rule (['user',{a}])"))));
-	assert(equalUnordered([],       gfv(parseRule("rule (['user',{name:a}])"))));
-	assert(equalUnordered(['a'],    gfv(parseRule("rule (['user',{name:a+''}])"))));
+	assert(equalU([],       gfv(parseRule("rule (['user',{a}])"))));
+	assert(equalU([],       gfv(parseRule("rule (['user',{name:a}])"))));
+	assert(equalU([],       gfv(parseRule("rule (['user',{a,...rs}])"))));
+	assert(equalU(['a'],    gfv(parseRule("rule (['user',{name:a+0}])"))));
     });
 });
 
+describe("exprGetVariablesWithBindingSites",function() {
+    var vwbs = chr._private.exprGetVariablesWithBindingSites;
+    it("should detect variables",function() {
+	assert(equalU([],       vwbs(parseRule("rule (['a'])"))));
+	assert(equalU(['a'],    vwbs(parseRule("rule (['user',a])"))));
+	assert(equalU(['rs'],   vwbs(parseRule("rule (['user',...rs])"))));
+	assert(equalU(['a'],    vwbs(parseRule("rule (['user',{'a':a}])"))));
+	assert(equalU(['a'],    vwbs(parseRule("rule (['user',{a:a}])"))));
+	assert(equalU(['a'],    vwbs(parseRule("rule (['user',{b:a}])"))));
+	assert(equalU(['a','b'],vwbs(parseRule("rule (['user',{a}],['co',{a,b}])"))));
+	assert(equalU(['rs'],   vwbs(parseRule("rule ([...rs])"))));
+	assert(equalU(['a'],    vwbs(parseRule("rule ([a])"))));
+    });
+});
 
-describe("dataflow analysis",function() {
-    it("should find variables",function() {
-	//console.log("*** %j",parseRule("rule (['a',{b,c}]);"));
+describe("Ref",function() {
+    var Ref = chr._private.Ref;
+    it("should capture site in an Array",function() {
+	var arr = [1,2,3,4];
+	var ref = new Ref(arr,[2]);
+	assert.deepEqual(ref.get(),3);
+	ref.set('three');
+	assert.deepEqual(arr,[1,2,'three',4]);
+	ref.insertAfter('7/2');
+	assert.deepEqual(arr,[1,2,'three','7/2',4]);
+	ref.next();
+	ref.insertAfter('15/4');
+	assert.deepEqual(arr,[1,2,'three','7/2','15/4',4]);
+	assert.deepEqual(Ref.flatAt(arr,function(x){return x==='7/2';}).cut(),'7/2');
+	assert.deepEqual(arr,[1,2,'three','15/4',4]);
+    });
+    it("should capture site in an Object",function() {
+	var obj = {a:1,b:2,c:3};
+	var ref = new Ref(obj,['c']);
+	assert.deepEqual(ref.get(),3);
+	ref.set('three');
+	assert.deepEqual(obj,{a:1,b:2,c:'three'});
+    });
+    it("should capture sites in nested structures",function() {
+	var   x = ['a',{p:3,q:4,r:5,s:[100]}];
+	var ref = new Ref(x,[1,'s',0]);
+	assert.deepEqual(ref.get(),100);
+	ref.set('sto');
+	assert.deepEqual(x,['a',{p:3,q:4,r:5,s:['sto']}]);
+	assert.deepEqual(ref.get(),'sto');
+    });
+});
+
+describe("generateJS",function() {
+    it("should generate JS for trivial store",function() {
+	var js = chr.generateJS(eschrjs.parse("store fred {['user',{name:'sid'}];rule(['user',{name:a}]);}"));
+	console.log("*** js: \n"+recast.print(js).code);
+	// +++
+    });
+    it("should generate JS for less trivial store",function() {
+	var matchCHRJS = fs.readFileSync("test/bl/match.chrjs");
+	var         js = eschrjs.parse(matchCHRJS).body[0];
+	console.log("*** bindable: %j",chr._private.exprGetVariablesWithBindingSites(js));
+	console.log("***     free: %j",chr._private.exprGetFreeVariables(js));
+	// +++
+    });
+});
+
+describe("genAccessor",function() {
+    var genAccessor = chr._private.genAccessor;
+    it("should generate code to access array elements",function() {
+	assert.strictEqual(recast.print(genAccessor(b.identifier('wibble'),[1,2,3,4])).code,"wibble[1][2][3][4]");
+    });
+    it("should generate code to access object properties",function() {
+	assert.strictEqual(recast.print(genAccessor(b.identifier('wobble'),['a','b','c'])).code,"wobble.a.b.c");
+    });
+    it("should generate code to access both",function() {
+	assert.strictEqual(recast.print(genAccessor(b.identifier('wubble'),['a',7,'c',0])).code,"wubble.a[7].c[0]");
+    });
+});
+
+describe("genMatch",function() {
+    var genMatch  = chr._private.genMatch;
+    var evalMatch = function(match,fact) {
+	var code = (recast.print(b.callExpression(b.functionExpression(null,[b.identifier('fact')],match),
+						  [fact])).code);
+	//console.log(code);
+	return eval(code);
+    }
+    it("should generate match code for simple array patterns",function() {
+	var  vars = {c:{bound:false}};
+	var match = genMatch(parseExpression("['a','b',c]"),
+			     vars,
+			     function(){return [b.returnStatement(b.identifier('c'))]} );
+	assert(vars.c.bound);
+	assert.equal(17,evalMatch(match,parseExpression("['a','b',17]") ) );
+    });
+    it("should generate match code for final ... array patterns",function() {
+	var  vars = {c:{bound:false}};
+	var match = genMatch(parseExpression("['a','b',...c]"),
+			     vars,
+			     function(){return [b.returnStatement(b.identifier('c'))]} );
+	assert(vars.c.bound);
+	assert.deepEqual([21,22],evalMatch(match,parseExpression("['a','b',21,22]")));
+    });
+    it("should generate match code for simple object patterns",function() {
+	var  vars = {c:{bound:false}};
+	var match = genMatch(parseExpression("{a:1, b:2, c}"),
+			     vars,
+			     function(){return [b.returnStatement(b.identifier('c'))]} );
+	assert(vars.c.bound);
+	assert.equal(117,evalMatch(match,parseExpression("{a:1,b:2,c:117}")));
+    });
+    it("should generate match code for ... object patterns",function() {
+	var  vars = {c:{bound:false}};
+	var match = genMatch(parseExpression("{a:1, b:2, ...c}"),
+			     vars,
+			     function(){return [b.returnStatement(b.identifier('c'))]} );
+	assert(vars.c.bound);
+	assert.deepEqual({c:117,d:118},evalMatch(match,parseExpression("{a:1,b:2,c:117,d:118}")));
+    });
+    it("should generate match code for medial ... array patterns",function() {
+	var  vars = {c:{bound:false},d:{bound:false}};
+	var match = genMatch(parseExpression("['a','b',...c,d]"),
+			     vars,
+			     function(){return [b.returnStatement(b.identifier('c'))]} );
+	assert(vars.c.bound);
+	assert(vars.d.bound);
+	assert.deepEqual([21],evalMatch(match,parseExpression("['a','b',21,22]")));
     });
 });
