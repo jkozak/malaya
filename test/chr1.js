@@ -69,16 +69,19 @@ describe("exprGetFreeVariables",function() {
 
 describe("exprGetVariablesWithBindingSites",function() {
     var vwbs = chr._private.exprGetVariablesWithBindingSites;
-    it("should detect variables",function() {
+    it("should detect variables XXX",function() {
 	assert(equalU([],       vwbs(parseRule("rule (['a'])"))));
 	assert(equalU(['a'],    vwbs(parseRule("rule (['user',a])"))));
 	assert(equalU(['rs'],   vwbs(parseRule("rule (['user',...rs])"))));
+	assert(equalU(['rs'],   vwbs(parseRule("rule (['user',...rs,11])"))));
 	assert(equalU(['a'],    vwbs(parseRule("rule (['user',{'a':a}])"))));
 	assert(equalU(['a'],    vwbs(parseRule("rule (['user',{a:a}])"))));
 	assert(equalU(['a'],    vwbs(parseRule("rule (['user',{b:a}])"))));
 	assert(equalU(['a','b'],vwbs(parseRule("rule (['user',{a}],['co',{a,b}])"))));
 	assert(equalU(['rs'],   vwbs(parseRule("rule ([...rs])"))));
 	assert(equalU(['a'],    vwbs(parseRule("rule ([a])"))));
+	assert(equalU(['rs'],   vwbs(parseRule("rule (['user',{a:12,...rs}])"))));
+	assert(equalU(['rs'],   vwbs(parseRule("rule (['user',{...rs}])"))));
     });
 });
 
@@ -115,21 +118,6 @@ describe("Ref",function() {
     });
 });
 
-describe("generateJS",function() {
-    it("should generate JS for trivial store",function() {
-	var js = chr.generateJS(eschrjs.parse("store fred {['user',{name:'sid'}];rule(['user',{name:a}]);}"));
-	console.log("*** js: \n"+recast.print(js).code);
-	// +++
-    });
-    it("should generate JS for less trivial store",function() {
-	var matchCHRJS = fs.readFileSync("test/bl/match.chrjs");
-	var         js = eschrjs.parse(matchCHRJS).body[0];
-	console.log("*** bindable: %j",chr._private.exprGetVariablesWithBindingSites(js));
-	console.log("***     free: %j",chr._private.exprGetFreeVariables(js));
-	// +++
-    });
-});
-
 describe("genAccessor",function() {
     var genAccessor = chr._private.genAccessor;
     it("should generate code to access array elements",function() {
@@ -148,7 +136,7 @@ describe("genMatch",function() {
     var evalMatch = function(match,fact) {
 	var code = (recast.print(b.callExpression(b.functionExpression(null,[b.identifier('fact')],match),
 						  [fact])).code);
-	//console.log(code);
+	console.log(code);
 	return eval(code);
     }
     it("should generate match code for simple array patterns",function() {
@@ -175,6 +163,14 @@ describe("genMatch",function() {
 	assert(vars.c.bound);
 	assert.equal(117,evalMatch(match,parseExpression("{a:1,b:2,c:117}")));
     });
+    it("should not over-match",function() {
+	var  vars = {c:{bound:false}};
+	var match = genMatch(parseExpression("{a:1, b:2, c}"),
+			     vars,
+			     function(){return [b.returnStatement(b.identifier('c'))]} );
+	assert(vars.c.bound);
+	assert.equal(undefined,evalMatch(match,parseExpression("{a:2,b:2,c:117}")));
+    });
     it("should generate match code for ... object patterns",function() {
 	var  vars = {c:{bound:false}};
 	var match = genMatch(parseExpression("{a:1, b:2, ...c}"),
@@ -193,3 +189,23 @@ describe("genMatch",function() {
 	assert.deepEqual([21],evalMatch(match,parseExpression("['a','b',21,22]")));
     });
 });
+
+describe("generateJS",function() {
+    it("should generate JS for trivial store",function() {
+	var js = chr.generateJS(eschrjs.parse("store fred {['user',{name:'sid'}];rule(['user',{name:a}]);rule(['company',{user:a,name:b}]);}"));
+	//console.log("*** js: \n"+recast.print(js).code);
+	// +++
+	//eval(recast.print(js).code);
+    });
+    it("should generate JS for less trivial store",function() {
+	var matchCHRJS = fs.readFileSync("test/bl/match.chrjs");
+	var      chrjs = eschrjs.parse(matchCHRJS);
+	console.log("*** bindable: %j",chr._private.exprGetVariablesWithBindingSites(chrjs));
+	console.log("***     free: %j",chr._private.exprGetFreeVariables(chrjs));
+	var         js = chr.generateJS(chrjs);
+	console.log("*** js: \n"+recast.print(js).code);
+	// +++
+	eval(recast.print(js).code);
+    });
+});
+
