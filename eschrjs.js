@@ -2156,12 +2156,12 @@ var util = require('./util.js');
 		expect(':');
 		value = parseAssignmentExpression();
 		if (value.type==='Identifier')
-		    return delegate.markEnd(delegate.createProperty('bindOne', id, value.name), startToken);
+		    return delegate.markEnd(delegate.createProperty('bindOne', id, value), startToken);
 		else
 		    return delegate.markEnd(delegate.createProperty('init', id, value), startToken);
 	    } else {		// chrjs
 		if (state.inStore && (match(',') || match('}')))
-		    return delegate.markEnd(delegate.createProperty('bindOne', id, id.name), startToken);
+		    return delegate.markEnd(delegate.createProperty('bindOne', id, id), startToken);
 		else
 		    throwUnexpected(token);
 	    }
@@ -2173,7 +2173,7 @@ var util = require('./util.js');
 	    expect(':');
 	    value = parseAssignmentExpression();
 	    if (value.type==='Identifier')
-		return delegate.markEnd(delegate.createProperty('bindOne', key, value.name), startToken);
+		return delegate.markEnd(delegate.createProperty('bindOne', key, value), startToken);
 	    else
 		return delegate.markEnd(delegate.createProperty('init', key, value), startToken);
         }

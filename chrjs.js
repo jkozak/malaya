@@ -61,8 +61,8 @@ function transformToInterpreter(chrjs) {
 			arguments: [
 			    {
 				type:  'Literal',
-				value: expr.value,
-				raw:   "'"+expr.value+"'"
+				value: expr.value.name,
+				raw:   "'"+expr.value.name+"'"
 			    }
 			]
 		    }
