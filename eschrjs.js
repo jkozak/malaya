@@ -3982,13 +3982,55 @@ var util = require('./util.js');
 	var qsb = parseQuerySnapBackend();
         return delegate.createSnapExpression(qsb.items,qsb.init,qsb.fold);
     }
-    
+
     // Sync with *.json manifests.
     exports.version = '1.2.2';
 
     exports.tokenize = tokenize;
 
     exports.parse = parse;
+
+    exports.visit = (function() {
+	var types = require('recast').types;
+	var  Type = types.Type;
+	var   def = Type.def;
+	var    or = Type.or;
+	def('StoreDeclaration')
+	    .bases('Declaration')
+	    .build('id', 'body')
+	    .field('id',   def('Identifier'))
+	    .field('body', [def('Statement')]);
+	def('RuleStatement')
+	    .bases('Statement')
+	    .build('id', 'items')
+	    .field('id',   or(def("Identifier"),null))
+	    .field('items',[def('ItemExpression')]);
+	def("ItemExpression")
+	    .bases('Expression')
+	    .build('op','expr')
+	    .field('op',   or('+','-','M','=','?'))
+	    .field('expr', def('Expression'))
+	    .field('t',    or(def('Identifier'),null))
+	    .field('rank', def('Expression'))
+	def('BindRest')
+	    .bases('Expression')
+	    .build('id')
+	    .field('id',def('Identifier'))
+	def('QueryStatement')
+	    .bases('Statement')
+	    .build('id','args','items','init','accum')
+	    .field('id',   def('Identifier'))
+	    .field('args', [def('Identifier')])
+	    .field('items',[def('ItemExpression')])
+	    .field('init', def('Expression'))
+	    .field('expr', def('Expression'))
+	types.finalize();
+	return function(ast,methods) {
+	    return types.visit(ast,methods);
+	};
+    })();
+
+    exports.namedTypes = require('recast').types.namedTypes;
 
     // Deep copy.
     /* istanbul ignore next */
@@ -4054,4 +4096,4 @@ var util = require('./util.js');
 	};
 
 }));
-/* vim: set sw=4 ts=4 et tw=80 : */
+

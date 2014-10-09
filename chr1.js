@@ -19,16 +19,19 @@ var template_marker = 'TEMPLATE_';
 
 function TEMPLATE_store() {
     (function() {
-	var     _ = require('underscore');
-	var     t = 1;		// must be > 0 always?
-	var facts = {};		// t -> fact; this is the main fact store
-	var  adds = [];
-	var  dels = [];
-	var  news = [];
-	var   err = null;
-	var  _add = function(fact) {
+	var      _ = require('underscore');
+	var assert = require('assert');
+	var      t = 1;		// must be > 0 always?
+	var  facts = {};		// t -> fact; this is the main fact store
+	var   adds = [];
+	var   dels = [];
+	var   news = [];
+	var    err = null;
+	var   _add = function(fact) {
 	    if (fact instanceof Array && fact.length>0) {
-		switch (fact[0]) {
+		var t_fact = t++;
+		facts[t_fact] = fact;
+		switch (t_fact) {
 		case INSERT_CASE:
 		    break;
 		}
@@ -36,21 +39,31 @@ function TEMPLATE_store() {
 	    } else
 		return {err:"unloved fact format: "+JSON.stringify(fact)};
 	};
-	var obj =  Object.freeze({
+	var obj = {
 	    get: function(t) {return facts[t];},
 	    add: function(fact) {
+		assert.strictEqual(adds.length,0);
+		assert.strictEqual(dels.length,0);
+		assert.strictEqual(news.length,0);
 		news.push(fact);
 		while (news.length>0) {
 		    _add(news.shift());
 		    if (err)
-			return {err:err};
+			break;
 		}
-		return {err:err,adds:adds,dels:dels};
+		var ans = {err:err,adds:adds,dels:dels};
+		adds = [];dels = [];
+		return ans;
 	    },
 	    get t()       {return t;},
 	    get queries() {return queries;},
 	    reset: function(){facts={};init();}
-	});
+	};
+	if (process.env.NODE_ENV==='test')
+	    obj._private = {
+		get facts()   {return facts;}
+	    };
+	// +++ obj = Object.freeze(obj) if it's not too slow. +++
 
 	// `rules` is an array [[variant,...],...]
 	INSERT_RULES;		
@@ -70,23 +83,9 @@ function TEMPLATE_store() {
 function TEMPLATE_rule() {	
     var INSERT_NAME = function (t_fact) {
 	var    fact;
-	var addenda = [];
-	var delenda = [];
-	var in_play = {};
+	var in_play = [];
 
 	INSERT_MATCH;  // all the term matches, then the addenda and delenda
-
-	delenda.forEach(function(d) {
-	    //INSERT_DEL_INDEX;
-	    delete facts[d];
-	    dels.push(d);
-	});
-	addenda.forEach(function(a){
-	    //INSERT_ADD_INDEX;
-	    news.push(a);
-	    adds.push(a);
-	});
-	
     };
 }
 
@@ -105,28 +104,62 @@ function TEMPLATE_query() {	// to be embedded in store above, whence `adds`, `de
     };
 }
 
-function TEMPLATE_scan_store() {
-    for (var INSERT_NAME=0;INSERT_NAME<facts.length;INSERT_NAME++) {
-	if (!in_play[INSERT_NAME]) {
-	    in_play[INSERT_NAME] = true;
-	    INSERT_REST;
-	}
+function TEMPLATE_sort() {
+    var  SORTED = [];
+    for (var T=1;T<facts.length;T++) {
+	// +++ genMatch +++
+	sorted.push([RANK,T]);
     }
+    SORTED.sort(function(p,q){return COMPARE(p[0],q[0]);})
+    for (var T=0;T<SORTED.length;T++) 
+	REST;
 }
 
-var autoparse = recast.parse(fs.readFileSync(__filename),{esprima:require('esprima')});
+var autoparse = recast.parse(fs.readFileSync(__filename),{esprima:       require('esprima'),
+							  sourceFileName:__filename});
 for (var i in autoparse.program.body) {
     var x = autoparse.program.body[i];
     if (x.type==='FunctionDeclaration' && x.id.name.indexOf(template_marker)===0) {
-	//console.log("*** %s: %j",x.id.name,x);
 	templates[x.id.name.substr(template_marker.length)] = x.body;
     }
 }
+//console.log("*** %j",templates.sort)
 
-//console.log("autoparse: %j",autoparse);
-//console.log("templates.rule: %j",templates.rule);
-
-//recast.parse("test/bl/match.chrjs",{esprima:eschrjs});
+function mangle(js,vars) {
+    if ((typeof js)==='string') {
+	assert(js.charAt(js.length-1)!=='_'); // !!! TESTING !!!
+	return js+'_';
+    } else {
+	var doIdentifier = function(path) {
+	    var id = path.node;
+	    if (vars.indexOf(id.name)!==-1)
+		path.replace(b.identifier(mangle(id.name)));
+	};
+	js = eschrjs.visit(js,{
+	    visitIdentifier: function(path) {
+		doIdentifier(path);
+		return false;
+	    },
+	    visitProperty: function(path) {           // keys may be Identifiers, don't mangle
+		doIdentifier(path.get('value'));
+		return false;
+	    },
+	    visitMemberExpression: function(path) {
+		var expr = path.node;
+		doIdentifier(path.get('object'));
+		if (expr.computed)
+		    this.traverse(path.get('property'));
+		else
+		    return false;
+	    }
+	});
+	return [js,_.map(vars,mangle)];
+    }
+}
+function unmangle(v) {
+    assert.strictEqual(v.charAt(v.length),'_');
+    return v.substr(v,v.length-1);
+}
 
 function exprContainsVariable(expr) {
     return exprGetFreeVariables(expr).length!=0;
@@ -396,6 +429,36 @@ function genAccessor(x,path) {
 	throw new Error(util.format("SNO: %j",path));
 }
 
+function genAdd(x) {
+    eschrjs.namedTypes.Expression.assert(x);
+    var bindRest = null;
+    x = deepClone(x);
+    eschrjs.visit(x,{
+	visitObjectExpression: function(path) {
+	    var bRsave = bindRest;
+	    bindRest = null;
+	    this.traverse(path);
+	    if (bindRest!==null) {
+		path.replace(b.callExpression(b.memberExpression(b.identifier('_'),
+								 b.identifier('extend'),
+								 false),
+					      [bindRest.value,path.node]) );
+	    }
+	    bindRest = bRsave;
+	},
+	visitProperty: function(path) {
+	    // ??? what about `...{}` ???
+	    var prop = path.node;
+	    if (prop.kind==='bindRest') {
+		bindRest = prop;
+		path.replace();
+	    }
+	    this.traverse(path);
+	}
+    });
+    return x;
+}
+
 function genMatch(term,vars,genRest,bIdFact) { // genRest() >> [stmt,...]; returns BlockStatement
 
     bIdFact = bIdFact || b.identifier('fact');
@@ -481,7 +544,6 @@ function genMatch(term,vars,genRest,bIdFact) { // genRest() >> [stmt,...]; retur
 					     [genAccessor(bIdFact,path.slice(0,path.length-1))].concat(
 						 _.map(term._leave_names,
 						       function(n){return b.literal(n);} ) ) );
-		//console.log("*** bR vars: %j  term: %j",vars,term);
 		if (vars[term.value.name].bound) {
 		    bools.push(genEqual(b.identifier(term.value.name),bRest));
 		} else {
@@ -516,11 +578,45 @@ function genMatch(term,vars,genRest,bIdFact) { // genRest() >> [stmt,...]; retur
 
 function generateJS(js) {
     // +++ allow for malaya code referencing top-level JS vars +++
+    // +++ N.B. this has implications for mangling             +++
+    // +++      should mangle whole file, need to track TLVs   +++
     
     assert.equal(js.type,'Program');
+
+    var genCheckInPlay = function(jss,vt) { // >> Statement
+	eschrjs.namedTypes.Statement.assert(jss[0]); // CBB
+	eschrjs.namedTypes.Identifier.assert(vt);
+	return b.ifStatement(b.binaryExpression(
+	    '===',
+	    b.callExpression(b.memberExpression(b.identifier('in_play'),
+						b.identifier('indexOf'),
+						false),
+			     [vt]),
+	    b.literal(-1) ),
+			     b.blockStatement([b.expressionStatement(
+				 b.callExpression(b.memberExpression(b.identifier('in_play'),
+								     b.identifier('push'),
+								     false),
+						  [vt]) )].concat(jss)),
+			     null);
+    }
+
+    var genForInFactStore = function(bv,body) {
+	return b.forStatement(b.variableDeclaration('var',[b.variableDeclarator(bv,
+										b.literal(0) ) ]),
+			      b.binaryExpression('<',
+						 bv,
+						 b.memberExpression(b.identifier('facts'),
+								    b.identifier('length'),
+								    false) ),
+			      b.updateExpression('++',bv,false),
+			      body);
+    };
     
     var genRuleVariant = function(chr,i) {
-	var bIdFact = b.identifier('fact')
+	var bIdFact = b.identifier('fact');
+	var addenda = [];
+	var delenda = [];
 	var genItem = function(item_id,fixed_item,next) { // >> [Statement,...]
 	    var    js;
 	    var next1 = (item_id<chr.items.length-1) ?
@@ -528,20 +624,20 @@ function generateJS(js) {
 	    var   js1;
 	    switch (chr.items[item_id].op) {
 	    case '-':
+		delenda.push(item_id);
+		// FALLTHROUGH
 	    case 'M':
-		js1 = [genMatch(chr.items[item_id].expr,vars,next1,bIdFact)];
+		js1 = genMatch(chr.items[item_id].expr,vars,next1,bIdFact).body;
 		break;
 	    case '?':
 		js1 = [b.ifStatement(chr.items[item_id].expr,b.blockStatement(next1()),null)];
 		break;
-	    case '=': {
-		var n = next1();
-		console.log("*** = %j %s",n,next1);
-		js1 = [b.expressionStatement(chr.items[item_id].expr)].concat(n)
+	    case '=': 
+		js1 = [b.expressionStatement(chr.items[item_id].expr)].concat(next1())
 		break;
-	    }
 	    case '+':
-		js1 = [b.expressionStatement(b.identifier('WRITE_ME'))];
+		addenda.push(item_id);
+		js1 = next1();
 		break;
 	    default:
 		throw new Error('NYI: '+chr.items[item_id].op);
@@ -552,20 +648,22 @@ function generateJS(js) {
 								  b.memberExpression(b.identifier('facts'),
 										     b.identifier('t_fact'),
 										     true) ));
-		js = [js].concat(js1);
-	    } else {
+		js = [js,genCheckInPlay(js1,b.identifier('t_fact'))];
+	    } else if (['M','-'].indexOf(chr.items[item_id].op)!==-1) {
 		var v = 't'+item_id;
-		js = b.forStatement(b.variableDeclaration('var',[b.variableDeclarator(b.identifier(v),
-										      b.literal(0) ) ]),
-				    b.binaryExpression('<',
-						       b.identifier(v),
-						       b.memberExpression(b.identifier('facts'),
-									  b.identifier('length'),
-									  false) ),
-				    b.updateExpression('++',b.identifier(v),false),
-				    b.blockStatement(js1));
-		js = [js];
-	    }
+		js1.unshift(b.expressionStatement(b.assignmentExpression(
+		    '=',
+		    bIdFact,
+		    b.memberExpression(b.identifier('facts'),
+				       b.identifier(v),
+				       true) )));
+		if (chr.items[item_id].rank) {
+		    // +++ fix this - implement sorting +++
+		    js = [genForInFactStore(b.identifier(v),genCheckInPlay(js1,b.identifier(v)))];
+		} else
+		    js = [genForInFactStore(b.identifier(v),genCheckInPlay(js1,b.identifier(v)))];
+	    } else
+		js = js1;
 	    return js;
 	};
 	assert.strictEqual(templates['rule'].body.length,1);
@@ -574,13 +672,69 @@ function generateJS(js) {
 	var frees = exprGetFreeVariables(chr);
 	var binds = exprGetVariablesWithBindingSites(chr);
 	var  vars = {};
-	binds.forEach(function(n){vars[n] = {bound:false};});
 	if (_.difference(frees,binds).length>0)
-	    throw new Error(util.format("cannot be assigned values: %j",_.difference(frees,binds)));
+	    throw new Error(util.format("cannot be assigned values: %j // %j %j",_.difference(frees,binds),frees,binds));
 
-	var js1 = genItem(0,i,function(){return [b.returnStatement(null)]});
-	console.log("*** "+recast.print(b.blockStatement(js1)).code);
-	// +++ insert `js1` into function template +++
+	var mangled = mangle(chr,binds);
+	chr   = mangled[0];
+	binds = mangled[1];
+
+	binds.forEach(function(n){vars[n] = {bound:false};});
+
+	var js1 = genItem(0,i,function() {
+	    var payload = [];
+	    delenda.forEach(function(i) {
+		var     bv = b.identifier('t'+i);
+		var bfactv = b.memberExpression(b.identifier('facts'),
+						bv,
+						true);
+		// +++ dels.add(facts[,bv]);delete facts[,bv]
+		payload.push(
+		    b.expressionStatement(b.callExpression(b.memberExpression(b.identifier('dels'),
+									      b.identifier('push'),
+									      false),
+							   [deepClone(bfactv)] )) );
+		payload.push(
+		    b.expressionStatement(b.unaryExpression('delete',bfactv)) );
+	    });
+	    addenda.forEach(function(i) {
+		var bv = b.identifier('t'+i);
+		payload.push(
+		    b.variableDeclaration('var',
+					  [b.variableDeclarator(
+					      bv,
+					      b.callExpression(b.memberExpression(b.identifier('store'),
+										  b.identifier('_add'),
+										  false),
+							       [genAdd(chr.items[i].expr)]) )] ) );
+		payload.push(
+		    b.expressionStatement(b.callExpression(b.memberExpression(b.identifier('news'),
+									      b.identifier('push'),
+									      false),
+							   [bv] ) ) );
+		payload.push(
+		    b.expressionStatement(b.callExpression(b.memberExpression(b.identifier('adds'),
+									      b.identifier('push'),
+									      false),
+							   [bv] ) ) );
+	    });
+	    return payload;
+	});
+	if (binds.length!=0)
+	    js1.unshift(b.variableDeclaration('var',
+					      _.map(binds,function(v){
+						  return b.variableDeclarator(b.identifier(v),null);} ) ))
+
+	eschrjs.visit(js,{
+	    visitExpressionStatement: function(path) {
+		var expr = path.node.expression;
+		if (expr.type==='Identifier' && expr.name==='INSERT_MATCH') {
+		    path.replace(b.blockStatement(js1));
+		    return false;
+		} else
+		    this.traverse(path);
+	    }
+	});
 	
 	return js;
     };
@@ -626,7 +780,7 @@ function generateJS(js) {
 		for (var j=0;j<chr.items.length;j++) {
 		    if (chr.items[j].op=='-' || chr.items[j].op=='M') {
 			noteDispatch(chr.items[j].expr,r,j);
-			variants.push(genRuleVariant(chr,j));
+			variants.push(genRuleVariant(deepClone(chr),j));
 		    }
 		}
 		code.rules.push(b.arrayExpression(variants));
@@ -650,7 +804,7 @@ function generateJS(js) {
 		throw new Error(util.format("Unknown store content: %j",init));
 	    }
 	}
-	
+
 	findTag('INSERT_RULES').insertAfter(b.variableDeclaration('var',[
 	    b.variableDeclarator(b.identifier('rules'),
 				 b.arrayExpression(code.rules))
@@ -676,17 +830,15 @@ function generateJS(js) {
 						      true),
 				   b.literal(ri[1]),
 				   true),
-		[b.identifier('fact')] ));
+		[b.identifier('t_fact')] ));
 	};
 	
-	// +++ generate `_add` using `dispatch*` stuff above +++
 	var    _addDef = Ref.flatAt(storeJS.callee.body.body,
 				 function(x){return x.type==='VariableDeclaration' &&
 					     x.declarations[0].id.name==='_add';}).get();
-	//console.log("*** _addDef: %j",_addDef);
 	if (_.keys(dispatchBranches).length>128)
 	    console.log("Warning: more than 128 cases in switch statement");
-	var _addSwitch = _addDef.declarations[0].init.body.body[0].consequent.body[0];
+	var _addSwitch = _addDef.declarations[0].init.body.body[0].consequent.body[2];
 	assert.equal(_addSwitch.type,'SwitchStatement');
 	assert.equal(_addSwitch.cases.length,1);
 	assert.equal(_addSwitch.cases[0].test.name,'INSERT_CASE');
@@ -696,9 +848,9 @@ function generateJS(js) {
 	    _addSwitch.cases.push(b.switchCase(b.literal(k),brs.concat(b.breakStatement())));
 	}
 	var ins_gen = _addDef.declarations[0].init.body.body[0].consequent.body;
-	assert.equal(ins_gen.length,2);
-	assert.equal(ins_gen[1].type,'ExpressionStatement');
-	assert.equal(ins_gen[1].expression.name,'INSERT_GENERIC_MATCHES');
+	assert.equal(ins_gen.length,4);
+	assert.equal(ins_gen[3].type,'ExpressionStatement');
+	assert.equal(ins_gen[3].expression.name,'INSERT_GENERIC_MATCHES');
 	ins_gen.pop();		// delete INSERT_GENERIC_MATCHES
 	dispatchGeneric.forEach(function(ri){ins_gen.push(genInvokeRuleItem(ri));});
 	    
@@ -722,7 +874,9 @@ if (util.env==='test') {
 	exprGetFreeVariables:             exprGetFreeVariables,
 	exprGetVariablesWithBindingSites: exprGetVariablesWithBindingSites,
 	Ref:                              Ref,
+	mangle:                           mangle,
 	genAccessor:                      genAccessor,
+	genAdd:                           genAdd,
 	genMatch:                         genMatch,
 	generateJS:                       generateJS
     };
