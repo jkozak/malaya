@@ -368,3 +368,48 @@ describe("esprima-based parser",function() {
 	assert.strictEqual(failures.length,0);
     });
 });
+
+describe("visit",function() {
+    it("should visit StoreDeclaration",function(){
+	var ok = false;
+	eschrjs.visit(eschrjs.parse("store {}"),
+		      {
+			  visitStoreDeclaration: function(node) {
+			      ok = true;
+			      return false;
+			  } });
+	assert(ok);
+    });
+    it("should visit RuleStatement",function(){
+	var n = 0;
+	eschrjs.visit(eschrjs.parse("store {rule (['a'])}"),
+		      {
+			  visitStoreDeclaration: function(node) {
+			      n++;
+			      this.traverse(node);
+			  },
+			  visitRuleStatement: function(node) {
+			      n++;
+			      this.traverse(node);
+			  } });
+	assert.equal(n,2);
+    });
+    it("should visit ItemExpressions",function(){
+	var n = 0;
+	eschrjs.visit(eschrjs.parse("store {rule (['a',a],['b',a])}"),
+		      {
+			  visitStoreDeclaration: function(node) {
+			      n++;
+			      this.traverse(node);
+			  },
+			  visitRuleStatement: function(node) {
+			      n++;
+			      this.traverse(node);
+			  },
+		      	  visitItemExpression: function(node) {
+			      n++;
+			      this.traverse(node);
+			  }});
+	assert.equal(n,4);
+    });
+});

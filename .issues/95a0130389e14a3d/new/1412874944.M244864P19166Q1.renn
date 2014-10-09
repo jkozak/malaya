@@ -1,0 +1,6 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Thu, 09 Oct 2014 18:15:44 +0100
+Subject: Use `Object.freeze` on facts when performance issue fixed in v8
+State: new
+Message-Id: <95a0130389e14a3d-0-artemis@renn>
+
