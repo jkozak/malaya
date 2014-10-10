@@ -21,17 +21,17 @@ function TEMPLATE_store() {
     (function() {
 	var      _ = require('underscore');
 	var assert = require('assert');
-	var      t = 1;		// must be > 0 always?
-	var  facts = {};		// t -> fact; this is the main fact store
+	var      t = 1;		        // must be > 0 always?
+	var  facts = {};		// 't' -> fact; this is the main fact store
 	var   adds = [];
 	var   dels = [];
 	var   news = [];
 	var    err = null;
 	var   _add = function(fact) {
 	    if (fact instanceof Array && fact.length>0) {
-		var t_fact = t++;
+		var t_fact = ''+t++; // `t_fact` is a string
 		facts[t_fact] = fact;
-		switch (t_fact) {
+		switch (fact[0]) {
 		case INSERT_CASE:
 		    break;
 		}
@@ -40,7 +40,7 @@ function TEMPLATE_store() {
 		return {err:"unloved fact format: "+JSON.stringify(fact)};
 	};
 	var obj = {
-	    get: function(t) {return facts[t];},
+	    get: function(t) {assert.equal(typeof t,'string');return facts[t];},
 	    add: function(fact) {
 		assert.strictEqual(adds.length,0);
 		assert.strictEqual(dels.length,0);
@@ -57,7 +57,7 @@ function TEMPLATE_store() {
 	    },
 	    get t()       {return t;},
 	    get queries() {return queries;},
-	    reset: function(){facts={};init();}
+	    reset: function(){t=1;facts={};init();}
 	};
 	if (process.env.NODE_ENV==='test')
 	    obj._private = {
@@ -141,8 +141,13 @@ function mangle(js,vars) {
 		return false;
 	    },
 	    visitProperty: function(path) {           // keys may be Identifiers, don't mangle
-		doIdentifier(path.get('value'));
-		return false;
+		var prop = path.node;
+		if (prop.value.type==='Identifier') {
+		    doIdentifier(path.get('value'));
+		    return false;
+		}
+		else
+		    this.traverse(path.get('value'));
 	    },
 	    visitMemberExpression: function(path) {
 		var expr = path.node;
@@ -586,6 +591,10 @@ function generateJS(js) {
     var genCheckInPlay = function(jss,vt) { // >> Statement
 	eschrjs.namedTypes.Statement.assert(jss[0]); // CBB
 	eschrjs.namedTypes.Identifier.assert(vt);
+	var popStmt = b.expressionStatement(b.callExpression(b.memberExpression(b.identifier('in_play'),
+										b.identifier('pop'),
+										false),
+							     []));
 	return b.ifStatement(b.binaryExpression(
 	    '===',
 	    b.callExpression(b.memberExpression(b.identifier('in_play'),
@@ -597,20 +606,26 @@ function generateJS(js) {
 				 b.callExpression(b.memberExpression(b.identifier('in_play'),
 								     b.identifier('push'),
 								     false),
-						  [vt]) )].concat(jss)),
+						  [vt]) )].concat(jss,popStmt)),
 			     null);
     }
 
     var genForInFactStore = function(bv,body) {
-	return b.forStatement(b.variableDeclaration('var',[b.variableDeclarator(bv,
-										b.literal(0) ) ]),
-			      b.binaryExpression('<',
-						 bv,
-						 b.memberExpression(b.identifier('facts'),
-								    b.identifier('length'),
-								    false) ),
-			      b.updateExpression('++',bv,false),
-			      body);
+	if (false)
+	    return b.forStatement(b.variableDeclaration('var',[b.variableDeclarator(bv,
+										    b.literal(1) ) ]),
+				  b.binaryExpression('<',
+						     bv,
+						     b.memberExpression(b.identifier('facts'),
+									b.identifier('length'),
+									false) ),
+				  b.updateExpression('++',bv,false),
+				  body);
+	else
+	    return b.forInStatement(b.variableDeclaration('var',[b.variableDeclarator(bv,null)]),
+				    b.identifier('facts'),
+				    body,
+				    false);
     };
     
     var genRuleVariant = function(chr,i) {
@@ -643,12 +658,15 @@ function generateJS(js) {
 		throw new Error('NYI: '+chr.items[item_id].op);
 	    }
 	    if (item_id==fixed_item) { // fixed assignment to `t_fact`
-		js = b.expressionStatement(b.assignmentExpression('=',
-								  bIdFact,
-								  b.memberExpression(b.identifier('facts'),
-										     b.identifier('t_fact'),
-										     true) ));
-		js = [js,genCheckInPlay(js1,b.identifier('t_fact'))];
+		js = [b.expressionStatement(b.assignmentExpression('=',
+								   bIdFact,
+								   b.memberExpression(b.identifier('facts'),
+										      b.identifier('t_fact'),
+										      true) )),
+		      b.ifStatement(b.binaryExpression('===',bIdFact,b.identifier('undefined')),
+				    b.returnStatement(null),
+				    null),
+		      genCheckInPlay(js1,b.identifier('t_fact'))];
 	    } else if (['M','-'].indexOf(chr.items[item_id].op)!==-1) {
 		var v = 't'+item_id;
 		js1.unshift(b.expressionStatement(b.assignmentExpression(
@@ -683,12 +701,11 @@ function generateJS(js) {
 
 	var js1 = genItem(0,i,function() {
 	    var payload = [];
-	    delenda.forEach(function(i) {
-		var     bv = b.identifier('t'+i);
+	    delenda.forEach(function(j) {
+		var     bv = b.identifier(i===j ? 't_fact' : 't'+j);
 		var bfactv = b.memberExpression(b.identifier('facts'),
 						bv,
 						true);
-		// +++ dels.add(facts[,bv]);delete facts[,bv]
 		payload.push(
 		    b.expressionStatement(b.callExpression(b.memberExpression(b.identifier('dels'),
 									      b.identifier('push'),
@@ -697,16 +714,14 @@ function generateJS(js) {
 		payload.push(
 		    b.expressionStatement(b.unaryExpression('delete',bfactv)) );
 	    });
-	    addenda.forEach(function(i) {
-		var bv = b.identifier('t'+i);
+	    addenda.forEach(function(j) {
+		var bv = b.identifier(i===j ? 't_fact' : 't'+j);
 		payload.push(
 		    b.variableDeclaration('var',
 					  [b.variableDeclarator(
 					      bv,
-					      b.callExpression(b.memberExpression(b.identifier('store'),
-										  b.identifier('_add'),
-										  false),
-							       [genAdd(chr.items[i].expr)]) )] ) );
+					      b.callExpression(b.identifier('_add'),
+							       [genAdd(chr.items[j].expr)]) )] ) );
 		payload.push(
 		    b.expressionStatement(b.callExpression(b.memberExpression(b.identifier('news'),
 									      b.identifier('push'),

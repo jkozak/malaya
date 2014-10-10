@@ -236,7 +236,10 @@ describe("generateJS",function() {
 	// +++
 	eval(recast.print(js).code);
 	console.log("*** match: %j",match._private.facts);
-	assert.strictEqual(Object.keys(match._private.facts).length,3); // 3 facts from the match.chrjs source 
+	assert.strictEqual(Object.keys(match._private.facts).length,3); // 3 facts from the match.chrjs source
+	var r1 = match.add(['match-price',{user:"John Kozak", instrument:"IL21",volume:10000000,isBuy:true, t:1}]);
+	var r2 = match.add(['match-price',{user:"Val Wardlaw",instrument:"IL21",volume: 9000000,isBuy:false,t:1}]);
+	console.log("*** match: %j",match._private.facts);
     });
 });
 
