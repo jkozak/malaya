@@ -310,4 +310,15 @@ describe("query statement",function() {
 	assert.equal(typeof qr1.t,'number');
 	assert.equal(qr1.t,qr5.t); // store has not been updated by queries
     });
+    it("should run the 3-head benchmark",function() {
+	var js = chr.generateJS(eschrjs.parse("var st = store {query q(;['X',x,p],['X',x,q],['X',x,r],p>q && q>r;a=0) a+p+q+r};"));
+	eval(recast.print(js).code);
+	var n = 100;
+	for (var i=0;i<n/3;i++) {
+	    st.add(["X",i,10]);
+	    st.add(["X",i,20]);
+	    st.add(["X",i,30]);
+	}
+	st.queries.q();
+    });
 });

@@ -41,7 +41,7 @@ suite('query',function() {
     });
     samples.forEach(function(n) {
 	var store = new chr.Store();
-	for (var i=0;i<n/2;i++) {
+	for (var i=0;i<n/3;i++) {
 	    store.add(["X",i,10]);
 	    store.add(["X",i,20]);
 	    store.add(["X",i,30]);
@@ -57,3 +57,4 @@ suite('query',function() {
 	});
     });
 });
+
