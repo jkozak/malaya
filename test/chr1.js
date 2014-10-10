@@ -289,3 +289,25 @@ describe("EventEmitter",function() {
 	assert(fired);
     });
 });
+
+describe("query statement",function() {
+    it("should compile and run a simple query",function() {
+	var js = chr.generateJS(eschrjs.parse("var st = store {query q(;['user',{name:n}];a=[]) a.concat(n);};"));
+	//console.log(recast.print(js).code);
+	eval(recast.print(js).code);
+	assert.equal(st.queries.q().result.length,0);
+	st.add(['user',{name:'tyson'}]);
+	assert.equal(st.queries.q().result.length,1);
+    });
+    it("should compile and run a parameterized query",function() {
+	var js = chr.generateJS(eschrjs.parse("var st = store {query q(p;['user',{name:n}],n.length===p;a=[]) a.concat(n);};"));
+	eval(recast.print(js).code);
+	st.add(['user',{name:'tyson'}]);
+	var qr1 = st.queries.q(1)
+	var qr5 = st.queries.q(5)
+	assert.equal(qr1.result.length,0);
+	assert.equal(qr5.result.length,1);
+	assert.equal(typeof qr1.t,'number');
+	assert.equal(qr1.t,qr5.t); // store has not been updated by queries
+    });
+});
