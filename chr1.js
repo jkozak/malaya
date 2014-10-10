@@ -25,7 +25,6 @@ function TEMPLATE_store() {
 	var  facts = {};		// 't' -> fact; this is the main fact store
 	var   adds = [];
 	var   dels = [];
-	var   news = [];
 	var    err = null;
 	var   _add = function(fact) {
 	    if (fact instanceof Array && fact.length>0) {
@@ -36,22 +35,17 @@ function TEMPLATE_store() {
 		    break;
 		}
 		INSERT_GENERIC_MATCHES;
+		return t_fact;
 	    } else
-		return {err:"unloved fact format: "+JSON.stringify(fact)};
+		throw new Error("unloved fact format: "+JSON.stringify(fact));
 	};
 	var obj = {
 	    get: function(t) {assert.equal(typeof t,'string');return facts[t];},
 	    add: function(fact) {
 		assert.strictEqual(adds.length,0);
 		assert.strictEqual(dels.length,0);
-		assert.strictEqual(news.length,0);
-		news.push(fact);
-		while (news.length>0) {
-		    _add(news.shift());
-		    if (err)
-			break;
-		}
-		var ans = {err:err,adds:adds,dels:dels};
+		var   t = _add(fact);
+		var ans = {err:null,t:t,adds:adds,dels:dels};
 		adds = [];dels = [];
 		return ans;
 	    },
@@ -105,16 +99,17 @@ function TEMPLATE_query() {	// to be embedded in store above, whence `adds`, `de
 }
 
 function TEMPLATE_sort() {
-    var  SORTED = [];
-    for (var T=1;T<facts.length;T++) {
-	// +++ genMatch +++
-	sorted.push([RANK,T]);
+    var SORTED = [];
+    for (var T in facts) {
+	GENMATCH;
+	SORTED.push([RANK,T]);
     }
-    SORTED.sort(function(p,q){return COMPARE(p[0],q[0]);})
+    SORTED.sort(function(p,q){return p[0]-q[0];})
     for (var T=0;T<SORTED.length;T++) 
 	REST;
 }
 
+//??? why isn't `sourceFileName` doing anything? ???
 var autoparse = recast.parse(fs.readFileSync(__filename),{esprima:       require('esprima'),
 							  sourceFileName:__filename});
 for (var i in autoparse.program.body) {
@@ -123,7 +118,7 @@ for (var i in autoparse.program.body) {
 	templates[x.id.name.substr(template_marker.length)] = x.body;
     }
 }
-//console.log("*** %j",templates.sort)
+//console.log("*** %j",templates.sort);
 
 function mangle(js,vars) {
     if ((typeof js)==='string') {
@@ -236,6 +231,7 @@ function exprGetFreeVariables(expr) {
 	return exprGetFreeVariables(expr.expression);
     case 'Program':
     case 'StoreDeclaration':
+    case 'StoreExpression':
     case 'BlockStatement': {
 	var ans = [];
 	for (var i in expr.body)
@@ -323,6 +319,7 @@ function exprGetVariablesWithBindingSites(expr) {
     case 'Literal':
     case 'Identifier':
 	return [];
+    case 'StoreExpression':
     case 'StoreDeclaration': {
 	var ans = [];
 	for (var i in expr.body)
@@ -658,6 +655,7 @@ function generateJS(js) {
 		throw new Error('NYI: '+chr.items[item_id].op);
 	    }
 	    if (item_id==fixed_item) { // fixed assignment to `t_fact`
+		// the new fact can have been deleted by a previous rule, allow for this
 		js = [b.expressionStatement(b.assignmentExpression('=',
 								   bIdFact,
 								   b.memberExpression(b.identifier('facts'),
@@ -722,11 +720,6 @@ function generateJS(js) {
 					      bv,
 					      b.callExpression(b.identifier('_add'),
 							       [genAdd(chr.items[j].expr)]) )] ) );
-		payload.push(
-		    b.expressionStatement(b.callExpression(b.memberExpression(b.identifier('news'),
-									      b.identifier('push'),
-									      false),
-							   [bv] ) ) );
 		payload.push(
 		    b.expressionStatement(b.callExpression(b.memberExpression(b.identifier('adds'),
 									      b.identifier('push'),
@@ -863,20 +856,30 @@ function generateJS(js) {
 	    _addSwitch.cases.push(b.switchCase(b.literal(k),brs.concat(b.breakStatement())));
 	}
 	var ins_gen = _addDef.declarations[0].init.body.body[0].consequent.body;
-	assert.equal(ins_gen.length,4);
+	assert.equal(ins_gen.length,5);
 	assert.equal(ins_gen[3].type,'ExpressionStatement');
-	assert.equal(ins_gen[3].expression.name,'INSERT_GENERIC_MATCHES');
-	ins_gen.pop();		// delete INSERT_GENERIC_MATCHES
+	assert.equal(ins_gen.splice(3,1)[0].expression.name,'INSERT_GENERIC_MATCHES');
 	dispatchGeneric.forEach(function(ri){ins_gen.push(genInvokeRuleItem(ri));});
 	    
 	return storeJS;
     }
 
-    for (var i in js.body) {
-	if (js.body[i].type=='StoreDeclaration')
-	    js.body[i] = b.variableDeclaration('var',[
-		b.variableDeclarator(js.body[i].id,genStore(js.body[i])) ]);
-    }
+    eschrjs.visit(js,{
+	visitStoreDeclaration: function(path) {
+	    var decl = path.node;
+	    if (decl.id===null)
+		path.replace(b.expressionStatement(genStore(decl)))
+	    else
+		path.replace(b.variableDeclaration('var',[
+		    b.variableDeclarator(decl.id,genStore(decl)) ]));
+	    return false;
+	},
+	visitStoreExpression: function(path) {
+	    var decl = path.node;
+	    path.replace(genStore(decl))
+	    return false;
+	}
+    });
 
     return js;
 }
