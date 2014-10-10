@@ -1,6 +1,7 @@
 From: John Kozak <jk@thameslighter.net>
 Date: Sun, 07 Sep 2014 14:33:10 +0100
 Subject: use EventEmitter rather than homebrewed event stuff
-State: new
+State: resolved
 Message-Id: <efe06cf96fbe1a3f-0-artemis@renn>
+resolution: fixed
 

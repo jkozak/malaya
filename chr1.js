@@ -19,14 +19,16 @@ var template_marker = 'TEMPLATE_';
 
 function TEMPLATE_store() {
     (function() {
-	var      _ = require('underscore');
-	var assert = require('assert');
-	var      t = 1;		        // must be > 0 always?
-	var  facts = {};		// 't' -> fact; this is the main fact store
-	var   adds = [];
-	var   dels = [];
-	var    err = null;
-	var   _add = function(fact) {
+	var   store = this;
+	var       _ = require('underscore');
+	var  assert = require('assert');
+	var emitter = new (require('events').EventEmitter)();
+	var       t = 1;	     // must be > 0 always?
+	var   facts = {};	     // 't' -> fact; this is the main fact store
+	var    adds = [];
+	var    dels = [];
+	var     err = null;
+	var    _add = function(fact) {
 	    if (fact instanceof Array && fact.length>0) {
 		var t_fact = ''+t++; // `t_fact` is a string
 		facts[t_fact] = fact;
@@ -40,12 +42,15 @@ function TEMPLATE_store() {
 		throw new Error("unloved fact format: "+JSON.stringify(fact));
 	};
 	var obj = {
-	    get: function(t) {assert.equal(typeof t,'string');return facts[t];},
-	    add: function(fact) {
+	    on:   function(ev,cb) {emitter.on(ev,cb);},
+	    once: function(ev,cb) {emitter.once(ev,cb);},
+	    get:  function(t) {assert.equal(typeof t,'string');return facts[t];},
+	    add:  function(fact) {
 		assert.strictEqual(adds.length,0);
 		assert.strictEqual(dels.length,0);
-		var   t = _add(fact);
-		var ans = {err:null,t:t,adds:adds,dels:dels};
+		adds.push(_add(fact));
+		emitter.emit('fire',obj,fact,adds,dels);
+		var ans = {err:null,adds:adds,dels:dels};
 		adds = [];dels = [];
 		return ans;
 	    },
@@ -55,7 +60,8 @@ function TEMPLATE_store() {
 	};
 	if (process.env.NODE_ENV==='test')
 	    obj._private = {
-		get facts()   {return facts;}
+		get facts()   {return facts;},
+		get size()    {return Object.keys(facts).length;}
 	    };
 	// +++ obj = Object.freeze(obj) if it's not too slow. +++
 
@@ -94,7 +100,7 @@ function TEMPLATE_query() {	// to be embedded in store above, whence `adds`, `de
 	    INSERT_ANS = INSERT_FOLD(INSERT_ANS);
 	}
 
-	return INSERT_ANS;
+	return {t:t,result:INSERT_ANS};
     };
 }
 
@@ -751,6 +757,7 @@ function generateJS(js) {
 	var js = deepClone(templates['query']);
 	// +++ insert parameters per query statement +++
 	// +++ ensure no adds or deletes +++
+	// +++ query returns {t:<t>,result:<json>}
 	return genRuleVariant(chr,null);
     };
     
