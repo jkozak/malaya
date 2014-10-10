@@ -1,0 +1,6 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Thu, 09 Oct 2014 18:39:50 +0100
+Subject: optimise generated code: don't need to check `fact[0]` after `_add`'s dispatch
+State: new
+Message-Id: <df06e3ce57953228-0-artemis@renn>
+
