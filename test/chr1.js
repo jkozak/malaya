@@ -225,20 +225,28 @@ describe("genAdd",function() {
 
 describe("generateJS",function() {
     it("should generate JS for trivial store",function() {
-	var js = chr.generateJS(eschrjs.parse("store fred {['user',{name:'sid'}];rule(['user',{name:a}]);rule(['company',{user:a,name:b}]);}"));
+	var js = chr.generateJS(eschrjs.parse("var st = store {['user',{name:'sid'}];rule(['user',{name:a}]);rule(['company',{user:a,name:b}]);};"));
 	eval(recast.print(js).code);
+	assert.deepEqual(st._private.facts,{"1":['user',{name:'sid'}]});
     });
     it("should generate JS for less trivial store",function() {
 	var matchCHRJS = fs.readFileSync("test/bl/match.chrjs");
 	var      chrjs = eschrjs.parse(matchCHRJS);
 	var         js = chr.generateJS(chrjs);
 	console.log("*** js: \n"+recast.print(js).code);
-	// +++
 	eval(recast.print(js).code);
 	console.log("*** match: %j",match._private.facts);
 	assert.strictEqual(Object.keys(match._private.facts).length,3); // 3 facts from the match.chrjs source
 	var r1 = match.add(['match-price',{user:"John Kozak", instrument:"IL21",volume:10000000,isBuy:true, t:1}]);
 	var r2 = match.add(['match-price',{user:"Val Wardlaw",instrument:"IL21",volume: 9000000,isBuy:false,t:1}]);
+	assert.equal(r1.adds.length,0);
+	assert.equal(r1.dels.length,0);
+	assert.equal(r2.adds.length,3); // trade and two prices
+	assert.equal(r2.dels.length,3); // three prices
+	console.log("*** r1: %j",r1);
+	console.log("*** r2: %j",r2);
+	assert(_.every(_.map(r2.dels,function(x){return x[0]==='match-price';})));
+	assert(_.every(r2.adds,function(x){return (typeof parseInt(x))==='number';}));
 	console.log("*** match: %j",match._private.facts);
     });
 });

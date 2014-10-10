@@ -354,7 +354,6 @@ function transform(chrjs) {
 
 require.extensions['.chrjs'] = function(module,filename) {
     var content = fs.readFileSync(filename,'utf8');
-    //console.log(codegen.generate(transform(eschrjs.parse(content))));
     module._compile(codegen.generate(transform(eschrjs.parse(content))),filename);
 };
 

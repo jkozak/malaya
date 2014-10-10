@@ -160,6 +160,7 @@ var util = require('./util.js');
 	// additions for chrjs
 	BindRest:       'BindRest',
 	StoreDeclaration: 'StoreDeclaration',
+	StoreExpression: 'StoreExpression',
 	RuleStatement: 'RuleStatement',
 	QueryStatement: 'QueryStatement',
 	SnapExpression: 'SnapExpression',
@@ -1839,6 +1840,14 @@ var util = require('./util.js');
 	    };
 	},
 
+	createStoreExpression: function(body) {
+	    return {
+		type: Syntax.StoreExpression,
+		id: null,
+		body: body
+	    };
+	},
+
 	createItemExpression: function(op,expr) {
 	    return {
 		type: Syntax.ItemExpression,
@@ -2276,6 +2285,9 @@ var util = require('./util.js');
             }
 	    if (state.inStore && matchKeyword('snap')) {          // chrjs
                 return parseSnapExpression();
+            }
+	    if (matchKeyword('store')) {                          // chrjs
+                return parseStoreExpression();
             }
             if (matchKeyword('this')) {
                 lex();
@@ -3877,6 +3889,20 @@ var util = require('./util.js');
 	}
     }
 
+    function parseStoreExpression() {
+	state.inStore = true;
+	try {
+            var startToken = lookahead;
+	    expectKeyword('store');
+	    expect("{");
+	    var body = parseStoreBodyList();
+	    expect("}");
+            return delegate.markEnd(delegate.createStoreExpression(body),startToken);
+	} finally {
+	    state.inStore = false;
+	}
+    }
+
     function parseChrjsFullTerm() {
 	if (match('[')) 
 	    return parseArrayInitialiser();
@@ -3999,6 +4025,10 @@ var util = require('./util.js');
 	    .bases('Declaration')
 	    .build('id', 'body')
 	    .field('id',   def('Identifier'))
+	    .field('body', [def('Statement')]);
+	def('StoreExpression')
+	    .bases('Expression')
+	    .build('body')
 	    .field('body', [def('Statement')]);
 	def('RuleStatement')
 	    .bases('Statement')
