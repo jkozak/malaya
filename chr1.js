@@ -266,6 +266,14 @@ function exprGetFreeVariables(expr) {
 	    ans = _.union(ans,exprGetFreeVariables(expr.items[i]));
 	return ans;
     }
+    case 'QueryStatement': {
+	var ans = [];
+	for (var i in expr.items)
+	    ans = _.union(ans,exprGetFreeVariables(expr.items[i]));
+	ans = _.union(ans,exprGetFreeVariables(expr.accum));
+	ans = _.union(ans,exprGetFreeVariables(expr.init.right));
+	return ans;
+    }
     case 'ItemExpression': {
 	var ans = exprGetFreeVariables(expr.expr);
 	if (expr.rank!==null)
@@ -307,13 +315,31 @@ function exprGetVariablesWithBindingSites(expr) {
 	return ans;
     }
     case 'AssignmentExpression':
-	return [expr.left.name];
+	switch (expr.left.type) {
+	case 'Identifier':
+	    return [expr.left.name];
+	case 'MemberExpression':
+	    return [expr.left.object.name];
+	default:
+	    throw new Error('NYI');
+	}
+	break;
     case 'BindRest':
 	return [expr.id.name];
     case 'RuleStatement': {
 	var ans = [];
 	for (var i in expr.items)
 	    ans = _.union(ans,exprGetVariablesWithBindingSites(expr.items[i]));
+	return ans;
+    }
+    case 'QueryStatement': {
+	assert.equal(expr.init.type,     'AssignmentExpression');
+	assert.equal(expr.init.operator, '=');
+	assert.equal(expr.init.left.type,'Identifier');
+	var ans = _.map(expr.args,function(x){return x.name;});
+	for (var i in expr.items)
+	    ans = _.union(ans,exprGetVariablesWithBindingSites(expr.items[i]));
+	ans = _.union(ans,[expr.init.left.name]);
 	return ans;
     }
     case 'ItemExpression': {
@@ -631,7 +657,7 @@ function generateJS(js) {
 				    false);
     };
     
-    var genRuleVariant = function(chr,i) {
+    var genRuleVariant = function(chr,i,genPayload) {
 	var bIdFact = b.identifier('fact');
 	var addenda = [];
 	var delenda = [];
@@ -703,7 +729,7 @@ function generateJS(js) {
 
 	binds.forEach(function(n){vars[n] = {bound:false};});
 
-	var js1 = genItem(0,i,function() {
+	genPayload = genPayload || function() { // >> [Statement]
 	    var payload = [];
 	    delenda.forEach(function(j) {
 		var     bv = b.identifier(i===j ? 't_fact' : 't'+j);
@@ -733,7 +759,9 @@ function generateJS(js) {
 							   [bv] ) ) );
 	    });
 	    return payload;
-	});
+	};
+	
+	var js1 = genItem(0,i,genPayload);
 	if (binds.length!=0)
 	    js1.unshift(b.variableDeclaration('var',
 					      _.map(binds,function(v){
@@ -752,13 +780,38 @@ function generateJS(js) {
 	
 	return js;
     };
-    
-    var genQuery = function(chr,id) {
-	var js = deepClone(templates['query']);
-	// +++ insert parameters per query statement +++
-	// +++ ensure no adds or deletes +++
-	// +++ query returns {t:<t>,result:<json>}
-	return genRuleVariant(chr,null);
+
+    var genQuery = function(chr) {
+	// a query is a hacked-up rule.  Do this better.
+	for (var item in chr.items)
+	    if (item.op=='+' || item.op=='-')
+		throw new Error("query statement must not modify the store");
+
+	var rv = genRuleVariant(chr,null,function() { // `null` as there's no incoming fact
+	    return [b.expressionStatement(b.assignmentExpression('=',chr.init.left,chr.accum))];
+	});
+
+	rv.params = chr.args;
+	rv.body.body.push(b.returnStatement(b.objectExpression([b.property('init',
+									   b.identifier('t'),
+									   b.identifier('t') ),
+								b.property('init',
+									   b.identifier('result'),
+									   chr.init.left) ])));
+	eschrjs.visit(rv,{	// remove query args and accum variable from binding site decls
+	    visitVariableDeclarator: function(path) {
+		var decl = path.node;
+		if (decl.id.name===chr.init.left.name ||
+		    _.any(chr.args,function(bId){return bId.name===decl.id.name}) )
+		    path.replace();
+		return false;
+	    }
+	});
+	rv.body.body.unshift(b.variableDeclaration('var',[b.variableDeclarator(chr.init.left,chr.init.right)]));
+	
+	//console.log("*** rv: %j",rv);
+	
+	return rv;
     };
     
     var genStore = function(storeCHR) {
@@ -828,7 +881,9 @@ function generateJS(js) {
 	    b.variableDeclarator(b.identifier('queries'),
 				 b.objectExpression(
 				     _.map(_.keys(code.queries),
-					   function(k) {return b.property('init',k,code.queries[k]);} ) ) )
+					   function(k) {return b.property('init',
+									  b.identifier(k),
+									  code.queries[k]); } ) ) )
 	] ));
 	findTag('INSERT_INIT').insertAfter(b.variableDeclaration('var',[
 	    b.variableDeclarator(b.identifier('init'),

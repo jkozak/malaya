@@ -17,7 +17,7 @@ suite('query',function() {
 	    store.add(["X",i,10]);
 	    store.add(["X",i,20]);
 	}
-	// query(;['X',x,p];a) 0:a+p
+	// query(;['X',x,p];a=0) a+p
 	bench("1 headed, store"+n,function() {
 	    store.snap(new chr.Snap([new Match(["X",new chr.Variable('x'),new chr.Variable('p')])],
 				    0,
@@ -30,7 +30,7 @@ suite('query',function() {
 	    store.add(["X",i,10]);
 	    store.add(["X",i,20]);
 	}
-	// query(;['X',x,p],['X',x,q],p>q;a) 0:a+p+q
+	// query(;['X',x,p],['X',x,q],p>q;a=0) a+p+q
 	bench("2 headed, store"+n,function() {
 	    store.snap(new chr.Snap([new Match(["X",new chr.Variable('x'),new chr.Variable('p')]),
 				     new Match(["X",new chr.Variable('x'),new chr.Variable('q')]),
@@ -46,7 +46,7 @@ suite('query',function() {
 	    store.add(["X",i,20]);
 	    store.add(["X",i,30]);
 	}
-	// query(;['X',x,p],['X',x,q],['X',x,r],p>q && q>r;a) 0:a+p+q+r
+	// query(;['X',x,p],['X',x,q],['X',x,r],p>q && q>r;a=0) a+p+q+r
 	bench("3 headed, store"+n,function() {
 	    store.snap(new chr.Snap([new Match(["X",new chr.Variable('x'),new chr.Variable('p')]),
 				     new Match(["X",new chr.Variable('x'),new chr.Variable('q')]),

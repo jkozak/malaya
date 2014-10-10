@@ -3966,7 +3966,7 @@ var util = require('./util.js');
     }
 
     function parseQuerySnapBackend() {
-	var qsb = {items:[],init:null,accum:null,fold:null}
+	var qsb = {items:[],init:null,accum:null}
         if (!match(';')) {
             while (index<length) {
                 qsb.items.push(parseChrjsItem());
@@ -3976,11 +3976,9 @@ var util = require('./util.js');
             }
         }
 	expect(';');
-	qsb.accum = parseVariableIdentifier();
+	qsb.init = parseAssignmentExpression();
 	expect(')');
-	qsb.init = parsePrimaryExpression();
-	expect(':');
-	qsb.fold = parseBinaryExpression();
+	qsb.accum = parseBinaryExpression();
 	return qsb;
     }
     
@@ -3991,7 +3989,7 @@ var util = require('./util.js');
 	expect('(');
         if (!match(';')) {
             while (index<length) {
-                args.push(parseChrjsItem());
+                args.push(parseAssignmentExpression());
                 if (match(';')) 
                     break;
                 expect(',');
@@ -3999,14 +3997,14 @@ var util = require('./util.js');
         }
 	expect(';');
 	var qsb = parseQuerySnapBackend();
-        return delegate.createQueryStatement(id,args,qsb.items,qsb.init,qsb.fold);
+        return delegate.createQueryStatement(id,args,qsb.items,qsb.init,qsb.accum);
     }
 
     function parseSnapExpression() {
 	expectKeyword('snap');
 	expect('(');
 	var qsb = parseQuerySnapBackend();
-        return delegate.createSnapExpression(qsb.items,qsb.init,qsb.fold);
+        return delegate.createSnapExpression(qsb.items,qsb.init,qsb.accum);
     }
 
     // Sync with *.json manifests.
@@ -4048,12 +4046,12 @@ var util = require('./util.js');
 	    .field('id',def('Identifier'))
 	def('QueryStatement')
 	    .bases('Statement')
-	    .build('id','args','items','init','accum')
+	    .build('id','args','items','accum')
 	    .field('id',   def('Identifier'))
 	    .field('args', [def('Identifier')])
 	    .field('items',[def('ItemExpression')])
-	    .field('init', def('Expression'))
-	    .field('expr', def('Expression'))
+	    .field('accum',def('Expression'))
+	    .field('init', def('AssignmentExpression'))
 	types.finalize();
 	return function(ast,methods) {
 	    return types.visit(ast,methods);
