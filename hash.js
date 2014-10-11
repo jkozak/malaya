@@ -4,6 +4,7 @@ var crypto = require('crypto');
 var stream = require('stream');
 var fs     = require('fs');
 var util   = require('./util.js');
+var events = require('events');
 
 module.exports = function(algorithm) {
     var ans = {
@@ -24,12 +25,10 @@ module.exports = function(algorithm) {
 	    }
 	},
 	make_store: function(dirname) {
-	    var events = {
-		add:function(hash) {}
-	    };
+	    var ee = new events.EventEmitter();
 	    ans.init(dirname);
 	    var store = {
-		on: function(name,handler) {events[name]=handler;},
+		on:           function(what,handler) {ee.on(what,handler);},
 		makeFilename: function(h) {
 		    return dirname+'/'+h;
 		},
@@ -43,7 +42,7 @@ module.exports = function(algorithm) {
 		    var        h = ans.hash(x);
 		    var filename = store.makeFilename(h);
 		    if (!fs.existsSync(filename)) {
-			events.add(h);
+			ee.emit('add',h);
 			fs.writeFileSync(filename,x);
 		    }
 		    return h;

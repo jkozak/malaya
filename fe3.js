@@ -14,10 +14,7 @@ var AP_XML2A       = 918;
 
 function FE3Connection(sock,options) {
     var mc          = this;
-    var events      = {
-	data:  function(js) {events['cmd'](toMalaya(js));}, 
-	close: function() {},
-	cmd:   function(js) {util.error("!!! cmd FE3 can't: "+JSON.stringify(js));} };
+    var ee          = new events.EventEmitter();
     var xml_builder = new x2j.Builder({headless:true});
     var recved      = new Buffer(0);
     var NUL         = new Buffer('\0');
@@ -46,7 +43,7 @@ function FE3Connection(sock,options) {
     }
     
     this.name  = null;
-    this.on    = function(what,handler) {events[what] = handler;}
+    this.on    = function(what,handler) {ee.on(what,handler);};
     this.write = function(js) {
 	var xml = xml_builder.buildObject(fromMalaya(js));
 	var hdr = new Buffer(FE3_HDR_LENGTH);
@@ -78,7 +75,7 @@ function FE3Connection(sock,options) {
 		    var xml = recved.toString('ascii',FE3_HDR_LENGTH+4,FE3_HDR_LENGTH+cbData-1);
 		    x2j.parseString(xml,function(err,js) {
 			if (err===null)
-			    events['data'](js); 
+			    ee.emit('data',js); 
 			else {
 			    // +++ error handling for broken XML? +++
 			    socket.destroy();
@@ -103,25 +100,23 @@ function FE3Connection(sock,options) {
 	sock.destroy();		// ???
     });
     sock.on('close',function() {
-	events['close']();
+	ee.emit('close');
     });
 }
 
 exports.createServer = function(options) {
-    var events = {
-	connect:   function(fe3) {},
-	listening: function() {} }
-    var server       = net.createServer(function(sock) {
+    var ee          = new events.EventEmitter();
+    var server      = net.createServer(function(sock) {
 	var conn = new FE3Connection(sock,{});
-	events['connect'](conn);
+	ee.emit('connect',conn);
     });
     this.listen = function(p,h) {
 	server.listen(p,h);
-	server.on('listening',events['listening']);
+	server.on('listening',function(){ee.emit('listening');});
     };
     this.on     = function(what,handler) {
-	events[what] = handler;
-    }
+	ee.on(what,handler);
+    };
     this.close  = function() {
 	server.close();
     };

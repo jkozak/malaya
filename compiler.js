@@ -22,7 +22,7 @@ function TEMPLATE_store() {
 	var   store = this;
 	var       _ = require('underscore');
 	var  assert = require('assert');
-	var emitter = new (require('events').EventEmitter)();
+	var      ee = new (require('events').EventEmitter)();
 	var       t = 1;	     // must be > 0 always?
 	var   facts = {};	     // 't' -> fact; this is the main fact store
 	var    adds = [];
@@ -42,14 +42,14 @@ function TEMPLATE_store() {
 		throw new Error("unloved fact format: "+JSON.stringify(fact));
 	};
 	var obj = {
-	    on:   function(ev,cb) {emitter.on(ev,cb);},
-	    once: function(ev,cb) {emitter.once(ev,cb);},
+	    on:   function(ev,cb) {ee.on(ev,cb);},
+	    once: function(ev,cb) {ee.once(ev,cb);},
 	    get:  function(t) {assert.equal(typeof t,'string');return facts[t];},
 	    add:  function(fact) {
 		assert.strictEqual(adds.length,0);
 		assert.strictEqual(dels.length,0);
 		adds.push(_add(fact));
-		emitter.emit('fire',obj,fact,adds,dels);
+		ee.emit('fire',obj,fact,adds,dels);
 		var ans = {err:null,adds:adds,dels:dels};
 		adds = [];dels = [];
 		return ans;
