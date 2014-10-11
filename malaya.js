@@ -2,22 +2,20 @@
 
 var    argv = require('minimist')(process.argv.slice(2));
 
+var  events = require('events');
+
 var    util = require('./util.js');
 
 var      fs = require('fs');
 var    prvl = require('./prevalence.js');
 
-var   chrjs = require("./chr1.js");  // adds support for .chrjs files
+require("./compiler.js");  // adds support for .chrjs files
 
 function MalayaConnection(conn,options) {
     var passwd = options.passwd;
     var mc     = this;
-    var events = {
-	data:  function(js) {},
-	cmd:   function(js) {util.error("!!! one day, I'll handle %s",js);},
-	close: function() {}
-    };
-
+    var ee     = new events.EventEmitter();
+ 
     this.name = null;
     function write(js) {
 	conn.write(JSON.stringify(js));
@@ -28,7 +26,7 @@ function MalayaConnection(conn,options) {
     };
 
     this.write = write;
-    this.on    = function(what,handler) {events[what] = handler;};
+    this.on    = function(what,handler) {ee.on(what,handler);};
     this.end   = function() {conn.end();}
 
     conn.on('data',function(data) {
@@ -39,10 +37,10 @@ function MalayaConnection(conn,options) {
 	if (js===undefined) {
 	    end("junk");
 	}
-	events.cmd(['EXEC',js,{user:this.name}]);
+	ee.emit('cmd',['EXEC',js,{user:this.name}]);
     });
     conn.on('close',function() {
-	events.close();
+	ee.emit('close');
 	conns.remove(mc);
     });
 }
@@ -57,16 +55,10 @@ exports.createServer = function(opts) {
     var syshash = null;		// at startup
     var conns   = [];
     var timer   = null;
-    var events  = {
-	makeConnection: function(mc)   {},
-	loseConnection: function(mc)   {},
-	loaded:         function(hash) {},
-	closed:         function(hash) {},
-	ready:          function()     {}
-    };
+    var ee     = new events.EventEmitter();
 
     var server = {
-	on: function(name,fn) {events[name] = fn;},
+	on:  function(what,handler) {ee.on(what,handler);},
 	run: function() {
 	    if (opts.init) {
 		try {
@@ -85,7 +77,7 @@ exports.createServer = function(opts) {
 	    }
 	    bl.open(opts.prevalenceDir);
 	    syshash = bl.load(bl.set_root,bl.update);
-	    events.loaded(syshash);
+	    ee.emit('loaded',syshash);
 
 	    if (bl.transform!==undefined) {
 		bl.transform();
@@ -156,9 +148,9 @@ exports.createServer = function(opts) {
 			// +++ which in turn invokes the core business logic +++
 			var mc = new MalayaConnection(conn,{passwd:{jk:[''],
 								    di:[''] } });
-			events.makeConnection(mc);
+			ee.emit('makeConnection',mc);
 			mc.on('close',function() {
-			    events.loseConnection(mc);
+			    ee.emit('loseConnection',mc);
 			});
 			break;
 		    };
@@ -177,16 +169,16 @@ exports.createServer = function(opts) {
 
 		http.listen(port,function() {
 		    util.debug('http listening on *:%s',port);
-		    events.ready(); // !!! should also wait on FE3 port !!!
+		    ee.emit('ready'); // !!! should also wait on FE3 port !!!
 		});
 	    }
 	    if (fe3p) {
 		fe3 = require('./fe3.js').createServer({});
 		fe3.on('connect',function(mc) {
 		    conns.add(mc);
-		    events.makeConnection(mc);
+		    ee.emit('makeConnection',mc);
 		    mc.on('close',function() {
-			events.loseConnection(mc);
+			ee.emit('loseConnection',mc);
 			conns.remove(mc);
 		    });
 		});
@@ -209,7 +201,7 @@ exports.createServer = function(opts) {
 	    if (timer)		// +++ tidy up timers +++
 		clearInterval(timer);
 	    bl.close();
-	    events.closed(syshash);
+	    ee.emit('closed',syshash);
 	}
     };
     return server;
