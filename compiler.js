@@ -705,7 +705,7 @@ function generateJS(js) {
 				 false)];
     };
     
-    var genRuleVariant = function(chr,i,genPayload) {
+    var genRuleVariant = function(chr,i,prebounds,genPayload) {
 	var bIdFact = b.identifier('fact');
 	var addenda = [];
 	var delenda = [];
@@ -773,6 +773,9 @@ function generateJS(js) {
 	binds = mangled[1];
 
 	binds.forEach(function(n){vars[n] = {bound:false};});
+	for (var pb in prebounds) { // non-empty for parametric ruley things
+	    vars[prebounds[pb]].bound = true;
+	}
 
 	genPayload = genPayload || function() { // >> [Statement]
 	    var payload = [];
@@ -846,7 +849,11 @@ function generateJS(js) {
 	    if (item.op=='+' || item.op=='-')
 		throw new Error("query statement must not modify the store");
 
-	var rv = genRuleVariant(chr,null,function() { // `null` as there's no incoming fact
+	// `null` as there's no incoming fact
+	var rv = genRuleVariant(chr,
+				null,
+				_.map(chr.args,function(arg){return mangle(arg.name);}),
+				function() {
 	    return [b.expressionStatement(b.assignmentExpression('=',chr.init.left,chr.accum))];
 	});
 
@@ -907,7 +914,7 @@ function generateJS(js) {
 		for (var j=0;j<chr.items.length;j++) {
 		    if (chr.items[j].op=='-' || chr.items[j].op=='M') {
 			noteDispatch(chr.items[j].expr,r,j);
-			variants.push(genRuleVariant(deepClone(chr),j));
+			variants.push(genRuleVariant(deepClone(chr),j,[]));
 		    }
 		}
 		code.rules.push(b.arrayExpression(variants));
