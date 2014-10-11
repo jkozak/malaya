@@ -11,7 +11,7 @@ describe("match example",function() {
 	    
 	    rule (-['match-price', {volume:0}]);
 	    rule (-['match-price', {user:uB, instrument, volume:vB, isBuy:true,  ...rB}]^rB.t,
-    	      -['match-price', {user:uS, instrument, volume:vS, isBuy:false, ...rS}]^rS.t,
+    		  -['match-price', {user:uS, instrument, volume:vS, isBuy:false, ...rS}]^rS.t,
     		  ["user", {name:uB, company:cB}],
     		  ["user", {name:uS, company:cS}],
     		  cB!==cS,
@@ -26,11 +26,20 @@ describe("match example",function() {
 	
 	assert.strictEqual(Object.keys(match._private.facts).length,3); // 3 facts from the match.chrjs source
 	var r1 = match.add(['match-price',{user:"John Kozak", instrument:"IL21",volume:10000000,isBuy:true, t:1}]);
-	var r2 = match.add(['match-price',{user:"Val Wardlaw",instrument:"IL21",volume: 9000000,isBuy:false,t:1}]);
 	assert.equal(r1.adds.length,1);
+	assert.deepEqual(match._private.facts[r1.adds[0]],
+			 ['match-price',{user:"John Kozak", instrument:"IL21",volume:10000000,isBuy:true, t:1}] );
 	assert.equal(r1.dels.length,0);
+	var r2 = match.add(['match-price',{user:"Val Wardlaw",instrument:"IL21",volume: 9000000,isBuy:false,t:1}]);
 	assert.equal(r2.adds.length,2); // new trade and new price
 	assert.equal(r2.dels.length,1); // original price deleted
+	var r2adds = _.map(r2.adds,function(a){return match.get(a);});
+	r2adds.sort();
+	assert.deepEqual(r2adds,
+			 [["match-price",{t:1,user:"John Kozak",instrument:"IL21",volume:1000000,isBuy:true}],
+			  ["match-trade",{buyer:"John Kozak",seller:"Val Wardlaw",instrument:"IL21",volume:9000000}] ]);
+	assert.deepEqual(r2.dels[0],
+			 ['match-price',{user:"John Kozak", instrument:"IL21",volume:10000000,isBuy:true, t:1}] );
 	assert(_.every(_.map(r2.dels,function(x){return x[0]==='match-price';})));
 	assert(_.every(r2.adds,function(x){return (typeof parseInt(x))==='number';}));
 	assert.strictEqual(Object.keys(match._private.facts).length,5); // original 3, trade and residual price
