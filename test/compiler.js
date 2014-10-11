@@ -232,7 +232,7 @@ describe("compile",function() {
 });
 
 describe("EventEmitter",function() {
-    it("should emit `fire` event to `once`",function(){
+    it("should emit `fire` event to `once` XXX",function(){
 	var js = compiler.compile(parser.parse("var st = store {rule(-['user',{name:a}]);};"));
 	//console.log(recast.print(js).code);
 	eval(recast.print(js).code);
@@ -240,8 +240,8 @@ describe("EventEmitter",function() {
 	st.once('fire',function(store,fact,adds,dels){
 	    fired = true;
 	    assert.deepEqual(fact,['user',{'name':'sid'}]);
-	    assert.equal(adds.length,1); // initial fact
-	    assert.equal(dels.length,1); // deletion of initial fact
+	    assert.equal(adds.length,0); // no nett adds...
+	    assert.equal(dels.length,0); // ... or deletes
 	    assert.equal(store._private.size,0);
 	});
 	st.add(['user',{'name':'sid'}]);
@@ -258,8 +258,8 @@ describe("EventEmitter",function() {
 	st.on('fire',function(store,fact,adds,dels){
 	    fired = true;
 	    assert.equal(fact[0],'user');
-	    assert.equal(adds.length,1); // initial fact
-	    assert.equal(dels.length,1); // deletion of initial fact
+	    assert.equal(adds.length,0); // no nett adds...
+	    assert.equal(dels.length,0); // ...or deletesx
 	    assert.equal(store._private.size,0);
 	});
 	st.add(['user',{'name':'sid'}]);
