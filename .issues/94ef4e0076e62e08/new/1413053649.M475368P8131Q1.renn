@@ -1,0 +1,6 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Sat, 11 Oct 2014 19:54:09 +0100
+Subject: fix line numbers in error msgs for .chrjs files
+State: new
+Message-Id: <94ef4e0076e62e08-0-artemis@renn>
+
