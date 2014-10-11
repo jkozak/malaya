@@ -3978,7 +3978,7 @@ var util = require('./util.js');
 	expect(';');
 	qsb.init = parseAssignmentExpression();
 	expect(')');
-	qsb.accum = parseBinaryExpression();
+	qsb.accum = parseConditionalExpression();
 	return qsb;
     }
     
