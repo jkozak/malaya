@@ -1,12 +1,12 @@
 "use strict";
 
-var chrjs = require("../chrjs.js");
+var parser = require("../parser.js");
 
 suite('parser',function() {
     set('iterations',10);
     bench("tiny program",function () {
 	var prog = "store { ['abc',17,18];rule (-['abc',...rest])}";
-	chrjs._private.parse(prog);
+	parser.parse(prog);
     });
 });
 

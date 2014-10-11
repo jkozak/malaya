@@ -1,0 +1,62 @@
+var assert = require("assert");
+var      _ = require('underscore');
+
+describe("match example",function() {
+    it("should generate JS for less trivial store",function() {
+	var match = store {
+	    ['user',{name:"John Kozak",company:"Acecomp"}];
+	    ['user',{name:"Val Wardlaw",company:"Perluceo"}];
+	    
+	    ['instrument',{name:"IL21"}];
+	    
+	    rule (-['match-price', {volume:0}]);
+	    rule (-['match-price', {user:uB, instrument, volume:vB, isBuy:true,  ...rB}]^rB.t,
+    	      -['match-price', {user:uS, instrument, volume:vS, isBuy:false, ...rS}]^rS.t,
+    		  ["user", {name:uB, company:cB}],
+    		  ["user", {name:uS, company:cS}],
+    		  cB!==cS,
+    		  vT = Math.min(vB,vS),
+    		  +['match-trade', {buyer:uB, seller:uS, instrument, volume:vT}],
+    		  +['match-price', {user:uB, instrument, volume:vB-vT, isBuy:true,  ...rB}],
+    		  +['match-price', {user:uS, instrument, volume:vS-vT, isBuy:false, ...rS}] );
+	    
+	    rule (['user', {name}],       -['user', {name}]);
+	    rule (['instrument', {name}], -['instrument', {name}]);
+	};
+	
+	assert.strictEqual(Object.keys(match._private.facts).length,3); // 3 facts from the match.chrjs source
+	var r1 = match.add(['match-price',{user:"John Kozak", instrument:"IL21",volume:10000000,isBuy:true, t:1}]);
+	var r2 = match.add(['match-price',{user:"Val Wardlaw",instrument:"IL21",volume: 9000000,isBuy:false,t:1}]);
+	assert.equal(r1.adds.length,1);
+	assert.equal(r1.dels.length,0);
+	assert.equal(r2.adds.length,4); // orig price, trade and two new prices
+	assert.equal(r2.dels.length,3); // three prices
+	assert(_.every(_.map(r2.dels,function(x){return x[0]==='match-price';})));
+	assert(_.every(r2.adds,function(x){return (typeof parseInt(x))==='number';}));
+    });
+});
+
+describe("query",function() {
+    it("should be able to add up",function(){
+	var st = store {
+	    query q(;['x',{x}];a=0) a+x;
+	};
+	assert.equal(st.queries.q().result,0);
+	st.add(['x',{x:1}]);
+	assert.equal(st.queries.q().result,1);
+	st.add(['x',{x:1}]);
+	assert.equal(st.queries.q().result,2);
+    });
+});
+
+describe("store generic operations",function() {
+    it("should reset",function() {
+	var st = store {
+	};
+	st.add(['one']);
+	st.add(['two']);
+	assert.equal(st._private.size,2);
+	st.reset();
+	assert.equal(st._private.size,0);
+    });
+});
