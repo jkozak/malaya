@@ -223,9 +223,9 @@ describe("genAdd",function() {
     });
 });
 
-describe("generateJS",function() {
+describe("compile",function() {
     it("should generate JS for trivial store",function() {
-	var js = compiler.generateJS(parser.parse("var st = store {['user',{name:'sid'}];rule(['user',{name:a}]);rule(['company',{user:a,name:b}]);};"));
+	var js = compiler.compile(parser.parse("var st = store {['user',{name:'sid'}];rule(['user',{name:a}]);rule(['company',{user:a,name:b}]);};"));
 	eval(recast.print(js).code);
 	assert.deepEqual(st._private.facts,{"1":['user',{name:'sid'}]});
     });
@@ -233,7 +233,7 @@ describe("generateJS",function() {
 
 describe("EventEmitter",function() {
     it("should emit `fire` event to `once`",function(){
-	var js = compiler.generateJS(parser.parse("var st = store {rule(-['user',{name:a}]);};"));
+	var js = compiler.compile(parser.parse("var st = store {rule(-['user',{name:a}]);};"));
 	//console.log(recast.print(js).code);
 	eval(recast.print(js).code);
 	var fired = false;
@@ -251,7 +251,7 @@ describe("EventEmitter",function() {
 	assert(!fired);
     });
     it("should emit `fire` event to `on`",function(){
-	var js = compiler.generateJS(parser.parse("var st = store {rule(-['user',{name:a}]);};"));
+	var js = compiler.compile(parser.parse("var st = store {rule(-['user',{name:a}]);};"));
 	//console.log(recast.print(js).code);
 	eval(recast.print(js).code);
 	var fired = false;
@@ -272,7 +272,7 @@ describe("EventEmitter",function() {
 
 describe("query statement",function() {
     it("should compile and run a simple query",function() {
-	var js = compiler.generateJS(parser.parse("var st = store {query q(;['user',{name:n}];a=[]) a.concat(n);};"));
+	var js = compiler.compile(parser.parse("var st = store {query q(;['user',{name:n}];a=[]) a.concat(n);};"));
 	//console.log(recast.print(js).code);
 	eval(recast.print(js).code);
 	assert.equal(st.queries.q().result.length,0);
@@ -280,7 +280,7 @@ describe("query statement",function() {
 	assert.equal(st.queries.q().result.length,1);
     });
     it("should compile and run a parameterized query",function() {
-	var js = compiler.generateJS(parser.parse("var st = store {query q(p;['user',{name:n}],n.length===p;a=[]) a.concat(n);};"));
+	var js = compiler.compile(parser.parse("var st = store {query q(p;['user',{name:n}],n.length===p;a=[]) a.concat(n);};"));
 	eval(recast.print(js).code);
 	st.add(['user',{name:'tyson'}]);
 	var qr1 = st.queries.q(1)
@@ -291,7 +291,7 @@ describe("query statement",function() {
 	assert.equal(qr1.t,qr5.t); // store has not been updated by queries
     });
     it("should run the 3-head benchmark",function() {
-	var js = compiler.generateJS(parser.parse("var st = store {query q(;['X',x,p],['X',x,q],['X',x,r],p>q && q>r;a=0) a+p+q+r};"));
+	var js = compiler.compile(parser.parse("var st = store {query q(;['X',x,p],['X',x,q],['X',x,r],p>q && q>r;a=0) a+p+q+r};"));
 	eval(recast.print(js).code);
 	var n = 100;
 	for (var i=0;i<n/3;i++) {
@@ -303,7 +303,7 @@ describe("query statement",function() {
     });
     it("should compile multiple queries",function() {
 	var chrjs = "store st {query q1(;['X',x,p];a=0) a+p;query q2(;['X',x,p],['X',x,q],p>q;a=0) a+p+q;query q3(;['X',x,p],['X',x,q],['X',x,r],p>q && q>r;a=0) a+p+q+r;}";
-	var js = compiler.generateJS(parser.parse(chrjs))
+	var js = compiler.compile(parser.parse(chrjs))
 	eval(recast.print(js).code);
 	assert.equal(Object.keys(st.queries).length,3);
     });

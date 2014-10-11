@@ -47,6 +47,17 @@ describe("query",function() {
 	st.add(['x',{x:1}]);
 	assert.equal(st.queries.q().result,2);
     });
+    it("should sort as needed",function(){
+	var st = store {
+	    ['x',{x:1}];
+	    ['x',{x:2}];
+	    query qu(;['x',{x}];a=0)    a===0?x:a;
+	    query qa(;['x',{x}]^x;a=0)  a===0?x:a;
+	    query qd(;['x',{x}]^-x;a=0) a===0?x:a;
+	};
+	assert.equal(st.queries.qa().result,1);
+	assert.equal(st.queries.qd().result,2);
+    })
 });
 
 describe("store generic operations",function() {

@@ -120,12 +120,15 @@ function TEMPLATE_query() {	// to be embedded in store above, whence `adds`, `de
 function TEMPLATE_sort() {
     var SORTED = [];
     for (var T in facts) {
+	fact = facts[T];
 	GENMATCH;
-	SORTED.push([RANK,T]);
     }
     SORTED.sort(function(p,q){return p[0]-q[0];})
-    for (var T=0;T<SORTED.length;T++) 
+    for (var S=0;S<SORTED.length;S++) {
+	T    = SORTED[S][1];
+	fact = facts[T];
 	REST;
+    }
 }
 
 //??? why isn't `sourceFileName` doing anything? ???
@@ -137,7 +140,6 @@ for (var i in autoparse.program.body) {
 	templates[x.id.name.substr(template_marker.length)] = x.body;
     }
 }
-//console.log("*** %j",templates.sort);
 
 function mangle(js,vars) {
     if ((typeof js)==='string') {
@@ -652,22 +654,54 @@ function generateJS(js) {
 			     null);
     }
 
-    var genForInFactStore = function(bv,body) {
-	if (false)
-	    return b.forStatement(b.variableDeclaration('var',[b.variableDeclarator(bv,
-										    b.literal(1) ) ]),
-				  b.binaryExpression('<',
-						     bv,
-						     b.memberExpression(b.identifier('facts'),
-									b.identifier('length'),
-									false) ),
-				  b.updateExpression('++',bv,false),
-				  body);
-	else
-	    return b.forInStatement(b.variableDeclaration('var',[b.variableDeclarator(bv,null)]),
-				    b.identifier('facts'),
-				    body,
-				    false);
+    var genForFacts = function(item,bv,body,vars) { // >> [Statement]
+	if (item.rank) {
+	    var        bSort = deepClone(templates['sort'].body);
+	    var bvCandidates = b.identifier(bv.name+'Candidates');
+	    var          bv1 = b.identifier(bv.name+'S');
+	    parser.visit(bSort,{
+		visitIdentifier: function(path) {
+		    switch (path.node.name) {
+		    case 'SORTED':
+			path.replace(bvCandidates);
+			break;
+		    case 'T':
+			path.replace(bv);
+			break;
+		    case 'S':
+			path.replace(bv1);
+			break;
+		    case 'RANK':
+			path.replace(item.rank);
+			break;
+		    }
+		    this.traverse(path);
+		},
+		visitExpressionStatement: function(path) {
+		    if (path.node.expression.type==='Identifier')
+			switch (path.node.expression.name) {
+			case 'GENMATCH':
+			    path.replace(genMatch(item.expr,vars,function(){
+				return [b.expressionStatement(
+				    b.callExpression(b.memberExpression(bvCandidates,
+									b.identifier('push'),
+									false),
+						     [b.arrayExpression([item.rank,bv])] ) )]
+			    }));
+			    break;
+			case 'REST':
+			    path.replace(body);
+			    break;
+			}
+		    this.traverse(path);
+		}
+	    });
+	    return bSort;
+	}
+	return [b.forInStatement(b.variableDeclaration('var',[b.variableDeclarator(bv,null)]),
+				 b.identifier('facts'),
+				 body,
+				 false)];
     };
     
     var genRuleVariant = function(chr,i,genPayload) {
@@ -676,6 +710,7 @@ function generateJS(js) {
 	var delenda = [];
 	var genItem = function(item_id,fixed_item,next) { // >> [Statement,...]
 	    var    js;
+	    var vars0 = deepClone(vars);
 	    var next1 = (item_id<chr.items.length-1) ?
 		function(){return genItem(item_id+1,fixed_item,next)} : next;
 	    var   js1;
@@ -718,11 +753,7 @@ function generateJS(js) {
 		    b.memberExpression(b.identifier('facts'),
 				       b.identifier(v),
 				       true) )));
-		if (chr.items[item_id].rank) {
-		    // +++ fix this - implement sorting +++
-		    js = [genForInFactStore(b.identifier(v),genCheckInPlay(js1,b.identifier(v)))];
-		} else
-		    js = [genForInFactStore(b.identifier(v),genCheckInPlay(js1,b.identifier(v)))];
+		js = genForFacts(chr.items[item_id],b.identifier(v),genCheckInPlay(js1,b.identifier(v)),vars0);
 	    } else
 		js = js1;
 	    return js;
@@ -957,7 +988,7 @@ function generateJS(js) {
     return js;
 }
 
-exports.generateJS = generateJS;
+exports.compile = generateJS;
 
 require.extensions['.chrjs'] = function(module,filename) {
     var codegen = require('escodegen');
@@ -974,7 +1005,6 @@ if (util.env==='test') {
 	mangle:                           mangle,
 	genAccessor:                      genAccessor,
 	genAdd:                           genAdd,
-	genMatch:                         genMatch,
-	generateJS:                       generateJS
+	genMatch:                         genMatch
     };
 }
