@@ -1,0 +1,21 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Sat, 11 Oct 2014 23:03:54 +0100
+Subject: Bug: query doesn't seem to generate code to bind args
+State: resolved
+Message-Id: <9a8c12db06baf838-0-artemis@renn>
+resolution: fixed
+
+This works:
+
+    query user(appId;
+	       ['Permissions',{ApplicationID,...rs}],
+	       ApplicationID===appId;
+	       a=[])  a.concat([rs]);
+
+and this doesn't:
+
+    query user(appId;
+	       ['Permissions',{ApplicationID:appId,...rs}];
+	       a=[])  a.concat([rs]);
+
+second query retrieves records for all users	       
