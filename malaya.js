@@ -7,7 +7,7 @@ var    util = require('./util.js');
 var      fs = require('fs');
 var    prvl = require('./prevalence.js');
 
-var   chrjs = require("./chrjs.js");  // adds support for .chrjs files
+var   chrjs = require("./chr1.js");  // adds support for .chrjs files
 
 function MalayaConnection(conn,options) {
     var passwd = options.passwd;

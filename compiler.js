@@ -9,7 +9,7 @@
 
 var  recast = require('recast');
 var      fs = require('fs');
-var eschrjs = require('./eschrjs.js');
+var  parser = require('./parser.js');
 var  assert = require('assert');
 var    util = require('./util.js');
 var       _ = require('underscore');
@@ -56,7 +56,20 @@ function TEMPLATE_store() {
 	    },
 	    get t()       {return t;},
 	    get queries() {return queries;},
-	    reset: function(){t=1;facts={};init();}
+	    reset: function(){t=1;facts={};init();},
+	    
+	    // business logic protocol
+	    get_root: function() {
+		return {t:    obj.t,
+			facts:obj.facts};
+	    },
+	    set_root: function(r) {
+		obj.t     = r.t;
+		obj.facts = r.facts;
+	    },
+	    update: function(u) {
+		return obj.add(u);
+	    }
 	};
 	if (process.env.NODE_ENV==='test')
 	    obj._private = {
@@ -136,7 +149,7 @@ function mangle(js,vars) {
 	    if (vars.indexOf(id.name)!==-1)
 		path.replace(b.identifier(mangle(id.name)));
 	};
-	js = eschrjs.visit(js,{
+	js = parser.visit(js,{
 	    visitIdentifier: function(path) {
 		doIdentifier(path);
 		return false;
@@ -464,10 +477,10 @@ function genAccessor(x,path) {
 }
 
 function genAdd(x) {
-    eschrjs.namedTypes.Expression.assert(x);
+    parser.namedTypes.Expression.assert(x);
     var bindRest = null;
     x = deepClone(x);
-    eschrjs.visit(x,{
+    parser.visit(x,{
 	visitObjectExpression: function(path) {
 	    var bRsave = bindRest;
 	    bindRest = null;
@@ -618,8 +631,8 @@ function generateJS(js) {
     assert.equal(js.type,'Program');
 
     var genCheckInPlay = function(jss,vt) { // >> Statement
-	eschrjs.namedTypes.Statement.assert(jss[0]); // CBB
-	eschrjs.namedTypes.Identifier.assert(vt);
+	parser.namedTypes.Statement.assert(jss[0]); // CBB
+	parser.namedTypes.Identifier.assert(vt);
 	var popStmt = b.expressionStatement(b.callExpression(b.memberExpression(b.identifier('in_play'),
 										b.identifier('pop'),
 										false),
@@ -630,7 +643,7 @@ function generateJS(js) {
 						b.identifier('indexOf'),
 						false),
 			     [vt]),
-	    b.literal(-1) ),
+	    b.unaryExpression('-',b.literal(1)) ),
 			     b.blockStatement([b.expressionStatement(
 				 b.callExpression(b.memberExpression(b.identifier('in_play'),
 								     b.identifier('push'),
@@ -767,7 +780,7 @@ function generateJS(js) {
 					      _.map(binds,function(v){
 						  return b.variableDeclarator(b.identifier(v),null);} ) ))
 
-	eschrjs.visit(js,{
+	parser.visit(js,{
 	    visitExpressionStatement: function(path) {
 		var expr = path.node.expression;
 		if (expr.type==='Identifier' && expr.name==='INSERT_MATCH') {
@@ -798,7 +811,7 @@ function generateJS(js) {
 								b.property('init',
 									   b.identifier('result'),
 									   chr.init.left) ])));
-	eschrjs.visit(rv,{	// remove query args and accum variable from binding site decls
+	parser.visit(rv,{	// remove query args and accum variable from binding site decls
 	    visitVariableDeclarator: function(path) {
 		var decl = path.node;
 		if (decl.id.name===chr.init.left.name ||
@@ -856,8 +869,6 @@ function generateJS(js) {
 		break;
 	    }
 	    case 'QueryStatement': {
-		// +++
-		//findTag('INSERT_QUERIES').insertAfter(genQuery(storeCHR.body[i],util.format("__query_%s",i)));
 		code.queries[storeCHR.body[i].id.name] = genQuery(storeCHR.body[i]);
 		break;
 	    }
@@ -926,7 +937,7 @@ function generateJS(js) {
 	return storeJS;
     }
 
-    eschrjs.visit(js,{
+    parser.visit(js,{
 	visitStoreDeclaration: function(path) {
 	    var decl = path.node;
 	    if (decl.id===null)
@@ -947,6 +958,12 @@ function generateJS(js) {
 }
 
 exports.generateJS = generateJS;
+
+require.extensions['.chrjs'] = function(module,filename) {
+    var codegen = require('escodegen');
+    var content = fs.readFileSync(filename,'utf8');
+    module._compile(codegen.generate(generateJS(parser.parse(content))),filename);
+};
 
 if (util.env==='test') {
     exports._private = {

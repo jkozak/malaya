@@ -5,7 +5,7 @@
 var  repl = require('repl');
 var  argv = require('minimist')(process.argv.slice(2));
 var  util = require('./util.js');
-var chrjs = require('./chrjs.js');
+//var chrjs = require('./chrjs.js');
 
 if (argv._.length==1) {
     var store = require(argv._[0]);

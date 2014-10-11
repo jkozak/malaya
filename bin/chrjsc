@@ -1,0 +1,12 @@
+#!/usr/bin/env node
+
+var   parser = require('../parser.js');
+var compiler = require('../compiler.js');
+var       fs = require('fs');
+var   recast = require('recast');
+
+for (var i=2;i<process.argv.length;i++) {
+    var source = process.argv[i];
+    var target = source+'.js';
+    fs.writeFileSync(target,recast.print(compiler.generateJS(parser.parse(fs.readFileSync(source)))).code);
+}

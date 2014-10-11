@@ -1,4 +1,4 @@
-var eschrjs = require("../eschrjs.js");
+var parser = require("../parser.js");
 
 var       _ = require('underscore');
 var  assert = require("assert");
@@ -354,7 +354,7 @@ describe("esprima-based parser",function() {
                 var expected = testFixture[category][source];
                 total += 1;
 		try {
-		    runTest(eschrjs,source,expected);
+		    runTest(parser,source,expected);
 		} catch (e) {
 		    console.log("!!! "+e);
 		    e.source = source;
@@ -372,7 +372,7 @@ describe("esprima-based parser",function() {
 describe("visit",function() {
     it("should visit StoreDeclaration",function(){
 	var ok = false;
-	eschrjs.visit(eschrjs.parse("store {}"),
+	parser.visit(parser.parse("store {}"),
 		      {
 			  visitStoreDeclaration: function(node) {
 			      ok = true;
@@ -382,7 +382,7 @@ describe("visit",function() {
     });
     it("should visit RuleStatement",function(){
 	var n = 0;
-	eschrjs.visit(eschrjs.parse("store {rule (['a'])}"),
+	parser.visit(parser.parse("store {rule (['a'])}"),
 		      {
 			  visitStoreDeclaration: function(node) {
 			      n++;
@@ -396,7 +396,7 @@ describe("visit",function() {
     });
     it("should visit ItemExpressions",function(){
 	var n = 0;
-	eschrjs.visit(eschrjs.parse("store {rule (['a',a],['b',a])}"),
+	parser.visit(parser.parse("store {rule (['a',a],['b',a])}"),
 		      {
 			  visitStoreDeclaration: function(node) {
 			      n++;
