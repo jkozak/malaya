@@ -29,10 +29,11 @@ describe("match example",function() {
 	var r2 = match.add(['match-price',{user:"Val Wardlaw",instrument:"IL21",volume: 9000000,isBuy:false,t:1}]);
 	assert.equal(r1.adds.length,1);
 	assert.equal(r1.dels.length,0);
-	assert.equal(r2.adds.length,4); // orig price, trade and two new prices
-	assert.equal(r2.dels.length,3); // three prices
+	assert.equal(r2.adds.length,2); // new trade and new price
+	assert.equal(r2.dels.length,1); // original price deleted
 	assert(_.every(_.map(r2.dels,function(x){return x[0]==='match-price';})));
 	assert(_.every(r2.adds,function(x){return (typeof parseInt(x))==='number';}));
+	assert.strictEqual(Object.keys(match._private.facts).length,5); // original 3, trade and residual price
     });
 });
 

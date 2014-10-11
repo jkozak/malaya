@@ -32,6 +32,7 @@ function TEMPLATE_store() {
 	    if (fact instanceof Array && fact.length>0) {
 		var t_fact = ''+t++; // `t_fact` is a string
 		facts[t_fact] = fact;
+		adds.push(t_fact);
 		switch (fact[0]) {
 		case INSERT_CASE:
 		    break;
@@ -48,7 +49,7 @@ function TEMPLATE_store() {
 	    add:  function(fact) {
 		assert.strictEqual(adds.length,0);
 		assert.strictEqual(dels.length,0);
-		adds.push(_add(fact));
+		_add(fact);
 		ee.emit('fire',obj,fact,adds,dels);
 		var ans = {err:null,adds:adds,dels:dels};
 		adds = [];dels = [];
@@ -775,16 +776,35 @@ function generateJS(js) {
 
 	genPayload = genPayload || function() { // >> [Statement]
 	    var payload = [];
+	    var bdel_t  = b.identifier('del_t');
+	    payload.push(b.variableDeclaration('var',[b.variableDeclarator(bdel_t,null)]));
 	    delenda.forEach(function(j) {
 		var     bv = b.identifier(i===j ? 't_fact' : 't'+j);
 		var bfactv = b.memberExpression(b.identifier('facts'),
 						bv,
 						true);
+		payload.push(b.expressionStatement(b.assignmentExpression(
+		    '=',bdel_t,b.callExpression(b.memberExpression(b.identifier('adds'),
+								   b.identifier('indexOf'),
+								   false),
+						[bv] ) )));
 		payload.push(
-		    b.expressionStatement(b.callExpression(b.memberExpression(b.identifier('dels'),
-									      b.identifier('push'),
-									      false),
-							   [deepClone(bfactv)] )) );
+		    b.ifStatement(b.binaryExpression(
+			'!==',
+			bdel_t,
+			b.unaryExpression('-',b.literal(1)) ),
+				  b.expressionStatement(
+				      b.callExpression(
+					  b.memberExpression(b.identifier('adds'),
+							     b.identifier('splice'),
+							     false),
+					  [bdel_t,b.literal(1)] ) ),
+				  b.expressionStatement(
+				      b.callExpression(
+					  b.memberExpression(b.identifier('dels'),
+							     b.identifier('push'),
+							     false),
+					  [deepClone(bfactv)] )) ) );
 		payload.push(
 		    b.expressionStatement(b.unaryExpression('delete',bfactv)) );
 	    });
@@ -796,11 +816,6 @@ function generateJS(js) {
 					      bv,
 					      b.callExpression(b.identifier('_add'),
 							       [genAdd(chr.items[j].expr)]) )] ) );
-		payload.push(
-		    b.expressionStatement(b.callExpression(b.memberExpression(b.identifier('adds'),
-									      b.identifier('push'),
-									      false),
-							   [bv] ) ) );
 	    });
 	    return payload;
 	};
@@ -950,7 +965,7 @@ function generateJS(js) {
 					     x.declarations[0].id.name==='_add';}).get();
 	if (_.keys(dispatchBranches).length>128)
 	    console.log("Warning: more than 128 cases in switch statement");
-	var _addSwitch = _addDef.declarations[0].init.body.body[0].consequent.body[2];
+	var _addSwitch = _addDef.declarations[0].init.body.body[0].consequent.body[3];
 	assert.equal(_addSwitch.type,'SwitchStatement');
 	assert.equal(_addSwitch.cases.length,1);
 	assert.equal(_addSwitch.cases[0].test.name,'INSERT_CASE');
@@ -960,9 +975,9 @@ function generateJS(js) {
 	    _addSwitch.cases.push(b.switchCase(b.literal(k),brs.concat(b.breakStatement())));
 	}
 	var ins_gen = _addDef.declarations[0].init.body.body[0].consequent.body;
-	assert.equal(ins_gen.length,5);
-	assert.equal(ins_gen[3].type,'ExpressionStatement');
-	assert.equal(ins_gen.splice(3,1)[0].expression.name,'INSERT_GENERIC_MATCHES');
+	assert.equal(ins_gen.length,6);
+	assert.equal(ins_gen[4].type,'ExpressionStatement');
+	assert.equal(ins_gen.splice(4,1)[0].expression.name,'INSERT_GENERIC_MATCHES');
 	dispatchGeneric.forEach(function(ri){ins_gen.push(genInvokeRuleItem(ri));});
 	    
 	return storeJS;
