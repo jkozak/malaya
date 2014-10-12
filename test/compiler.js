@@ -232,7 +232,7 @@ describe("compile",function() {
 });
 
 describe("EventEmitter",function() {
-    it("should emit `fire` event to `once` XXX",function(){
+    it("should emit `fire` event to `once`",function(){
 	var js = compiler.compile(parser.parse("var st = store {rule(-['user',{name:a}]);};"));
 	//console.log(recast.print(js).code);
 	eval(recast.print(js).code);

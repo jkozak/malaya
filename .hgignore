@@ -5,5 +5,7 @@ syntax: glob
 .\#*
 .nfs*
 
+*.chrjs.js
+
 node_modules/
 .prevalence/

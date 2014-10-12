@@ -4,6 +4,7 @@ from decimal import Decimal
 import datetime
 import json
 
+# +++ sanitise sensitive parts of data: names and passwords +++
 
 def import_init_db(filename):
     tables = eval(open(filename).read())

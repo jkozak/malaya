@@ -1,13 +1,5 @@
 "use strict";
 
-function mktest() {
-    return store {
-	query q1(;['X',x,p];a=0) a+p;
-	query q2(;['X',x,p],['X',x,q],p>q;a=0) a+p+q;
-	query q3(;['X',x,p],['X',x,q],['X',x,r],p>q && q>r;a=0) a+p+q+r;
-    };
-}
-
 suite('query',function() {
     store st10 {
 	query q1(;['X',x,p];a=0) a+p;

@@ -1,6 +1,7 @@
-var    _ = require('underscore');
-var   fs = require('fs');
-var exec = require('child_process').exec;
+var     _ = require('underscore');
+var    fs = require('fs');
+var  exec = require('child_process').exec;
+var faker = require('faker');
 
 var dateToYYYYMMDD = function(md) {
     var d = new Date(md).toISOString();
@@ -8,29 +9,35 @@ var dateToYYYYMMDD = function(md) {
 }
 
 var IDB = store {
-    // !!! hacking initial data import: tweak my password !!!
-    rule (-['Permissions',{ApplicationName:"John Kozak",Password,...rs}],
+    // filter the db data on its way in to remove the more egregious nasties
+    rule (-['Permissions',{Password,...rs}],                              // remove trailing pwd spaces
+	  Password && Password.charAt(Password.length-1)===' ',
+	  +['Permissions',{Password:Password.trimRight(),...rs}]);
+    rule (-['Permissions',{ApplicationName:"John Kozak",Password,...rs}], // tweak my pwd
 	  Password!=="JK",
 	  +['Permissions',{ApplicationName:"John Kozak",Password:"JK",...rs}]);
+    rule (-['Permissions',{ApplicationName,Password,anon,...rs}],         // anonymise users and passwords
+	  ApplicationName!=="John Kozak" && !anon,
+	  aname = faker.name.findName(),
+	  apwd  = faker.internet.password(),
+	  +['Permissions',{ApplicationName:aname,Password:apwd,anon:true,...rs}]);
     
     // logon processing
     rule (-['logon',      {user,password}],
-	  -['Permissions',{ApplicationName:user,Password,LoggedOn:0,...rs}],
-	  Password.trimRight()===password,
+	  -['Permissions',{ApplicationName:user,Password:password,LoggedOn:0,...rs}],
 	  +['Permissions',{ApplicationName:user,Password,LoggedOn:1, ...rs}] );
     rule (-['logon',      {user,password}],
-	  ['Permissions',{ApplicationName:user,Password,LoggedOn:1}],
-	  Password.trimRight()===password,
+	  ['Permissions',{ApplicationName:user,Password:password,LoggedOn:1}],
 	  +['msg',user,"already logged on"] );
-    rule (-['logon',      {user,password}],
+    rule (-['logon',      {user}],
 	  ['Permissions',{ApplicationName:user}],
 	  +['msg',user,"bad password"] );
-    rule (-['logon',      {user,password}],
+    rule (-['logon',      {user}],
 	  +['msg',user,"user unknown"] );
 
     query users(;
-		['Permissions',{ApplicationID,ApplicationName}];
-		a=[])  a.concat([[ApplicationID,ApplicationName]]);
+		['Permissions',{ApplicationID,ApplicationName,Password}];
+		a=[])  a.concat([[ApplicationID,ApplicationName,Password]]);
     query user(appId;
 	       ['Permissions',{ApplicationID:appId,...rs}];
 	       a=[])  a.concat([rs]);
@@ -96,11 +103,14 @@ if (false) {
 	console.log("*** logon resp: %j",resp);
 	console.log("*** logon resp.adds: %j",_.map(resp.adds,function(t){return IDB.get(t);}));
 	console.log("*** JK: %j",IDB.queries.user(51));
-	//console.log("users: %j",IDB.queries.users());
+	console.log("users: %j",IDB.queries.users());
 	// console.log("staticdata(): %j",IDB.queries.staticdata());
 	// console.log("instruments(): %j",IDB.queries.instruments());
 	// console.log("subclasses(): %j",IDB.queries.subclasses());
 	// console.log("cookie(51,0): %j",IDB.queries.cookie(51,0));
+	
+	//fs.writeFileSync('/tmp/idb.chr.json',JSON.stringify(_.map(Object.keys(IDB._private.facts),
+	//							  function(k){return IDB._private.facts[k];} )));
     });
 }
 // +++ get via ODBC +++
