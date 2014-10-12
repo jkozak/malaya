@@ -21,6 +21,7 @@
     "xml2js": "^0.4.4"
   },
   "devDependencies": {
+    "faker": "^2.0.1",
     "matcha": "^0.5.0",
     "mocha": "^1.20.1",
     "prettyjson": "^1.0.0"

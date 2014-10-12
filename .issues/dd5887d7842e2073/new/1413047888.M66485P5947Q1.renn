@@ -4,3 +4,22 @@ Subject: indices
 State: new
 Message-Id: <dd5887d7842e2073-0-artemis@renn>
 
+Simplest index is on first string:
+ e.g. fact is ['hello',{a:17}]
+
+have an index:
+ {hello: [t,...]}
+
+the `t` values are integers not strings, and thus naturally maintained in
+order by appending.  Can search quickly for them (for deletion) by binary
+chop.
+
+So something like:
+ * in `_add`:
+  if (index[fact[0]]===undefined)
+    index[fact[0]] = [];
+  index[fact[0]].push(parseInt(t));
+ * in `_del` (using _ to get a binary search):
+  index[fact[0]](.splice(_.indexOf(index[fact[0]],parseInt(t),true),1);
+ * in genForFacts:
+  for (var <tn> in index[fact[0]])

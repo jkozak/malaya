@@ -19,18 +19,18 @@ var template_marker = 'TEMPLATE_';
 
 function TEMPLATE_store() {
     (function() {
-	var   store = this;
-	var       _ = require('underscore');
-	var  assert = require('assert');
-	var      ee = new (require('events').EventEmitter)();
-	var       t = 1;	     // must be > 0 always?
-	var   facts = {};	     // 't' -> fact; this is the main fact store
-	var    adds = [];
-	var    dels = [];
-	var     err = null;
-	var    _add = function(fact) {
+	var  store = this;
+	var      _ = require('underscore');
+	var assert = require('assert');
+	var     ee = new (require('events').EventEmitter)();
+	var      t = 1;	     // must be > 0 always?
+	var  facts = {};	     // 't' -> fact; this is the main fact store
+	var   adds = [];
+	var   dels = [];
+	var    err = null;
+	var   _add = function(fact) {
 	    if (fact instanceof Array && fact.length>0) {
-		var t_fact = ''+t++; // `t_fact` is a string
+		var t_fact = ''+t++; // `t_fact` is a string , use (t-1) in indices
 		facts[t_fact] = fact;
 		adds.push(t_fact);
 		switch (fact[0]) {
@@ -42,7 +42,16 @@ function TEMPLATE_store() {
 	    } else
 		throw new Error("unloved fact format: "+JSON.stringify(fact));
 	};
-	var obj = {
+	var   _del = function(t) {
+	    var ti = parseInt(t);   // use this in indices
+	    var  i = adds.indexOf(t); 
+	    if (i!==-1)
+		adds.splice(i,1);
+	    else
+		dels.push(facts[t]);
+	    delete facts[t];
+	};
+	var    obj = {
 	    on:   function(ev,cb) {ee.on(ev,cb);},
 	    once: function(ev,cb) {ee.once(ev,cb);},
 	    get:  function(t) {assert.equal(typeof t,'string');return facts[t];},
@@ -779,46 +788,15 @@ function generateJS(js) {
 
 	genPayload = genPayload || function() { // >> [Statement]
 	    var payload = [];
-	    var bdel_t  = b.identifier('del_t');
-	    payload.push(b.variableDeclaration('var',[b.variableDeclarator(bdel_t,null)]));
 	    delenda.forEach(function(j) {
-		var     bv = b.identifier(i===j ? 't_fact' : 't'+j);
-		var bfactv = b.memberExpression(b.identifier('facts'),
-						bv,
-						true);
-		payload.push(b.expressionStatement(b.assignmentExpression(
-		    '=',bdel_t,b.callExpression(b.memberExpression(b.identifier('adds'),
-								   b.identifier('indexOf'),
-								   false),
-						[bv] ) )));
-		payload.push(
-		    b.ifStatement(b.binaryExpression(
-			'!==',
-			bdel_t,
-			b.unaryExpression('-',b.literal(1)) ),
-				  b.expressionStatement(
-				      b.callExpression(
-					  b.memberExpression(b.identifier('adds'),
-							     b.identifier('splice'),
-							     false),
-					  [bdel_t,b.literal(1)] ) ),
-				  b.expressionStatement(
-				      b.callExpression(
-					  b.memberExpression(b.identifier('dels'),
-							     b.identifier('push'),
-							     false),
-					  [deepClone(bfactv)] )) ) );
-		payload.push(
-		    b.expressionStatement(b.unaryExpression('delete',bfactv)) );
+		var bv = b.identifier(i===j ? 't_fact' : 't'+j);
+		payload.push(b.expressionStatement(
+		    b.callExpression(b.identifier('_del'),[bv]) ));
 	    });
 	    addenda.forEach(function(j) {
-		var bv = b.identifier(i===j ? 't_fact' : 't'+j);
-		payload.push(
-		    b.variableDeclaration('var',
-					  [b.variableDeclarator(
-					      bv,
-					      b.callExpression(b.identifier('_add'),
-							       [genAdd(chr.items[j].expr)]) )] ) );
+		payload.push(b.expressionStatement(
+		    b.callExpression(b.identifier('_add'),
+				     [genAdd(chr.items[j].expr)]) ) );
 	    });
 	    return payload;
 	};
