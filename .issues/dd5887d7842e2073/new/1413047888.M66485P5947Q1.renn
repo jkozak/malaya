@@ -1,8 +1,9 @@
 From: John Kozak <jk@thameslighter.net>
 Date: Sat, 11 Oct 2014 18:18:08 +0100
 Subject: indices
-State: new
+State: resolved
 Message-Id: <dd5887d7842e2073-0-artemis@renn>
+resolution: fixed
 
 Simplest index is on first string:
  e.g. fact is ['hello',{a:17}]

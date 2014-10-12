@@ -44,6 +44,40 @@ describe("match example",function() {
 	assert(_.every(r2.adds,function(x){return (typeof parseInt(x))==='number';}));
 	assert.strictEqual(Object.keys(match._private.facts).length,5); // original 3, trade and residual price
     });
+    it("should reset",function() {
+	var match = store {
+	    ['user',{name:"John Kozak",company:"Acecomp"}];
+	    ['user',{name:"Val Wardlaw",company:"Perluceo"}];
+	    
+	    ['instrument',{name:"IL21"}];
+	    
+	    rule (-['match-price', {volume:0}]);
+	    rule (-['match-price', {user:uB, instrument, volume:vB, isBuy:true,  ...rB}]^rB.t,
+    		  -['match-price', {user:uS, instrument, volume:vS, isBuy:false, ...rS}]^rS.t,
+    		  ["user", {name:uB, company:cB}],
+    		  ["user", {name:uS, company:cS}],
+    		  cB!==cS,
+    		  vT = Math.min(vB,vS),
+    		  +['match-trade', {buyer:uB, seller:uS, instrument, volume:vT}],
+    		  +['match-price', {user:uB, instrument, volume:vB-vT, isBuy:true,  ...rB}],
+    		  +['match-price', {user:uS, instrument, volume:vS-vT, isBuy:false, ...rS}] );
+	    
+	    rule (['user', {name}],       -['user', {name}]);
+	    rule (['instrument', {name}], -['instrument', {name}]);
+	};
+
+	for (var i=0;i<10;i++)
+	    match.add(['match-price',{user:"John Kozak", instrument:"IL21",volume:10000000,isBuy:true, t:1}]);
+	assert.strictEqual(match._private.size,13);
+
+	match.reset();
+	assert.strictEqual(match._private.size,3);
+	
+	for (var i=0;i<10;i++)
+	    match.add(['match-price',{user:"John Kozak", instrument:"IL21",volume:10000000,isBuy:true, t:1}]);
+	assert.strictEqual(match._private.size,13);
+
+    });
 });
 
 describe("query",function() {

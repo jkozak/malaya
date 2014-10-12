@@ -1,0 +1,8 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Sun, 12 Oct 2014 15:28:35 +0100
+Subject: changed properties (state=resolved, resolution=fixed)
+Message-Id: <dd5887d7842e2073-9b3036c5e67b271f-artemis@renn>
+References: <dd5887d7842e2073-0-artemis@renn>
+In-Reply-To: <dd5887d7842e2073-0-artemis@renn>
+
+Notes in previos were correct _but_ I needed to reset `index` in `reset()` too.
