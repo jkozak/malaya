@@ -23,16 +23,21 @@ function TEMPLATE_store() {
 	var      _ = require('underscore');
 	var assert = require('assert');
 	var     ee = new (require('events').EventEmitter)();
-	var      t = 1;	     // must be > 0 always?
+	var      t = 1;	             // must be > 0 always?
 	var  facts = {};	     // 't' -> fact; this is the main fact store
+	var  index = {};	     // term1 -> [t,...]  where t is number not string
 	var   adds = [];
 	var   dels = [];
 	var    err = null;
 	var   _add = function(fact) {
-	    if (fact instanceof Array && fact.length>0) {
-		var t_fact = ''+t++; // `t_fact` is a string , use (t-1) in indices
+	    if (fact instanceof Array && fact.length>0 && (typeof fact[0])==='string') {
+		var     ti = t++;
+		var t_fact = ''+ti; // `t_fact` is a string , use ti in indices
 		facts[t_fact] = fact;
 		adds.push(t_fact);
+		if (index[fact[0]]===undefined)
+		    index[fact[0]] = [];
+		index[fact[0]].push(ti);
 		switch (fact[0]) {
 		case INSERT_CASE:
 		    break;
@@ -43,12 +48,14 @@ function TEMPLATE_store() {
 		throw new Error("unloved fact format: "+JSON.stringify(fact));
 	};
 	var   _del = function(t) {
-	    var ti = parseInt(t);   // use this in indices
-	    var  i = adds.indexOf(t); 
+	    var   ti = parseInt(t);   // use this in indices
+	    var    i = adds.indexOf(t);
+	    var fact = facts[t];
 	    if (i!==-1)
 		adds.splice(i,1);
 	    else
 		dels.push(facts[t]);
+	    index[fact[0]].splice(_.indexOf(index[fact[0]],ti,true),1);
 	    delete facts[t];
 	};
 	var    obj = {
@@ -66,7 +73,7 @@ function TEMPLATE_store() {
 	    },
 	    get t()       {return t;},
 	    get queries() {return queries;},
-	    reset: function(){t=1;facts={};init();},
+	    reset: function(){t=1;index={};facts={};init();},
 	    
 	    // business logic protocol
 	    get_root: function() {
@@ -708,10 +715,33 @@ function generateJS(js) {
 	    });
 	    return bSort;
 	}
-	return [b.forInStatement(b.variableDeclaration('var',[b.variableDeclarator(bv,null)]),
-				 b.identifier('facts'),
-				 body,
-				 false)];
+	if (item.expr.type==='ArrayExpression'            &&
+	    item.expr.elements.length>0                   &&
+	    item.expr.elements[0].type==='Literal'        &&
+	    (typeof item.expr.elements[0].value)==='string')
+	{
+	    var bvx = b.identifier(bv.name+'x');
+	    var  bx = b.binaryExpression('+',
+					 b.literal(''),
+					 b.memberExpression(b.memberExpression(b.identifier('index'),
+									       item.expr.elements[0],
+									       true),
+							    bvx,
+							    true) );
+	    return [b.forInStatement(b.variableDeclaration('var',[b.variableDeclarator(bvx,null)]),
+				     b.memberExpression(b.identifier('index'),
+							item.expr.elements[0],
+							true),
+				     b.blockStatement([
+					 b.variableDeclaration('var',[b.variableDeclarator(bv,bx)]),
+					 body]),
+				    false)];
+	} else {
+	    return [b.forInStatement(b.variableDeclaration('var',[b.variableDeclarator(bv,null)]),
+				     b.identifier('facts'),
+				     body,
+				     false)];
+	}
     };
     
     var genRuleVariant = function(chr,i,prebounds,genPayload) {
@@ -950,7 +980,7 @@ function generateJS(js) {
 					     x.declarations[0].id.name==='_add';}).get();
 	if (_.keys(dispatchBranches).length>128)
 	    console.log("Warning: more than 128 cases in switch statement");
-	var _addSwitch = _addDef.declarations[0].init.body.body[0].consequent.body[3];
+	var _addSwitch = _addDef.declarations[0].init.body.body[0].consequent.body[6];
 	assert.equal(_addSwitch.type,'SwitchStatement');
 	assert.equal(_addSwitch.cases.length,1);
 	assert.equal(_addSwitch.cases[0].test.name,'INSERT_CASE');
@@ -960,9 +990,9 @@ function generateJS(js) {
 	    _addSwitch.cases.push(b.switchCase(b.literal(k),brs.concat(b.breakStatement())));
 	}
 	var ins_gen = _addDef.declarations[0].init.body.body[0].consequent.body;
-	assert.equal(ins_gen.length,6);
-	assert.equal(ins_gen[4].type,'ExpressionStatement');
-	assert.equal(ins_gen.splice(4,1)[0].expression.name,'INSERT_GENERIC_MATCHES');
+	assert.equal(ins_gen.length,9);
+	assert.equal(ins_gen[7].type,'ExpressionStatement');
+	assert.equal(ins_gen.splice(7,1)[0].expression.name,'INSERT_GENERIC_MATCHES');
 	dispatchGeneric.forEach(function(ri){ins_gen.push(genInvokeRuleItem(ri));});
 	    
 	return storeJS;

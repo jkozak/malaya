@@ -40,8 +40,7 @@ store IDB {
 	       a=[])  a.concat([rs]);
 
     query staticdata(;
-		     ['Permissions',{ApplicationID:appId,TeamID:teamId,CompanyID:companyId}],
-		     ['Team',{TeamID:teamId,TeamName:team}];
+		     ['Permissions',{ApplicationID:appId,TeamID:teamId,CompanyID:companyId}];
 		     a=[]) a.concat([{app:appId,team:teamId,Name:companyId}]);
 
     query instruments(appId;
@@ -101,4 +100,12 @@ suite('toy idb with real data',function() {
     bench("query instruments",function() {
 	IDB.queries.instruments(51);
     });
+    bench("query staticdata",function() {
+	IDB.queries.staticdata();
+    });
+    // bench("dateToYYYYMMDD",function() {
+    //   // Let's see if this function is taking most of the time in
+    //   // "query instruments" above.  It is.
+    // 	 dateToYYYYMMDD("Mon Jun  1 00:00:00 2037");
+    // });
 });
