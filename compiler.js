@@ -76,6 +76,9 @@ function TEMPLATE_store() {
 	    reset: function(){t=1;index={};facts={};init();},
 	    
 	    // business logic protocol
+	    init: function() {
+		obj.reset();
+	    },
 	    get_root: function() {
 		return {t:    obj.t,
 			facts:obj.facts};
@@ -85,7 +88,9 @@ function TEMPLATE_store() {
 		obj.facts = r.facts;
 	    },
 	    update: function(u) {
-		return obj.add(u);
+		var res = obj.add(u);
+		res.adds = _.map(res.adds,function(t){return facts[t];});
+		return res;
 	    }
 	};
 	if (process.env.NODE_ENV==='test')
