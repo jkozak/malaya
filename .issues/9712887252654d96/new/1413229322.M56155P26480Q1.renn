@@ -1,0 +1,6 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Mon, 13 Oct 2014 20:42:02 +0100
+Subject: take over `Date` and make it prevalence deterministic
+State: new
+Message-Id: <9712887252654d96-0-artemis@renn>
+
