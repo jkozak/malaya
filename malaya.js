@@ -48,7 +48,6 @@ function WsConnection(conn,server) {
 }
 
 exports.createServer = function(opts) {
-    var port    = opts.port;
     var http    = null;
     var bl      = null;		// business logic
     var syshash = null;		// at startup
@@ -59,7 +58,7 @@ exports.createServer = function(opts) {
     var server = {
 	on:  function(what,handler) {ee.on(what,handler);},
 	
-	run: function(done) {
+	start: function(done) {
 	    if (opts.init) {
 		try {
 		    fs.statSync(opts.prevalenceDir);
@@ -85,19 +84,6 @@ exports.createServer = function(opts) {
 		process.exit(0);
 	    }
 
-	    process.on('SIGINT',function() {
-		server.close();
-		process.exit(1);
-	    });
-	    process.on('SIGQUIT',function() {
-		process.exit(1);
-	    });
-	    process.on('SIGHUP',function() {
-		bl.save();
-	    });
-	    process.on('exit',function(code) {
-	    });
-
 	    conns.add = function(conn) {
 		conns.push(conn);
 	    }
@@ -114,21 +100,22 @@ exports.createServer = function(opts) {
 		    this[i].write(js);
 		}
 	    }
-
+	    
 	    timer = setInterval(function() {
 		server.command(['tick',{}],{port:'server:'});
 	    },1000);
+	},
 
-	    if (port) {
-		var express = require('express');
-		var     app = express();
-		var    sock = require('sockjs').createServer();
-
-		http = require('http').Server(app);
-		
-		if (opts.logging)
-		    app.use(require('morgan')(":remote-addr - :remote-user [:date] \":method :url HTTP/:http-version\" :status :res[content-length] \":referrer\" \":user-agent\" :res[etag]"));
-
+	listen: function (port,done) {
+	    var express = require('express');
+	    var     app = express();
+	    var    sock = require('sockjs').createServer();
+	    
+	    http = require('http').Server(app);
+	    
+	    if (opts.logging)
+		app.use(require('morgan')(":remote-addr - :remote-user [:date] \":method :url HTTP/:http-version\" :status :res[content-length] \":referrer\" \":user-agent\" :res[etag]"));
+	    
 		sock.on('connection',function(conn) {
 		    switch (conn.prefix) {
 		    case '/data':
@@ -144,24 +131,22 @@ exports.createServer = function(opts) {
 			break;
 		    };
 		});
-
-		sock.installHandlers(http,{prefix:'/data'});
-
-		prvl.installHandlers(app, {prefix:'/replication'});
-
-		app.get('/',function(req,res) {
-		    res.redirect('/index.html');
-		});
-		if (opts.audit)
-		    app.use(prvl.createExpressMiddleware(opts.webDir));
-		app.use(express.static(opts.webDir));
-
-		http.listen(port,function() {
-		    util.debug('http listening on *:%s',port);
-		    done();
-		});
-	    } else
+	    
+	    sock.installHandlers(http,{prefix:'/data'});
+	    
+	    prvl.installHandlers(app, {prefix:'/replication'});
+	    
+	    app.get('/',function(req,res) {
+		res.redirect('/index.html');
+	    });
+	    if (opts.audit)
+		app.use(prvl.createExpressMiddleware(opts.webDir));
+	    app.use(express.static(opts.webDir));
+	    
+	    http.listen(port,function() {
+		util.debug('http listening on *:%s',port);
 		done();
+	    });
 	},
 	
 	addConnection: function(conn) {
