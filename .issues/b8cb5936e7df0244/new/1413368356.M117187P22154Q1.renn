@@ -1,0 +1,35 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Wed, 15 Oct 2014 11:19:16 +0100
+Subject: chrjs syntax for transforms
+State: new
+Message-Id: <b8cb5936e7df0244-0-artemis@renn>
+
+A `transform` is like a `store` but:
+ * no `query` statements
+ * runs to exhaustion, stops
+
+But needs to be cognisant of prevalence, so
+this should be mediate through the malaya server
+which can wrap the transform also.
+
+A transform converts an the facts in a store between
+one set of rules and another.  If we have stores
+`oldStore` and `newStore` then a transform between the two
+would be a set of rules which are prepended to a freshly
+initted `newStore` and then into which the contents of
+`oldStore` are fed, fact by fact.  The resulting fact store
+is then loadable by an instance of `newStore`.
+
+Something like:
+ var stOld = oldStore {
+ // ...
+ };
+ var stNew = newStore {
+ // ...
+ };
+ var tfm = transform {
+ rule (...);
+ // ...
+ };
+ tfm.transform(stOld,stNew);
+
