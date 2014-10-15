@@ -76,16 +76,20 @@ function TEMPLATE_store() {
 	    reset: function(){t=1;index={};facts={};init();},
 	    
 	    // business logic protocol
+	    tag: null,
 	    init: function() {
 		obj.reset();
 	    },
 	    get_root: function() {
-		return {t:    obj.t,
-			facts:obj.facts};
+		return {tag:  obj.tag,
+		        t:    t,
+			facts:facts};
 	    },
 	    set_root: function(r) {
-		obj.t     = r.t;
-		obj.facts = r.facts;
+		if (r.tag!==obj.tag)
+		    throw new Error("wrong tag: "+JSON.stringify(r.tag)+", expected: "+JSON.stringify(obj.tag));
+		t     = r.t;
+		facts = r.facts;
 	    },
 	    update: function(u) {
 		var res = obj.add(u);

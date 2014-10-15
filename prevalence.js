@@ -273,6 +273,7 @@ function load(fn_root,fn_datum) {
 }
 
 function wrap(dir,bl,options) {
+    bl.tag = options.tag;
     var ans = {
 	init:function() {
 	    init(dir,options);
