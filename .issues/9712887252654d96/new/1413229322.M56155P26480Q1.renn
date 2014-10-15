@@ -4,3 +4,5 @@ Subject: take over `Date` and `Math.random` and make them prevalence determinist
 State: new
 Message-Id: <9712887252654d96-0-artemis@renn>
 
+See:
+ https://github.com/davidbau/seedrandom

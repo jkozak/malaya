@@ -106,6 +106,14 @@ exports.createServer = function(opts) {
 	    },1000);
 	},
 
+	transform: function(blt) { // `blt` implements bl transform protocol (transform, no update/query)
+	    throw new Error('NYI');
+	    // !!! this is a sketch of [b8cb5936e7df0244] !!!
+	    //     needs a target store to save into
+	    //     how does prevalence wrapping work here?
+	    //     (must stash the transform code)
+	},
+
 	listen: function (port,done) {
 	    var express = require('express');
 	    var     app = express();
