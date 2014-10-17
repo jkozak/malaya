@@ -58,6 +58,20 @@ function TEMPLATE_store() {
 	    index[fact[0]].splice(_.indexOf(index[fact[0]],ti,true),1);
 	    delete facts[t];
 	};
+	var _rebuild = function() {
+	    index = {};
+	    for (var t in facts) {
+		var fact = facts[t];
+		var   ti = parseInt(t);
+		if (fact instanceof Array && fact.length>0 && (typeof fact[0])==='string') {
+		    if (index[fact[0]]===undefined)
+			index[fact[0]] = [];
+		    index[fact[0]].push(ti);
+		}
+	    }
+	    for (var tag in index)
+		index[tag].sort();
+	};
 	var    obj = {
 	    on:   function(ev,cb) {ee.on(ev,cb);},
 	    once: function(ev,cb) {ee.once(ev,cb);},
@@ -90,6 +104,12 @@ function TEMPLATE_store() {
 		    throw new Error("wrong tag: "+JSON.stringify(r.tag)+", expected: "+JSON.stringify(obj.tag));
 		t     = r.t;
 		facts = r.facts;
+		_rebuild();
+	    },
+	    query: function(qs) {
+		assert.equal(typeof qs[0],'string');
+		var ans = queries[qs[0]].apply(null,qs.slice(1));
+		return ans;
 	    },
 	    update: function(u) {
 		var res = obj.add(u);
@@ -891,8 +911,6 @@ function generateJS(js) {
 	    }
 	});
 	rv.body.body.unshift(b.variableDeclaration('var',[b.variableDeclarator(chr.init.left,chr.init.right)]));
-	
-	//console.log("*** rv: %j",rv);
 	
 	return rv;
     };

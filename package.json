@@ -14,17 +14,18 @@
     "readline": "0.0.3",
     "recast": "^0.7.2",
     "rimraf": "^2.2.8",
+    "sax": "^0.6.1",
     "shelljs": "^0.3.0",
     "sockjs": "^0.3.9",
     "temp": "^0.8.0",
-    "underscore": "^1.6.0",
-    "xml2js": "^0.4.4"
+    "underscore": "^1.6.0"
   },
   "devDependencies": {
     "faker": "^2.0.1",
     "matcha": "^0.5.0",
     "mocha": "^1.20.1",
-    "prettyjson": "^1.0.0"
+      "prettyjson": "^1.0.0",
+    "xml2js": "^0.4.4"
   },
   "repository": {
     "type": "hg",

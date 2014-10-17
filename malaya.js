@@ -100,10 +100,6 @@ exports.createServer = function(opts) {
 		    this[i].write(js);
 		}
 	    }
-	    
-	    timer = setInterval(function() {
-		server.command(['tick',{}],{port:'server:'});
-	    },1000);
 	},
 
 	transform: function(blt) { // `blt` implements bl transform protocol (transform, no update/query)
@@ -155,14 +151,18 @@ exports.createServer = function(opts) {
 		util.debug('http listening on *:%s',port);
 		done();
 	    });
+
+	    timer = setInterval(function() {
+		server.command(['tick',{}],{port:'server:'});
+	    },1000);
 	},
 	
 	addConnection: function(conn) {
-	    conns.add(mc);
-	    ee.emit('makeConnection',mc);
-	    mc.on('close',function() {
-		ee.emit('loseConnection',mc);
-		conns.remove(mc);
+	    conns.add(conn);
+	    ee.emit('makeConnection',conn);
+	    conn.on('close',function() {
+		ee.emit('loseConnection',conn);
+		conns.remove(conn);
 	    });
 	},
 	
@@ -200,9 +200,8 @@ exports.createServer = function(opts) {
 	    assert(js instanceof Array);
 	    assert(js.length>0);
 	    assert.equal(typeof js[0],'string');
-	    var query = [js,{port:conn.port}];
-	    ee.emit('query',query)
-	    return bl.query(query);
+	    ee.emit('query',js)
+	    return bl.query(js);
 	},
 	
 	queries: function(js,conn) { // batch of queries, executed simultaneously
@@ -211,7 +210,7 @@ exports.createServer = function(opts) {
 	    assert(js instanceof Array);
 	    assert(js.length>0);
 	    js.forEach(function(js1) {
-		var res = server.query(js1);
+		var res = server.query(js1,conn);
 		if (t===null)
 		    t = res.t;
 		else
