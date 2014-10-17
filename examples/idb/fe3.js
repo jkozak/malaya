@@ -2,9 +2,10 @@
 
 "use strict";
 
+var      _ = require('underscore');
 var   util = require('../../util.js');
 var    net = require('net');
-var    x2j = require('xml2js');
+var    x2j = require('./x2j.js');
 var events = require('events');
 var assert = require('assert');
 
@@ -16,7 +17,6 @@ var AP_XML2A       = 918;
 function FE3Connection(sock,server) {
     var mc          = this;
     var ee          = new events.EventEmitter();
-    var xml_builder = new x2j.Builder({headless:true});
     var recved      = new Buffer(0);
     var NUL         = new Buffer('\0');
     var inLogon     = false;
@@ -24,8 +24,17 @@ function FE3Connection(sock,server) {
     var appName     = null;
     var appRole     = null;
 
+    var timer       = setInterval(function() {
+	if (appId!==null) {
+	    var d = new Date();
+	    write({heartbeat:{timestamp:d.toTimeString().substring(0,9)+d.getDate()+'/'+(d.getMonth()+1)+'/'+(d.getYear()+1900)}});
+	}
+    },2000);
+
+
     var write = function(jsx) {
-	var xml = xml_builder.buildObject(jsx);
+	console.log("*** write: %j",jsx);
+	var xml = x2j.build(jsx);
 	var hdr = new Buffer(FE3_HDR_LENGTH);
 	hdr.writeInt32LE(AP_XML2,      0); // type
 	hdr.writeInt32LE(0,            4); // drain
@@ -40,6 +49,17 @@ function FE3Connection(sock,server) {
 
     var command = function(cmd) {
 	var res = server.command(cmd,mc);
+	console.log("*** command %j",cmd);
+	if (res.err)
+	    console.log("**** err: %j",res.err);
+	else {
+	    res.adds.forEach(function(add){
+		console.log("**** add: %j",add);
+	    });
+	    res.dels.forEach(function(del){
+		console.log("**** del: %j",del);
+	    });
+	}
 	res.adds.forEach(function(add) {
 	    if (add[0]==='msg') {
 		if (add[1]===null)
@@ -54,29 +74,58 @@ function FE3Connection(sock,server) {
     var handleJsx = function(jsx) {
 	assert.equal(Object.keys(jsx).length,1);
 	var tag = Object.keys(jsx)[0];
-	if (Object.keys(jsx[tag]).length==1) {
-	    var res = command([tag,jsx[tag].$]);
-	    switch (tag) {
-	    case 'logon':
-		switch (res.adds[0][0]) {
-		case 'Permissions':
-		    assert.equal(res.adds[0][1].LoggedOn,1);
-		    appId   = res.adds[0][1].ApplicationID;
-		    appName = res.adds[0][1].ApplicationName;
-		    appRole = res.adds[0][1].AppRole;
-		    write({logon:{$:{OK:1,session_key:0}}});
-		    break;
-		case 'msg':
-		    break;
-		default:
-		    throw new Error("NYI "+res.adds[0][0]);
-		}
+	switch (tag) {
+	case 'start': {
+	    var ans = server.queries([['staticdata'],
+				      ['instruments',appId],
+				      ['feCookies'],
+				      ['subclasses'] ],
+				     mc);
+	    write({'static-data':{_children:[].concat(
+		_.map(ans[0][0],function(o){return {counterparty:o}}),
+		[{self:{ID:appId,Name:appName,Role:appRole}}],
+		_.map(ans[0][1],function(o) {return {instrument:o};}),
+		_.map(ans[0][2],function(o) {return {_XML:o};}),
+		_.map(ans[0][3],function(o) {return {SubClass:o};}) )}});
+	    // +++ BigFig +++
+	    write({initialised:{}});
+	    break;
+	}
+	case 'logon': {
+	    var res = command([tag,jsx[tag]]);
+	    switch (res.adds[0][0]) {
+	    case 'Permissions':
+		assert.equal(res.adds[0][1].LoggedOn,1);
+		appId   = res.adds[0][1].ApplicationID;
+		appName = res.adds[0][1].ApplicationName;
+		appRole = res.adds[0][1].AppRole;
+		write({logon:{OK:1,session_key:0}});
+		break;
+	    case 'msg':
+		break;
+	    default:
+		throw new Error("NYI "+res.adds[0][0]);
 	    }
-	} else
-	    throw new Error("NYI: "+JSON.stringify(jsx));
+	    break;
+	}
+	case 'cookie': {
+	    var    ans = server.query(['cookie',appId,parseInt(jsx[tag].id)],mc);
+	    var cookie = ans.result.length===0 ? '' : ans.result[0];
+	    write({cookie:{id:jsx[tag].id,_children:[cookie]}});
+	    break;
+	}
+	case 'AuctionTemplateBlock': {
+	    var ans = server.query(['auctionTemplates'],mc);
+	    console.log("AuctionTemplateBlock >> %j",ans)
+	    write({AuctionTemplateBlock:{_children:_.map(ans.result,function(r){return {AuctionTemplate:r}})}});
+	    break;
+	}
+	default:
+	    throw new Error("NYI "+tag);
+	}
     };
-    
-    this.port  = util.format("fe3:%d",sock.address().port);
+
+    this.port  = util.format("fe3://%s:%d/",sock.remoteAddress,sock.remotePort);
     this.on    = function(what,handler) {ee.on(what,handler);};
     this.close = function() {
 	sock.end();
@@ -85,7 +134,7 @@ function FE3Connection(sock,server) {
 	if (js instanceof Array)
 	    switch (js[0]) {
 	    case 'msg':
-		write({error:{$:{code:999,text:js[2]}}});
+		write({error:{id:999,text:js[2]}});
 		return;
 	    }
 	throw new Error('NYI');
@@ -103,15 +152,7 @@ function FE3Connection(sock,server) {
 		switch (type) {
 		case AP_XML2A: {
 		    var xml = recved.toString('ascii',FE3_HDR_LENGTH+4,FE3_HDR_LENGTH+cbData-1);
-		    x2j.parseString(xml,function(err,jsx) {
-			if (err===null) 
-			    handleJsx(jsx);
-			else {
-			    console.log(err);
-			    // +++ error handling for broken XML? +++
-			    sock.destroy();
-			}
-		    });
+		    handleJsx(x2j.parse(xml));
 		    break;
 		}
 		case AP_HEARTBEAT:
@@ -130,6 +171,9 @@ function FE3Connection(sock,server) {
 	sock.destroy();		// ???
     });
     sock.on('close',function() {
+	clearInterval(timer);
+	timer = null;
+	command(['logoff',{appId:appId}]);
 	ee.emit('close');
     });
     

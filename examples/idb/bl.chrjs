@@ -43,13 +43,19 @@ var IDB = store {
 	  +['Permissions',{ApplicationName:aname,Password:apwd,anon:null,...rs}]);
 
     // the market itself
-    rule (['MarketState',{MarketID}],   -['MarketState',{MarketID}]);
-    rule (['market-status',{ID,status}],+['MarketState',{MarketID:ID,Status:status}]);
+    rule (['MarketState',{MarketID}],    -['MarketState',{MarketID}]);
+    rule (-['market-status',{ID,status}],+['MarketState',{MarketID:ID,Status:status}]);
+
+    // restart
+    rule (['restart'],
+	  -['Permissions',{LoggedOn:1,...rs}],
+	  +['Permissions',{LoggedOn:0,...rs}] );
+    rule (-['restart']);
     
     // logon processing
     rule (-['logon',      {user,pw},{port}],
 	  -['Permissions',{ApplicationName:user,Password:pw,LoggedOn:0,...rs}],
-	  +['Permissions',{ApplicationName:user,Password,LoggedOn:1,port, ...rs}] );
+	  +['Permissions',{ApplicationName:user,Password,LoggedOn:1,port,...rs}] );
     rule (-['logon',      {user,pw}],
 	  ['Permissions',{ApplicationName:user,Password:pw,LoggedOn:1}],
 	  +['msg',null,"already logged on"] );
@@ -58,6 +64,11 @@ var IDB = store {
 	  +['msg',null,"bad password"] );
     rule (-['logon'],
 	  +['msg',null,"user unknown"] );
+    rule (['Permissions',{ApplicationID}],
+	  -['Permissions',{ApplicationID}]);
+    rule (-['logoff',     {appId}],
+	  -['Permissions',{ApplicationID:appId,LoggedOn:1,port,...rs}],
+	  +['Permissions',{ApplicationID:appId,LoggedOn:0,port:null,...rs}] );
 
     // cookies
     rule (-['store-cookie',{id,cookie},{port}],
@@ -80,9 +91,9 @@ var IDB = store {
     query staticdata(;
 		     ['Permissions',{ApplicationID:appId,TeamID:teamId,CompanyID:companyId}],
 		     ['Team',{TeamID:teamId,TeamName:team}];
-		     a=[]) a.concat([{app:appId,team:teamId,Name:companyId}]);
+		     a=[]) a.concat([{app:appId,team:teamId,Name:team}]);
 
-    query instruments(appId;
+    query instruments(appId;	// +++ make per-user
 		      ['Instrument',inst];
 		      a=[]) a.concat([{
 			  ID:               inst.InstID,
@@ -100,7 +111,7 @@ var IDB = store {
 		    ['FEConfig',{TabID,CookieData}];
 		    a=[]) a.concat(CookieData);
 
-    query subclasses(;
+    query subclasses(appId;	// +++ make per-user
 		     ['InstrumentClass',sc];
 		     a=[]) a.concat([{
 			 ID:                sc.InstSubClassID,
@@ -117,6 +128,19 @@ var IDB = store {
     query cookie(appId,id;
 		 ['Cookies',{ApplicationID:appId,CookieID:id,Cookie}];
 		 a=[]) a.concat(Cookie);
+
+    query auctionTemplates(;
+			   ['AuctionTemplate',at];
+			   a=[]) a.concat([{
+			       cls:                  1,
+			       name:                 at.AuctionName,
+			       id:                   at.AuctionTemplateID,
+			       instance:             0,
+			       phases:               at.AuctionPhases,
+			       duration:             at.AuctionDuration,
+			       MatchingDuration:     at.MatchingDuration,
+			       SecondChanceDuration: 0
+			   }]);
 };
 
 module.exports = IDB;

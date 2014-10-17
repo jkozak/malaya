@@ -101,7 +101,16 @@ describe("query",function() {
 	};
 	assert.equal(st.queries.qa().result,1);
 	assert.equal(st.queries.qd().result,2);
-    })
+    });
+    it("should use parameters",function(){
+	var st = store {
+	    ['Cookies',{ApplicationID:51,CookieID:0,Cookie:"with jam"}];
+	    query cookie(appId,id;
+			 ['Cookies',{ApplicationID:appId,CookieID:id,Cookie}];
+			 a=[]) a.concat(Cookie);
+	};
+	assert.deepEqual(st.queries.cookie(51,0).result,["with jam"]);
+    });
 });
 
 describe("store generic operations",function() {

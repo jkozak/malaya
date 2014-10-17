@@ -16,7 +16,7 @@ var malaya = require('../../malaya.js').createServer({
     logging:       true,
     init:          !!argv.init,
     tag:           'idb',
-    businessLogic: argv.bl || path.join(__dirname,'bl.chrjs')
+    businessLogic: argv.bl ? path.resolve(argv.bl) : path.join(__dirname,'bl.chrjs')
 });
 
 var fe3 = require('./fe3.js').createServer({malaya:malaya});
@@ -58,6 +58,7 @@ process.on('exit',function(code) {
 });
 
 var listen = function() {
+    malaya.command(['restart',{}],{port:'server:'});
     malaya.listen(WS_PORT,function() {
 	fe3.listen(FE3_PORT);
     });
@@ -106,13 +107,14 @@ if (argv.init) {
     } else if (argv.init.match(/[a-zA-Z0-9]+@[a-zA-Z0-9-]+\/[a-z0-9]+:.*/)) {
 	throw new Error("NYI - ODBC loading");
     } else if (argv.init==='none') {
-	listenn();
+	listen();
     } else {
 	console.error("can't init from: %j",argv.init);
 	process.exit(100);
     }
-} else
+} else {
     listen();
+}
 
 
 

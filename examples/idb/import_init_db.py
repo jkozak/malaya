@@ -3,6 +3,7 @@
 from decimal import Decimal
 import datetime
 import json
+import sys
 
 # +++ sanitise sensitive parts of data: names and passwords +++
 
@@ -14,6 +15,7 @@ def import_init_db(filename):
         rows = tables[table][1]
         for row in rows:
             ans.append([table,dict(zip(cols,row))])
+        print >>sys.stderr,"*** import table: %s  #rows: %d"%(table,len(rows))
     def default(obj):
         if isinstance(obj,Decimal):
             return int(obj)
