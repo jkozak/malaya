@@ -8,7 +8,7 @@ var dateToYYYYMMDD = function(md) {
 }
 
 // need to handle these messages:
-//    AuctionTemplateBlock
+//  X AuctionTemplateBlock
 //    AuctionTemplate
 //    AuctionDelAll
 //    PrepareAuction
@@ -43,8 +43,10 @@ var IDB = store {
 	  +['Permissions',{ApplicationName:aname,Password:apwd,anon:null,...rs}]);
 
     // the market itself
-    rule (['MarketState',{MarketID}],    -['MarketState',{MarketID}]);
-    rule (-['market-status',{ID,status}],+['MarketState',{MarketID:ID,Status:status}]);
+    rule (['MarketManager',{MarketID}],  -['MarketManager',{MarketID}]);
+    rule (-['market-status',{ID,status}],
+	  -['MarketManager',{MarketID:ID,Status,...rs}],
+	  +['MarketManager',{MarketID:ID,Status:status,...rs}]);
 
     // restart
     rule (['restart'],
@@ -128,6 +130,31 @@ var IDB = store {
     query cookie(appId,id;
 		 ['Cookies',{ApplicationID:appId,CookieID:id,Cookie}];
 		 a=[]) a.concat(Cookie);
+
+    query markets(id;
+		  ['MarketManager',{MarketID:id,Status}],
+		  ['SequenceNumbers',{MarketID,PriceSequenceNo,TradeSequenceNo}];
+		  a=[]) a.concat({ID:        id,
+		                  status:    Status,
+				  priceSeqNo:PriceSequenceNo,
+				  tradeSeqNo:TradeSequenceNo});
+    query prices(id;
+		 ['Price',{Action,Status,...rs}],
+		 ("UC").indexOf(Action)!==-1 && ("RATS").indexOf(Status)!==-1;
+		 // +++ above tests not complete +++
+		 a=[]) a.concat({ID:        rs.PriceID,
+				 seqNo:     rs.PriceSequenceNo,
+				 isBuy:     rs.BidOrOffer,
+				 instrument:rs.InstID,
+				 x:         rs.Rate,
+				 volume:    rs.Amount,
+				 action:    Action,
+				 status:    Status,
+				 valueDate: rs.ValuationDate,
+				 minLotSize:rs.MinLotSize});
+
+    // +++ query trades(id; +++
+		 
 
     query auctionTemplates(;
 			   ['AuctionTemplate',at];

@@ -79,7 +79,11 @@ function FE3Connection(sock,server) {
 	    var ans = server.queries([['staticdata'],
 				      ['instruments',appId],
 				      ['feCookies'],
-				      ['subclasses'] ],
+				      ['subclasses',appId],
+				      ['markets',2],
+				      ['prices',2]
+				      // +++ ,['trades',2]
+				     ],
 				     mc);
 	    write({'static-data':{_children:[].concat(
 		_.map(ans[0][0],function(o){return {counterparty:o}}),
@@ -87,6 +91,14 @@ function FE3Connection(sock,server) {
 		_.map(ans[0][1],function(o) {return {instrument:o};}),
 		_.map(ans[0][2],function(o) {return {_XML:o};}),
 		_.map(ans[0][3],function(o) {return {SubClass:o};}) )}});
+	    write({contexts:{_children:[].concat(
+		_.map(ans[0][4],function(o) {
+		    o._children = [].concat(
+			_.map(ans[0][5],function(o) {return {price:o};})
+			// +++ trades
+		    );
+		    return {'market-status':o};
+		}) )}});
 	    // +++ BigFig +++
 	    write({initialised:{}});
 	    break;
