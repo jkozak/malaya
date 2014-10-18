@@ -76,7 +76,7 @@ store IDB {
 		 a=[]) a.concat(Cookie);
 }
 
-var json = JSON.parse(fs.readFileSync(path.join(__dirname,'data/idb.json')));
+var json = JSON.parse(fs.readFileSync(path.join(__dirname,'../examples/idb/data/idb.json')));
 for (var i in json) 
     IDB.add(json[i]);
 

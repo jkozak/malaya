@@ -93,12 +93,7 @@ exports.createServer = function(opts) {
 			this.splice(i,1);
 			return;
 		    }
-		util.debug("*** couldn't remove %j",x);
-	    }
-	    conns.broadcast = function(js) {
-		for (var i=0;i<this.length;i++) {
-		    this[i].write(js);
-		}
+		util.debug("*** couldn't remove connection %j",x);
 	    }
 	},
 
