@@ -10,24 +10,28 @@ var parser = sax.parser(true);
 
 
 exports.parse = function(xml) {
-    var   ans;
-    var stack = [];
+    var       ans;
+    var     stack = [];
+    var pushChild = function(ch) {
+	var keys = Object.keys(stack[0]);
+	assert.equal(keys.length,1);
+	var insertHere = stack[0][keys[0]];
+	if (insertHere._children===undefined)
+	    insertHere._children = [];
+	insertHere._children.push(ch);
+    };
     parser.onerror = function(e) {
 	throw new Error(e);
     };
     parser.ontext = function (t) {
 	assert(stack.length>0);
-	if (stack[0]._children===undefined)
-	    stack[0]._children = [];
-	stack[0]._children.push(t);
+	pushChild(t);
     };
     parser.onopentag = function (node) {
 	var newnode = {};
 	newnode[node.name] = node.attributes;
 	if (stack.length>0) {
-	    if (stack[0]._children===undefined)
-		stack[0]._children = [];
-	    stack[0]._children.push(newnode);
+	    pushChild(newnode);
 	}
 	stack.unshift(newnode);
     };

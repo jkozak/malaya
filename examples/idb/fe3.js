@@ -33,7 +33,7 @@ function FE3Connection(sock,server) {
 
 
     var write = function(jsx) {
-	console.log("*** write: %j",jsx);
+	//console.log("*** write: %j",jsx);
 	var xml = x2j.build(jsx);
 	var hdr = new Buffer(FE3_HDR_LENGTH);
 	hdr.writeInt32LE(AP_XML2,      0); // type
@@ -49,17 +49,17 @@ function FE3Connection(sock,server) {
 
     var command = function(cmd) {
 	var res = server.command(cmd,mc);
-	console.log("*** command %j",cmd);
-	if (res.err)
-	    console.log("**** err: %j",res.err);
-	else {
-	    res.adds.forEach(function(add){
-		console.log("**** add: %j",add);
-	    });
-	    res.dels.forEach(function(del){
-		console.log("**** del: %j",del);
-	    });
-	}
+	//console.log("*** command %j",cmd);
+	//if (res.err)
+	//    console.log("**** err: %j",res.err);
+	//else {
+	//    res.adds.forEach(function(add){
+	//	console.log("**** add: %j",add);
+	//    });
+	//    res.dels.forEach(function(del){
+	//	console.log("**** del: %j",del);
+	//    });
+	//}
 	res.adds.forEach(function(add) {
 	    if (add[0]==='msg') {
 		if (add[1]===null)

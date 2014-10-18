@@ -8,11 +8,18 @@ function roundTrip(js) {
 }
 
 describe("parse",function() {
+    var jsx;
     it("should parse simplest XML",function() {
-	x2j.parse("<fred/>");
+	jsx = x2j.parse("<fred/>");
+	assert.deepEqual(jsx,{fred:{}});
     });
     it("should parse nested XML",function() {
-	x2j.parse("<fred a='2'>text <jim><sally/><sarah/></jim></fred>");
+	jsx = x2j.parse("<fred a='2'>text <jim><sally/><sarah/></jim></fred>");
+	assert.deepEqual(Object.keys(jsx),['fred']);
+    });
+    it("should parse children",function() {
+	jsx = x2j.parse("<static-data><self ID=\"51\" Name=\"John Kozak\" Role=\"1283\"/></static-data>");
+	assert.deepEqual(jsx,{'static-data':{_children:[{self:{ID:'51',Name:'John Kozak',Role:'1283'}}]}});
     });
 });
 

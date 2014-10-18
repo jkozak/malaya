@@ -70,7 +70,7 @@ function TEMPLATE_store() {
 		}
 	    }
 	    for (var tag in index)
-		index[tag].sort();
+		index[tag].sort(function(p,q){return p-q;});
 	};
 	var    obj = {
 	    on:   function(ev,cb) {ee.on(ev,cb);},

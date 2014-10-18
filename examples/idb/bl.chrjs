@@ -154,7 +154,6 @@ var IDB = store {
 				 minLotSize:rs.MinLotSize});
 
     // +++ query trades(id; +++
-		 
 
     query auctionTemplates(;
 			   ['AuctionTemplate',at];
