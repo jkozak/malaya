@@ -186,6 +186,27 @@ var IDB = store {
 			       MatchingDuration:     at.MatchingDuration,
 			       SecondChanceDuration: 0
 			   }]);
+    query auctionTemplate(id;
+			  ['AuctionTemplate',{AuctionTemplateID:id,...at}];
+			  a=[]) {
+			      cls:                  1,
+			      name:                 at.AuctionName,
+			      id:                   id,
+			      instance:             0,
+			      phases:               at.AuctionPhases,
+			      duration:             at.AuctionDuration,
+			      MatchingDuration:     at.MatchingDuration,
+			      SecondChanceDuration: 0
+			   };
+    query auctionInstrumentsTemplate(id;
+				     ['AuctionInstrumentsTemplate',{AuctionTemplateID:id,InstID,...ait}],
+				     ['Instrument',{InstID,...inst}];
+				     a=[]) a.concat([{
+					 InstID:       InstID,
+					 Midprice:     inst.MidPrice,
+					 Tolerance:    inst.VolatilityPercent,
+					 AddTolerance: inst.VolatilitySpread
+				     }]);
 };
 
 module.exports = IDB;

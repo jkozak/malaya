@@ -60,7 +60,9 @@ exports.build = function(obj,cb) {
 		cb(k);
 		Object.keys(obj[k]).forEach(function(a) {
 		    if (a!=='_children') {
-			var s = obj[k][a]===null ? "" : obj[k][a].toString();
+			if (obj[k][a]===undefined)
+			    console.log("*** undef obj: %j  k: %j  a: %j",obj,k,a);
+			var s = obj[k][a]===null  ? "" : obj[k][a].toString();
 			assert.equal(s.indexOf('"'),-1);
 			cb(" ");cb(a);cb('="');cb(s);cb('"');
 		    }

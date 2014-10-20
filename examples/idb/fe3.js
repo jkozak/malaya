@@ -96,12 +96,24 @@ function FE3Connection(sock,server) {
 	}
 	case 'AuctionTemplateBlock': {
 	    var ans = server.query(['auctionTemplates'],mc);
-	    console.log("AuctionTemplateBlock >> %j",ans)
 	    write({AuctionTemplateBlock:{_children:_.map(ans.result,function(r){return {AuctionTemplate:r}})}});
 	    break;
 	}
+	case 'AuctionTemplate': {
+	    var  id = parseInt(jsx[tag].id);
+	    var ans = server.queries([['auctionTemplate',id],
+				      ['auctionInstrumentsTemplate',id] ],
+				     mc);
+	    console.log("*** ans: %j",ans);
+	    var out = {'AuctionTemplate':_.extend(ans[0][0],
+						  {_children:_.map(ans[0][1],function(r){return {AInst:r};})} )};
+
+	    console.log("*** out: %j",out);
+	    write(out);
+	    break;
+	}
 	default:
-	    throw new Error("NYI "+tag);
+	    command([tag,jsx[tag]]);
 	}
     };
 
