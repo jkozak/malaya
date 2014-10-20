@@ -17,7 +17,7 @@ var malaya = require('../../malaya.js').createServer({
     init:          !!argv.init,
     tag:           'idb',
     businessLogic: argv.bl ? path.resolve(argv.bl) : path.join(__dirname,'bl.chrjs'),
-    auto_output:   false
+    auto_output:   true
 });
 
 var fe3 = require('./fe3.js').createServer({malaya:malaya});
@@ -27,6 +27,10 @@ fe3.on('connect',function(mc) {
 fe3.on('listening',function() {
     util.debug('fe3  listening on *:%s',FE3_PORT);
 });
+
+var timer = setInterval(function() {
+    malaya.command(['tick',{date:new Date()}],{port:'server:'});
+},1000);
 
 malaya.on('loaded',function(hash) {
     util.debug("opening hash is: %s",hash);
@@ -41,6 +45,8 @@ malaya.on('loseConnection',function(mc) {
     util.debug("farewell, %j",mc);
 });
 malaya.on('closed',function() {
+    if (timer)
+	clearInterval(timer);
     fe3.close();
     fe3 = null;
 });

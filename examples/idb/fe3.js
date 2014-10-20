@@ -24,16 +24,7 @@ function FE3Connection(sock,server) {
     var appName     = null;
     var appRole     = null;
 
-    var timer       = setInterval(function() {
-	if (appId!==null) {
-	    var d = new Date();
-	    write({heartbeat:{timestamp:d.toTimeString().substring(0,9)+d.getDate()+'/'+(d.getMonth()+1)+'/'+(d.getYear()+1900)}});
-	}
-    },2000);
-
-
     var write = function(jsx) {
-	//console.log("*** write: %j",jsx);
 	var xml = x2j.build(jsx);
 	var hdr = new Buffer(FE3_HDR_LENGTH);
 	hdr.writeInt32LE(AP_XML2,      0); // type
@@ -48,27 +39,7 @@ function FE3Connection(sock,server) {
     };
 
     var command = function(cmd) {
-	var res = server.command(cmd,mc);
-	//console.log("*** command %j",cmd);
-	//if (res.err)
-	//    console.log("**** err: %j",res.err);
-	//else {
-	//    res.adds.forEach(function(add){
-	//	console.log("**** add: %j",add);
-	//    });
-	//    res.dels.forEach(function(del){
-	//	console.log("**** del: %j",del);
-	//    });
-	//}
-	res.adds.forEach(function(add) {
-	    if (add[0]==='msg') {
-		if (add[1]===null)
-		    server.broadcast(add);
-		else
-		    mc.write(add);
-	    }
-	});
-	return res;
+	return server.command(cmd,mc);
     };
 
     var handleJsx = function(jsx) {
@@ -111,9 +82,6 @@ function FE3Connection(sock,server) {
 		appId   = res.adds[0][1].ApplicationID;
 		appName = res.adds[0][1].ApplicationName;
 		appRole = res.adds[0][1].AppRole;
-		write({logon:{OK:1,session_key:0}});
-		break;
-	    case 'msg':
 		break;
 	    default:
 		throw new Error("NYI "+res.adds[0][0]);
@@ -143,13 +111,7 @@ function FE3Connection(sock,server) {
 	sock.end();
     }
     this.write = function(js) {
-	if (js instanceof Array)
-	    switch (js[0]) {
-	    case 'msg':
-		write({error:{id:999,text:js[2]}});
-		return;
-	    }
-	throw new Error('NYI');
+	write(js);
     }
     sock.on('data',function(data) {
 	recved = Buffer.concat([recved,data]);
@@ -183,8 +145,6 @@ function FE3Connection(sock,server) {
 	sock.destroy();		// ???
     });
     sock.on('close',function() {
-	clearInterval(timer);
-	timer = null;
 	command(['logoff',{appId:appId}]);
 	ee.emit('close');
     });

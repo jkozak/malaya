@@ -52,7 +52,8 @@ var mkServer = function(opts) {
 	init:          true,
 	tag:           'idb-test',
 	businessLogic: path.join(__dirname,'../bl.chrjs'),
-	sync_journal:  'none'
+	sync_journal:  'none',
+	auto_output:   true
     },opts));
     srvr.start();
     for (var i in FIXTURE) 
@@ -61,8 +62,10 @@ var mkServer = function(opts) {
 };
 
 function logOnOffServerTest(srvr) {
-    var  ans = srvr.command(['logon',{user:"John Kozak",pw:"JK"}],{port:'test:'});
-    assert.equal(ans.adds.length,1);            // one nett addition and _output
+    var  out = null;
+    var  ans = srvr.command(['logon',{user:"John Kozak",pw:"JK"}],{port:'test:',
+								   write:function(js){out=js;} });
+    assert.equal(ans.adds.length,2);            // one nett addition and _output
     assert.equal(ans.dels.length,1);            // one nett deletion
     assert.equal(ans.adds[0][0],'Permissions'); // both of Permissions records
     assert.equal(ans.dels[0][0],'Permissions');
@@ -70,7 +73,11 @@ function logOnOffServerTest(srvr) {
     assert.equal(ans.dels[0][1].LoggedOn,0);
     assert.equal(ans.adds[0][1].ApplicationID,51); // appId 51 is JK
     assert.equal(ans.dels[0][1].ApplicationID,51);
-    ans = srvr.command(['logoff',{appId:51}],{port:'test:'});
+    assert.deepEqual(_.keys(out),['logon']);
+    assert.deepEqual(out.logon.OK,1);
+    out = null;
+    ans = srvr.command(['logoff',{appId:51}],{port:'test:',
+					      write:function(js){out=js;} });
     assert.equal(ans.adds.length,1);            // one nett addition
     assert.equal(ans.adds.length,1);            // one nett deletion
     assert.equal(ans.adds[0][0],'Permissions'); // both of Permissions records
@@ -79,6 +86,7 @@ function logOnOffServerTest(srvr) {
     assert.equal(ans.dels[0][1].LoggedOn,1);
     assert.equal(ans.adds[0][1].ApplicationID,51); // appId 51 is JK
     assert.equal(ans.dels[0][1].ApplicationID,51);
+    assert.equal(out,null);
 }
 
 describe("server",function() {
@@ -173,7 +181,7 @@ function logOnOffMultipleFE3ConnectionTest(srvr) {
 
 describe("FE3Connection",function() {
     var prevalenceDir = path.join(temp.mkdirSync(),'prevalence');
-    it("inits nicely and performs a simple logon and logoff",function() {
+    it("inits nicely and performs a simple logon and logoff XXX",function() {
 	var srvr = mkServer({init:true,prevalenceDir:prevalenceDir});
 	logOnOffFE3ConnectionTest(srvr);
 	srvr.close();

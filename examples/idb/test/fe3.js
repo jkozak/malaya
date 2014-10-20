@@ -20,25 +20,4 @@ var mkFE3 = function(s,ap_type) {
 };
 
 describe("FE3Connection",function() {
-    describe("FE3 XML <-> chrJS conversions",function() {
-	it("should convert logon",function() {
-	    var   ee = new events.EventEmitter();
-	    var  rep = null;
-	    var conn = new fe3._private.FE3Connection({ // sock server
-		on:      function(what,handler) {return ee.on(what,handler);},
-		address: function()  {return {port:12345};},
-		write:   function(b) {rep=b;},
-		destroy: function()  {assert(false);}
-		//write:   
-	    },{				       // malaya server
-		command: function(cmd,conn0) {
-		    assert.equal(conn,conn0);
-		    assert.deepEqual(cmd,['logon',{user:"John Kozak",pw:"correct"}]);
-		    return {err:null,adds:[['msg',1,"bugger"]],dels:[]};
-		}
-	    } );
-	    ee.emit('data',mkFE3("<logon user='John Kozak' pw='correct'/>"));
-	    assert(rep!==null);
-	});
-    });
 });

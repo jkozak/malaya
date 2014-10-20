@@ -2,9 +2,17 @@ var     _ = require('underscore');
 var    fs = require('fs');
 var faker = require('faker');
 
-var dateToYYYYMMDD = function(md) {
+function dateToYYYYMMDD(md) {
     var d = new Date(md).toISOString();
     return d.substr(0,4)+d.substr(5,2)+d.substr(8,2);
+}
+
+function mkHeartbeat(d) {
+    // want a heartbeat only every two seconds
+    if (d.getSeconds()%2===1)
+	return null;
+    else
+	return {heartbeat:{timestamp:d.toTimeString().substring(0,9)+d.getDate()+'/'+(d.getMonth()+1)+'/'+(d.getYear()+1900)}};
 }
 
 // need to handle these messages:
@@ -52,22 +60,26 @@ var IDB = store {
     rule (['restart'],
 	  -['Permissions',{LoggedOn:1,...rs}],
 	  +['Permissions',{LoggedOn:0,...rs}] );
+    rule (['restart'], -['_output']);
+    rule (['restart'], -['_take-outputs']);
+    rule (['restart'], -['tick']);
+    rule (['restart'], -['restart']); // shouldn't happen, but if a bad world is saved...
     rule (-['restart']);
     
     // logon processing
     rule (-['logon',      {user,pw},{port}],
 	  -['Permissions',{ApplicationName:user,Password:pw,LoggedOn:0,...rs}],
-	  +['Permissions',{ApplicationName:user,Password,LoggedOn:1,port,...rs}]
-	  //+['_output','self',{OK:1,session_key:0}]
+	  +['Permissions',{ApplicationName:user,Password,LoggedOn:1,port,...rs}],
+	  +['_output','self',{logon:{OK:1,session_key:0}}]
 	 );
     rule (-['logon',      {user,pw}],
 	  ['Permissions',{ApplicationName:user,Password:pw,LoggedOn:1}],
-	  +['msg',null,"already logged on"] );
+	  +['_output','self',{error:{_children:{code:16,text:"already logged on"}}}] );
     rule (-['logon',      {user}],
 	  ['Permissions',{ApplicationName:user}],
-	  +['msg',null,"bad password"] );
+	  +['_output','self',{error:{_children:{code:17,text:"bad password"}}}] );
     rule (-['logon'],
-	  +['msg',null,"user unknown"] );
+	  +['_output','self',{error:{_children:{code:18,text:"user unknown"}}}] );
     rule (['Permissions',{ApplicationID}],
 	  -['Permissions',{ApplicationID}]);
     rule (-['logoff',     {appId}],
@@ -81,12 +93,12 @@ var IDB = store {
 	  +['Cookies',{ApplicationID,CookieID:id,Cookie:cookie}] );
 
     // background
-    rule (['tick'],-['msg']);
-    // +++ 
-    rule(-['tick']);
+    rule (['tick',{date}],
+	  +['_output','all',mkHeartbeat(date)] );
+    rule (-['tick']);
 
     // output
-    rule (['_take-outputs'],-['_output']);
+    rule (['_take-outputs'], -['_output']);
     rule (-['_take-outputs']);
 
 
