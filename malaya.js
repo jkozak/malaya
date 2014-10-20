@@ -53,7 +53,6 @@ exports.createServer = function(opts) {
     var bl      = null;		// business logic
     var syshash = null;		// at startup
     var conns   = {};
-    var timer   = null;
     var ee      = new events.EventEmitter();
 
     var server = {
@@ -133,10 +132,6 @@ exports.createServer = function(opts) {
 		util.debug('http listening on *:%s',port);
 		done();
 	    });
-
-	    timer = setInterval(function() {
-		server.command(['tick',{}],{port:'server:'});
-	    },1000);
 	},
 	
 	addConnection: function(conn) {
@@ -155,14 +150,12 @@ exports.createServer = function(opts) {
 		conns_[p].end();
 	    var syshash = bl.save();
 	    http = null;
-	    if (timer)		// +++ tidy up timers +++
-		clearInterval(timer);
 	    bl.close();
 	    ee.emit('closed',syshash);
 	},
 	
 	broadcast: function(js,filter) {
-	    conns.forEach(function(port) {
+	    _.keys(conns).forEach(function(port) {
 		var conn = conns[port];
 		if (!filter || filter(conn))
 		    conn.write(js);
@@ -179,7 +172,9 @@ exports.createServer = function(opts) {
 	    if (opts['auto_output'] && _.any(res.adds,function(add){return add[0]==='_output';})) {
 		bl.update(['_take-outputs']).dels.forEach(function(output) {
 		    assert.equal(output.length,3);
-		    if (output[1]==='all')
+		    if (output[2]===null)
+			;	// discard
+		    else if (output[1]==='all')
 			server.broadcast(output[2]);
 		    else if (output[1]=='self')
 			conn.write(output[2]);
