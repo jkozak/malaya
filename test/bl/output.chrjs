@@ -1,0 +1,10 @@
+module.exports = store {
+
+    rule (-['do_summat'],
+	  +['_output','self',{msg:"will this do?"}] );
+    
+
+    rule (['_take-outputs'],-['_output']);
+    rule (-['_take-outputs']);
+
+};

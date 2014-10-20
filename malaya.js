@@ -178,7 +178,6 @@ exports.createServer = function(opts) {
 	    var res = bl.update(command);
 	    if (opts['auto_output'] && _.any(res.adds,function(add){return add[0]==='_output';})) {
 		bl.update(['_take-outputs']).dels.forEach(function(output) {
-		    console.log("*** _output: %j",output);
 		    assert.equal(output.length,3);
 		    if (output[1]==='all')
 			server.broadcast(output[2]);
@@ -215,6 +214,11 @@ exports.createServer = function(opts) {
 	    return [ans,{t:t}];
 	}
     };
+    if (util.env==='test')
+	server._private = {
+	    get bl()    {return bl;},
+	    get facts() {return bl._private.bl._private.facts;}
+	};
     return server;
 };
 

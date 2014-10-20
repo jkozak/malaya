@@ -325,6 +325,10 @@ function wrap(dir,bl,options) {
 	    }
 	};
     }
+    if (util.env==='test')
+	ans._private = {
+	    bl: bl
+	};
     return ans;
 }
 
