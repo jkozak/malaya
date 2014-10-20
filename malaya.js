@@ -2,6 +2,7 @@
 
 var    argv = require('minimist')(process.argv.slice(2));
 
+var       _ = require('underscore');
 var  events = require('events');
 var  assert = require('assert');
 var      fs = require('fs');
@@ -26,7 +27,7 @@ function WsConnection(conn,server) {
 	conn.end();
     };
 
-    this.port  = util.format('ws:???');
+    this.port  = util.format('websocket://%s:%d/',conn.remoteAddress,conn.remotePort);
     this.write = write;
     this.on    = function(what,handler) {ee.on(what,handler);};
     this.end   = function() {conn.end();}
@@ -43,17 +44,17 @@ function WsConnection(conn,server) {
     });
     conn.on('close',function() {
 	ee.emit('close');
-	conns.remove(mc);
     });
+    return this;
 }
 
 exports.createServer = function(opts) {
     var http    = null;
     var bl      = null;		// business logic
     var syshash = null;		// at startup
-    var conns   = [];
+    var conns   = {};
     var timer   = null;
-    var ee     = new events.EventEmitter();
+    var ee      = new events.EventEmitter();
 
     var server = {
 	on:  function(what,handler) {ee.on(what,handler);},
@@ -83,18 +84,6 @@ exports.createServer = function(opts) {
 		bl.save()
 		process.exit(0);
 	    }
-
-	    conns.add = function(conn) {
-		conns.push(conn);
-	    }
-	    conns.remove = function(x) {
-		for (var i=0;i<this.length;i++)
-		    if (this[i]===x) {
-			this.splice(i,1);
-			return;
-		    }
-		util.debug("*** couldn't remove connection %j",x);
-	    }
 	},
 
 	transform: function(blt) { // `blt` implements bl transform protocol (transform, no update/query)
@@ -119,11 +108,9 @@ exports.createServer = function(opts) {
 		    switch (conn.prefix) {
 		    case '/data':
 			util.debug("client connection from: %s:%s to %s",conn.remoteAddress,conn.remotePort,conn.prefix);
-			// +++ pass a `cmd` arg through in `options` below +++
-			// +++ this to invoke a prevalent handler +++
-			// +++ which in turn invokes the core business logic +++
 			var mc = new WsConnection(conn,server);
 			ee.emit('makeConnection',mc);
+			server.addConnection(mc);
 			mc.on('close',function() {
 			    ee.emit('loseConnection',mc);
 			});
@@ -153,20 +140,19 @@ exports.createServer = function(opts) {
 	},
 	
 	addConnection: function(conn) {
-	    conns.add(conn);
-	    ee.emit('makeConnection',conn);
+	    assert.equal(conns[conn.port],undefined);
+	    conns[conn.port] = conn;
 	    conn.on('close',function() {
-		ee.emit('loseConnection',conn);
-		conns.remove(conn);
+		delete conns[conn.port];
 	    });
 	},
 	
 	close: function() {
 	    if (http)
 		http.close();
-	    var conns_ = conns.slice();  // copy list, original will be updated
-	    for (var i in conns_)
-		conns_[i].end();
+	    var conns_ = Object.keys(conns);
+	    for (var p in conns_)
+		conns_[p].end();
 	    var syshash = bl.save();
 	    http = null;
 	    if (timer)		// +++ tidy up timers +++
@@ -176,7 +162,8 @@ exports.createServer = function(opts) {
 	},
 	
 	broadcast: function(js,filter) {
-	    conns.forEach(function(conn) {
+	    conns.forEach(function(port) {
+		var conn = conns[port];
 		if (!filter || filter(conn))
 		    conn.write(js);
 	    });
@@ -188,7 +175,20 @@ exports.createServer = function(opts) {
 	    assert.equal(typeof js[0],'string');
 	    var command = [js[0],js[1],{port:conn.port}];
 	    ee.emit('command',command);
-	    return bl.update(command);
+	    var res = bl.update(command);
+	    if (opts['auto_output'] && _.any(res.adds,function(add){return add[0]==='_output';})) {
+		bl.update(['_take-outputs']).dels.forEach(function(output) {
+		    console.log("*** _output: %j",output);
+		    assert.equal(output.length,3);
+		    if (output[1]==='all')
+			server.broadcast(output[2]);
+		    else if (output[1]=='self')
+			conn.write(output[2]);
+		    else
+			conns[output[1]].write(output[2]);
+		});
+	    }
+	    return res;
 	},
 	
 	query: function(js,conn) {

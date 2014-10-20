@@ -1,0 +1,27 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Sun, 19 Oct 2014 14:20:03 +0100
+Subject: live queries
+State: new
+Message-Id: <f2ed1571b919792e-0-artemis@renn>
+
+are quite easy, in simple cases.
+
+Every query that is monotonic (-ish) via something like addition can be
+turned into a stream.
+
+Invoked like this:
+
+store st {
+    // ...
+    query total(i;
+                ['number',{n}];
+		a=i) a+n;
+   }
+
+   STORE.streams.total(10)(function(n){/*...*/}) >> [a,n]
+
+so `streams.total` returns a function (with params bound) which will return the
+snapshot value and stream out updates to the callback.
+
+The dispatch function called by `_add` should also dispatch to these.
+Scope for a fair bit of common subexpression elimination.
