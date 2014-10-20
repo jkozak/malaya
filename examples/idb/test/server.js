@@ -62,8 +62,8 @@ var mkServer = function(opts) {
 
 function logOnOffServerTest(srvr) {
     var  ans = srvr.command(['logon',{user:"John Kozak",pw:"JK"}],{port:'test:'});
-    assert.equal(ans.adds.length,1);            // one nett addition
-    assert.equal(ans.adds.length,1);            // one nett deletion
+    assert.equal(ans.adds.length,1);            // one nett addition and _output
+    assert.equal(ans.dels.length,1);            // one nett deletion
     assert.equal(ans.adds[0][0],'Permissions'); // both of Permissions records
     assert.equal(ans.dels[0][0],'Permissions');
     assert.equal(ans.adds[0][1].LoggedOn,1);

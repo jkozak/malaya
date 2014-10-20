@@ -36,7 +36,7 @@ var IDB = store {
     rule (-['Permissions',{ApplicationName:"John Kozak",Password,...rs}], // tweak my pwd
 	  Password!=="JK",
 	  +['Permissions',{ApplicationName:"John Kozak",Password:"JK",...rs}]);
-    rule (-['Permissions',{ApplicationName,Password,...rs}],         // anonymise users and passwords
+    rule (-['Permissions',{ApplicationName,Password,...rs}],              // anonymise users and passwords
 	  ApplicationName!=="John Kozak" && !rs.hasOwnProperty('anon'),
 	  aname = faker.name.findName(),
 	  apwd  = faker.internet.password(),
@@ -57,7 +57,9 @@ var IDB = store {
     // logon processing
     rule (-['logon',      {user,pw},{port}],
 	  -['Permissions',{ApplicationName:user,Password:pw,LoggedOn:0,...rs}],
-	  +['Permissions',{ApplicationName:user,Password,LoggedOn:1,port,...rs}] );
+	  +['Permissions',{ApplicationName:user,Password,LoggedOn:1,port,...rs}]
+	  //+['_output','self',{OK:1,session_key:0}]
+	 );
     rule (-['logon',      {user,pw}],
 	  ['Permissions',{ApplicationName:user,Password:pw,LoggedOn:1}],
 	  +['msg',null,"already logged on"] );
@@ -82,6 +84,11 @@ var IDB = store {
     rule (['tick'],-['msg']);
     // +++ 
     rule(-['tick']);
+
+    // output
+    rule (['_take-outputs'],-['_output']);
+    rule (-['_take-outputs']);
+
 
     query users(;
 		['Permissions',{ApplicationID,ApplicationName,Password}];

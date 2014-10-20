@@ -16,7 +16,8 @@ var malaya = require('../../malaya.js').createServer({
     logging:       true,
     init:          !!argv.init,
     tag:           'idb',
-    businessLogic: argv.bl ? path.resolve(argv.bl) : path.join(__dirname,'bl.chrjs')
+    businessLogic: argv.bl ? path.resolve(argv.bl) : path.join(__dirname,'bl.chrjs'),
+    auto_output:   false
 });
 
 var fe3 = require('./fe3.js').createServer({malaya:malaya});
