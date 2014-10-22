@@ -181,7 +181,7 @@ function logOnOffMultipleFE3ConnectionTest(srvr) {
 
 describe("FE3Connection",function() {
     var prevalenceDir = path.join(temp.mkdirSync(),'prevalence');
-    it("inits nicely and performs a simple logon and logoff XXX",function() {
+    it("inits nicely and performs a simple logon and logoff",function() {
 	var srvr = mkServer({init:true,prevalenceDir:prevalenceDir});
 	logOnOffFE3ConnectionTest(srvr);
 	srvr.close();

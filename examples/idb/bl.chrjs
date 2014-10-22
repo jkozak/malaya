@@ -15,6 +15,17 @@ function mkHeartbeat(d) {
 	return {heartbeat:{timestamp:d.toTimeString().substring(0,9)+d.getDate()+'/'+(d.getMonth()+1)+'/'+(d.getYear()+1900)}};
 }
 
+function addToPropertyList(obj,prop,value) {
+    if (obj[prop]===undefined)
+	obj[prop] = [];
+    obj[prop].push(value);
+    return obj;
+}
+function addToIndexList(obj,prop,value) {
+    obj[prop] = value;
+    return obj;
+}
+
 // need to handle these messages:
 //  X AuctionTemplateBlock
 //    AuctionTemplate
@@ -198,15 +209,16 @@ var IDB = store {
 			      MatchingDuration:     at.MatchingDuration,
 			      SecondChanceDuration: 0
 			   };
-    query auctionInstrumentsTemplate(id;
-				     ['AuctionInstrumentsTemplate',{AuctionTemplateID:id,InstID,...ait}],
-				     ['Instrument',{InstID,...inst}];
-				     a=[]) a.concat([{
-					 InstID:       InstID,
-					 Midprice:     inst.MidPrice,
-					 Tolerance:    inst.VolatilityPercent,
-					 AddTolerance: inst.VolatilitySpread
-				     }]);
+    query auctionTemplateInstances(id;
+				   ['AuctionInstrumentsTemplate',{AuctionTemplateID:id,InstID,...ait}],
+				   ['Instrument',{InstID,...inst}];
+				   a=[]) a.addToIndexList(ait.AuctionTemplateInstance,{
+				       InstID:       InstID,
+				       Midprice:     inst.MidPrice,
+				       Tolerance:    inst.VolatilityPercent,
+				       AddTolerance: inst.VolatilitySpread
+				   });
+    // +++ templates -> template,... -> instance,... -> instrument,... +++
 };
 
 module.exports = IDB;
