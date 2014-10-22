@@ -111,6 +111,28 @@ describe("query",function() {
 	};
 	assert.deepEqual(st.queries.cookie(51,0).result,["with jam"]);
     });
+    it("should generate even silly code",function(){
+	// this cropped up while testing nested queries
+    	var st = store {
+    	    ['Cookies',{ApplicationID:51,CookieID:0,Cookie:"with jam"}];
+    	    query cookie(appId,id;
+    			 ['Cookies',{ApplicationID:appId,CookieID:id}];
+    			 a=[]) a.concat([[appId,id]]);
+    	};
+	assert.deepEqual(st.queries.cookie(51,0).result,[[51,0]]);
+    });
+    it("should nest",function(){
+    	var st = store {
+    	    ['Cookies',{ApplicationID:51,CookieID:0,Cookie:"with jam"}];
+    	    query cookie(appId,id;
+    			 ['Cookies',{Cookie,ApplicationID:appId,CookieID:id}];
+    			 a=[]) a.concat([Cookie,ingredient(appId,id)]);
+    	    query ingredient(appId,id;
+    			     ['Cookies',{ApplicationID:appId,CookieID:id,Cookie}];
+    			     a=[]) a.concat([Cookie]);
+    	};
+	assert.deepEqual(st.queries.cookie(51,0).result,["with jam",["with jam"]]);
+    });
 });
 
 describe("store generic operations",function() {

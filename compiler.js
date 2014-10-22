@@ -513,6 +513,10 @@ function genEqual(p,q) {
 	return b.callExpression(bIsEqual,[p,q]);
 }
 
+function bWrapFunction(bid,bargs,fn) {
+    return b.functionExpression(null,bargs,b.blockStatement([fn(b.callExpression(bid,bargs))]));
+}
+
 function genAccessor(x,path) {
     if (path.length===0)
 	return x;
@@ -861,7 +865,7 @@ function generateJS(js) {
 	};
 	
 	var js1 = genItem(0,i,genPayload);
-	if (binds.length!=0)
+	if (binds.length!=0) 
 	    js1.unshift(b.variableDeclaration('var',
 					      _.map(binds,function(v){
 						  return b.variableDeclarator(b.identifier(v),null);} ) ))
@@ -895,12 +899,7 @@ function generateJS(js) {
 	});
 
 	rv.params = chr.args;
-	rv.body.body.push(b.returnStatement(b.objectExpression([b.property('init',
-									   b.identifier('t'),
-									   b.identifier('t') ),
-								b.property('init',
-									   b.identifier('result'),
-									   chr.init.left) ])));
+	rv.body.body.push(b.returnStatement(chr.init.left));
 	parser.visit(rv,{	// remove query args and accum variable from binding site decls
 	    visitVariableDeclarator: function(path) {
 		var decl = path.node;
@@ -910,6 +909,15 @@ function generateJS(js) {
 		return false;
 	    }
 	});
+	parser.visit(rv,{	// if we just removed all the declarators, remove the declaration
+	    visitVariableDeclaration: function(path) {
+		var decl = path.node;
+		if (decl.declarations.length===0)
+		    path.replace();
+		return false;
+	    }
+	});
+	// +++
 	rv.body.body.unshift(b.variableDeclaration('var',[b.variableDeclarator(chr.init.left,chr.init.right)]));
 	
 	return rv;
@@ -976,14 +984,37 @@ function generateJS(js) {
 	    b.variableDeclarator(b.identifier('rules'),
 				 b.arrayExpression(code.rules))
 	] ));
-	findTag('INSERT_QUERIES').insertAfter(b.variableDeclaration('var',[
-	    b.variableDeclarator(b.identifier('queries'),
-				 b.objectExpression(
-				     _.map(_.keys(code.queries),
-					   function(k) {return b.property('init',
-									  b.identifier(k),
-									  code.queries[k]); } ) ) )
-	] ));
+	var bQueryReturn = function(bq) {
+	    return b.returnStatement(b.objectExpression([b.property('init',
+								    b.identifier('t'),
+								    b.identifier('t') ),
+							 b.property('init',
+								    b.identifier('result'),
+								    bq) ]));
+	};
+	if (_.keys(code.queries).length>0)
+	    findTag('INSERT_QUERIES').insertAfter(b.variableDeclaration('var',[
+		b.variableDeclarator(b.identifier('queries'),
+				     b.callExpression(b.functionExpression(
+					 null,
+					 [],
+					 b.blockStatement([
+					     b.variableDeclaration('var',
+								   _.map(_.keys(code.queries),
+									 function(k) {
+									     return b.variableDeclarator(
+										 b.identifier(k),
+										 code.queries[k]); } ) ),
+					     b.returnStatement(b.objectExpression(
+						 _.map(_.keys(code.queries),
+						       function(k) {
+							   return b.property(
+							       'init',
+							       b.identifier(k),
+							       bWrapFunction(b.identifier(k),
+									     code.queries[k].params,
+									     bQueryReturn) ); } ) )) ]) ),
+						      []) ) ]));
 	findTag('INSERT_INIT').insertAfter(b.variableDeclaration('var',[
 	    b.variableDeclarator(b.identifier('init'),
 				 b.functionExpression(null,[],b.blockStatement(code.inits)) ) ]));

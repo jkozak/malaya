@@ -1,0 +1,30 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Tue, 21 Oct 2014 20:11:54 +0100
+Subject: nested query calls
+State: resolved
+Message-Id: <949a42219a2e3fbf-0-artemis@renn>
+resolution: fixed
+
+Will this work for free (i.e. just do `queries.<nested>(...)` in a query?) - no,
+because of mangling, but almost!
+
+Could generate this code for the query block:
+
+var queries = ((function(){
+   var query1 = function(...){...};
+   var query2 = function(...){...};
+   ...
+   return {query1:query1,query2:query2,...};
+})())
+
+That's not eright - use:
+
+var queries = ((function(){
+   var query1 = function(...){...};
+   var query2 = function(...){...};
+   ...
+   return {query1:function(<arg>,...) {return {t:t,result:query1(<arg>,...)}},...};
+})())
+
+Is the `in_play` set the same for the nested calls?
+
