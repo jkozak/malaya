@@ -29,6 +29,7 @@ var rm_rf = require("rimraf");
 var hash  = require("./hash.js")('sha1');
 var path  = require("path");
 var util  = require("./util.js");
+var lock  = require("./lock.js");
 
 var consts = process.binding('constants');
 if (consts.O_DSYNC===undefined)
@@ -55,8 +56,8 @@ var source_version = util.source_version;
 function init(dirname,options) {
     // prepare a directory to be a store
     fs.mkdirSync(dirname+"/state");
-    fs.writeFileSync(dirname+"/state/world",util.serialise(null)+"\n");
-    fs.appendFileSync(dirname+"/state/world",util.serialise({})+"\n");
+    fs.writeFileSync(path.join(dirname,"state/world"),util.serialise(null)+"\n");
+    fs.appendFileSync(path.join(dirname,"state/world"),util.serialise({})+"\n");
     open(dirname);
     journalise('init',options);
     close();
@@ -66,14 +67,15 @@ function open(dirname) {
     // open an existing store
     if (dir!==null)
 	throw new Error("already open");
+    lock.lockSync(path.join(dirname,'lock'));
     try {
 	fs.statSync(dirname+'/state');
     } catch (err) {
 	try {
-	    fs.renameSync(dirname+"/state-NEW",dirname+'/state');
+	    fs.renameSync(path.join(dirname,"state-NEW"),path.join(dirname,'state'));
 	} catch (e) {
 	    try {
-		fs.renameSync(dirname+"/state-OLD",dirname+'/state');
+		fs.renameSync(path.join(dirname,"state-OLD"),path.join(dirname,'state'));
 	    } catch (e) {
 		throw new Error("can't find a state dir to open");
 	    }
@@ -85,7 +87,7 @@ function open(dirname) {
     case 'o_dsync': flg=consts.O_APPEND|consts.O_CREAT|consts.O_WRONLY|consts.O_DSYNC; break;
     default:        flg="a"; break;
     }
-    fd_jrnl = fs.openSync(dirname+"/state/journal",flg);
+    fd_jrnl = fs.openSync(path.join(dirname,"/state/journal"),flg);
     dir     = dirname;
     date    = null;
     t_jrnl  = null;
@@ -95,6 +97,7 @@ function close() {
     // close a store (quickly)
     if (fd_jrnl)
 	fs.closeSync(fd_jrnl);
+    lock.unlockSync(path.join(dir,'lock'));
     fd_jrnl = null;
     dir     = null;
     date    = null;
@@ -172,19 +175,19 @@ function save(root) {
     if (dir===null)
 	throw new Error("must be open to save");
     var dir_sav = dir;
-    var dir_cur = dir+"/state"
-    var dir_new = dir+"/state-NEW";
-    var dir_old = dir+"/state-OLD";
+    var dir_cur = path.join(dir,"state");
+    var dir_new = path.join(dir,"state-NEW");
+    var dir_old = path.join(dir,"state-OLD");
     var syshash = null;
     close();
     if (audit) 
-	syshash = hash_store.putFileSync(dir_cur+"/journal");
+	syshash = hash_store.putFileSync(path.join(dir_cur,"/journal"));
     rm_rf.sync(dir_new);
     fs.mkdirSync(dir_new);
-    fs.writeFileSync( dir_new+"/world",util.serialise(syshash));
-    fs.appendFileSync(dir_new+"/world","\n");
-    fs.appendFileSync(dir_new+"/world",util.serialise(root));
-    fs.appendFileSync(dir_new+"/world","\n");
+    fs.writeFileSync( path.join(dir_new,"world"),util.serialise(syshash));
+    fs.appendFileSync(path.join(dir_new,"world"),"\n");
+    fs.appendFileSync(path.join(dir_new,"world"),util.serialise(root));
+    fs.appendFileSync(path.join(dir_new,"world"),"\n");
     rm_rf.sync(dir_old);
     fs.renameSync(dir_cur,dir_old);
     fs.renameSync(dir_new,dir_cur);
@@ -194,8 +197,8 @@ function save(root) {
 }
 
 function load(fn_root,fn_datum) {
-    var world_file   = dir+"/state/world";
-    var journal_file = dir+"/state/journal";
+    var world_file   = path.join(dir,"state/world");
+    var journal_file = path.join(dir,"state/journal");
     var lineno       = 1;
     var syshash      = null;
     // load a store

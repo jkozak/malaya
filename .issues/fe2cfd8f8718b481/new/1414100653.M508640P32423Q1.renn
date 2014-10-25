@@ -1,0 +1,11 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Thu, 23 Oct 2014 22:44:13 +0100
+Subject: prevalence should lock its directory
+State: resolved
+Message-Id: <fe2cfd8f8718b481-0-artemis@renn>
+resolution: fixed
+
+see npm package lockfile - [later] it's a bid weedy - doesn't check
+staleness well (should use the pidfile mechanism), also should use the
+guaranteed atomic hard linking trick.
+
