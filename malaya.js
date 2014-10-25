@@ -56,7 +56,16 @@ exports.createServer = function(opts) {
     var ee      = new events.EventEmitter();
 
     var server = {
-	on:  function(what,handler) {ee.on(what,handler);},
+	on:  function(what,handler) {
+	    if (['fire'].indexOf(what)!==-1)
+		bl.on(what,handler);
+	    else
+		ee.on(what,handler);
+	},
+
+	get size() {
+	    return bl.size;
+	},
 	
 	start: function(done) {
 	    if (opts.init) {
@@ -163,7 +172,7 @@ exports.createServer = function(opts) {
 	},
 	
 	command: function(js,conn) {
-	    assert(js instanceof Array);
+	    assert(_.isArray(js));
 	    assert.equal(js.length,2);
 	    assert.equal(typeof js[0],'string');
 	    var command = [js[0],js[1],{port:conn.port}];
@@ -186,7 +195,7 @@ exports.createServer = function(opts) {
 	},
 	
 	query: function(js,conn) {
-	    assert(js instanceof Array);
+	    assert(_.isArray(js));
 	    assert(js.length>0);
 	    assert.equal(typeof js[0],'string');
 	    ee.emit('query',js)
@@ -196,7 +205,7 @@ exports.createServer = function(opts) {
 	queries: function(js,conn) { // batch of queries, executed simultaneously
 	    var   t = null;
 	    var ans = [];
-	    assert(js instanceof Array);
+	    assert(_.isArray(js));
 	    assert(js.length>0);
 	    js.forEach(function(js1) {
 		var res = server.query(js1,conn);
@@ -207,6 +216,10 @@ exports.createServer = function(opts) {
 		ans.push(res.result);
 	    });
 	    return [ans,{t:t}];
+	},
+
+	ready: function() {
+	    ee.emit('ready');
 	}
     };
     if (util.env==='test')

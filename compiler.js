@@ -86,6 +86,7 @@ function TEMPLATE_store() {
 		return ans;
 	    },
 	    get t()       {return t;},
+	    get size()    {return Object.keys(facts).length;},
 	    get queries() {return queries;},
 	    reset: function(){t=1;index={};facts={};init();},
 	    
