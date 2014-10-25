@@ -297,6 +297,12 @@ function wrap(dir,bl,options) {
 	load:function() {
 	    return load(bl.set_root,bl.update);
 	},
+	on:function(what,handler) {
+	    return bl.on(what,handler);
+	},
+	get size() {
+	    return bl.size;
+	},
 	query:function(q) {
 	    try {
 		bl_running = true;
