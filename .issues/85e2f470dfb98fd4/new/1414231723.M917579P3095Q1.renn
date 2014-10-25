@@ -1,0 +1,12 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Sat, 25 Oct 2014 11:08:43 +0100
+Subject: Dates are not being serialised properly
+State: resolved
+Message-Id: <85e2f470dfb98fd4-0-artemis@renn>
+resolution: fixed
+
+Date.prototype.toJSON is converting the date object to a string.  This happens
+before the `JSON.stringify` replacer function is called.  This seems to be
+a recent change?
+
+Deleting `Date.prototype.toJSON` will fix this, but is a bit scary.
