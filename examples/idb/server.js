@@ -74,7 +74,7 @@ var listen = function() {
 malaya.start();
 
 if (argv.init) {
-    // +++ do this via the `transform` machanism that doesn't exist yet [b8cb5936e7df0244] +++
+    // +++ do this via the `transform` mechanism that doesn't exist yet [b8cb5936e7df0244] +++
     var IDB = {add:function(js) {malaya.command(js,{port:'init'});}};
     if (argv.init.match(/\.json$/)) {
 	var json = JSON.parse(fs.readFileSync(argv.init));

@@ -11,4 +11,15 @@ describe('constants',function() {
     });
 });
 
-
+describe('serialise',function() {
+    var date = new Date(0);
+    it("should encode bare dates nicely",function() {
+    	assert(util.deserialise(util.serialise(date)) instanceof Date);
+    });
+    it("should encode dates in arrays nicely",function() {
+    	assert(util.deserialise(util.serialise([date]))[0] instanceof Date);
+    });
+    it("should encode dates in objects nicely",function() {
+    	assert(util.deserialise(util.serialise({d:date})).d instanceof Date);
+    });
+});

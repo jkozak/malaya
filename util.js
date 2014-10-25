@@ -60,7 +60,7 @@ exports.readFileLinesSync = function(path,fn) {
 //     string "abc" is encoded as ":abc"
 //     date   DDD   is encoded as "date:"+DDD
 //     ...
-exports.serialise = function(v) {
+var serialise = function(v) {
     return JSON.stringify(v,function(k,v) {
 	if (v instanceof Date)
 	    return "date:"+v;
@@ -71,16 +71,27 @@ exports.serialise = function(v) {
     });
 };
 
+exports.serialise = function(v) {
+    // disable standard `toJSON` processing which we replace above
+    var saveDate = Date.prototype.toJSON;
+    try {
+	Date.prototype.toJSON = function(){return this;};
+	return serialise(v);
+    } finally {
+	Date.prototype.toJSON = saveDate;
+    }
+};
+
 exports.deserialise = function(s) {
     return JSON.parse(s,function(k,v) {
 	if (typeof v!=="string")
 	    return v;
 	else if (v.charAt(0)==':')
 	    return v.substring(1);
-	else if (v.startsWith("date:"))
+	else if (v.indexOf("date:")===0)
 	    return new Date(v.substring(5)); // "date:".length===5
 	else
-	    return v;
+	    throw new Error("unencoded: %s",v);
     });
 };
 
