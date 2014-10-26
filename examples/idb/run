@@ -1,0 +1,24 @@
+#!/usr/bin/env node
+// -*- mode:javascript -*-
+
+"use strict";
+
+var  argv = require('minimist')(process.argv.slice(2),{string:['init']});
+var setup = require('./setup.js');
+
+process.on('SIGINT',function() {
+    if (server)
+	server.close();
+    process.exit(1);
+});
+process.on('SIGQUIT',function() {
+    process.exit(1);
+});
+process.on('SIGHUP',function() {
+    server.save();
+});
+process.on('exit',function(code) {
+});
+
+var server = setup.build({init:argv.init});
+server.run();

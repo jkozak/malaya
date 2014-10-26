@@ -1,3 +1,9 @@
+H1 { text-align:center }
+
+BODY {
+  font-family: "Helvetica";
+}
+
 .big-button {
     display:inline-block;
     width:100px;
@@ -8,12 +14,9 @@
     color:#f5f5f5;
     text-align:center;
     text-decoration:none;
-    background: #00c600;
+    background: rgb(0,212,0);
     box-shadow: 0 0 3px gray;
     font-size:20px;
     font-weight:bold;
-}
-.big-button:hover {
-    background: #00e600;
 }
 
