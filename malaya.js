@@ -149,11 +149,12 @@ exports.createServer = function(opts) {
 	},
 	
 	close: function() {
+	    var conns_ = Object.keys(conns);
+	    conns_.forEach(function(p) {
+		conns[p].end();
+	    });
 	    if (http)
 		http.close();
-	    var conns_ = Object.keys(conns);
-	    for (var p in conns_)
-		conns_[p].end();
 	    var syshash = bl.save();
 	    http = null;
 	    bl.close();

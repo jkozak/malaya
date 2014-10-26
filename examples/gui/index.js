@@ -35,15 +35,15 @@ $(document).ready(function() {
     opts.audit         = true;
     opts.webDir        = fs.realpathSync('.');
     opts.auto_output   = true;
+    $('#title').text(util.format("malaya.%s control panel",opts.tag))
     // set parameter table
-    $('#paramTag') .text(opts.tag);
     $('#paramPort').text(opts.port);
     $('#paramFE3P').text(opts.fe3Port);
     $('#paramBL')  .text(opts.businessLogic);
     $('#paramPrvD').text(opts.prevalenceDir);
     // +++ get from above +++
-    //if (!(fs.existsSync(opts.prevalenceDir)))
-    //	opts.init = true;
+    if (!(fs.existsSync(opts.prevalenceDir)))
+	throw new Error("NYI - init");
     $('#bigButton').hover(function() {brighten($(this),1.2)},
 			  function() {brighten($(this),0.83333)} );
     $('#bigButton').click(function() {
@@ -69,8 +69,7 @@ $(document).ready(function() {
 		});
 		server.on('loaded',function(hash) {
 		    // !!! this is now called too late to do anything !!!
-		    $('#narrHash').text("opening hash");
-		    $('#textHash').text(hash);
+		    $('#paramHash').text(hash);
 		});
 		server.on('ready',function() {
 		    $('#bigButton').css('background','rgb(254,0,0)');
@@ -78,8 +77,7 @@ $(document).ready(function() {
 		    state = 'started';
 		});
 		server.on('closed',function(hash) {
-		    $('#narrHash').text("closing hash");
-		    $('#textHash').text(hash);
+		    $('#paramHash').text(hash);
 		    $('#bigButton').css('background','rgb(0,254,0)');
 		    $('#bigButton').text('START');
 		    state = 'stopped';

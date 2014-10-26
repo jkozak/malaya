@@ -23,9 +23,6 @@ exports.build = function(opts) {
     var fe3port = opts.fe3port || 5110;
     var  wsport = opts.wsport  || 3000;
     
-    fe3srv.on('connect',function(mc) {
-	server.addConnection(mc);
-    });
     fe3srv.on('listening',function() {
 	util.debug('fe3  listening on *:%s',fe3port);
 	server.ready();

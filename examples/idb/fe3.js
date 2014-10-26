@@ -122,6 +122,9 @@ function FE3Connection(sock,server) {
     this.close = function() {
 	sock.end();
     }
+    this.end = function() {
+	sock.end();
+    }
     this.write = function(js) {
 	write(js);
     }
@@ -157,7 +160,11 @@ function FE3Connection(sock,server) {
 	sock.destroy();		// ???
     });
     sock.on('close',function() {
-	command(['logoff',{appId:appId}]);
+	try {
+	    command(['logoff',{appId:appId}]);
+	} catch (e) {
+	    console.log("couldn't logoff: "+e); // this happens if server is shutdown
+	}
 	ee.emit('close');
     });
     
@@ -166,13 +173,13 @@ function FE3Connection(sock,server) {
 	    handleJsx: handleJsx
 	};
     }
+    return this;
 }
 
 exports.createServer = function(options) {
     var ee     = new events.EventEmitter();
     var server = net.createServer(function(sock) {
-	var conn = new FE3Connection(sock,options.malaya);
-	ee.emit('connect',conn);
+	options.malaya.addConnection(new FE3Connection(sock,options.malaya));
     });
     this.listen = function(p,h) {
 	server.listen(p,h);

@@ -7,24 +7,20 @@
    <script src="index.js"></script>
  </head>
  <body>
-   <h1>malaya server control</h1>
+   <h1 id='title'>malaya server control</h1>
    <div>
      <table id='parameters' style="display:inline-block">
        <tbody>
-	 <tr><td>tag           </td><td><code><span id='paramTag'/></code></td></tr>
 	 <tr><td>WS port       </td><td><code><span id='paramPort'/></code></td></tr>
 	 <tr><td>FE3 port      </td><td><code><span id='paramFE3P'/></code></td></tr>
 	 <tr><td>business logic</td><td><code><span id='paramBL'/>  </code></td></tr>
 	 <tr><td>fact store    </td><td><code><span id='paramPrvD'/></code></td></tr>
+	 <tr><td>hash          </td><td><code><span id='paramHash'/></code></td></tr>
 	 <tr><td>#facts        </td><td><code><span id='paramNF'/>  </code></td></tr>
 	 <tr><td>#connections  </td><td><code><span id='paramNC'/>  </code></td></tr>
        </tbody>
      </table>
-     <span id="bigButton" class="big-button" style="vertical-align:top">START</span>
-   </div>
-   <div>
-     <span id='narrHash' style="display:inline-block"></span>
-     <span id='textHash' style="display:inline-block"></span>
+       <span id="bigButton" class="big-button" style="vertical-align:top">START</span>
    </div>
  </body>
 </html>
