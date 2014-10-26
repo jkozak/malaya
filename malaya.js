@@ -116,12 +116,7 @@ exports.createServer = function(opts) {
 		    switch (conn.prefix) {
 		    case '/data':
 			util.debug("client connection from: %s:%s to %s",conn.remoteAddress,conn.remotePort,conn.prefix);
-			var mc = new WsConnection(conn,server);
-			ee.emit('makeConnection',mc);
-			server.addConnection(mc);
-			mc.on('close',function() {
-			    ee.emit('loseConnection',mc);
-			});
+			server.addConnection(new WsConnection(conn,server));
 			break;
 		    };
 		});
@@ -146,8 +141,10 @@ exports.createServer = function(opts) {
 	addConnection: function(conn) {
 	    assert.equal(conns[conn.port],undefined);
 	    conns[conn.port] = conn;
+	    ee.emit('makeConnection',conn);
 	    conn.on('close',function() {
 		delete conns[conn.port];
+		ee.emit('loseConnection',conn);
 	    });
 	},
 	
@@ -220,7 +217,7 @@ exports.createServer = function(opts) {
 
 	ready: function() {
 	    ee.emit('ready');
-	}
+	},
     };
     if (util.env==='test')
 	server._private = {
