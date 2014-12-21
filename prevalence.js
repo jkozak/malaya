@@ -400,7 +400,7 @@ exports.createExpressMiddleware = function(path) {
 		sn = seen[req.url];
 		res.setHeader("Content-Type",express.static.mime.lookup(req.url));
 		res.setHeader("ETag",        sn.hash);
-		res.status(200).sendfile(hash_store.makeFilename(sn.hash));
+		res.status(200).sendFile(hash_store.makeFilename(sn.hash));
 		return;
 	    } catch (e) {
 		if (e.code!=='ENOENT')

@@ -8,7 +8,7 @@ init:
 build: 	init
 
 tests:	init
-	NODE_ENV=test mocha --compilers chrjs:compiler -C test examples/*/test #--grep "XXX"
+	NODE_ENV=test mocha -R min --compilers chrjs:compiler -C test examples/*/test #--grep "XXX"
 
 benchmarks: CHRJSS = $(wildcard benchmark/*.chrjs examples/*/benchmark/*.chrjs)
 benchmarks:	init
