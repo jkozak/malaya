@@ -9,3 +9,5 @@ syntax: glob
 
 node_modules/
 .prevalence/
+
+examples/idb/*.log
