@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "description": "tiny vegetarian mosquito with GUI",
   "dependencies": {
+    "pixi.js": "^2.2.3"
   },
   "devDependencies": {
     "mocha": "^1.20.1"
@@ -12,7 +13,7 @@
     "url": "ssh://pooka.vm.bytemark.co.uk/malaya"
   },
   "scripts": {
-      "test":   "NODE_ENV=test mocha -C"
+    "test": "NODE_ENV=test mocha -C"
   },
-  "main":"index.html"
+  "main": "index.html"
 }

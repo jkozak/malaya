@@ -6,6 +6,17 @@ var   path = require('path');
 var malaya = require('../../malaya.js')
 var    fe3 = require('./fe3.js');
 
+exports.extraOpts = {
+    fe3Port: ["FE3 port",
+	      5110,
+	      function(s) {
+		  var ans = parseInt(s);
+		  if (ans===NaN)
+		      throw new Error("invalid port");
+		  return ans;
+	      } ]
+};
+
 exports.build = function(opts) {
     opts = _.extend({
 	prevalenceDir: path.join(__dirname,'.prevalence'),

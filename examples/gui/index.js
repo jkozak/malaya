@@ -38,9 +38,12 @@ $(document).ready(function() {
     $('#title').text(util.format("malaya.%s control panel",opts.tag))
     // set parameter table
     $('#paramPort').text(opts.port);
-    $('#paramFE3P').text(opts.fe3Port);
     $('#paramBL')  .text(opts.businessLogic);
     $('#paramPrvD').text(opts.prevalenceDir);
+    for (var k in build.extraOpts) {
+	var xo = build.extraOpts[k];
+	$('#parameters tr:first').before(util.format("<tr><td>%s</td><td><code><span id='#xparam%s'>%s</span></code></td></tr>",xo[0],k,xo[1]));
+    }
     // +++ get from above +++
     if (!(fs.existsSync(opts.prevalenceDir)))
 	throw new Error("NYI - init");
@@ -61,15 +64,15 @@ $(document).ready(function() {
 		process.on('SIGHUP',function() {server.save();});
 		server.fe3.on('listening',function() {
 		    cFacts = server.size;
-		    $('#paramNF').text(cFacts);
-		    $('#paramNC').text(cConns);
-		    server.on('makeConnection',function() {$('#paramNC').text(++cConns);});
-		    server.on('loseConnection',function() {$('#paramNC').text(--cConns);});
+		    $('#varNF').text(cFacts);
+		    $('#varNC').text(cConns);
+		    server.on('makeConnection',function() {$('#varNC').text(++cConns);});
+		    server.on('loseConnection',function() {$('#varNC').text(--cConns);});
 		    server.ready();
 		});
 		server.on('loaded',function(hash) {
 		    // !!! this is now called too late to do anything !!!
-		    $('#paramHash').text(hash);
+		    $('#varHash').text(hash);
 		});
 		server.on('ready',function() {
 		    $('#bigButton').css('background','rgb(254,0,0)');
@@ -77,7 +80,7 @@ $(document).ready(function() {
 		    state = 'started';
 		});
 		server.on('closed',function(hash) {
-		    $('#paramHash').text(hash);
+		    $('#varHash').text(hash);
 		    $('#bigButton').css('background','rgb(0,254,0)');
 		    $('#bigButton').text('START');
 		    state = 'stopped';
@@ -85,7 +88,7 @@ $(document).ready(function() {
 		server.on('fire',function(obj,fact,adds,dels) {
 		    cFacts += adds.length;
 		    cFacts -= dels.length;
-		    $('#paramNF').text(cFacts);
+		    $('#varNF').text(cFacts);
 		});
 		server.run();
 		break;

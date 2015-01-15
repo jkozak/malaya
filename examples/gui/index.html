@@ -5,22 +5,56 @@
    <link rel="stylesheet" type="text/css" href="index.css">
    <script src="http://code.jquery.com/jquery-1.11.1.min.js"></script>
    <script src="index.js"></script>
+   <link href="http://code.jquery.com/ui/1.10.4/themes/ui-lightness/jquery-ui.css" rel="stylesheet">
+   <script src="http://code.jquery.com/jquery-1.10.2.js"></script>
+   <script src="http://code.jquery.com/ui/1.10.4/jquery-ui.js"></script>
+   <script>
+    $(function() {
+      $("#tabs-1").tabs({heightStyle:'auto'});
+    });
+   </script>
+   <style>
+    #tabs-1 {font-size: 14px;}
+    .ui-widget-header {
+      background: #b9cd6d;
+      border:     1px solid #b9cd6d;
+      color:      #FFFFFF;
+      font-weight:bold;
+    }
+    .ui-widget-content {
+      background:transparent;
+    }
+   </style>
  </head>
  <body>
-   <h1 id='title'>malaya server control</h1>
-   <div>
-     <table id='parameters' style="display:inline-block">
-       <tbody>
-	 <tr><td>WS port       </td><td><code><span id='paramPort'/></code></td></tr>
-	 <tr><td>FE3 port      </td><td><code><span id='paramFE3P'/></code></td></tr>
-	 <tr><td>business logic</td><td><code><span id='paramBL'/>  </code></td></tr>
-	 <tr><td>fact store    </td><td><code><span id='paramPrvD'/></code></td></tr>
-	 <tr><td>hash          </td><td><code><span id='paramHash'/></code></td></tr>
-	 <tr><td>#facts        </td><td><code><span id='paramNF'/>  </code></td></tr>
-	 <tr><td>#connections  </td><td><code><span id='paramNC'/>  </code></td></tr>
-       </tbody>
-     </table>
+   <div id="tabs-1">
+     <ul>
+       <li><a href="#tabs-2">Control</a></li>
+       <li><a href="#tabs-3">GUI</a></li>
+     </ul>
+     <div id="tabs-2">
+       <table id='parameters' style="display:inline-block">
+	 <tbody>
+	   <tr><td>WS port       </td><td><code><span id='paramPort'/></code></td></tr>
+	   <tr><td>business logic</td><td><code><span id='paramBL'/>  </code></td></tr>
+	   <tr><td>fact store    </td><td><code><span id='paramPrvD'/></code></td></tr>
+	   <tr><td>hash          </td><td><code><span id='varHash'/></code></td></tr>
+	   <tr><td>#facts        </td><td><code><span id='varNF'/>  </code></td></tr>
+	   <tr><td>#connections  </td><td><code><span id='varNC'/>  </code></td></tr>
+	 </tbody>
+       </table>
        <span id="bigButton" class="big-button" style="vertical-align:top">START</span>
+     </div>
+     <div id="tabs-3">
+       <p> text
+       <p> text
+       <p> text
+       <p> text
+       <p> text
+       <p> text
+       <p> text
+       <p> text
+     </div>
    </div>
  </body>
 </html>
