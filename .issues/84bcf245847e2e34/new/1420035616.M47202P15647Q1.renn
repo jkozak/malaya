@@ -1,0 +1,6 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Wed, 31 Dec 2014 14:20:16 +0000
+Subject: add `queue-rule` and `rule-fired` events; rename `fire` to `idle`
+State: new
+Message-Id: <84bcf245847e2e34-0-artemis@renn>
+
