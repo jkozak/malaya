@@ -85,12 +85,12 @@ var IDB = store {
 	 );
     rule (-['logon',      {user,pw}],
 	  ['Permissions',{ApplicationName:user,Password:pw,LoggedOn:1}],
-	  +['_output','self',{error:{_children:{code:16,text:"already logged on"}}}] );
+	  +['_output','self',{logon:{OK:0,error_code:16,text:"already logged on"}}] );
     rule (-['logon',      {user}],
 	  ['Permissions',{ApplicationName:user}],
-	  +['_output','self',{error:{_children:{code:17,text:"bad password"}}}] );
+	  +['_output','self',{logon:{OK:0,error_code:17,text:"bad password"}}] );
     rule (-['logon'],
-	  +['_output','self',{error:{_children:{code:18,text:"user unknown"}}}] );
+	  +['_output','self',{logon:{OK:0,error_code:18,text:"user unknown"}}] );
     rule (['Permissions',{ApplicationID}],
 	  -['Permissions',{ApplicationID}]);
     rule (-['logoff',     {appId}],

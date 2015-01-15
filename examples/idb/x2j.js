@@ -80,4 +80,4 @@ exports.build = function(obj,cb) {
 	});
     }
     return ans;
-}
+};

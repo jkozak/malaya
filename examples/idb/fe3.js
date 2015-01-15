@@ -83,6 +83,8 @@ function FE3Connection(sock,server) {
 		appName = res.adds[0][1].ApplicationName;
 		appRole = res.adds[0][1].AppRole;
 		break;
+	    case '_output':
+		break;
 	    default:
 		throw new Error("NYI "+res.adds[0][0]);
 	    }
