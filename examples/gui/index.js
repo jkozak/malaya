@@ -18,7 +18,7 @@ function brighten(elem,amount) {
     elem.css('background-color',"rgb("+p[0]+","+p[1]+","+p[2]+')');
 }
 
-$(document).ready(function() {
+$(document).ready(function() {	// 'control' panel
     var  state = 'stopped';	// 'starting','started','stopping'
     var   opts = {};
     var cFacts = 0;
@@ -96,3 +96,4 @@ $(document).ready(function() {
 	},0);
     });
 });
+

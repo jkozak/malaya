@@ -8,16 +8,19 @@
    <link href="http://code.jquery.com/ui/1.10.4/themes/ui-lightness/jquery-ui.css" rel="stylesheet">
    <script src="http://code.jquery.com/jquery-1.10.2.js"></script>
    <script src="http://code.jquery.com/ui/1.10.4/jquery-ui.js"></script>
+   <script src="node_modules/pixi.js/bin/pixi.dev.js"></script>
+   <script src="hollywood.js"></script>
    <script>
     $(function() {
-      $("#tabs-1").tabs({heightStyle:'auto'});
+      $("#tabs").tabs({heightStyle:'auto',
+      		       active:     0});  // TESTING: should be 0
     });
    </script>
    <style>
-    #tabs-1 {font-size: 14px;}
+    #tabs {font-size: 14px;}
     .ui-widget-header {
-      background: #b9cd6d;
-      border:     1px solid #b9cd6d;
+      background: #808080;
+      border:     1px solid #808080;
       color:      #FFFFFF;
       font-weight:bold;
     }
@@ -27,17 +30,20 @@
    </style>
  </head>
  <body>
-   <div id="tabs-1">
+   <div id="tabs">
      <ul>
-       <li><a href="#tabs-2">Control</a></li>
-       <li><a href="#tabs-3">GUI</a></li>
+       <li><a href="#tab-0">Control</a></li>
+       <li><a href="#tab-1">GUI</a></li>
      </ul>
-     <div id="tabs-2">
+     <div id="tab-0">
+       <!-- +++ This should be two tables (params and vars): fix layout stuff +++ -->
        <table id='parameters' style="display:inline-block">
 	 <tbody>
 	   <tr><td>WS port       </td><td><code><span id='paramPort'/></code></td></tr>
 	   <tr><td>business logic</td><td><code><span id='paramBL'/>  </code></td></tr>
 	   <tr><td>fact store    </td><td><code><span id='paramPrvD'/></code></td></tr>
+	   <tr style="transparent;height:10px"><td style="background:transparent" colspan=2/></tr>
+	   <tr style="transparent;height:10px"><td style="background:transparent" colspan=2/></tr>
 	   <tr><td>hash          </td><td><code><span id='varHash'/></code></td></tr>
 	   <tr><td>#facts        </td><td><code><span id='varNF'/>  </code></td></tr>
 	   <tr><td>#connections  </td><td><code><span id='varNC'/>  </code></td></tr>
@@ -45,16 +51,12 @@
        </table>
        <span id="bigButton" class="big-button" style="vertical-align:top">START</span>
      </div>
-     <div id="tabs-3">
-       <p> text
-       <p> text
-       <p> text
-       <p> text
-       <p> text
-       <p> text
-       <p> text
-       <p> text
+     <div id="tab-1">
+       <div id="GUI"/>
      </div>
    </div>
+   <script>
+	installHollywood($('#GUI'));
+   </script>
  </body>
 </html>

@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "description": "tiny vegetarian mosquito with GUI",
   "dependencies": {
+    "pixi": "^0.2.1",
     "pixi.js": "^2.2.3"
   },
   "devDependencies": {
