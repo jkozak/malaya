@@ -3844,6 +3844,7 @@ var util = require('./util.js');
     }
 
     // chrjs parsing stuff follows
+    // +++ markEnd +++
     function parseStoreBodyElement() {
 	if (matchKeyword('rule'))
 	    return parseRuleStatement();
@@ -3928,29 +3929,34 @@ var util = require('./util.js');
     }
 
     function parseChrjsItem() {
+	var startToken = lookahead;
+	var        ans = null;
 	if (match('+')) {
 	    expect('+');
-	    return delegate.createItemExpression('+',parseChrjsFullTerm()); //N.B. no suffix ops
+	    ans = delegate.createItemExpression('+',parseChrjsFullTerm()); //N.B. no suffix ops
 	} else if (match('-')) {
 	    expect('-');
-	    return parseChrjsFullTermItemExpression('-');
+	    ans = parseChrjsFullTermItemExpression('-');
 	} else if (match('[') || match('{')) {
-	    return parseChrjsFullTermItemExpression('M');
+	    ans = parseChrjsFullTermItemExpression('M');
 	} else if (lookahead.type===Token.Identifier) {
 	    var expr = parseAssignmentExpression();
 	    if (expr.type=='AssignmentExpression')
-		return delegate.createItemExpression('=',expr);                    // bind
+		ans = delegate.createItemExpression('=',expr);                    // bind
 	    else
-		return delegate.createItemExpression('?',expr);                    // guard
+		ans = delegate.createItemExpression('?',expr);                    // guard
 	} else if (match('(')) {
-	    return delegate.createItemExpression('?',parseAssignmentExpression()); // guard
-	} else
+	    ans = delegate.createItemExpression('?',parseAssignmentExpression()); // guard
+	}
+	if (ans===null)
 	    throwUnexpected(lex());
+	return delegate.markEnd(ans,startToken);
     }
 
     function parseRuleStatement() {
-	var    id = null;
-	var items = [];
+	var startToken = lookahead;
+	var         id = null;
+	var      items = [];
 	expectKeyword('rule');
 	expect('(');
         if (!match(')')) {
@@ -3962,7 +3968,7 @@ var util = require('./util.js');
             }
         }
 	expect(')');
-        return delegate.createRuleStatement(id,items);
+        return delegate.markEnd(delegate.createRuleStatement(id,items),startToken);
     }
 
     function parseQuerySnapBackend() {
@@ -3983,7 +3989,8 @@ var util = require('./util.js');
     }
     
     function parseQueryStatement() {
-	var args = [];
+	var startToken = lookahead;
+	var       args = [];
 	expectKeyword('query');
 	var id = parseVariableIdentifier();
 	expect('(');
@@ -3997,14 +4004,15 @@ var util = require('./util.js');
         }
 	expect(';');
 	var qsb = parseQuerySnapBackend();
-        return delegate.createQueryStatement(id,args,qsb.items,qsb.init,qsb.accum);
+        return delegate.markEnd(delegate.createQueryStatement(id,args,qsb.items,qsb.init,qsb.accum),startToken);
     }
 
     function parseSnapExpression() {
+	var startToken = lookahead;
 	expectKeyword('snap');
 	expect('(');
 	var qsb = parseQuerySnapBackend();
-        return delegate.createSnapExpression(qsb.items,qsb.init,qsb.accum);
+        return delegate.markEnd(delegate.createSnapExpression(qsb.items,qsb.init,qsb.accum),startToken);
     }
 
     // Sync with *.json manifests.
