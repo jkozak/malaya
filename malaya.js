@@ -180,8 +180,10 @@ exports.createServer = function(opts) {
 	    var command = [js[0],js[1],{port:conn.port}];
 	    ee.emit('command',command);
 	    var res = bl.update(command);
-	    if (opts['auto_output'] && _.any(res.adds,function(add){return add[0]==='_output';})) {
-		bl.update(['_take-outputs']).dels.forEach(function(output) {
+	    if (opts['auto_output'] && _.any(res.adds,function(t){return res.refs[t][0]==='_output';})) {
+		var res1 = bl.update(['_take-outputs']);
+		res1.dels.forEach(function(t_output) {
+		    var output = res1.refs[t_output];
 		    assert.equal(output.length,3);
 		    if (output[2]===null)
 			;	// discard

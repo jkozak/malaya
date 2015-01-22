@@ -67,25 +67,34 @@ function logOnOffServerTest(srvr) {
 								   write:function(js){out=js;} });
     assert.equal(ans.adds.length,2);            // one nett addition and _output
     assert.equal(ans.dels.length,1);            // one nett deletion
-    assert.equal(ans.adds[0][0],'Permissions'); // both of Permissions records
-    assert.equal(ans.dels[0][0],'Permissions');
-    assert.equal(ans.adds[0][1].LoggedOn,1);
-    assert.equal(ans.dels[0][1].LoggedOn,0);
-    assert.equal(ans.adds[0][1].ApplicationID,51); // appId 51 is JK
-    assert.equal(ans.dels[0][1].ApplicationID,51);
+
+    var add0 = ans.refs[ans.adds[0]];
+    var add1 = ans.refs[ans.adds[1]];
+    var del0 = ans.refs[ans.dels[0]];
+    
+    assert.equal(add0[0],'Permissions'); // both of Permissions records
+    assert.equal(del0[0],'Permissions');
+    assert.equal(add0[1].LoggedOn,1);
+    assert.equal(del0[1].LoggedOn,0);
+    assert.equal(add0[1].ApplicationID,51); // appId 51 is JK
+    assert.equal(del0[1].ApplicationID,51);
     assert.deepEqual(_.keys(out),['logon']);
     assert.deepEqual(out.logon.OK,1);
     out = null;
     ans = srvr.command(['logoff',{appId:51}],{port:'test:',
 					      write:function(js){out=js;} });
     assert.equal(ans.adds.length,1);            // one nett addition
-    assert.equal(ans.adds.length,1);            // one nett deletion
-    assert.equal(ans.adds[0][0],'Permissions'); // both of Permissions records
-    assert.equal(ans.dels[0][0],'Permissions');
-    assert.equal(ans.adds[0][1].LoggedOn,0);
-    assert.equal(ans.dels[0][1].LoggedOn,1);
-    assert.equal(ans.adds[0][1].ApplicationID,51); // appId 51 is JK
-    assert.equal(ans.dels[0][1].ApplicationID,51);
+    assert.equal(ans.dels.length,1);            // one nett deletion
+
+    var add0 = ans.refs[ans.adds[0]];
+    var del0 = ans.refs[ans.dels[0]];
+
+    assert.equal(add0[0],'Permissions'); // both of Permissions records
+    assert.equal(del0[0],'Permissions');
+    assert.equal(add0[1].LoggedOn,0);
+    assert.equal(del0[1].LoggedOn,1);
+    assert.equal(add0[1].ApplicationID,51); // appId 51 is JK
+    assert.equal(del0[1].ApplicationID,51);
     assert.equal(out,null);
 }
 

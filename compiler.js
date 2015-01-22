@@ -28,8 +28,9 @@ function TEMPLATE_store() {
 	var      t = 1;	             // must be > 0 always?
 	var  facts = {};	     // 't' -> fact; this is the main fact store
 	var  index = {};	     // term1 -> [t,...]  where t is number not string
-	var   adds = [];
-	var   dels = [];
+	var   adds = [];	     // <t>,...
+	var   dels = [];	     // <t>,...
+	var   refs = {};	     // <t>:<fact>,...
 	var    err = null;
 	var   _add = function(fact) {
 	    if (fact instanceof Array && fact.length>0 && (typeof fact[0])==='string') {
@@ -54,9 +55,11 @@ function TEMPLATE_store() {
 	    var    i = adds.indexOf(t);
 	    var fact = facts[t];
 	    if (i!==-1)
-		adds.splice(i,1);
-	    else
-		dels.push(facts[t]);
+		adds.splice(i,1);     // here today, gone today
+	    else {
+		refs[t] = facts[t];
+		dels.push(t);
+	    }
 	    index[fact[0]].splice(_.indexOf(index[fact[0]],ti,true),1);
 	    delete facts[t];
 	};
@@ -82,9 +85,9 @@ function TEMPLATE_store() {
 		assert.strictEqual(adds.length,0);
 		assert.strictEqual(dels.length,0);
 		_add(fact);
-		ee.emit('fire',obj,fact,adds,dels);
-		var ans = {err:null,adds:adds,dels:dels};
-		adds = [];dels = [];
+		ee.emit('fire',obj,fact,adds,dels,refs);
+		var ans = {err:null,adds:adds,dels:dels,refs:refs};
+		adds = [];dels = [];refs = {};
 		return ans;
 	    },
 	    get t()       {return t;},
@@ -116,7 +119,7 @@ function TEMPLATE_store() {
 	    },
 	    update: function(u) {
 		var res = obj.add(u);
-		res.adds = _.map(res.adds,function(t){return facts[t];});
+		res.adds.forEach(function(t) {res.refs[t]=facts[t];});
 		return res;
 	    }
 	};

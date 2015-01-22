@@ -75,18 +75,20 @@ function FE3Connection(sock,server) {
 	    break;
 	}
 	case 'logon': {
-	    var res = command([tag,jsx[tag]]);
-	    switch (res.adds[0][0]) {
+	    var  res = command([tag,jsx[tag]]);
+	    var add0 = res.refs[res.adds[0]];
+	    var tag1 = add0[0];
+	    switch (tag1) {
 	    case 'Permissions':
-		assert.equal(res.adds[0][1].LoggedOn,1);
-		appId   = res.adds[0][1].ApplicationID;
-		appName = res.adds[0][1].ApplicationName;
-		appRole = res.adds[0][1].AppRole;
+		assert.equal(add0[1].LoggedOn,1);
+		appId   = add0[1].ApplicationID;
+		appName = add0[1].ApplicationName;
+		appRole = add0[1].AppRole;
 		break;
 	    case '_output':
 		break;
 	    default:
-		throw new Error("NYI "+res.adds[0][0]);
+		throw new Error("NYI "+tag1);
 	    }
 	    break;
 	}

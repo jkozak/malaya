@@ -38,9 +38,9 @@ describe("match example",function() {
 	assert.deepEqual(r2adds,
 			 [["match-price",{t:1,user:"John Kozak",instrument:"IL21",volume:1000000,isBuy:true}],
 			  ["match-trade",{buyer:"John Kozak",seller:"Val Wardlaw",instrument:"IL21",volume:9000000}] ]);
-	assert.deepEqual(r2.dels[0],
+	assert.deepEqual(r2.refs[r2.dels[0]],
 			 ['match-price',{user:"John Kozak", instrument:"IL21",volume:10000000,isBuy:true, t:1}] );
-	assert(_.every(_.map(r2.dels,function(x){return x[0]==='match-price';})));
+	assert(_.every(_.map(r2.dels,function(t){return r2.refs[t][0]==='match-price';})));
 	assert(_.every(r2.adds,function(x){return (typeof parseInt(x))==='number';}));
 	assert.strictEqual(Object.keys(match._private.facts).length,5); // original 3, trade and residual price
     });
