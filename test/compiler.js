@@ -4,10 +4,14 @@ var parser = require("../parser.js");
 var  assert = require("assert");
 var  recast = require("recast");
 var    util = require('../util.js');
+var    temp = require('temp');
+var    path = require('path');
 var      fs = require('fs');
 var       _ = require('underscore');
 
 var       b = recast.types.builders;
+
+temp.track();
 
 var parseRule = function(code) {
     parser._private.setupParse(code);
@@ -309,3 +313,45 @@ describe("query statement",function() {
     });
 });
 
+describe("compile hook",function() {
+    var tdir = temp.mkdirSync();
+    it("should be run when a chrjs file is compiled",function() {
+	var fn = path.join(tdir,'a.chrjs');
+	var ok = false;
+	compiler.once('compile',function(filename) {
+	    ok = true;
+	});
+	fs.writeFileSync(fn,"store {\nrule (['1']);}");
+	require(fn);
+	assert(ok);
+    });
+});
+
+
+describe("code stanzas",function() {
+    var tdir = temp.mkdirSync();
+    it("should build stanzas when asked",function() {
+	try {
+	    var fn = path.join(tdir,'a.chrjs');
+	    var ok = false;
+	    compiler.debug = true;
+	    compiler.once('compile',function(filename) {
+		assert.equal(compiler.getStanzas(filename).length,1);
+		ok = true;
+	    });
+	    fs.writeFileSync(fn,"store {\nrule (['1']);}");
+	    require(fn);
+	    assert(ok);
+	} finally {
+	    compiler.debug = false;
+	}
+    });
+    it("should not build stanzas unless asked",function() {
+	var fn = path.join(tdir,'b.chrjs');
+	fs.writeFileSync(fn,"store {\nrule (['1']);}");
+	require(fn);
+	assert.throws(function() {
+	    compiler.getStanzas(filename)
+	});
+    });
+});

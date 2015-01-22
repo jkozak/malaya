@@ -1,18 +1,17 @@
 "use strict";
 
-var    argv = require('minimist')(process.argv.slice(2));
+var     argv = require('minimist')(process.argv.slice(2));
 
-var       _ = require('underscore');
-var  events = require('events');
-var  assert = require('assert');
-var      fs = require('fs');
+var        _ = require('underscore');
+var   events = require('events');
+var   assert = require('assert');
+var       fs = require('fs');
 
-var    util = require('./util.js');
+var     util = require('./util.js');
 
-var    prvl = require('./prevalence.js');
+var     prvl = require('./prevalence.js');
 
-
-require("./compiler.js");  // adds support for .chrjs files
+var compiler = require("./compiler.js");  // adds support for .chrjs files
 
 function WsConnection(conn,server) {
     var mc = this;
@@ -55,10 +54,15 @@ exports.createServer = function(opts) {
     var conns   = {};
     var ee      = new events.EventEmitter();
 
+    if (opts['debug'])
+	compiler.debug = true;
+
     var server = {
 	on:  function(what,handler) {
 	    if (['fire'].indexOf(what)!==-1)
 		bl.on(what,handler);
+	    else if (what==='compile')
+		compiler.on(what,handler);
 	    else
 		ee.on(what,handler);
 	},
