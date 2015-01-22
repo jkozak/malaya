@@ -1,9 +1,12 @@
 "use strict";
 
+// +++ this should move up to the base directory
+// +++ apps should specialise this to add their own comms &c
+
 var      _ = require('underscore');
 var   util = require('../../util.js');
 var   path = require('path');
-var malaya = require('../../malaya.js')
+var malaya = require('../../malaya.js');
 var    fe3 = require('./fe3.js');
 
 exports.extraOpts = {
@@ -26,6 +29,8 @@ exports.build = function(opts) {
 	init:          false,
 	tag:           'idb',
 	businessLogic: path.join(__dirname,'bl.chrjs'),
+	debug:         false,
+	onCompile:     null,
 	auto_output:   true},
 		    opts);
     
@@ -54,6 +59,8 @@ exports.build = function(opts) {
 	fe3srv.close();
 	fe3srv = null;
     });
+    if (opts.onCompile)
+	server.on('compile',opts.onCompile);
 
     server.start();
     

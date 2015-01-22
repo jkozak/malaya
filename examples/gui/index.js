@@ -34,6 +34,8 @@ $(document).ready(function() {	// 'control' panel
     opts.init          = false;
     opts.audit         = true;
     opts.webDir        = fs.realpathSync('.');
+    opts.debug         = true;
+    opts.onCompile     = function(filename) {drawStanzas(filename);};
     opts.auto_output   = true;
     $('#title').text(util.format("malaya.%s control panel",opts.tag))
     // set parameter table

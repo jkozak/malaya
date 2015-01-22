@@ -61,7 +61,7 @@ var IDB = store {
 	  apwd  = faker.internet.password(),
 	  +['Permissions',{ApplicationName:aname,Password:apwd,anon:null,...rs}]);
 
-    // the market itself
+    // market control
     rule (['MarketManager',{MarketID}],  -['MarketManager',{MarketID}]);
     rule (-['market-status',{ID,status}],
 	  -['MarketManager',{MarketID:ID,Status,...rs}],

@@ -16,5 +16,9 @@
   "scripts": {
     "test": "NODE_ENV=test mocha -C"
   },
-  "main": "index.html"
+  "main": "index.html",
+  "window":{
+    "height":960,
+    "width":1060
+  }
 }

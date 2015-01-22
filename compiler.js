@@ -11,7 +11,9 @@ var  recast = require('recast');
 var      fs = require('fs');
 var  parser = require('./parser.js');
 var  assert = require('assert');
+var  events = require('events');
 var    util = require('./util.js');
+var    path = require('path');
 var       _ = require('underscore');
 
 var templates       = {};
@@ -1079,10 +1081,148 @@ function generateJS(js) {
 
 exports.compile = generateJS;
 
+exports.debug   = false;
+
+var stanzas = {};		// <path> -> <stanzas>,...
+
+exports.getStanzas = function(p) {
+    if (!exports.debug)
+	throw new Error("stanza building off");
+    return stanzas[path.resolve(p)];
+};
+
+function setCharAt(str,index,chr) {
+    if (index>str.length-1)
+	return str;
+    return str.substr(0,index)+chr+str.substr(index+1);
+}
+
+function buildStanzas(code,parsed) {
+    assert(code.search('\t')===-1,"code should be tab-free");
+    var  lines = [""].concat(code.split('\n')); // make zero-based
+    var lines1 = _.map(lines,function(s) {
+	return Array(s.length).join(' ');       // initially a blank copy
+    });
+    var    stanzas = [];
+    var    sources = {};	                // {<line>:{<column>:<source>,...},...}
+    var noteSource = function(node) {
+	if (sources[node.loc.start.line]===undefined)
+	    sources[node.loc.start.line] = {};
+	sources[node.loc.start.line][node.loc.start.column] = node;
+    }
+
+    if (parsed===undefined)
+	parsed = parser.parse(code,{loc:true});
+    parser.visit(parsed,{
+	visitRuleStatement: function(path) {
+	    var node = path.node;
+	    for (var i=0;i<'rule'.length;i++)
+		lines1[node.loc.start.line] = setCharAt(lines1[node.loc.start.line],node.loc.start.column+i,'R');
+	    noteSource(node);
+	    this.traverse(path);
+	},
+	visitQueryStatement: function(path) {
+	    var node = path.node;
+	    for (var i=0;i<'query'.length;i++)
+		lines1[node.loc.start.line] = setCharAt(lines1[node.loc.start.line],node.loc.start.column+i,'Q');
+	    noteSource(node);
+	    this.traverse(path);
+	}, 
+	visitItemExpression: function(path) {
+	    var node = path.node;
+	    for (var l=node.loc.start.line;l<=node.loc.end.line;l++)
+		for (var c=node.loc.start.column;c<node.loc.end.column;c++) {
+		    lines1[l] = setCharAt(lines1[l],c,node.op);
+		}
+	    noteSource(node);
+	    this.traverse(path);
+	}
+    });
+    
+    var stanza = null;
+    var    tag = null;
+    for (var l=0;l<lines1.length;l++) {
+	var  blank = (lines[l].search(/[^ ]/)===-1);
+	var blank1 = (lines1[l].search(/[^ ]/)===-1);
+	if (l>0) {
+	    var m = lines[l-1].match(/ *\/\/ +([^: ]+)/);
+	    if (m!=null && m[1]!=='+++')
+		tag = m[1];
+	}
+	if (stanza===null) {
+	    if (!blank1) {
+		stanza = {lines:[lines1[l]],tag:tag,line:l,draws:[]}
+		tag    = null;
+	    }
+	} else {
+	    if (!blank1)
+		stanza.lines.push(lines1[l]);
+	    else if (blank) {
+		stanzas.push(stanza);
+		stanza = null;
+	    }
+	    else
+		stanza.lines.push(''); // to keep line numbers aligned with source
+	}
+    }
+    if (stanza!==null)
+	stanzas.push(stanza);
+
+    // run-length encoding (H and V) to build drawing instructions
+    stanzas.forEach(function(stanza) {
+	var addDraw = function(l,l1,c,n,ch) {
+	    if (ch!=null && n>0 && stanza.lines[l][c]!=' ') {
+		stanza.draws.push({node:sources[stanza.line+l][c],
+				   ch:ch,
+				   x:c,
+				   y:l1,
+				   n:n+1});
+	    }
+	};
+	var l1 = 0;
+	for (var l=0;l<stanza.lines.length;l++) {
+	    var line = stanza.lines[l];
+	    if (line.search(/[^ ]/)!==-1) {
+		var   ch = null;
+		var    c = 0;
+		var    n = 0;
+		l1++;
+		for (var i=0;i<line.length;i++) {
+		    if (ch!==line[i]) {
+			addDraw(l,l1,c,n,ch);
+			ch = line[i];
+			c  = i;
+			n  = 0;
+		    }
+		    else
+			n++;
+		}
+		addDraw(l,l1,c,n,ch);
+	    }
+	}
+    });
+    
+    return stanzas;
+}
+
+var ee = new events.EventEmitter();
+
+exports.on = function(what,handler) {
+    ee.on(what,handler);
+};
+exports.once = function(what,handler) {
+    ee.once(what,handler);
+};
+
 require.extensions['.chrjs'] = function(module,filename) {
+    filename = path.resolve(filename);
     var codegen = require('escodegen');
-    var content = fs.readFileSync(filename,'utf8');
-    module._compile(codegen.generate(generateJS(parser.parse(content))),filename);
+    var content = fs.readFileSync(filename,'utf8').replace(/\t/g,'        '); // remove tabs
+    var   chrjs = parser.parse(content,{loc:exports.debug});
+    if (exports.debug)
+	stanzas[filename] = buildStanzas(content,chrjs); // +++ clone the parse! +++
+    module._compile(codegen.generate(generateJS(chrjs)),filename);
+    ee.emit('compile',filename);
 };
 
 if (util.env==='test') {
@@ -1094,6 +1234,7 @@ if (util.env==='test') {
 	mangle:                           mangle,
 	genAccessor:                      genAccessor,
 	genAdd:                           genAdd,
-	genMatch:                         genMatch
+	genMatch:                         genMatch,
+	buildStanzas    :                 buildStanzas
     };
 }
