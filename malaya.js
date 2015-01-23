@@ -59,7 +59,7 @@ exports.createServer = function(opts) {
 
     var server = {
 	on:  function(what,handler) {
-	    if (['fire'].indexOf(what)!==-1)
+	    if (['fire','queue-rule','query-done'].indexOf(what)!==-1)
 		bl.on(what,handler);
 	    else if (what==='compile')
 		compiler.on(what,handler);
