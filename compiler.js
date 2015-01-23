@@ -35,9 +35,10 @@ function TEMPLATE_store() {
 	var   _add = function(fact) {
 	    if (fact instanceof Array && fact.length>0 && (typeof fact[0])==='string') {
 		var     ti = t++;
-		var t_fact = ''+ti; // `t_fact` is a string , use ti in indices
+		var t_fact = ''+ti;  // `t_fact` is a string , use ti in indices
 		facts[t_fact] = fact;
 		adds.push(t_fact);
+		ee.emit('add',t_fact,fact); // +++ only if `debug` set +++
 		if (index[fact[0]]===undefined)
 		    index[fact[0]] = [];
 		index[fact[0]].push(ti);
@@ -51,11 +52,12 @@ function TEMPLATE_store() {
 		throw new Error("unloved fact format: "+JSON.stringify(fact));
 	};
 	var   _del = function(t) {
-	    var   ti = parseInt(t);   // use this in indices
+	    var   ti = parseInt(t);  // use this in indices
 	    var    i = adds.indexOf(t);
 	    var fact = facts[t];
+	    ee.emit('del',t,fact);   // +++ only if `debug` set +++
 	    if (i!==-1)
-		adds.splice(i,1);     // here today, gone today
+		adds.splice(i,1);    // here today, gone today
 	    else {
 		refs[t] = facts[t];
 		dels.push(t);
@@ -857,6 +859,20 @@ function generateJS(js) {
 
 	genPayload = genPayload || function() { // >> [Statement]
 	    var payload = [];
+	    if (exports.debug) {
+		var vars = [];
+		for (var j=0;j<chr.items.length;j++) {
+		    if (['M','-'].indexOf(chr.items[j].op)!==-1) {
+			vars.push(b.identifier((i===j) ? 't_fact' : 't'+j));
+		    } else
+			vars.push(b.literal(null));
+		}
+		payload.push(b.expressionStatement(
+		    b.callExpression(b.memberExpression(b.identifier('ee'),
+							b.identifier('emit'),
+							false),
+				     [b.literal('queue-rule'),b.literal(chr.id.name),b.arrayExpression(vars)] ) ));
+	    }
 	    delenda.forEach(function(j) {
 		var bv = b.identifier(i===j ? 't_fact' : 't'+j);
 		payload.push(b.expressionStatement(
@@ -896,15 +912,24 @@ function generateJS(js) {
 	    if (item.op=='+' || item.op=='-')
 		throw new Error("query statement must not modify the store");
 
-	// `null` as there's no incoming fact
-	var rv = genRuleVariant(chr,
-				null,
-				_.map(chr.args,function(arg){return mangle(arg.name);}),
-				function() {
-	    return [b.expressionStatement(b.assignmentExpression('=',chr.init.left,chr.accum))];
-	});
+	var genQueryPayload = function() {
+	    var payload = [];
+	    payload.push(b.expressionStatement(b.assignmentExpression('=',chr.init.left,chr.accum)));
+	    return payload;
+	};
+	var              rv = genRuleVariant(chr,
+					     null, // `null` as there's no incoming fact
+					     _.map(chr.args,function(arg){return mangle(arg.name);}),
+					     genQueryPayload);
 
 	rv.params = chr.args;
+	if (exports.debug) {
+	    rv.body.body.push(b.expressionStatement(
+		b.callExpression(b.memberExpression(b.identifier('ee'),
+						    b.identifier('emit'),
+						    false),
+				 [b.literal('query-done'),b.literal(chr.id.name)] ) ));
+	}
 	rv.body.body.push(b.returnStatement(chr.init.left));
 	parser.visit(rv,{	// remove query args and accum variable from binding site decls
 	    visitVariableDeclarator: function(path) {
@@ -1044,7 +1069,7 @@ function generateJS(js) {
 					     x.declarations[0].id.name==='_add';}).get();
 	if (_.keys(dispatchBranches).length>128)
 	    console.log("Warning: more than 128 cases in switch statement");
-	var _addSwitch = _addDef.declarations[0].init.body.body[0].consequent.body[6];
+	var _addSwitch = _addDef.declarations[0].init.body.body[0].consequent.body[7];
 	assert.equal(_addSwitch.type,'SwitchStatement');
 	assert.equal(_addSwitch.cases.length,1);
 	assert.equal(_addSwitch.cases[0].test.name,'INSERT_CASE');
@@ -1054,9 +1079,9 @@ function generateJS(js) {
 	    _addSwitch.cases.push(b.switchCase(b.literal(k),brs.concat(b.breakStatement())));
 	}
 	var ins_gen = _addDef.declarations[0].init.body.body[0].consequent.body;
-	assert.equal(ins_gen.length,9);
-	assert.equal(ins_gen[7].type,'ExpressionStatement');
-	assert.equal(ins_gen.splice(7,1)[0].expression.name,'INSERT_GENERIC_MATCHES');
+	assert.equal(ins_gen.length,10);
+	assert.equal(ins_gen[8].type,'ExpressionStatement');
+	assert.equal(ins_gen.splice(8,1)[0].expression.name,'INSERT_GENERIC_MATCHES');
 	dispatchGeneric.forEach(function(ri){ins_gen.push(genInvokeRuleItem(ri));});
 	    
 	return storeJS;
@@ -1108,20 +1133,24 @@ function buildStanzas(code,parsed) {
     });
     var    stanzas = [];
     var    sources = {};	                // {<line>:{<column>:<source>,...},...}
-    var noteSource = function(node) {
+    var noteSource = function(node,node1) {
+	if (node1===undefined)
+	    node1 = node;
 	if (sources[node.loc.start.line]===undefined)
 	    sources[node.loc.start.line] = {};
-	sources[node.loc.start.line][node.loc.start.column] = node;
+	sources[node.loc.start.line][node.loc.start.column] = node1;
     }
 
     if (parsed===undefined)
 	parsed = parser.parse(code,{loc:true});
+    var currentRule;
     parser.visit(parsed,{
 	visitRuleStatement: function(path) {
 	    var node = path.node;
 	    for (var i=0;i<'rule'.length;i++)
 		lines1[node.loc.start.line] = setCharAt(lines1[node.loc.start.line],node.loc.start.column+i,'R');
 	    noteSource(node);
+	    currentRule = node;
 	    this.traverse(path);
 	},
 	visitQueryStatement: function(path) {
@@ -1129,6 +1158,7 @@ function buildStanzas(code,parsed) {
 	    for (var i=0;i<'query'.length;i++)
 		lines1[node.loc.start.line] = setCharAt(lines1[node.loc.start.line],node.loc.start.column+i,'Q');
 	    noteSource(node);
+	    currentRule = node;
 	    this.traverse(path);
 	}, 
 	visitItemExpression: function(path) {
@@ -1137,7 +1167,7 @@ function buildStanzas(code,parsed) {
 		for (var c=node.loc.start.column;c<node.loc.end.column;c++) {
 		    lines1[l] = setCharAt(lines1[l],c,node.op);
 		}
-	    noteSource(node);
+	    noteSource(node,currentRule);
 	    this.traverse(path);
 	}
     });

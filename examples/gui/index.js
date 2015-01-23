@@ -35,7 +35,7 @@ $(document).ready(function() {	// 'control' panel
     opts.audit         = true;
     opts.webDir        = fs.realpathSync('.');
     opts.debug         = true;
-    opts.onCompile     = function(filename) {drawStanzas(filename);};
+    opts.onCompile     = function(filename) {initStanzas(filename);};
     opts.auto_output   = true;
     $('#title').text(util.format("malaya.%s control panel",opts.tag))
     // set parameter table
@@ -91,6 +91,12 @@ $(document).ready(function() {	// 'control' panel
 		    cFacts += adds.length;
 		    cFacts -= dels.length;
 		    $('#varNF').text(cFacts);
+		});
+		server.on('queue-rule',function(ruleName,bindings) {
+		    updateCodeDraw(ruleName);
+		});
+		server.on('query-done',function(queryName) {
+		    updateCodeDraw(queryName);
 		});
 		server.run();
 		break;

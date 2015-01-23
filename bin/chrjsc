@@ -5,6 +5,8 @@ var compiler = require('../compiler.js');
 var       fs = require('fs');
 var   recast = require('recast');
 
+compiler.debug = true;
+
 for (var i=2;i<process.argv.length;i++) {
     var source = process.argv[i];
     var target = source+'.js';
