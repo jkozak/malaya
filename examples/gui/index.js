@@ -98,6 +98,12 @@ $(document).ready(function() {	// 'control' panel
 		server.on('query-done',function(queryName) {
 		    updateCodeDraw(queryName);
 		});
+		server.on('add',function(t) {
+		    addFact(t);
+		});
+		server.on('del',function(t) {
+		    delFact(t);
+		});
 		server.run();
 		break;
 	    }

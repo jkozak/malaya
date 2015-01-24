@@ -36,26 +36,8 @@ function initStanzas(sourcePath) {
     var x =  0;
     var y = 10;
     
-    // delete: red, create: green
-
-    graphics.beginFill(0x202020);
-    graphics.drawRect(0,0,220,800);
-
     compiler.getStanzas(sourcePath).forEach(function(stanza) {
 	stanza.draws.forEach(function(draw) {
-	    switch (draw.ch) {
-	    case 'R':
-		graphics.lineStyle(lineWidth,0x80A0C0);
-		break;
-	    case 'Q':
-		graphics.lineStyle(lineWidth,0xC0A080);
-		break;
-	    default:
-		graphics.lineStyle(lineWidth,0x808080);
-		break;
-	    }
-	    graphics.moveTo(x+draw.x*lineWidth,                 y+draw.y*(lineWidth+1));
-	    graphics.lineTo(x+draw.x*lineWidth+draw.n*lineWidth,y+draw.y*(lineWidth+1));
 	    if (codeDraws[draw.node.id.name]===undefined)
 		codeDraws[draw.node.id.name] = [];
 	    codeDraws[draw.node.id.name].push([[x,y,Date.now()],draw]);
@@ -116,6 +98,24 @@ function drawCode(name) {
     });
 }
 
+var       factDim;
+var   factsOffset = 220;
+var freeFactSlots;
+var  displayFacts = {};		// <t>:<DisplayFact>,...
+
+function addFact(t) {
+    var sprite;			// +++ create sprite
+    var    pos = freeFactSlots.slice(0,1);
+    //sprite.position(pos[0],pos[1]);
+    //graphics.add(sprite);
+}
+
+function delFact(t) {
+}
+
+function drawFacts() {
+}
+
 function installHollywood(target) {
     var    width = 1000;
     var   height =  800;
@@ -128,11 +128,32 @@ function installHollywood(target) {
     
     stage.addChild(graphics);
 
+    // 28 chars is 197x17 for 12px Courier
+    var textSample = new PIXI.Text("1234567890123456789012345678",
+				   {font:  "12px Courier",
+				    fill:  "white",
+				    align: "left"} );
+    textSample.position.x = 320;
+    textSample.position.y = 300;
+    console.log(util.format("*** textSample.size: %dx%d",textSample.width,textSample.height));
+    factDim = {w:textSample.width+1,h:textSample.height+1};
+
+    stage.addChild(textSample);
+
+    // setup `freeFactSlots`
+    freeFactSlots = [];
+    for (var x=factsOffset;x+factDim.w<width;x+=factDim.w+1)
+	for (var y=0;y+factDim.h<height;y+=factDim.h+1)
+	    freeFactSlots.push([x,y]);
+
+    // +++
+    
     function animate() {
 	graphics.clear();
 	for (var r in codeDraws) {
 	    drawCode(r);
 	}
+	drawFacts();
 	renderer.render(stage);
     }
     
