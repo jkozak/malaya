@@ -3,10 +3,11 @@
 // +++ sensible startup page, including:                        +++
 // +++ check if prevalence dir exists, offer create page if not +++
 
-var      _ = require('underscore');
-var     fs = require('fs');
-var   path = require('path');
-var   util = require('util');
+var        _ = require('underscore');
+var       fs = require('fs');
+var     path = require('path');
+var     util = require('util');
+var compiler = require('../../compiler.js');
 
 // +++ configure init and start buttons +++
 

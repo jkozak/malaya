@@ -1,62 +1,359 @@
-<!DOCTYPE html>
 <html>
- <head>
-   <title>malaya server control</title>
-   <link rel="stylesheet" type="text/css" href="index.css">
-   <script src="http://code.jquery.com/jquery-1.11.1.min.js"></script>
-   <script src="index.js"></script>
-   <link href="http://code.jquery.com/ui/1.10.4/themes/ui-lightness/jquery-ui.css" rel="stylesheet">
-   <script src="http://code.jquery.com/jquery-1.10.2.js"></script>
-   <script src="http://code.jquery.com/ui/1.10.4/jquery-ui.js"></script>
-   <script src="node_modules/pixi.js/bin/pixi.dev.js"></script>
-   <script src="hollywood.js"></script>
-   <script>
-    $(function() {
-      $("#tabs").tabs({heightStyle:'auto',
-      		       active:     0});  // TESTING: should be 0
-    });
-   </script>
-   <style>
-    #tabs {font-size: 14px;}
-    .ui-widget-header {
-      background: #808080;
-      border:     1px solid #808080;
-      color:      #FFFFFF;
-      font-weight:bold;
-    }
-    .ui-widget-content {
-      background:transparent;
-    }
-   </style>
- </head>
- <body>
-   <div id="tabs">
-     <ul>
-       <li><a href="#tab-0">Control</a></li>
-       <li><a href="#tab-1">GUI</a></li>
-     </ul>
-     <div id="tab-0">
-       <!-- +++ This should be two tables (params and vars): fix layout stuff +++ -->
-       <table id='parameters' style="display:inline-block">
-	 <tbody>
-	   <tr><td>WS port       </td><td><code><span id='paramPort'/></code></td></tr>
-	   <tr><td>business logic</td><td><code><span id='paramBL'/>  </code></td></tr>
-	   <tr><td>fact store    </td><td><code><span id='paramPrvD'/></code></td></tr>
-	   <tr style="transparent;height:10px"><td style="background:transparent" colspan=2/></tr>
-	   <tr style="transparent;height:10px"><td style="background:transparent" colspan=2/></tr>
-	   <tr><td>hash          </td><td><code><span id='varHash'/></code></td></tr>
-	   <tr><td>#facts        </td><td><code><span id='varNF'/>  </code></td></tr>
-	   <tr><td>#connections  </td><td><code><span id='varNC'/>  </code></td></tr>
-	 </tbody>
-       </table>
-       <span id="bigButton" class="big-button" style="vertical-align:top">START</span>
-     </div>
-     <div id="tab-1">
-       <div id="GUI"/>
-     </div>
-   </div>
-   <script>
-    installHollywood($('#GUI'));
-   </script>
- </body>
+
+  <head>
+    <title>WebGL for malaya.hollywood</title>
+    <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+    <script src="http://code.jquery.com/jquery-1.11.1.min.js"></script>
+    <script src="index.js"></script>
+    <style>
+     html, body {
+       width:  100%;
+       height: 100%;
+       margin: 0px;
+     }
+    </style>
+
+    <link rel="stylesheet" type="text/css" href="index.css">
+
+
+    <script id="shader-fs" type="x-shader/x-fragment">
+     precision mediump float;
+
+     varying vec4 vColour;
+
+     void main(void) {
+       gl_FragColor = vColour;
+     }
+    </script>
+
+    <script id="shader-vs" type="x-shader/x-vertex">
+     attribute vec2 aVertexPosition;
+     attribute vec4 aVertexColour;
+
+     uniform vec2 uResolution;
+
+     varying vec4 vColour;
+
+     void main(void) {
+       vec2        vp = vec2(aVertexPosition.x,uResolution.y-aVertexPosition.y);
+       vec2 zeroToOne = vp/uResolution;
+       vec2 zeroToTwo = zeroToOne*2.0;
+       vec2 clipSpace = zeroToTwo-1.0;
+
+       gl_Position = vec4(clipSpace,0,1);
+       vColour     = aVertexColour;
+     }
+    </script>
+
+
+    <script type="text/javascript">
+
+     var gl;
+
+     function initGL(canvas) {
+       try {
+         gl = canvas.getContext("webgl",{antialias:false});
+         gl.viewportWidth  = canvas.width;
+         gl.viewportHeight = canvas.height;
+       } catch (e) {
+       }
+       if (!gl) {
+         alert("Could not initialise WebGL, sorry :-(");
+       }
+     }
+
+     function getShader(gl,id) {
+       var shaderScript = document.getElementById(id);
+       if (!shaderScript) {
+         return null;
+       };
+
+       var str = "";
+       var   k = shaderScript.firstChild;
+       while (k) {
+         if (k.nodeType==3) {
+           str += k.textContent;
+         }
+         k = k.nextSibling;
+       }
+
+       var shader;
+       if (shaderScript.type=="x-shader/x-fragment") {
+         shader = gl.createShader(gl.FRAGMENT_SHADER);
+       } else if (shaderScript.type=="x-shader/x-vertex") {
+         shader = gl.createShader(gl.VERTEX_SHADER);
+       } else {
+         return null;
+       }
+
+       gl.shaderSource(shader,str);
+       gl.compileShader(shader);
+
+       if (!gl.getShaderParameter(shader,gl.COMPILE_STATUS)) {
+         alert(gl.getShaderInfoLog(shader));
+         return null;
+       }
+
+       return shader;
+     }
+
+     var shaderProgram;
+
+     function initShaders() {
+       var fragmentShader = getShader(gl,"shader-fs");
+       var   vertexShader = getShader(gl,"shader-vs");
+
+       shaderProgram = gl.createProgram();
+       gl.attachShader(shaderProgram,vertexShader);
+       gl.attachShader(shaderProgram,fragmentShader);
+       gl.linkProgram(shaderProgram);
+
+       if (!gl.getProgramParameter(shaderProgram,gl.LINK_STATUS)) {
+         alert("Could not initialise shaders");
+       }
+
+       gl.useProgram(shaderProgram);
+
+       shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram,"aVertexPosition");
+       gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
+
+       shaderProgram.vertexColourAttribute = gl.getAttribLocation(shaderProgram,"aVertexColour");
+       gl.enableVertexAttribArray(shaderProgram.vertexColourAttribute);
+
+       shaderProgram.resolutionLocation = gl.getUniformLocation(shaderProgram,"uResolution");
+     }
+
+     var squareVertexPositionBuffer;
+     var squareVertexColourBuffer;
+
+     var faColours;
+
+     var lineWidth = 2;
+     var codeDraws = {};
+
+     function initStanzas(sourcePath) {
+       var x =  0;
+       var y = 10;
+       
+       compiler.getStanzas(sourcePath).forEach(function(stanza) {
+	 stanza.draws.forEach(function(draw) {
+	   if (codeDraws[draw.node.id.name]===undefined)
+	   codeDraws[draw.node.id.name] = [];
+	   codeDraws[draw.node.id.name].push([[x,y,Date.now()],draw]);
+	 });
+	 y += 3*lineWidth+stanza.draws[stanza.draws.length-1].y*(lineWidth+1);
+       });
+       
+       webGLStart(codeDraws);
+     }
+
+     function updateCodeDraw(name) {
+       var now = Date.now();
+       codeDraws[name].forEach(function(cd) {
+	 cd[0][2] = Date.now();
+       });
+     }
+
+     function initBuffers(codeDraws) {
+       squareVertexPositionBuffer = gl.createBuffer();
+       gl.bindBuffer(gl.ARRAY_BUFFER,squareVertexPositionBuffer);
+       var vertices = [];
+       var  colours = [];
+       var      idx = 0;
+       for (var name in codeDraws) {
+	 codeDraws[name].forEach(function(cd) {
+	   var   xy = cd[0];
+	   var now0 = cd[0][2];
+	   var draw = cd[1];
+	   draw.i = idx++;
+	   vertices = vertices.concat([xy[0]+draw.x*lineWidth,                 xy[1]+draw.y*(lineWidth+1),
+				       xy[0]+draw.x*lineWidth+draw.n*lineWidth,xy[1]+draw.y*(lineWidth+1) ]);
+	   var colour = [0.50,0.50,0.50,1];
+	   switch (draw.ch) {
+	     case 'R':
+	       colour = [0.50,0.63,0.75,1];
+	       break;
+	     case 'Q':
+	       colour = [0.75,0.63,0.50,1];
+	       break;
+	   }
+	   colours = colours.concat(colour);
+	   colours = colours.concat(colour);    // twice - once for each end
+	 });
+       }
+       var faVertices = new Float32Array(vertices);
+       gl.bufferData(gl.ARRAY_BUFFER,faVertices,gl.STATIC_DRAW);
+       squareVertexPositionBuffer.itemSize = 2;
+       squareVertexPositionBuffer.numItems = vertices.length/squareVertexPositionBuffer.itemSize;
+       gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute,
+			      squareVertexPositionBuffer.itemSize,
+			      gl.FLOAT,
+			      false,
+			      0,
+			      0);
+
+       squareVertexColourBuffer = gl.createBuffer();
+       gl.bindBuffer(gl.ARRAY_BUFFER,squareVertexColourBuffer);
+       faColours = new Float32Array(colours);
+       gl.bufferData(gl.ARRAY_BUFFER,faColours,gl.DYNAMIC_DRAW);
+       squareVertexColourBuffer.itemSize = 4;
+       squareVertexColourBuffer.numItems = colours.length/squareVertexColourBuffer.itemSize;
+       gl.vertexAttribPointer(shaderProgram.vertexColourAttribute,
+			      squareVertexColourBuffer.itemSize,
+			      gl.FLOAT,
+			      false,
+			      0,
+			      0);
+       // +++ glMapBuffer? 
+     }
+
+     function addFact(t) {
+       //var    pos = freeFactSlots.slice(0,1);
+       //sprite.position(pos[0],pos[1]);
+       //graphics.add(sprite);
+     }
+
+     function delFact(t) {
+     }
+     
+     function drawFacts() {
+     }
+
+     var oldWindowSize = [null,null];
+     function handleResize(force) {
+       if (window.innerWidth!==oldWindowSize[0] || window.innerHeight!==oldWindowSize[1] || force) {
+	 var canvas = document.getElementById("mycanvas");
+	 var  ctrls = document.getElementById('controls');
+	 canvas.width = window.innerWidth;
+	 if (ctrls.style.display==='block') {
+	   canvas.height = window.innerHeight-ctrls.offsetHeight;
+	 } else {
+	   canvas.height = window.innerHeight;
+	 }
+         gl.viewportWidth  = canvas.width;
+         gl.viewportHeight = canvas.height;
+         gl.viewport(0,0,gl.viewportWidth,gl.viewportHeight);
+	 
+	 gl.uniform2f(shaderProgram.resolutionLocation,canvas.width,canvas.height);
+	 
+	 oldWindowSize = [window.innerWidth,window.innerHeight];
+       } 
+     }
+     
+     function drawCode(name) {
+       var    now = Date.now();
+       var tDecay = 500.0;		// ms
+
+       codeDraws[name].forEach(function(cd) {
+	 var   xy = cd[0];
+	 var now0 = cd[0][2];
+	 var draw = cd[1];
+	 var   ts = 1-Math.max(Math.min(now-now0,tDecay),0)/tDecay;
+	 var setFAColours = function(r0,r1,g0,g1,b0,b1) {
+	   r0 /= 255.0;
+	   r1 /= 255.0;
+	   g0 /= 255.0;
+	   g1 /= 255.0;
+	   b0 /= 255.0;
+	   b1 /= 255.0;
+	   var rgba = [r0+(r1-r0)*ts,g0+(g1-g0)*ts,b0+(b1-b0)*ts,1.0];
+	   faColours.set(rgba,8*draw.i);
+	   faColours.set(rgba,8*draw.i+4);
+	 };
+	 switch (draw.ch) {
+	   case 'R':
+	     setFAColours(0x80,0x80,0xA0,0xC0,0xC0,0xF0);
+	     break;
+	   case 'Q':
+	     setFAColours(0xC0,0xF0,0xA0,0xC0,0x80,0x80);
+	     break;
+	   case '+':
+	     setFAColours(0x80,0x00,0x80,0xC0,0x80,0x00);
+	     break;
+	   case '-':
+	     setFAColours(0x80,0xC0,0x80,0x00,0x80,0x00);
+	     break;
+	   case 'M':
+	     setFAColours(0x80,0xF0,0x80,0xF0,0x80,0x00);
+	     break;
+	   default:
+	     setFAColours(0x80,0xC0,0x80,0xC0,0x80,0xC0);
+	     break;
+	 }
+       });
+     }
+
+     function drawScene() {
+       handleResize(false);
+       
+       gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+
+       gl.bindBuffer(gl.ARRAY_BUFFER,squareVertexColourBuffer);
+       gl.bufferData(gl.ARRAY_BUFFER,faColours,gl.DYNAMIC_DRAW);
+     
+       gl.lineWidth(lineWidth);
+
+       for (var name in codeDraws) {
+	 drawCode(name);
+       }
+
+       gl.drawArrays(gl.LINES,0,squareVertexPositionBuffer.numItems);
+     }
+
+     function webGLInit() {
+       var canvas = document.getElementById("mycanvas");
+       initGL(canvas);
+       initShaders();
+     }
+
+     function webGLStart(codeDraws) {
+       initBuffers(codeDraws);
+
+       gl.clearColor(0.0,0.0,0.0,1.0);
+       gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+       gl.enable(gl.DEPTH_TEST);
+
+       setInterval(drawScene,100);
+     }
+
+     document.addEventListener('keydown',function(event) {
+       if (event.keyCode===9) {
+	 var ctrls = document.getElementById('controls');
+	 ctrls.style.display = (ctrls.style.display==='block') ? 'none' : 'block';
+	 handleResize(true);
+       }
+     });
+
+    </script>
+
+
+  </head>
+
+
+  <body onload="webGLInit();">
+    <canvas id="mycanvas" style="border:none"></canvas>
+    <div id="controls" style="border:none;position:fixed;bottom:0;display:block">
+      <div style="border:none;display:table">
+	<div style="display:table-row">
+	  <!-- +++ This should be two tables (params and vars): fix layout stuff +++ -->
+	  <table id='parameters' style="display:table-cell">
+	    <tbody>
+	      <tr><td>WS port       </td><td><code><span id='paramPort'/></code></td></tr>
+	      <tr><td>business logic</td><td><code><span id='paramBL'/>  </code></td></tr>
+	      <tr><td>fact store    </td><td><code><span id='paramPrvD'/></code></td></tr>
+	      <tr style="transparent;height:10px"><td style="background:transparent" colspan=2/></tr>
+	      <tr style="transparent;height:10px"><td style="background:transparent" colspan=2/></tr>
+	      <tr><td>hash          </td><td><code><span id='varHash'/></code></td></tr>
+	      <tr><td>#facts        </td><td><code><span id='varNF'/>  </code></td></tr>
+	      <tr><td>#connections  </td><td><code><span id='varNC'/>  </code></td></tr>
+	    </tbody>
+	  </table>
+	  <div style="display:table-cell;vertical-align:middle">
+	    <span id="bigButton" class="big-button" style="margin:20px">START</span>
+	  </div>
+	</div>
+      </div>
+    </div>
+  </body>
+
 </html>

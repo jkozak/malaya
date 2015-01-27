@@ -44,6 +44,8 @@ function initStanzas(sourcePath) {
 	});
 	y += 3*lineWidth+stanza.draws[stanza.draws.length-1].y*(lineWidth+1);
     });
+    
+    //webGLStart(codeDraws);
 }
 
 function updateCodeDraw(name) {
@@ -105,7 +107,7 @@ var  displayFacts = {};		// <t>:<DisplayFact>,...
 
 function addFact(t) {
     var sprite;			// +++ create sprite
-    var    pos = freeFactSlots.slice(0,1);
+    //var    pos = freeFactSlots.slice(0,1);
     //sprite.position(pos[0],pos[1]);
     //graphics.add(sprite);
 }
@@ -116,46 +118,7 @@ function delFact(t) {
 function drawFacts() {
 }
 
-function installHollywood(target) {
-    var    width = 1000;
-    var   height =  800;
-    var    stage = new PIXI.Stage(0);
-    var renderer = new PIXI.WebGLRenderer(width,height);
-
-    graphics = new PIXI.Graphics();
-
-    target.append(renderer.view);
-    
-    stage.addChild(graphics);
-
-    // 28 chars is 197x17 for 12px Courier
-    var textSample = new PIXI.Text("1234567890123456789012345678",
-				   {font:  "12px Courier",
-				    fill:  "white",
-				    align: "left"} );
-    textSample.position.x = 320;
-    textSample.position.y = 300;
-    console.log(util.format("*** textSample.size: %dx%d",textSample.width,textSample.height));
-    factDim = {w:textSample.width+1,h:textSample.height+1};
-
-    stage.addChild(textSample);
-
+function installHollywood() {
     // setup `freeFactSlots`
     freeFactSlots = [];
-    for (var x=factsOffset;x+factDim.w<width;x+=factDim.w+1)
-	for (var y=0;y+factDim.h<height;y+=factDim.h+1)
-	    freeFactSlots.push([x,y]);
-
-    // +++
-    
-    function animate() {
-	graphics.clear();
-	for (var r in codeDraws) {
-	    drawCode(r);
-	}
-	drawFacts();
-	renderer.render(stage);
-    }
-    
-    setInterval(animate,100);
 }
