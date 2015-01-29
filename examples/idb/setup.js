@@ -23,7 +23,7 @@ exports.extraOpts = {
 exports.build = function(opts) {
     opts = _.extend({
 	prevalenceDir: path.join(__dirname,'.prevalence'),
-	webDir:        'www',
+	webDir:        path.join(__dirname,'www'),
 	audit:         true,
 	logging:       true,
 	init:          false,
