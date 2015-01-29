@@ -332,24 +332,35 @@
 
   <body onload="webGLInit();">
     <canvas id="mycanvas" style="border:none"></canvas>
-    <div id="controls" style="border:none;position:fixed;bottom:0;display:block">
-      <div style="border:none;display:table">
+    <div id="controls" style="border:none;position:fixed;bottom:0;display:block;width:100%">
+      <div style="border:none;display:table;width:100%">
 	<div style="display:table-row">
-	  <!-- +++ This should be two tables (params and vars): fix layout stuff +++ -->
-	  <table id='parameters' style="display:table-cell">
+	  <div style="display:table-cell">
+	  <table id='parameters'>
 	    <tbody>
 	      <tr><td>WS port       </td><td><code><span id='paramPort'/></code></td></tr>
 	      <tr><td>business logic</td><td><code><span id='paramBL'/>  </code></td></tr>
 	      <tr><td>fact store    </td><td><code><span id='paramPrvD'/></code></td></tr>
-	      <tr style="transparent;height:10px"><td style="background:transparent" colspan=2/></tr>
-	      <tr style="transparent;height:10px"><td style="background:transparent" colspan=2/></tr>
-	      <tr><td>hash          </td><td><code><span id='varHash'/></code></td></tr>
+	      <tr><td>fact renderer </td><td><code><span id='paramFRnd'/></code></td></tr>
+	    </tbody>
+	  </table>
+	  </div>
+	  <div style="display:table-cell">
+	  <table id='variables'>
+	    <tbody>
+	      <tr><td>hash          </td><td><code>
+		<span id='varHash'>
+		  <!-- create space for SHA-1 hash -->
+		  <span style="visibility:hidden">da39a3ee5e6b4b0d3255bfef95601890afd80709</span>
+		</span>
+	      </code></td></tr>
 	      <tr><td>#facts        </td><td><code><span id='varNF'/>  </code></td></tr>
 	      <tr><td>#connections  </td><td><code><span id='varNC'/>  </code></td></tr>
 	    </tbody>
 	  </table>
+	  </div>
 	  <div style="display:table-cell;vertical-align:middle">
-	    <span id="bigButton" class="big-button" style="margin:20px">START</span>
+	    <span id="bigButton" class="big-button" style="margin-left:20px;margin-top:10px;margin-bottom:10px">START</span>
 	  </div>
 	</div>
       </div>

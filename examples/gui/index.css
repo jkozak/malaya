@@ -23,4 +23,7 @@ BODY {
 #parameters tr:nth-child(even) td{background: rgb(240,240,240);}
 #parameters tr:nth-child(odd)  td{background: rgb(250,250,250);}
 
+#variables  tr:nth-child(even) td{background: rgb(240,240,240);}
+#variables   tr:nth-child(odd)  td{background: rgb(250,250,250);}
+
 
