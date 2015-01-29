@@ -33,7 +33,7 @@ exports.build = function(opts) {
 	onCompile:     null,
 	auto_output:   true},
 		    opts);
-    
+
     var  server = malaya.createServer(opts);
     var  fe3srv = fe3.createServer({malaya:server});
     var fe3port = opts.fe3port || 5110;
@@ -61,6 +61,9 @@ exports.build = function(opts) {
     });
     if (opts.onCompile)
 	server.on('compile',opts.onCompile);
+
+    if (opts.init==='')
+	throw new Error("specify a source of init data");
 
     server.start();
     
