@@ -71,6 +71,21 @@ var serialise = function(v) {
     });
 };
 
+exports.Fail = function(msg) {
+    this.message = msg;
+};
+exports.Fail.prototype = new Error;
+
+process.on('uncaughtException', function(err) {
+    if (err instanceof exports.Fail) {
+	console.log(err.message);
+	process.exit(100);
+    } else {
+	console.error(err.stack)
+	process.exit(101)
+    }
+});
+
 exports.serialise = function(v) {
     // disable standard `toJSON` processing which we replace above
     var saveDate = Date.prototype.toJSON;
@@ -119,11 +134,11 @@ exports.env = (function() {
     if (env==='' || env===undefined)
 	env = 'dev';
     if (!{dev:true,prod:true,test:true}[env])
-	throw new Error(_util.format("bad NODE_ENV: %j",env));
+	throw new exports.Fail(_util.format("bad NODE_ENV: %j",env));
     return env;
 })();
 
 exports.inspect = _util.inspect;
 
 if (exports.env==='prod' && exports.source_version.slice(-1)==='+')
-    throw new Error("must run registered code in production");
+    throw new exports.Fail("must run registered code in production");

@@ -75,9 +75,8 @@ exports.createServer = function(opts) {
 	    if (opts.init) {
 		try {
 		    fs.statSync(opts.prevalenceDir);
-		    util.error("prevalence state dir already exists, won't init");
-		    process.exit();
-		} catch (err) {}
+		    throw new util.Fail("prevalence state dir already exists, won't init");
+		} catch (err) {if (err instanceof util.Fail) throw err;}
 		fs.mkdirSync(opts.prevalenceDir);
 		bl = prvl.wrap(opts.prevalenceDir,opts.businessLogic,opts);
 		bl.init();

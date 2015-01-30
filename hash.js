@@ -12,13 +12,13 @@ module.exports = function(algorithm) {
 	    try {		// if dirname doesn't exist, create it
 		var st = fs.statSync(dirname);
 		if (!st.isDirectory())
-		    throw new Error(util.format("hash store %j exists and is not a directory",dirname));
+		    throw new util.Fail(util.format("hash store %j exists and is not a directory",dirname));
 	    } catch (err) {
 		if (err.code==='ENOENT') {
 		    try {
 			fs.mkdirSync(dirname);
 		    } catch (err1) {
-			throw new Error(util.format("can't find or open a hashstore at: %j",dirname));
+			throw new util.Fail(util.format("can't find or open a hashstore at: %j",dirname));
 		    }
 		} else
 		    throw err;
