@@ -3,9 +3,9 @@
 
 "use strict";
 
-var  argv = require('minimist')(process.argv.slice(2),{string:['init']});
+var  argv = require('minimist')(process.argv.slice(2),{string:['init','fsync'],defaults:{fsync:'kludge'}});
 var setup = require('./setup.js');
-
+    
 process.on('SIGINT',function() {
     if (server)
 	server.close();
@@ -20,5 +20,5 @@ process.on('SIGHUP',function() {
 process.on('exit',function(code) {
 });
 
-var server = setup.build({init:argv.init});
+var server = setup.build({init:argv.init,sync_journal:argv.fsync});
 server.run();

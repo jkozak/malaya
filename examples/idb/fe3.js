@@ -74,6 +74,10 @@ function FE3Connection(sock,server) {
 	    write({initialised:{}});
 	    break;
 	}
+	case 'logon0': {
+	    write({logon0:{}});	// +++ encryption +++
+	    break;
+	}
 	case 'logon': {
 	    var  res = command([tag,jsx[tag]]);
 	    var add0 = res.refs[res.adds[0]];
@@ -108,11 +112,9 @@ function FE3Connection(sock,server) {
 	    var ans = server.queries([['auctionTemplate',id],
 				      ['auctionInstrumentsTemplate',id] ],
 				     mc);
-	    console.log("*** ans: %j",ans);
 	    var out = {'AuctionTemplate':_.extend(ans[0][0],
 						  {_children:_.map(ans[0][1],function(r){return {AInst:r};})} )};
 
-	    console.log("*** out: %j",out);
 	    write(out);
 	    break;
 	}

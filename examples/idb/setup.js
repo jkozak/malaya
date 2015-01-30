@@ -15,7 +15,7 @@ exports.extraOpts = {
 	      function(s) {
 		  var ans = parseInt(s);
 		  if (ans===NaN)
-		      throw new Error("invalid port");
+		      throw new util.Fail(util.format("invalid port: %j",s));
 		  return ans;
 	      } ]
 };
@@ -33,6 +33,9 @@ exports.build = function(opts) {
 	onCompile:     null,
 	auto_output:   true},
 		    opts);
+
+    if (opts.init==='')
+	throw new util.Fail("specify something to init from!");
 
     var  server = malaya.createServer(opts);
     var  fe3srv = fe3.createServer({malaya:server});
@@ -78,7 +81,7 @@ exports.build = function(opts) {
 		fe3srv.listen(fe3port);
 	    });
 	};
-	if (opts.init==="" || !!opts.init)
+	if (opts.init==='' || !!opts.init)
 	    init(server,opts.init,listen);
 	else
 	    listen();
@@ -125,11 +128,9 @@ function init(server,init,listen) {
 	    listen();
 	});
     } else if (init.match(/[a-zA-Z0-9]+@[a-zA-Z0-9-]+\/[a-z0-9]+:.*/)) {
-	throw new Error("NYI - ODBC loading");
-    } else {
-	console.error("can't init from: %j",init);
-	process.exit(100);
-    }
+	throw new util.Fail("NYI - ODBC loading");
+    } else
+	throw new util.Fail(util.format("can't init from: %j",init));
 }
 
 

@@ -1,0 +1,6 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Thu, 29 Jan 2015 22:51:15 +0000
+Subject: `examples/idb --init` is slow - set journalling off during init
+State: new
+Message-Id: <d82d9ca66ebedc24-0-artemis@renn>
+
