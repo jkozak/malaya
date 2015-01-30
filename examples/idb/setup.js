@@ -62,9 +62,6 @@ exports.build = function(opts) {
     if (opts.onCompile)
 	server.on('compile',opts.onCompile);
 
-    if (opts.init==='')
-	throw new Error("specify a source of init data");
-
     server.start();
     
     server.on('makeConnection',function(mc) {
@@ -81,7 +78,7 @@ exports.build = function(opts) {
 		fe3srv.listen(fe3port);
 	    });
 	};
-	if (!!opts.init)
+	if (opts.init==="" || !!opts.init)
 	    init(server,opts.init,listen);
 	else
 	    listen();
@@ -94,20 +91,30 @@ exports.build = function(opts) {
 
 function init(server,init,listen) {
     // +++ do this via the `transform` mechanism that doesn't exist yet [b8cb5936e7df0244] +++
-    var IDB = {add:function(js) {server.command(js,{port:'init'});}};
+    var           fs = require('fs');
+    var          IDB = {add:function(js) {server.command(js,{port:'init'});}};
+    var exitIfNoFile = function(filename) {
+	if (!fs.existsSync(filename)) {
+	    console.error("init file %j not found",filename);
+	    process.exit(100);
+	}
+    }
     if (init.match(/\.json$/)) {
+	exitIfNoFile(init);
 	var json = JSON.parse(fs.readFileSync(init));
 	for (var i in json) {
 	    IDB.add(json[i]);
 	}
 	listen();
     } else if (init.match(/\.py$/)) {
+	exitIfNoFile(init);
 	var  exec = require('child_process').exec;
 	var child = exec("python import_init_db.py "+init,{
 	    maxBuffer: 10*1024*1024
 	}, function(err,stdout,stderr) {
+	    if (err) throw err;
 	    var json = JSON.parse(stdout);
-	    for (var i in json)
+	    for (var i in json) 
 		IDB.add(json[i]);
 	});
 	child.on('exit',function(code,signal) {
