@@ -1,6 +1,7 @@
 From: John Kozak <jk@thameslighter.net>
 Date: Tue, 14 Oct 2014 09:41:04 +0100
 Subject: ['a',{b}] should not match ['a']
-State: new
+State: resolved
 Message-Id: <9e15c3b9134c259c-0-artemis@renn>
+resolution: fixed
 
