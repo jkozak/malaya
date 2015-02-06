@@ -202,7 +202,7 @@ function mangle(js,vars) {
     } else {
 	var doIdentifier = function(path) {
 	    var id = path.node;
-	    if (vars.indexOf(id.name)!==-1)
+	    if (vars.indexOf(id.name)!==-1) 
 		path.replace(b.identifier(mangle(id.name)));
 	};
 	js = parser.visit(js,{
@@ -221,11 +221,12 @@ function mangle(js,vars) {
 	    },
 	    visitMemberExpression: function(path) {
 		var expr = path.node;
-		doIdentifier(path.get('object'));
 		if (expr.computed)
-		    this.traverse(path.get('property'));
-		else
+		    this.traverse(path);
+		else {
+		    doIdentifier(path.get('object'));
 		    return false;
+		}
 	    }
 	});
 	return [js,_.map(vars,mangle)];
@@ -349,6 +350,8 @@ function exprGetFreeVariables(expr) {
 	    ans = _.union(ans,exprGetFreeVariables(expr.rank));
 	return ans;
     }
+    case 'BindRest':
+	return [];
     default:
 	throw new Error(util.format("NYI: %j",expr));
     }
@@ -539,8 +542,7 @@ function genAccessor(x,path) {
 function genAdd(x) {
     parser.namedTypes.Expression.assert(x);
     var bindRest = null;
-    x = deepClone(x);
-    parser.visit(x,{
+    return parser.visit(deepClone(x),{
 	visitObjectExpression: function(path) {
 	    var bRsave = bindRest;
 	    bindRest = null;
@@ -549,7 +551,7 @@ function genAdd(x) {
 		path.replace(b.callExpression(b.memberExpression(b.identifier('_'),
 								 b.identifier('extend'),
 								 false),
-					      [bindRest.value,path.node]) );
+					      [b.objectExpression([]),bindRest.value,path.node]) );
 	    }
 	    bindRest = bRsave;
 	},
@@ -561,9 +563,34 @@ function genAdd(x) {
 		path.replace();
 	    }
 	    this.traverse(path);
+	},
+	visitArrayExpression: function(path) {
+	    var bRsave = bindRest;
+	    bindRest = null;
+	    this.traverse(path);
+	    if (bindRest!==null) {
+		var before = b.arrayExpression([]);
+		var  after = b.arrayExpression([]);
+		var   rest = null;
+		for (var i=0;i<path.node.elements.length;i++) {
+		    if (path.node.elements[i].type==='BindRest') 
+			rest = path.node.elements[i].id; 
+		    else if (rest!==null)
+			after.elements.push(path.node.elements[i]);
+		    else
+			before.elements.push(path.node.elements[i]);
+		}
+		var rep = b.callExpression(b.memberExpression(before,b.identifier('concat'),false),
+					   [rest,after]);
+		path.replace(rep);
+	    }
+	    bindRest = bRsave;
+	},
+	visitBindRest: function(path) {
+	    bindRest = path.node;
+	    this.traverse(path);
 	}
     });
-    return x;
 }
 
 function genMatch(term,vars,genRest,bIdFact) { // genRest() >> [stmt,...]; returns BlockStatement
@@ -631,6 +658,22 @@ function genMatch(term,vars,genRest,bIdFact) { // genRest() >> [stmt,...]; retur
 		vars[term.name].bound = true;
 	    }
 	    break;
+	case 'MemberExpression': {
+	    if (term.computed)
+		throw new Error("NYI: computed member: %j",term);
+	    var root;
+	    for (root=term;root.type==='MemberExpression';root=root.object)
+		;
+	    if (vars[root.name].bound) {
+		bools.push(genEqual(term,genAccessor(bIdFact,path)));
+	    } else if (root!==term) {
+		throw new Error("can't bind to subobject");
+	    } else {
+		binds[term.name]      = genAccessor(bIdFact,path);
+		vars[term.name].bound = true;
+	    }
+	    break;
+	}
 	case 'Property': {
 	    switch (term.kind) {
 	    case 'bindOne':
@@ -642,7 +685,7 @@ function genMatch(term,vars,genRest,bIdFact) { // genRest() >> [stmt,...]; retur
 		}
 		break;
 	    case 'init':
-		bools.push(genEqual(term.value,genAccessor(bIdFact,path)));
+		visit(term.value,path);
 		break;
 	    case 'bindRest':
 		if (path.length===0)

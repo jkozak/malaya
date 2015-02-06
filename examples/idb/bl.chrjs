@@ -60,6 +60,9 @@ var IDB = store {
 	  aname = faker.name.findName(),
 	  apwd  = faker.internet.password(),
 	  +['Permissions',{ApplicationName:aname,Password:apwd,anon:null,...rs}]);
+    rule (-['MarketManager',{auctionId,...rs}],
+	  _.isUndefined(auctionId),
+	  +['MarketManager',{auctionId:10000,...rs}] );
 
     // market control
     rule (['MarketManager',{MarketID}],  -['MarketManager',{MarketID}]);
@@ -74,6 +77,7 @@ var IDB = store {
     rule (['restart'], -['_output']);
     rule (['restart'], -['_take-outputs']);
     rule (['restart'], -['tick']);
+    rule (['restart'], -['auction',{state}]); // !!! TESTING !!!
     rule (['restart'], -['restart']); // shouldn't happen, but if a bad world is saved...
     rule (-['restart']);
     
@@ -100,8 +104,40 @@ var IDB = store {
     // cookies
     rule (-['store-cookie',{id,cookie},{port}],
 	  ['Permissions',{port,ApplicationID}],
-	  -['Cookies',{ApplicationID,CookieID:id,Cookie:cookie}],
+	  -['Cookies',{ApplicationID,CookieID:id}],
 	  +['Cookies',{ApplicationID,CookieID:id,Cookie:cookie}] );
+
+    // +++ `price` +++
+    // +++ `trade` +++
+    // +++ `BigFigBlock` +++
+    // +++ `EndBigFigBlock` +++
+    // +++ `InstHighlight` +++
+
+    // auction
+    rule (-['PrepareAuction',{id,action:'I',...prs}],
+	  -['MarketManager',{auctionId,...mrs}],
+	  +['MarketManager',{auctionId:auctionId+1,...mrs}],
+	  +['annotatePrepareAuction',{id:auctionId+1,templateId:id,instruments:[],state:'P',...prs}] );
+    rule (-['annotatePrepareAuction',{instruments,_children:[child,...irs],...rs}],
+    	  ['Instrument',{InstID:child.AInst.InstID,SubClass}],
+    	  ['InstrumentClass',{InstSubClassID:SubClass,AuctionVolumes:av}],
+    	  +['annotatePrepareAuction',{instruments:instruments.concat([{AInst:_.extend(child.AInst,
+    										      {AuctionVolumes:av} )}]),
+    				      _children:[...irs],
+    				      ...rs}] );
+    rule (-['annotatePrepareAuction',{id,instruments,_children:[],phases,...rs}],
+	  +['auction',{id,instruments,curPhase:phases[0],phases,...rs}],
+	  +['_output','all',{PrepareAuction:{AuctionID:id,Class:1,action:'I',_children:instruments,...rs}}] );
+    rule (['tick'],
+	  ['auction',{state,id,curPhase,...rs}],
+	  state!='N',
+	  d = {'M':rs.MatchingDuration,'A':rs.Duration,'S':rs.SecondChanceDuration}[curPhase],
+	  +['_output','all',{AuctionState:{AuctionID:id,Class:1,State:state,Duration:d}}] );
+    // +++ `StartPrepareAuction` +++
+    // +++ `AuctionPriceBlock` +++
+    // +++ `AuctionSecondChance` +++
+    // +++ `AuctionMatch` +++
+    // +++ `AuctionDelAll` +++
 
     // background
     rule (['tick',{date}],
@@ -209,10 +245,10 @@ var IDB = store {
 			      MatchingDuration:     at.MatchingDuration,
 			      SecondChanceDuration: 0
 			   };
-    query auctionTemplateInstances(id;
+    query auctionInstrumentsTemplate(id;
 				   ['AuctionInstrumentsTemplate',{AuctionTemplateID:id,InstID,...ait}],
 				   ['Instrument',{InstID,...inst}];
-				   a=[]) a.addToIndexList(ait.AuctionTemplateInstance,{
+				     a=[]) addToIndexList(a,ait.AuctionTemplateInstance,{
 				       InstID:       InstID,
 				       Midprice:     inst.MidPrice,
 				       Tolerance:    inst.VolatilityPercent,

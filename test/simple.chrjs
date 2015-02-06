@@ -146,3 +146,44 @@ describe("store generic operations",function() {
 	assert.equal(st._private.size,0);
     });
 });
+
+describe("ellipsis bindings",function() {
+    it("should not leak [9d893bfbf0ea11b0]",function() {
+	var st = store {
+	    rule (-['a',{...rs}],
+		  +['b',{b:1,...rs}],
+		  +['c',{c:2,...rs}]
+		 );
+	};
+	st.add(['a',{p:99}]);
+	assert.equal(st._private.size,2);
+	assert.deepEqual(st._private.facts["2"],['b',{p:99,b:1}]);
+	assert.deepEqual(st._private.facts["3"],['c',{p:99,c:2}]);
+    });
+});
+
+describe("regression tests",function() {
+    it("should have fixed [955dab]",function() {
+	var IDB = store {
+	    rule (-['annotatePrepareAuction',{instruments,_children:[child,...irs],...rs}],
+    		  ['Instrument',{InstID:child.AInst.InstID,SubClass}],
+    		  ['InstrumentClass',{InstSubClassID:SubClass,AuctionVolumes:av}],
+    		  +['annotatePrepareAuction',{instruments:instruments.push({AInst:_.extend(child.AInst,
+											   {AuctionVolumes:av} )}),
+                                              _children:[...irs],
+       	                                      ...rs}] );
+	};
+    });
+    it("should have fixed [e39caf5ad040aa90] (mangling)",function() {
+	var IDB = store {
+	    rule (['tick'],
+		  ['auction',{state,id,curPhase,...rs}],
+		  state!='N',
+		  d = {'M':rs.MatchingDuration,'A':rs.Duration,'S':rs.SecondChanceDuration}[curPhase],
+		  +['_output','all',{AuctionState:{AuctionID:id,Class:1,State:state,Duration:d}}] );
+	};
+	IDB.add(['auction',{state:'P',id:1,curPhase:'A'}]);
+	IDB.add(['tick']);
+	assert.equal(IDB._private.size,3); // check rule fired
+    });
+});

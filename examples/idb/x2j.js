@@ -62,9 +62,11 @@ exports.build = function(obj,cb) {
 		    if (a!=='_children') {
 			if (obj[k][a]===undefined)
 			    console.log("*** undef obj: %j  k: %j  a: %j",obj,k,a);
-			var s = obj[k][a]===null  ? "" : obj[k][a].toString();
-			assert.equal(s.indexOf('"'),-1);
-			cb(" ");cb(a);cb('="');cb(s);cb('"');
+			else {
+			    var s = obj[k][a]===null  ? "" : obj[k][a].toString();
+			    assert.equal(s.indexOf('"'),-1);
+			    cb(" ");cb(a);cb('="');cb(s);cb('"');
+			}
 		    }
 		});
 		var children = obj[k]['_children'];

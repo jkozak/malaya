@@ -69,6 +69,7 @@ describe("exprGetFreeVariables",function() {
 	assert(equalU([],       gfv(parseRule("rule (['user',{name:a}])"))));
 	assert(equalU([],       gfv(parseRule("rule (['user',{a,...rs}])"))));
 	assert(equalU(['a'],    gfv(parseRule("rule (['user',{name:a+0}])"))));
+	assert(equalU(['a'],    gfv(parseRule("rule (['user',['fred',a,...rs]])"))));
     });
 });
 
@@ -136,11 +137,67 @@ describe("genAccessor",function() {
     });
 });
 
+function literalise(x) {
+    if (_.isArray(x))
+	return b.arrayExpression(x.map(literalise));
+    else if (_.isObject(x))
+	return b.objectExpression(_.keys(x).map(function(k) {
+	    return b.property('init',
+			      b.identifier(k),
+			      literalise(x[k]) );
+	}));
+    else
+	return b.literal(x);
+}
+
+describe("genAdd",function() {
+    var  genAdd = compiler._private.genAdd;
+    var evalAdd = function(add,bindings) {
+	if (bindings===undefined)
+	    bindings = {};
+	var   ks = _.keys(bindings);
+	var code = recast.print(b.callExpression(b.functionExpression(null,
+								      ks.map(function(k){return b.identifier(k);}),
+								      b.blockStatement([b.returnStatement(add)]) ),
+						 ks.map(function(k){return literalise(bindings[k]);}) )).code;
+	return eval(code);
+    };
+    it("should have sane test infrastructure",function() {
+	assert.deepEqual([1,2,3],evalAdd(parseExpression("[1,2,3]")));
+	assert.deepEqual([1,2,4],evalAdd(parseExpression("[1,2,a]"),{a:4}));
+    });
+    it("should generate code for an array pattern",function() {
+	var add = genAdd(parseExpression("['a',b,...c]"));
+	assert.deepEqual(['a',6,56,57],evalAdd(add,{b:6,c:[56,57]}));
+    });
+    it("should generate code for a nested array pattern",function() {
+	var add = genAdd(parseExpression("[['a',b,...c]]"));
+	assert.deepEqual([['a',6,56,57]],evalAdd(add,{b:6,c:[56,57]}));
+    });
+    it("should generate code for an object pattern",function() {
+	var add = genAdd(parseExpression("{a:1,...rs}"));
+	assert.deepEqual({a:1,b:2,c:3},evalAdd(add,{rs:{b:2,c:3}}));
+    });
+    it("should generate code for a nested object pattern",function() {
+	var add = genAdd(parseExpression("{k:{a:1,...rs}}"));
+	assert.deepEqual({k:{a:1,b:2,c:3}},evalAdd(add,{rs:{b:2,c:3}}));
+    });
+    it("should generate code for an object-in-array pattern",function() {
+	var add = genAdd(parseExpression("[{a:1,...rs}]"));
+	assert.deepEqual([{a:1,b:4,c:5}],evalAdd(add,{rs:{b:4,c:5}}));
+    });
+    it("should generate code for an array-in-object pattern",function() {
+	var add = genAdd(parseExpression("{p:[a,b,c]}"));
+	assert.deepEqual({p:['a','b','c']},evalAdd(add,{a:'a',b:'b',c:'c'}));
+    });
+});
+
+
 describe("genMatch",function() {
-    var genMatch  = compiler._private.genMatch;
+    var  genMatch = compiler._private.genMatch;
     var evalMatch = function(match,fact) {
 	var code = (recast.print(b.callExpression(b.functionExpression(null,[b.identifier('fact')],match),
-						  [fact])).code);
+						  [fact] )).code);
 	return eval(code);
     }
     it("should generate match code for simple array patterns",function() {
@@ -192,6 +249,48 @@ describe("genMatch",function() {
 	assert(vars.d.bound);
 	assert.deepEqual([21],evalMatch(match,parseExpression("['a','b',21,22]")));
     });
+    it("should generate match code for nested array pattern",function() {
+	var  vars = {a:{bound:false}};
+	var match = genMatch(parseExpression("[[a]]"),
+			     vars,
+			     function(){return [b.returnStatement(b.identifier('a'))]} );
+	assert(vars.a.bound);
+	assert.deepEqual(26,evalMatch(match,parseExpression("[[26]]")));
+    });
+    it("should generate match code for array pattern in object expression",function() {
+	var  vars = {a:{bound:false},q:{bound:false}};
+	var match = genMatch(parseExpression("{p:[a],...q}"),
+			     vars,
+			     function(){return [b.returnStatement(b.identifier('a'))]} );
+	assert(vars.q.bound);
+	assert(vars.a.bound);
+	assert.deepEqual(23,evalMatch(match,parseExpression("{\"p\":[23]}")));
+    });
+    it("should generate match code for ... array pattern in object expression",function() {
+	var  vars = {c:{bound:false},q:{bound:false}};
+	var match = genMatch(parseExpression("{p:['a','b',...c],...q}"),
+			     vars,
+			     function(){return [b.returnStatement(b.identifier('c'))]} );
+	assert(vars.q.bound);
+	assert(vars.c.bound);
+	assert.deepEqual([23],evalMatch(match,parseExpression("{\"p\":['a','b',23]}")));
+    });
+    it("should generate match code for member pattern in object expression",function() {
+	// +++ extending `evalMatch` with the bindings code from `evalAdd` +++
+	var  vars = {a:{bound:true}};
+	var match = genMatch(parseExpression("{p:a.b}"),
+			     vars,
+			     function(){return [b.returnStatement(b.identifier('a'))]} );
+	var  code = recast.print(b.callExpression(b.functionExpression(null,
+								       [b.identifier('a'),
+									b.identifier('fact')],
+								       match),
+						  [b.objectExpression([b.property('init',
+										  b.identifier('b'),
+										  b.literal(30) )]),
+						   parseExpression("{p:30}")])).code;
+	assert.deepEqual({b:30},eval(code));
+    });
 });
 
 describe("mangle",function() {
@@ -205,15 +304,20 @@ describe("mangle",function() {
     });
     it("should translate BindRest exprs",function() {
 	var ast = parser.parse("store fred {rule(['user',{...rB}]^rB.t);}");
-	var  av = compiler._private.mangle(ast,['a','rB']);
+	var  av = mangle(ast,['rB']);
 	assert.equal(av[0].body[0].body[0].items[0].rank.object.name,'rB_');
     });
     it("should handle properties correctly",function() {
 	var ast = parser.parse("store fred {rule(['user',{name}]);}");
-	var  av = compiler._private.mangle(ast,['a','name']);
+	var  av = mangle(ast,['name']);
 	assert.equal(av[0].body[0].body[0].items[0].expr.elements[1].properties[0].key.name,'name');
 	assert.equal(av[0].body[0].body[0].items[0].expr.elements[1].properties[0].value.name,mangle('name'));
     });
+    it("should handle computed MemberExpressions [e39caf5ad040aa90]",function() {
+	var ast = parser.parse("store fred {rule(['user',{id,...rs}],d={'a':rs.x}['a']);}");
+	var  av = mangle(ast,['rs']);
+	assert.equal(av[0].body[0].body[0].items[1].expr.right.object.properties[0].value.object.name,'rs_');
+    })
 });
 
 describe("genAdd",function() {
@@ -326,7 +430,6 @@ describe("compile hook",function() {
 	assert(ok);
     });
 });
-
 
 describe("code stanzas",function() {
     var tdir = temp.mkdirSync();

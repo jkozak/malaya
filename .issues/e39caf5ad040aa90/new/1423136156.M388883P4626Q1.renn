@@ -1,0 +1,7 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Thu, 05 Feb 2015 11:35:56 +0000
+Subject: mangling not being done for computed MemberExpression items
+State: resolved
+Message-Id: <e39caf5ad040aa90-0-artemis@renn>
+resolution: fixed
+
