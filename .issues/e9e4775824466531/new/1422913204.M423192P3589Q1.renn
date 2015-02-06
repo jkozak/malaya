@@ -1,0 +1,6 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Mon, 02 Feb 2015 21:40:04 +0000
+Subject: allow `undefined` as a global name in chrjs
+State: new
+Message-Id: <e9e4775824466531-0-artemis@renn>
+
