@@ -186,4 +186,46 @@ describe("regression tests",function() {
 	IDB.add(['tick']);
 	assert.equal(IDB._private.size,3); // check rule fired
     });
+    it("should have fixed [c50b9588e7f6632b] (array match should check size)",function() {
+	var st = store {
+	    rule (-['a',[car,...cdr]],
+		  +['a',cdr]);
+	};
+	st.add(['a',[]]);
+	assert.equal(st._private.size,1);
+	assert.deepEqual(_.values(st._private.facts),[['a',[]]]);
+    });
+    it("should have fixed [9e15c3b9134c259c] (['a',{b}] should not match ['a'])",function() {
+	var st = store {
+	    rule (-['a',{b}]);
+	};
+	st.add(['a']);
+	assert.deepEqual(_.values(st._private.facts),[['a']]); // i.e. not consumed
+    });
+    it("should have fixed problem observed in the wild",function() {
+	var IDB = store {
+	    rule (-['annotatePrepareAuction',{instruments,_children:[child,...irs],...rs}],
+    		  ['Instrument',{InstID:child.AInst.InstID,SubClass}],
+    		  ['InstrumentClass',{InstSubClassID:SubClass,AuctionVolumes:av}],
+    		  +['annotatePrepareAuction',{instruments:instruments.concat([{AInst:_.extend(child.AInst,
+    											      {AuctVols:av} )}]),
+    					      _children:[...irs],
+    					      ...rs}] );
+	    rule (-['annotatePrepareAuction',{id,instruments,_children:[],phases,...rs}],
+		  +['auction',{id,instruments,curPhase:phases[0],phases,...rs}],
+		  +['_o',{PrepareAuction:{AuctionID:id,Class:1,action:'I',_children:instruments,...rs}}] );
+	};
+	IDB.add(['Instrument',{InstID:999,SubClass:777}]);
+	IDB.add(['InstrumentClass',{InstSubClassID:777,AuctionVolumes:"10 20 30"}]);
+	assert.equal(IDB._private.size,2);
+	IDB.add(['annotatePrepareAuction',{instruments:[],_children:[{AInst:{InstID:999}}],phases:'A',id:8}]);
+	console.log("*** %j",IDB._private.facts);
+	assert.equal(IDB._private.size,4);
+	_.values(IDB._private.facts).forEach(function(f) {
+	    if (f[0]==='auction') 
+		assert.deepEqual(f[1].instruments,[{AInst:{InstID:999,AuctVols:"10 20 30"}}]);
+	    else if (f[0]==='_o')
+		assert.deepEqual(f[1].PrepareAuction._children,[{AInst:{InstID:999,AuctVols:"10 20 30"}}]);
+	});
+    });
 });

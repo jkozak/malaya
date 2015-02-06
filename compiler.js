@@ -623,13 +623,21 @@ function genMatch(term,vars,genRest,bIdFact) { // genRest() >> [stmt,...]; retur
 	    break;
 	}
 	case 'ArrayExpression': {
+	    var min_size = term.elements.length;
 	    for (var i=0;i<term.elements.length;i++) {
 		if (i!=term.elements.length-1       &&
 		    term.elements[i].type==='BindRest') { // not in final position +++ handle this +++
 		    term.elements[i]._leave_count = term.elements.length-i-1;
 		}
+		if (term.elements[i].type==='BindRest')
+		    min_size--;
 		visit(term.elements[i],path.concat(i));
 	    }
+	    bools.push(b.binaryExpression('>=', // gen check that enough elements are offered
+	     				  b.memberExpression(genAccessor(bIdFact,path),
+							     b.identifier('length'),
+							     false),
+	     				  b.literal(min_size) ));
 	    break;
 	}
 	case 'Literal':
@@ -642,7 +650,7 @@ function genMatch(term,vars,genRest,bIdFact) { // genRest() >> [stmt,...]; retur
 	    var sl_args = !term._leave_count ? [b.literal(path[path.length-1])] : [
 		b.literal(path[path.length-1]),
 		b.binaryExpression('-',bProp(acc,'length'),b.literal(term._leave_count)) ];
-	    var sliced  = b.callExpression(bProp(acc,'slice'),sl_args)
+	    var sliced  = b.callExpression(bProp(acc,'slice'),sl_args);
 	    if (vars[term.id.name].bound) {
 		bools.push(genEqual(term,sliced));
 	    } else {
