@@ -66,38 +66,37 @@ var IDB = store {
 
     // market control
     rule (['MarketManager',{MarketID}],  -['MarketManager',{MarketID}]);
-    rule (-['market-status',{ID,status}],
+    rule (-['market-status',{ID,status,...},...],
 	  -['MarketManager',{MarketID:ID,Status,...rs}],
 	  +['MarketManager',{MarketID:ID,Status:status,...rs}]);
 
     // restart
-    rule (['restart'],
+    rule (['restart',...],
 	  -['Permissions',{LoggedOn:1,...rs}],
 	  +['Permissions',{LoggedOn:0,...rs}] );
-    rule (['restart'], -['_output']);
-    rule (['restart'], -['_take-outputs']);
-    rule (['restart'], -['tick']);
-    rule (['restart'], -['auction',{state}]); // !!! TESTING !!!
-    rule (['restart'], -['restart']); // shouldn't happen, but if a bad world is saved...
-    rule (-['restart']);
+    rule (['restart',...], -['_output',...]);
+    rule (['restart',...], -['_take-outputs',...]);
+    rule (['restart',...], -['tick',...]);
+    rule (['restart',...], -['restart',...]); // shouldn't happen, but if a bad world is saved...
+    rule (-['restart',...]);
     
     // logon processing
-    rule (-['logon',      {user,pw},{port}],
+    rule (-['logon',      {user,pw,...},{port,...}],
 	  -['Permissions',{ApplicationName:user,Password:pw,LoggedOn:0,...rs}],
 	  +['Permissions',{ApplicationName:user,Password,LoggedOn:1,port,...rs}],
 	  +['_output','self',{logon:{OK:1,session_key:0}}]
 	 );
-    rule (-['logon',      {user,pw}],
-	  ['Permissions',{ApplicationName:user,Password:pw,LoggedOn:1}],
+    rule (-['logon',      {user,pw,...},...],
+	  ['Permissions',{ApplicationName:user,Password:pw,LoggedOn:1,...}],
 	  +['_output','self',{logon:{OK:0,error_code:16,text:"already logged on"}}] );
     rule (-['logon',      {user}],
-	  ['Permissions',{ApplicationName:user}],
+	  ['Permissions',{ApplicationName:user,...}],
 	  +['_output','self',{logon:{OK:0,error_code:17,text:"bad password"}}] );
-    rule (-['logon'],
+    rule (-['logon',...],
 	  +['_output','self',{logon:{OK:0,error_code:18,text:"user unknown"}}] );
     rule (['Permissions',{ApplicationID}],
 	  -['Permissions',{ApplicationID}]);
-    rule (-['logoff',     {appId}],
+    rule (-['logoff',     {appId,...},...],
 	  -['Permissions',{ApplicationID:appId,LoggedOn:1,port,...rs}],
 	  +['Permissions',{ApplicationID:appId,LoggedOn:0,port:null,...rs}] );
 
@@ -114,7 +113,8 @@ var IDB = store {
     // +++ `InstHighlight` +++
 
     // auction
-    rule (-['PrepareAuction',{id,action:'I',...prs}],
+    rule (['restart',...], -['auction',...]); // !!! TESTING !!!
+    rule (-['PrepareAuction',{id,action:'I',...prs},...],
 	  -['MarketManager',{auctionId,...mrs}],
 	  +['MarketManager',{auctionId:auctionId+1,...mrs}],
 	  +['annotatePrepareAuction',{id:auctionId+1,templateId:id,instruments:[],state:'P',...prs}] );
@@ -128,7 +128,7 @@ var IDB = store {
     rule (-['annotatePrepareAuction',{id,instruments,_children:[],phases,...rs}],
 	  +['auction',{id,instruments,curPhase:phases[0],phases,...rs}],
 	  +['_output','all',{PrepareAuction:{AuctionID:id,Class:1,action:'I',_children:instruments,...rs}}] );
-    rule (['tick'],
+    rule (['tick',...],
 	  ['auction',{state,id,curPhase,...rs}],
 	  state!='N',
 	  d = {'M':rs.MatchingDuration,'A':rs.Duration,'S':rs.SecondChanceDuration}[curPhase],
@@ -140,25 +140,25 @@ var IDB = store {
     // +++ `AuctionDelAll` +++
 
     // background
-    rule (['tick',{date}],
+    rule (['tick',{date,...},...],
 	  +['_output','all',mkHeartbeat(date)] );
-    rule (-['tick']);
+    rule (-['tick',...]);
 
     // output
-    rule (['_take-outputs'], -['_output']);
-    rule (-['_take-outputs']);
+    rule (['_take-outputs',...], -['_output',...]);
+    rule (-['_take-outputs',...]);
 
 
     query users(;
-		['Permissions',{ApplicationID,ApplicationName,Password}];
+		['Permissions',{ApplicationID,ApplicationName,Password,...}];
 		a=[])  a.concat([[ApplicationID,ApplicationName,Password]]);
     query user(appId;
 	       ['Permissions',{ApplicationID:appId,...rs}];
 	       a=[])  a.concat([rs]);
 
     query staticdata(;
-		     ['Permissions',{ApplicationID:appId,TeamID:teamId,CompanyID:companyId}],
-		     ['Team',{TeamID:teamId,TeamName:team}];
+		     ['Permissions',{ApplicationID:appId,TeamID:teamId,CompanyID:companyId,...}],
+		     ['Team',{TeamID:teamId,TeamName:team,...}];
 		     a=[]) a.concat([{app:appId,team:teamId,Name:team}]);
 
     query instruments(appId;	// +++ make per-user
@@ -176,7 +176,7 @@ var IDB = store {
 		      }]);
 
     query feCookies(;
-		    ['FEConfig',{TabID,CookieData}];
+		    ['FEConfig',{TabID,CookieData,...}];
 		    a=[]) a.concat(CookieData);
 
     query subclasses(appId;	// +++ make per-user
@@ -194,12 +194,12 @@ var IDB = store {
 		     }]);
 
     query cookie(appId,id;
-		 ['Cookies',{ApplicationID:appId,CookieID:id,Cookie}];
+		 ['Cookies',{ApplicationID:appId,CookieID:id,Cookie,...}];
 		 a=[]) a.concat(Cookie);
 
     query markets(id;
-		  ['MarketManager',{MarketID:id,Status}],
-		  ['SequenceNumbers',{MarketID,PriceSequenceNo,TradeSequenceNo}];
+		  ['MarketManager',{MarketID:id,Status,...}],
+		  ['SequenceNumbers',{MarketID,PriceSequenceNo,TradeSequenceNo,...}];
 		  a=[]) a.concat({ID:        id,
 		                  status:    Status,
 				  priceSeqNo:PriceSequenceNo,
@@ -246,14 +246,14 @@ var IDB = store {
 			      SecondChanceDuration: 0
 			   };
     query auctionInstrumentsTemplate(id;
-				   ['AuctionInstrumentsTemplate',{AuctionTemplateID:id,InstID,...ait}],
-				   ['Instrument',{InstID,...inst}];
+				     ['AuctionInstrumentsTemplate',{AuctionTemplateID:id,InstID,...ait}],
+				     ['Instrument',{InstID,...inst}];
 				     a=[]) addToIndexList(a,ait.AuctionTemplateInstance,{
-				       InstID:       InstID,
-				       Midprice:     inst.MidPrice,
-				       Tolerance:    inst.VolatilityPercent,
-				       AddTolerance: inst.VolatilitySpread
-				   });
+					 InstID:       InstID,
+					 Midprice:     inst.MidPrice,
+					 Tolerance:    inst.VolatilityPercent,
+					 AddTolerance: inst.VolatilitySpread
+				     });
     // +++ templates -> template,... -> instance,... -> instrument,... +++
 };
 

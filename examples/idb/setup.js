@@ -30,8 +30,7 @@ exports.build = function(opts) {
 	tag:           'idb',
 	businessLogic: path.join(__dirname,'bl.chrjs'),
 	debug:         false,
-	onCompile:     null,
-	auto_output:   true},
+	onCompile:     null},
 		    opts);
 
     if (opts.init==='')
@@ -48,6 +47,7 @@ exports.build = function(opts) {
     });
     var timer = setInterval(function() {
 	server.command(['tick',{date:new Date()}],{port:'server:'});
+	server.command(['_take-outputs',{}],{port:'server:'}); // !!! improve this !!!
     },1000);
 
     server.on('loaded',function(hash) {
@@ -95,7 +95,7 @@ exports.build = function(opts) {
 function init(server,init,listen) {
     // +++ do this via the `transform` mechanism that doesn't exist yet [b8cb5936e7df0244] +++
     var           fs = require('fs');
-    var          IDB = {add:function(js) {server.command(js,{port:'init'});}};
+    var          IDB = {add:function(js) {server.command(js);}};
     var exitIfNoFile = function(filename) {
 	if (!fs.existsSync(filename)) {
 	    console.error("init file %j not found",filename);

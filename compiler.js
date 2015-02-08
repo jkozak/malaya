@@ -212,7 +212,9 @@ function mangle(js,vars) {
 	    },
 	    visitProperty: function(path) {           // keys may be Identifiers, don't mangle
 		var prop = path.node;
-		if (prop.value.type==='Identifier') {
+		if (prop.value===null) {
+		    return false;
+		} else if (prop.value.type==='Identifier') {
 		    doIdentifier(path.get('value'));
 		    return false;
 		}
@@ -374,8 +376,11 @@ function exprGetVariablesWithBindingSites(expr) {
 	for (var i in expr.properties) {
 	    switch (expr.properties[i].kind) {
 	    case 'bindOne':
-	    case 'bindRest':
 		ans.push(expr.properties[i].value.name);
+		break;
+	    case 'bindRest':
+		if (expr.properties[i].value!==null)
+		    ans.push(expr.properties[i].value.name);
 		break;
 	    case 'init':
 		ans = _.union(ans,exprGetVariablesWithBindingSites(expr.properties[i].value));
@@ -397,7 +402,10 @@ function exprGetVariablesWithBindingSites(expr) {
 	}
 	break;
     case 'BindRest':
-	return [expr.id.name];
+	if (expr.id===null)
+	    return []
+	else
+	    return [expr.id.name];
     case 'RuleStatement': {
 	var ans = [];
 	for (var i in expr.items)
@@ -560,6 +568,8 @@ function genAdd(x) {
 	    var prop = path.node;
 	    if (prop.kind==='bindRest') {
 		bindRest = prop;
+		if (bindRest.value===null)
+		    throw new Error("anonymous ellipsis in value expression");
 		path.replace();
 	    }
 	    this.traverse(path);
@@ -588,6 +598,8 @@ function genAdd(x) {
 	},
 	visitBindRest: function(path) {
 	    bindRest = path.node;
+	    if (bindRest.id===null)
+		throw new Error("anonymous ellipsis in value expression");
 	    this.traverse(path);
 	}
     });
@@ -617,23 +629,32 @@ function genMatch(term,vars,genRest,bIdFact) { // genRest() >> [stmt,...]; retur
 		rest._leave_names = _.map(non_rests,function(p){return p.key.name;});
 	    for (var p in term.properties) {
 		var prop = term.properties[p];
-		var name = prop.key==='' ? prop.value.name : prop.key.name;
-		visit(prop,path.concat(name));
+		if (prop.key==='' && prop.value===null) {
+		    // anonymous, ignore
+		} else if (prop.key==='') {
+		    visit(prop,path.concat(prop.value.name));
+		} else {
+		    visit(prop,path.concat(prop.key.name));
+		}
 	    }
 	    break;
 	}
 	case 'ArrayExpression': {
-	    var min_size = term.elements.length;
+	    var   min_size = term.elements.length;
+	    var rest_bound = false;
 	    for (var i=0;i<term.elements.length;i++) {
 		if (i!=term.elements.length-1       &&
 		    term.elements[i].type==='BindRest') { // not in final position +++ handle this +++
 		    term.elements[i]._leave_count = term.elements.length-i-1;
 		}
-		if (term.elements[i].type==='BindRest')
+		if (term.elements[i].type==='BindRest') {
 		    min_size--;
+		    rest_bound = true;
+		}
 		visit(term.elements[i],path.concat(i));
 	    }
-	    bools.push(b.binaryExpression('>=', // gen check that enough elements are offered
+	    // gen check that enough elements are offered
+	    bools.push(b.binaryExpression(rest_bound ? '>=' : '===', 
 	     				  b.memberExpression(genAccessor(bIdFact,path),
 							     b.identifier('length'),
 							     false),
@@ -651,10 +672,12 @@ function genMatch(term,vars,genRest,bIdFact) { // genRest() >> [stmt,...]; retur
 		b.literal(path[path.length-1]),
 		b.binaryExpression('-',bProp(acc,'length'),b.literal(term._leave_count)) ];
 	    var sliced  = b.callExpression(bProp(acc,'slice'),sl_args);
-	    if (vars[term.id.name].bound) {
+	    if (term.id===null) {
+		// anonymous, ignore
+	    } else if (vars[term.id.name].bound) {
 		bools.push(genEqual(term,sliced));
 	    } else {
-		binds[term.id.name] = sliced;
+		binds[term.id.name]      = sliced;
 		vars[term.id.name].bound = true;
 	    }
 	    break;
@@ -1256,11 +1279,14 @@ function buildStanzas(code,parsed) {
     stanzas.forEach(function(stanza) {
 	var addDraw = function(l,l1,c,n,ch) {
 	    if (ch!=null && n>0 && stanza.lines[l][c]!=' ') {
-		stanza.draws.push({node:sources[stanza.line+l][c],
-				   ch:ch,
-				   x:c,
-				   y:l1,
-				   n:n+1});
+		if (sources[stanza.line+l])
+		    stanza.draws.push({node:sources[stanza.line+l][c],
+				       ch:ch,
+				       x:c,
+				       y:l1,
+				       n:n+1});
+		else
+		    console.warn("cqn't find draw for stanza %d line %d",stanza.line,l);
 	    }
 	};
 	var l1 = 0;

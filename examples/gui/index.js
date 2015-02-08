@@ -37,7 +37,6 @@ $(document).ready(function() {	// 'control' panel
     opts.webDir        = fs.realpathSync('.');
     opts.debug         = true;
     opts.onCompile     = function(filename) {initStanzas(filename);};
-    opts.auto_output   = true;
     $('#title').text(util.format("malaya.%s control panel",opts.tag))
     // set parameter table
     $('#paramPort').text(opts.port);

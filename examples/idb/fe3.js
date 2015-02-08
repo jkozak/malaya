@@ -112,6 +112,7 @@ function FE3Connection(sock,server) {
 	    var ans = server.queries([['auctionTemplate',id],
 				      ['auctionInstrumentsTemplate',id] ],
 				     mc);
+	    console.log("fe3.AuctionTemplate: %j",ans);
 	    var out = {'AuctionTemplate':_.extend(ans[0][0],
 						  {_children:_.map(ans[0][1],function(r){return {AInst:r};})} )};
 

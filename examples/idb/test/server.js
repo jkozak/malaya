@@ -52,12 +52,11 @@ var mkServer = function(opts) {
 	init:          true,
 	tag:           'idb-test',
 	businessLogic: path.join(__dirname,'../bl.chrjs'),
-	sync_journal:  'none',
-	auto_output:   true
+	sync_journal:  'none'
     },opts));
     srvr.start();
     for (var i in FIXTURE) 
-	srvr.command(FIXTURE[i],{port:'test:'});
+	srvr._private.bl._private.bl.add(FIXTURE[i]); // add fact directly to store, bypassing context append
     return srvr;
 };
 
@@ -100,20 +99,22 @@ function logOnOffServerTest(srvr) {
 
 describe("server",function() {
     var prevalenceDir = path.join(temp.mkdirSync(),'prevalence');
+    var          test = function(opts) {
+	var srvr = mkServer(opts);
+	try {
+ 	    logOnOffServerTest(srvr);
+	} finally {
+	    srvr.close();
+	}
+    };
     it("inits nicely and performs a simple logon and logoff",function() {
-	var srvr = mkServer({init:true,prevalenceDir:prevalenceDir});
-	logOnOffServerTest(srvr);
-	srvr.close();
+	test({init:true,prevalenceDir:prevalenceDir});
     });
     it("loads nicely and performs a simple logon and logoff",function() {
-	var srvr = mkServer({init:false,prevalenceDir:prevalenceDir});
-	logOnOffServerTest(srvr);
-	srvr.close();
+	test({init:false,prevalenceDir:prevalenceDir});
     });
     it("reloads nicely and performs a simple logon and logoff",function() {
-	var srvr = mkServer({init:false,prevalenceDir:prevalenceDir});
-	logOnOffServerTest(srvr);
-	srvr.close();
+	test({init:false,prevalenceDir:prevalenceDir});
     });
 });
 
@@ -190,38 +191,42 @@ function logOnOffMultipleFE3ConnectionTest(srvr) {
 
 describe("FE3Connection",function() {
     var prevalenceDir = path.join(temp.mkdirSync(),'prevalence');
+    var          test = function(opts) {
+	var srvr = mkServer(opts);
+	try {
+	    logOnOffFE3ConnectionTest(srvr);
+	} finally {
+	    srvr.close();
+	}
+    };
     it("inits nicely and performs a simple logon and logoff",function() {
-	var srvr = mkServer({init:true,prevalenceDir:prevalenceDir});
-	logOnOffFE3ConnectionTest(srvr);
-	srvr.close();
+	test({init:true,prevalenceDir:prevalenceDir});
     });
     it("loads nicely and performs a simple logon and logoff",function() {
-	var srvr = mkServer({init:false,prevalenceDir:prevalenceDir});
-	logOnOffFE3ConnectionTest(srvr);
-	srvr.close();
+	test({init:false,prevalenceDir:prevalenceDir});
     });
     it("reloads nicely and performs a simple logon and logoff",function() {
-	var srvr = mkServer({init:false,prevalenceDir:prevalenceDir});
-	logOnOffFE3ConnectionTest(srvr);
-	srvr.close();
+	test({init:false,prevalenceDir:prevalenceDir});
     });
 });
 
-describe("FE3Connection",function() {
+describe("multiple connection",function() {
     var prevalenceDir = path.join(temp.mkdirSync(),'prevalence');
+    var          test = function(opts) {
+	var srvr = mkServer(opts);
+	try {
+	    logOnOffMultipleFE3ConnectionTest(srvr);
+	} finally {
+	    srvr.close();
+	}
+    };
     it("inits nicely and performs a brace of logons and logoffs",function() {
-	var srvr = mkServer({init:true,prevalenceDir:prevalenceDir});
-	logOnOffMultipleFE3ConnectionTest(srvr);
-	srvr.close();
+	test({init:true,prevalenceDir:prevalenceDir});
     });
     it("loads nicely and performs a brace of logons and logoffs",function() {
-	var srvr = mkServer({init:false,prevalenceDir:prevalenceDir});
-	logOnOffMultipleFE3ConnectionTest(srvr);
-	srvr.close();
+	test({init:false,prevalenceDir:prevalenceDir});
     });
     it("reloads nicely and performs a brace of logons and logoffs",function() {
-	var srvr = mkServer({init:false,prevalenceDir:prevalenceDir});
-	logOnOffMultipleFE3ConnectionTest(srvr);
-	srvr.close();
+	test({init:false,prevalenceDir:prevalenceDir});
     });
 });
