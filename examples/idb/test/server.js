@@ -1,6 +1,7 @@
 var    fe3 = require('../fe3.js');
 
 var    x2j = require('../x2j.js');
+var   util = require('../../../util.js');
 var      _ = require('underscore');
 var   path = require('path');
 var events = require('events');
@@ -14,10 +15,125 @@ var AP_XML2A       = fe3._private.AP_XML2A;
 
 temp.track();			// auto-cleanup at exit
 
-var FIXTURE = [
-    ["Permissions",{"UserName":"Anon.","TotalFailCount":0,"RegionID":1,"TelExtn":null,"DirtyFlag":0,"TeamID":100,"UpdateDate":"Fri Jul 25 17:49:33 2014","NewFEFlag":1,"TelNo":"7777 7777                     ","ApplicationID":51,"Email":"Unknown","Deleted":0,"MatchingVolEntry":"B","UpdateUserID":51,"SessionID":0,"Enabled":1,"AppRole":1283,"CurrFailCount":0,"LogOnTime":"Fri Jul 25 17:49:29 2014","CountryID":44,"CompanyID":100,"TelAreaCode":"20    ","TelCountryCode":"44","CSPID":1,"LoggedOn":0,"ApplicationName":"John Kozak","Password":"JK"}],
-    ["Permissions",{"UserName":"Anon.","TotalFailCount":0,"RegionID":1,"TelExtn":null,"DirtyFlag":0,"TeamID":1,"UpdateDate":"Thu Dec  2 16:25:14 2004","NewFEFlag":1,"TelNo":"7777 7777                     ","ApplicationID":1,"Email":"Unknown","Deleted":0,"MatchingVolEntry":"B","UpdateUserID":1,"SessionID":76601,"Enabled":1,"AppRole":2,"CurrFailCount":0,"LoggedOn":0,"LogOnTime":"Wed Dec  1 14:54:11 2004","CountryID":44,"CompanyID":1,"TelAreaCode":"20    ","TelCountryCode":"44","CSPID":1,"ApplicationName":"Floy Murazik","Password":"241tykxKcB_n6fR","anon":true}]
-];
+function mkFixture(msjson) {
+    return util.deserialise(JSON.stringify(msjson));
+}
+
+var USERS = mkFixture([
+    [":Permissions",{"DirtyFlag":0,"TeamID":100,"UpdateDate":"date:Fri Jul 25 17:49:33 2014","ApplicationID":51,"Deleted":0,"MatchingVolEntry":":B","UpdateUserID":51,"SessionID":0,"Enabled":1,"AppRole":1283,"CurrFailCount":0,"LogOnTime":"date:Fri Jul 25 17:49:29 2014","CountryID":44,"CompanyID":100,"CSPID":1,"LoggedOn":0,"ApplicationName":":John Kozak","Password":":JK"}],
+    [":Permissions",{"DirtyFlag":0,"TeamID":1,"UpdateDate":"date:Thu Dec  2 16:25:14 2004","ApplicationID":1,"Deleted":0,"MatchingVolEntry":":B","UpdateUserID":1,"SessionID":76601,"Enabled":1,"AppRole":2,"CurrFailCount":0,"LoggedOn":0,"LogOnTime":"date:Wed Dec  1 14:54:11 2004","CountryID":44,"CompanyID":1,"CSPID":1,"ApplicationName":":Floy Murazik","Password":":241tykxKcB_n6fR","anon":true}]
+]);
+
+var INSTRUMENTS = mkFixture([
+    [":InstrumentClass", 
+     {
+	 "SellBrokerage": 20,
+         "AssociatedTitle": 1, 
+         "Title": ":Straight Prices", 
+         "Display_ShowPlusMinus": 0, 
+         "AuctionVolumes": ":25 30 35 40 45 50 75 100 150 200", 
+         "InstSubClassID": 1, 
+         "PriceTick": 0.001, 
+         "MarketID": 2, 
+         "DefaultVolume": 25, 
+         "InstSubClassName": ":Conventional Straight", 
+         "CounterpartyDowgate": 1, 
+         "Match_xBidMinus1": 1, 
+         "BuyBrokerage": 20, 
+         "DefaultPercentTolerence": 0.1
+     }
+    ],
+    [":Instrument", 
+     {
+         "InstDesc": null, 
+         "InstID": 34, 
+         "CountryID": 44, 
+         "BidBigFigure": 120.11, 
+         "VisibleFlag": 1, 
+         "VolatilitySpread": 2, 
+         "AccrualDate": "date:Thu Jan 26 00:00:00 1995", 
+         "UpdateDate": "date:Thu Sep 30 15:54:25 1999", 
+         "MaturityDate": "date:Mon Dec  7 00:00:00 2015", 
+         "PublishFlag": 0, 
+         "AuctionInstTitle": ": ", 
+         "CouponType": 0, 
+         "FreeOfTax": 0, 
+         "UpdateUserID": -1, 
+         "AccruedMethod": 4, 
+         "GreyMarket": 1, 
+         "DisplayOrder": 20151207, 
+         "BidDate": "date:Fri Feb 14 15:52:13 2014", 
+         "IssuePrice": null, 
+         "OfferDate": "date:Wed Feb  7 10:05:06 2007", 
+         "MidPrice": 0.25, 
+         "OfferBigFigure": 120, 
+         "Strippable": 1, 
+         "AuctionUpdateDate": "date:Mon Apr 14 14:48:14 2014", 
+         "DirtyFlag": 0, 
+         "IssueDate": "date:Thu Jan 26 00:00:00 1995", 
+         "Rating": null, 
+         "CouponFrequency": 2, 
+         "Tranche": null, 
+         "InstSubClassID": 1, 
+         "PriceTick": 0.001, 
+         "MarketID": 2, 
+         "Currency": ":GBP", 
+         "CouponFloat": 0, 
+         "InstName": ":8 15", 
+         "CreationDate": "date:Thu Sep 30 15:54:25 1999", 
+         "VolatilityPercent": 0.1
+     }
+    ], 
+    [":Instrument", 
+     {
+         "InstDesc": null, 
+         "InstID": 35, 
+         "CountryID": 44, 
+         "BidBigFigure": 109.44, 
+         "VisibleFlag": 1, 
+         "VolatilitySpread": 2, 
+         "AccrualDate": "date:Thu Apr 30 00:00:00 1992", 
+         "UpdateDate": "date:Thu Nov 11 16:24:53 2004", 
+         "MaturityDate": "date:Fri Aug 25 00:00:00 2017", 
+         "PublishFlag": 1, 
+         "AuctionInstTitle": ": ", 
+         "CouponType": 0, 
+         "FreeOfTax": 0, 
+         "UpdateUserID": -2, 
+         "AccruedMethod": 4.375, 
+         "GreyMarket": 1, 
+         "DisplayOrder": 20170825, 
+         "BidDate": "date:Thu Mar  6 15:44:50 2008", 
+         "IssuePrice": 27, 
+         "OfferDate": "date:Wed Feb  7 10:05:30 2007", 
+         "MidPrice": 0.25, 
+         "OfferBigFigure": 130, 
+         "Strippable": 0, 
+         "AuctionUpdateDate": "date:Mon Apr 14 14:48:14 2014", 
+         "DirtyFlag": 0, 
+         "IssueDate": "date:Thu Apr 30 00:00:00 1992", 
+         "Rating": null, 
+         "CouponFrequency": 2, 
+         "Tranche": null, 
+         "InstSubClassID": 1, 
+         "PriceTick": 0.001, 
+         "MarketID": 2, 
+         "Currency": ":GBP", 
+         "CouponFloat": 0, 
+         "InstName": ":8T17", 
+         "CreationDate": "date:Thu Sep 30 15:54:25 1999", 
+         "VolatilityPercent": 0.1
+     }
+    ]
+]);
+
+var mkIDB = function(fixture) {	// bare server without prevalence layer
+    var bl = require('../bl.chrjs');
+    bl.reset();			// `bl` is effectively shared by `require`
+    for (var i in fixture)
+	bl.add(fixture[i]);
+    return bl;
+};
 
 var mkFE3 = function(s,ap_type) {
     ap_type = ap_type || AP_XML2A;
@@ -44,7 +160,7 @@ var rcveFE3 = function(s) {	// >> [<jsx>,...]   assumes it gets entire  FE3 fram
     return ans;
 };
 
-var mkServer = function(opts) {
+var mkServer = function(opts,fixture) { // full server with prevalence layer
     var srvr =  require('../../../malaya.js').createServer(_.extend({
 	prevalenceDir: path.join(temp.mkdirSync(),'prevalence'),
 	audit:         true,
@@ -55,8 +171,9 @@ var mkServer = function(opts) {
 	sync_journal:  'none'
     },opts));
     srvr.start();
-    for (var i in FIXTURE) 
-	srvr._private.bl._private.bl.add(FIXTURE[i]); // add fact directly to store, bypassing context append
+    srvr._private.bl._private.bl.reset();
+    for (var i in fixture)
+	srvr._private.bl._private.bl.add(fixture[i]); // add fact directly to store, bypassing context append
     return srvr;
 };
 
@@ -100,7 +217,7 @@ function logOnOffServerTest(srvr) {
 describe("server",function() {
     var prevalenceDir = path.join(temp.mkdirSync(),'prevalence');
     var          test = function(opts) {
-	var srvr = mkServer(opts);
+	var srvr = mkServer(opts,USERS);
 	try {
  	    logOnOffServerTest(srvr);
 	} finally {
@@ -192,7 +309,7 @@ function logOnOffMultipleFE3ConnectionTest(srvr) {
 describe("FE3Connection",function() {
     var prevalenceDir = path.join(temp.mkdirSync(),'prevalence');
     var          test = function(opts) {
-	var srvr = mkServer(opts);
+	var srvr = mkServer(opts,USERS);
 	try {
 	    logOnOffFE3ConnectionTest(srvr);
 	} finally {
@@ -213,7 +330,7 @@ describe("FE3Connection",function() {
 describe("multiple connection",function() {
     var prevalenceDir = path.join(temp.mkdirSync(),'prevalence');
     var          test = function(opts) {
-	var srvr = mkServer(opts);
+	var srvr = mkServer(opts,USERS);
 	try {
 	    logOnOffMultipleFE3ConnectionTest(srvr);
 	} finally {
@@ -228,5 +345,12 @@ describe("multiple connection",function() {
     });
     it("reloads nicely and performs a brace of logons and logoffs",function() {
 	test({init:false,prevalenceDir:prevalenceDir});
+    });
+});
+
+describe("business logic queries",function() {
+    it("should return auction instrument templates",function() {
+	var fixture = [];
+	var      bl = mkIDB(fixture);
     });
 });

@@ -70,6 +70,16 @@ var serialise = function(v) {
 	    return v;
     });
 };
+var deserialise = function(v) {
+    if (typeof v!=="string")
+	return v;
+    else if (v.charAt(0)==':')
+	return v.substring(1);
+    else if (v.indexOf("date:")===0)
+	return new Date(v.substring(5)); // "date:".length===5
+    else
+	throw new Error(_util.format("unencoded: %s",v));
+};
 
 exports.Fail = function(msg) {
     this.message = msg;
@@ -99,14 +109,7 @@ exports.serialise = function(v) {
 
 exports.deserialise = function(s) {
     return JSON.parse(s,function(k,v) {
-	if (typeof v!=="string")
-	    return v;
-	else if (v.charAt(0)==':')
-	    return v.substring(1);
-	else if (v.indexOf("date:")===0)
-	    return new Date(v.substring(5)); // "date:".length===5
-	else
-	    throw new Error("unencoded: %s",v);
+	return deserialise(v);
     });
 };
 
@@ -140,5 +143,11 @@ exports.env = (function() {
 
 exports.inspect = _util.inspect;
 
+if (exports.env==='test') {
+    exports._private = {
+	deserialise: deserialise
+    } }
+
 if (exports.env==='prod' && exports.source_version.slice(-1)==='+')
     throw new exports.Fail("must run registered code in production");
+

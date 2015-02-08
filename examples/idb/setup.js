@@ -112,14 +112,17 @@ function init(server,init,listen) {
     } else if (init.match(/\.py$/)) {
 	exitIfNoFile(init);
 	var  exec = require('child_process').exec;
-	var child = exec("python import_init_db.py "+init,{
-	    maxBuffer: 10*1024*1024
-	}, function(err,stdout,stderr) {
-	    if (err) throw err;
-	    var json = JSON.parse(stdout);
-	    for (var i in json) 
-		IDB.add(json[i]);
-	});
+	var  prog = path.join(__dirname,"import_init_db.py");
+	var child = exec(util.format("python %j --malaya-serialised %s",prog,init),
+			 {
+			     maxBuffer: 10*1024*1024
+			 },
+			 function(err,stdout,stderr) {
+			     if (err) throw err;
+			     var json = util.deserialise(stdout);
+			     for (var i in json) 
+				 IDB.add(json[i]);
+			 } );
 	child.on('exit',function(code,signal) {
 	    if (code!==0)
 		console.log("failed: %j",code);
