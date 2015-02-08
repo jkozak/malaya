@@ -172,28 +172,32 @@ exports.createServer = function(opts) {
 	    });
 	},
 	
-	command: function(js,conn) {
+	command: function(js,conn) { // `conn` can be omitted, probably init-time only though
 	    assert(_.isArray(js));
 	    assert.equal(js.length,2);
 	    assert.equal(typeof js[0],'string');
-	    var command = [js[0],js[1],{port:conn.port}];
+	    var command;
+	    if (conn===undefined)
+		command = [js[0],js[1]];
+	    else
+		command = [js[0],js[1],{port:conn.port}];
 	    ee.emit('command',command);
 	    var res = bl.update(command);
-	    if (opts['auto_output'] && _.any(res.adds,function(t){return res.refs[t][0]==='_output';})) {
-		var res1 = bl.update(['_take-outputs']);
-		res1.dels.forEach(function(t_output) {
-		    var output = res1.refs[t_output];
-		    assert.equal(output.length,3);
-		    if (output[2]===null)
-			;	// discard
-		    else if (output[1]==='all')
-			server.broadcast(output[2]);
-		    else if (output[1]=='self')
-			conn.write(output[2]);
-		    else
-			conns[output[1]].write(output[2]);
+	    if (conn!==undefined)
+		res.adds.forEach(function(t) {
+		    var add = res.refs[t];
+		    if (add[0]==='_output') {
+			assert.equal(add.length,3);
+			if (add[2]===null)
+			    ;	// discard
+			else if (add[1]==='all')
+			    server.broadcast(add[2]);
+			else if (add[1]=='self')
+			    conn.write(add[2]);
+			else
+			    conns[add[1]].write(add[2]);
+		    }
 		});
-	    }
 	    return res;
 	},
 	

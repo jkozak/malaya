@@ -276,7 +276,7 @@ describe("genMatch",function() {
 	assert.deepEqual([23],evalMatch(match,parseExpression("{\"p\":['a','b',23]}")));
     });
     it("should generate match code for member pattern in object expression",function() {
-	// +++ extending `evalMatch` with the bindings code from `evalAdd` +++
+	// +++ extend `evalMatch` with the bindings code from `evalAdd` +++
 	var  vars = {a:{bound:true}};
 	var match = genMatch(parseExpression("{p:a.b}"),
 			     vars,

@@ -160,6 +160,45 @@ describe("ellipsis bindings",function() {
 	assert.deepEqual(st._private.facts["2"],['b',{p:99,b:1}]);
 	assert.deepEqual(st._private.facts["3"],['c',{p:99,c:2}]);
     });
+    it("should support anonymous ellipsis in array matchers",function() {
+	var st = store {
+	    rule (-['a',...]);
+	};
+	assert.equal(st._private.size,0);
+	st.add(['a',{p:99}]);
+	assert.equal(st._private.size,0);
+	st.add(['a']);
+	assert.equal(st._private.size,0);
+    });
+    it("should support anonymous ellipsis in object matchers",function() {
+	var st = store {
+	    rule (-['a',{p,...}]);
+	};
+	assert.equal(st._private.size,0);
+	st.add(['a',{p:99}]);
+	assert.equal(st._private.size,0);
+    });
+});
+
+describe("matching",function() {
+    it("should not match unequal length arrays",function() {
+	var st = store {
+	    rule (-['a']);
+	};
+	assert.equal(st._private.size,0);
+	st.add(['a',{b:88}]);
+	assert.equal(st._private.size,1); // not matched, not deleted
+    });
+    it("should match unequal length arrays given ellipsis",function() {
+	var st = store {
+	    rule (-['a',...]);
+	};
+	assert.equal(st._private.size,0);
+	st.add(['a',{b:88}]);
+	assert.equal(st._private.size,0); // matched and deleted
+	st.add(['a']);
+	assert.equal(st._private.size,0); // matched and deleted
+    });
 });
 
 describe("regression tests",function() {
@@ -219,8 +258,8 @@ describe("regression tests",function() {
 	IDB.add(['InstrumentClass',{InstSubClassID:777,AuctionVolumes:"10 20 30"}]);
 	assert.equal(IDB._private.size,2);
 	IDB.add(['annotatePrepareAuction',{instruments:[],_children:[{AInst:{InstID:999}}],phases:'A',id:8}]);
-	console.log("*** %j",IDB._private.facts);
-	assert.equal(IDB._private.size,4);
+	assert.deepEqual(_.values(IDB._private.facts).map(function(f){return f[0];}).sort(),
+			 ["Instrument","InstrumentClass","_o","auction"] );
 	_.values(IDB._private.facts).forEach(function(f) {
 	    if (f[0]==='auction') 
 		assert.deepEqual(f[1].instruments,[{AInst:{InstID:999,AuctVols:"10 20 30"}}]);

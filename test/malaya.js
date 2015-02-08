@@ -20,29 +20,3 @@ var mkServer = function(opts) {
     return srvr;
 };
 
-describe("auto_output",function() {
-    it("should not invoke write automagically if not so bidden",function(){
-	var srvr =  mkServer({
-	    businessLogic: path.join(__dirname,'bl/output.chrjs'),
-	});
-	var output = null;
-	var    ans = srvr.command(['do_summat',{}],{port:'test:',
-						    write:function(js){output=js;} });
-	assert.deepEqual(output,null);
-	assert.deepEqual(_.values(srvr._private.facts),
-			 [['_output','self',{msg:"will this do?"}]] );
-	srvr.close();
-    });
-    it("should invoke write automagically if so bidden",function(){
-	var srvr =  mkServer({
-	    businessLogic: path.join(__dirname,'bl/output.chrjs'),
-	    auto_output:   true
-	});
-	var output = null;
-	var    ans = srvr.command(['do_summat',{}],{port:'test:',
-						    write:function(js){output=js;} });
-	assert.deepEqual(output,{msg:"will this do?"});
-	assert.deepEqual(srvr._private.facts,[]);
-	srvr.close();
-    });
-});

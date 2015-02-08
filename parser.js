@@ -2078,7 +2078,10 @@ var util = require('./util.js');
             } else {
 		if (state.inStore && match('...')) { // chrjs
 		    expect('...');
-		    elements.push(delegate.createBindRest(parseAssignmentExpression()));
+		    if (match(']') || match(','))
+			elements.push(delegate.createBindRest(null));
+		    else
+			elements.push(delegate.createBindRest(parseAssignmentExpression()));
 		} else
                     elements.push(parseAssignmentExpression());
                 if (!match(']')) {
@@ -2134,7 +2137,10 @@ var util = require('./util.js');
 
 	if (state.inStore && match('...')) {	// chrjs
 	    expect('...');
-            value = parseVariableIdentifier();
+	    if (match('}') || match(','))
+		value = null;
+	    else
+		value = parseVariableIdentifier();
             return delegate.markEnd(delegate.createProperty('bindRest', '', value), startToken);
 	} else if (token.type === Token.Identifier) {
 
@@ -4054,7 +4060,7 @@ var util = require('./util.js');
 	def('BindRest')
 	    .bases('Expression')
 	    .build('id')
-	    .field('id',def('Identifier'))
+	    .field('id',   or(def('Identifier'),null))
 	def('QueryStatement')
 	    .bases('Statement')
 	    .build('id','args','items','accum')
