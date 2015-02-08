@@ -77,10 +77,11 @@ var IDB = store {
     rule (['restart',...], -['_output',...]);
     rule (['restart',...], -['_take-outputs',...]);
     rule (['restart',...], -['tick',...]);
-    rule (['restart',...], -['restart',...]); // shouldn't happen, but if a bad world is saved...
     rule (-['restart',...]);
     
     // logon processing
+    rule (-['logon0',...],	// no pw encryption at the moment
+	  +['_output','self',{'logon0':{}}] );
     rule (-['logon',      {user,pw,...},{port,...}],
 	  -['Permissions',{ApplicationName:user,Password:pw,LoggedOn:0,...rs}],
 	  +['Permissions',{ApplicationName:user,Password,LoggedOn:1,port,...rs}],
