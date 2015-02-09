@@ -1,0 +1,7 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Fri, 06 Feb 2015 13:06:35 +0000
+Subject: Bug: [1] should not match []
+State: resolved
+Message-Id: <c436b2168b71e900-0-artemis@renn>
+resolution: fixed
+

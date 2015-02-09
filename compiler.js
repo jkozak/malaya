@@ -879,7 +879,10 @@ function generateJS(js) {
 	    case '?':
 		js1 = [b.ifStatement(chr.items[item_id].expr,b.blockStatement(next1()),null)];
 		break;
-	    case '=': 
+	    case '=':
+		if (chr.items[item_id].expr.left.type!=="Identifier")
+		    throw new Error(util.format("can't bind to non-variable: %j",chr.items[item_id].expr.left));
+		vars[chr.items[item_id].expr.left.name].bound = true;
 		js1 = [b.expressionStatement(chr.items[item_id].expr)].concat(next1())
 		break;
 	    case '+':
@@ -1061,8 +1064,8 @@ function generateJS(js) {
 		var      chr = storeCHR.body[i];
 		for (var j=0;j<chr.items.length;j++) {
 		    if (chr.items[j].op=='-' || chr.items[j].op=='M') {
-			noteDispatch(chr.items[j].expr,r,j);
-			variants.push(genRuleVariant(deepClone(chr),j,[]));
+			noteDispatch(chr.items[j].expr,r,variants.length);  // variants.length will be...
+			variants.push(genRuleVariant(deepClone(chr),j,[])); // ...allocated now
 		    }
 		}
 		code.rules.push(b.arrayExpression(variants));
