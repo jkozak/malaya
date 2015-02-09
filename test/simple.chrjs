@@ -267,4 +267,16 @@ describe("regression tests",function() {
 		assert.deepEqual(f[1].PrepareAuction._children,[{AInst:{InstID:999,AuctVols:"10 20 30"}}]);
 	});
     });
+    it("should have fixed [de90f7821b78bfa9] compiler miscounting bind items as matches",function() {
+	var st = store {
+	    rule (-['a',{}],
+		  x = 0,
+		  -['b',{}] );
+	};
+	assert.equal(st._private.size,0);
+	st.add(['a',{}]);
+	assert.equal(st._private.size,1);
+	st.add(['b',{}]);
+	assert.equal(st._private.size,0);
+    });
 });

@@ -1,0 +1,7 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Sun, 08 Feb 2015 22:02:08 +0000
+Subject: Bug: compiler treats bind items as things to be matched
+State: resolved
+Message-Id: <de90f7821b78bfa9-0-artemis@renn>
+resolution: fixed
+

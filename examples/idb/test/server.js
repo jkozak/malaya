@@ -21,7 +21,14 @@ function mkFixture(msjson) {
 
 var USERS = mkFixture([
     [":Permissions",{"DirtyFlag":0,"TeamID":100,"UpdateDate":"date:Fri Jul 25 17:49:33 2014","ApplicationID":51,"Deleted":0,"MatchingVolEntry":":B","UpdateUserID":51,"SessionID":0,"Enabled":1,"AppRole":1283,"CurrFailCount":0,"LogOnTime":"date:Fri Jul 25 17:49:29 2014","CountryID":44,"CompanyID":100,"CSPID":1,"LoggedOn":0,"ApplicationName":":John Kozak","Password":":JK"}],
-    [":Permissions",{"DirtyFlag":0,"TeamID":1,"UpdateDate":"date:Thu Dec  2 16:25:14 2004","ApplicationID":1,"Deleted":0,"MatchingVolEntry":":B","UpdateUserID":1,"SessionID":76601,"Enabled":1,"AppRole":2,"CurrFailCount":0,"LoggedOn":0,"LogOnTime":"date:Wed Dec  1 14:54:11 2004","CountryID":44,"CompanyID":1,"CSPID":1,"ApplicationName":":Floy Murazik","Password":":241tykxKcB_n6fR","anon":true}]
+    [":Permissions",{"DirtyFlag":0,"TeamID":1,"UpdateDate":"date:Thu Dec  2 16:25:14 2004","ApplicationID":1,"Deleted":0,"MatchingVolEntry":":B","UpdateUserID":1,"SessionID":76601,"Enabled":1,"AppRole":2,"CurrFailCount":0,"LoggedOn":0,"LogOnTime":"date:Wed Dec  1 14:54:11 2004","CountryID":44,"CompanyID":1,"CSPID":1,"ApplicationName":":Floy Murazik","Password":":241tykxKcB_n6fR","anon":true}],
+    [":Cookies", 
+     {
+         "CookieID": 2, 
+         "ApplicationID": 51, 
+         "Cookie": ":eikooC"
+     }
+    ]
 ]);
 
 var INSTRUMENTS = mkFixture([
@@ -349,8 +356,42 @@ describe("multiple connection",function() {
 });
 
 describe("business logic queries",function() {
-    it("should return auction instrument templates",function() {
-	var fixture = [];
-	var      bl = mkIDB(fixture);
+    it("should return cookie appropriately",function() {
+	var users = _.clone(USERS);
+	assert.equal(users[0][1].ApplicationName,"John Kozak");
+	users[0][1].LoggedOn = 1;
+	users[0][1].port     = 'test://JK/';
+	var   IDB = mkIDB(users);
+	IDB.add(['cookie',{id:'2'},{port:users[0][1].port}]);
+	var ok = false;
+	var  n = 0;
+	_.values(IDB._private.facts).forEach(function(f) {
+	    if (f[0]==='_output') {
+		n++;
+		if (_.isEqual(f[2].cookie._children,['eikooC'])) 
+		    ok = true;
+	    }
+	});
+	assert.equal(n,1);
+	assert(ok);
+    });
+    it("should return error for non-existent cookie",function() {
+	var users = _.clone(USERS);
+	assert.equal(users[0][1].ApplicationName,"John Kozak");
+	users[0][1].LoggedOn = 1;
+	users[0][1].port     = 'test://JK/';
+	var   IDB = mkIDB(users);
+	IDB.add(['cookie',{id:'0'},{port:users[0][1].port}]);
+	var ok = false;
+	var  n = 0;
+	_.values(IDB._private.facts).forEach(function(f) {
+	    if (f[0]==='_output') {
+		n++;
+		if (f[2].cookie.error==="not found") 
+		    ok = true;
+	    }
+	});
+	assert.equal(n,1);
+	assert(ok);
     });
 });

@@ -102,6 +102,13 @@ var IDB = store {
 	  +['Permissions',{ApplicationID:appId,LoggedOn:0,port:null,...rs}] );
 
     // cookies
+    rule (-['cookie',{id:ids},{port}],
+	  id = parseInt(ids),	// !!! compiler does not mark `id` as bound! !!!
+	  ['Permissions',{port,ApplicationID,...}],
+	  ['Cookies',{ApplicationID,CookieID:id,Cookie,...}],
+	  +['_output','self',{'cookie':{id,_children:[Cookie]}}] );
+    rule (-['cookie',{id:ids},{port}],
+	  +['_output','self',{'cookie':{id,_children:[],error:"not found"}}] );
     rule (-['store-cookie',{id,cookie},{port}],
 	  ['Permissions',{port,ApplicationID}],
 	  -['Cookies',{ApplicationID,CookieID:id}],

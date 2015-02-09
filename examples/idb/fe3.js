@@ -92,7 +92,7 @@ function FE3Connection(sock,server) {
 	    }
 	    break;
 	}
-	case 'cookie': {
+	case 'cookie1': {
 	    var    ans = server.query(['cookie',appId,parseInt(jsx[tag].id)],mc);
 	    var cookie = ans.result.length===0 ? '' : ans.result[0];
 	    write({cookie:{id:jsx[tag].id,_children:[cookie]}});
