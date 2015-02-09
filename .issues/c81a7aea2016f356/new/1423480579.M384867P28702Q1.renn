@@ -1,0 +1,8 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Mon, 09 Feb 2015 11:16:19 +0000
+Subject: re-instate `snap` expression
+State: new
+Message-Id: <c81a7aea2016f356-0-artemis@renn>
+
+I _think_ `snap` and `query` are equivalent to (or can be made equivalent to)
+CHR^{cp} in arXiv:1406.2121

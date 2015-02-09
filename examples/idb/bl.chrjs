@@ -225,6 +225,8 @@ var IDB = store {
 				 action:    Action,
 				 status:    Status,
 				 valueDate: rs.ValuationDate,
+				 owner:     rs.OwnerAppID,
+				 marketID:  2,
 				 minLotSize:rs.MinLotSize});
 
     // +++ query trades(id; +++

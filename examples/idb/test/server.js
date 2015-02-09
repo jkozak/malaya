@@ -28,7 +28,45 @@ var USERS = mkFixture([
          "ApplicationID": 51, 
          "Cookie": ":eikooC"
      }
-    ]
+    ],
+    // [":Team", 
+    //  {
+    //      "RegionID": 1, 
+    //      "TeamID": 1, 
+    //      "UpdateDate": "date:Wed Sep 29 00:00:00 1999", 
+    //      "TeamRole": 2, 
+    //      "UpdateUserID": -1, 
+    //      "TradeBrokerageRate": 1, 
+    //      "TeamSettlementName": ":BZW", 
+    //      "SettlementID": 1, 
+    //      "TeamName": ":BARCAP", 
+    //      "EnabledFlag": 1, 
+    //      "CountryID": 44, 
+    //      "TeamTLA": ":IE5", 
+    //      "CompanyID": 1, 
+    //      "QuoteBrokerageRate": 0, 
+    //      "DeletedFlag": 0
+    //  }
+    // ], 
+    // [":Team", 
+    //  {
+    //      "RegionID": 1, 
+    //      "TeamID": 100, 
+    //      "UpdateDate": "date:Wed Sep 29 00:00:00 1999", 
+    //      "TeamRole": 3, 
+    //      "UpdateUserID": -1, 
+    //      "TradeBrokerageRate": 1, 
+    //      "TeamSettlementName": ":DOW", 
+    //      "SettlementID": 100, 
+    //      "TeamName": ":DOW", 
+    //      "EnabledFlag": 1, 
+    //      "CountryID": 44, 
+    //      "TeamTLA": ":IE5", 
+    //      "CompanyID": 100, 
+    //      "QuoteBrokerageRate": 0, 
+    //      "DeletedFlag": 0
+    //  }
+    // ] 
 ]);
 
 var INSTRUMENTS = mkFixture([
@@ -394,4 +432,13 @@ describe("business logic queries",function() {
 	assert.equal(n,1);
 	assert(ok);
     });
+    // it("should return static data for user",function() {
+    // 	var fixture = _.clone(USERS).concat(INSTRUMENTS);
+    // 	assert.equal(fixture[0][1].ApplicationName,"John Kozak");
+    // 	fixture[0][1].LoggedOn = 1;
+    // 	fixture[0][1].port     = 'test://JK/';
+    // 	var   IDB = mkIDB(fixture);
+    // 	IDB.add(['start',{},{port:fixture[0][1].port}]);
+    // 	console.log("*** %j",IDB._private.facts);
+    // });
 });
