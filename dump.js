@@ -1,11 +1,9 @@
 #!/usr/bin/env node
 
 "use strict";
+/*eslint-disable no-console*/
 
 var     argv = require('minimist')(process.argv.slice(2));
-var     util = require('./util.js');
-var       fs = require('fs');
-var        _ = require('underscore');
 var compiler = require('./compiler.js');
 
 compiler.debug = true;
@@ -18,8 +16,7 @@ var stanzas = compiler.getStanzas(sourceFilename);
 
 stanzas.forEach(function(stanza) {
     stanza.draws.forEach(function(draw) {
-	delete draw.node;
+        delete draw.node;
     });
     console.log("%j",stanza);
 });
-

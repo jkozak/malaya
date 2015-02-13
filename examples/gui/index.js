@@ -1,4 +1,5 @@
 "use strict";
+/*eslint-disable*/
 
 // +++ sensible startup page, including:                        +++
 // +++ check if prevalence dir exists, offer create page if not +++

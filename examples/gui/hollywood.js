@@ -1,4 +1,5 @@
 // requires pixi.dev.js to be loaded
+/*eslint-disable*/
 
 var compiler = require('../../compiler.js');
 

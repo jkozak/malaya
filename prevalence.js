@@ -23,6 +23,7 @@
 // to use, journalise items _before_ evaluating (this is to make Dates work)
 
 "use strict";
+/*eslint-disable*/
 
 var fs    = require("fs");
 var rm_rf = require("rimraf");
@@ -51,7 +52,7 @@ var sync_journal = 'kludge';
 
 var sanity_check = true;	// default to true if running production
 
-var source_version = util.source_version;
+var source_version = util.sourceVersion;
 
 function init(dirname,options) {
     // prepare a directory to be a store
