@@ -6,6 +6,7 @@
 //     later editing and re-emission.  They are not directly run.
 
 "use strict";
+/*eslint-disable*/
 
 var  recast = require('recast');
 var      fs = require('fs');

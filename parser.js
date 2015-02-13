@@ -42,6 +42,7 @@ parseFunctionSourceElements: true, parseVariableIdentifier: true,
 parseLeftHandSideExpression: true,
 parseUnaryExpression: true,
 parseStatement: true, parseSourceElement: true */
+/*eslint-disable*/
 
 var util = require('./util.js');
 

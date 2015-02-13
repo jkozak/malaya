@@ -3,10 +3,7 @@
 "use strict";
 
 var argv = require('minimist')(process.argv.slice(2));
-var util = require('./util.js');
-var  fe3 = require('./fe3.js');
 
-var FE3_PORT = 5110;
 var  WS_PORT = 3000;
 
 var malaya = require('./malaya.js').createServer({
@@ -20,6 +17,3 @@ var malaya = require('./malaya.js').createServer({
 });
 
 malaya.run();
-
-
-

@@ -7,7 +7,7 @@ describe('constants',function() {
 	assert.equal(util.env,"test");
     });
     it("`source_version` will be a string",function() {
-	assert.equal(typeof util.source_version,'string');
+	assert.equal(typeof util.sourceVersion,'string');
     });
 });
 
