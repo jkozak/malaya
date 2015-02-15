@@ -139,7 +139,7 @@ exports.env = (function() {
     var env = process.env.NODE_ENV;
     if (env==='production')
         env = 'prod';
-    if (env==='' || env===undefined)
+    if (env==='' || env===undefined || env==='development')
         env = 'dev';
     if (!{dev:true,prod:true,test:true}[env])
         throw new exports.Fail(_util.format("bad NODE_ENV: %j",env));
