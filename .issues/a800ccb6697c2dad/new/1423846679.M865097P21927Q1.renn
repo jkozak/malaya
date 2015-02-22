@@ -4,3 +4,9 @@ Subject: extend `eslint` to rest of javascript source files
 State: new
 Message-Id: <a800ccb6697c2dad-0-artemis@renn>
 
+IWBNI either `curly` or `indent` worked in the way I want:
+
+ "multi" flavour of `curly` should allow braces around an if-statement
+ in an if-statement to avoid dangling-else ambiguity.
+
+ `indent` doesn't handle else-clauses correctly.

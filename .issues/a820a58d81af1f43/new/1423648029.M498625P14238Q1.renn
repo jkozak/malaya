@@ -1,0 +1,6 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Wed, 11 Feb 2015 09:47:09 +0000
+Subject: replace `query` statement with a `snap` within a `function`
+State: new
+Message-Id: <a820a58d81af1f43-0-artemis@renn>
+
