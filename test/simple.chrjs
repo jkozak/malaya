@@ -201,6 +201,20 @@ describe("matching",function() {
     });
 });
 
+describe("in-store `for` expression",function() {
+    // it("should accumulate over a store",function() {
+    // 	var st = store {
+    // 	    ['a',{p:1}];
+    // 	    ['a',{p:2}];
+    // 	    ['b',{p:99}];
+    // 	    rule (-['accumulate'],
+    // 		  +['_ans',{sum:for(a=0;['a',{p}];a+p)}] );
+    // 	};
+    // 	st.add(['accumulate']);
+    // 	assert.equal(_.filter(_.values(st._private.facts),function(f){return f[0]==='_ans';})[0].sum,3);
+    // });
+});
+
 describe("regression tests",function() {
     it("should have fixed [955dab]",function() {
 	var IDB = store {

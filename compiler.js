@@ -20,6 +20,8 @@ var       _ = require('underscore');
 var templates       = {};
 var template_marker = 'TEMPLATE_';
 
+var b = recast.types.builders;
+
 function TEMPLATE_store() {
     (function() {
 	var  store = this;
@@ -43,10 +45,7 @@ function TEMPLATE_store() {
 		if (index[fact[0]]===undefined)
 		    index[fact[0]] = [];
 		index[fact[0]].push(ti);
-		switch (fact[0]) {
-		case INSERT_CASE:
-		    break;
-		}
+		INSERT_INDEXED_MATCHES;
 		INSERT_GENERIC_MATCHES;
 		return t_fact;
 	    } else
@@ -147,6 +146,13 @@ function TEMPLATE_store() {
     })();
 }
 
+function TEMPLATE_indexed_matches() {
+    switch (fact[0]) {
+    case INSERT_CASE:
+	break;
+    }
+}
+
 // to be embedded in store above, whence `adds`, `dels` &c
 function TEMPLATE_rule() {	
     var INSERT_NAME = function (t_fact) {
@@ -196,15 +202,310 @@ for (var i in autoparse.program.body) {
     }
 }
 
+function deepClone(json) {
+    return JSON.parse(JSON.stringify(json)); // lazy, very
+}
+
+function annotateParse1(js) {	// poor man's attribute grammar - pass one
+    var vars = null;
+    var item = null;	// `op` of active item or `null`
+    var stmt = null;
+    js = deepClone(js);
+    parser.visit(js,{
+	markItemsWithId:          function(node) {
+	    for (var i=0;i<node.items.length;i++)
+		node.items[i].attrs.itemId = i;
+	},
+	doFunction:               function(path) {
+	    var save = {vars:vars,stmt:stmt};
+	    vars = {};
+	    stmt = 'function';
+	    this.traverse(path);
+	    path.node.attrs.vars = vars;
+	    stmt = save.stmt;;
+	    vars = save.vars;
+	},
+	visitProgram:             function(path) {
+	    vars = {};
+	    stmt = 'program';
+	    this.traverse(path);
+	    path.node.attrs.vars = vars;
+	    stmt = null;
+	    vars = null;
+	},
+	visitFunctionDeclaration: function(path) {
+	    var name = path.node.id.name;
+	    if (vars[name])
+		throw new util.Fail(util.format("function shadowed or overloaded: %s",name));
+	    vars[name] = {declared:true,type:'function'};
+	    return this.doFunction(path);
+	},
+	visitFunctionExpression:  function(path) {return this.doFunction(path);},
+	visitVariableDeclarator:  function(path) {
+	    var name = path.node.id.name;
+	    this.traverse(path);
+	    vars[name].declared = true;
+	    vars[name].mutable  = path.parent.kind!=='const';
+	    vars[name].type     = (path.node.init&&path.node.init.type==='FunctionExpression') ? 'function' : null;
+	    if (!_.contains(['program','function',null],stmt)) // !!! null is for TESTING !!!
+		throw new util.Fail(util.format("variable %s declared in inappropriate context %s",name,stmt));
+	},
+	visitRuleStatement:       function(path) {
+	    this.markItemsWithId(path.node);
+	    var save = {vars:vars};
+	    vars = {};
+	    stmt = 'rule';
+	    this.traverse(path.get('items'));
+	    path.node.attrs.vars = vars;
+	    stmt = null;
+	    vars = save.vars;
+	},
+	visitQueryStatement:      function(path) {
+	    this.markItemsWithId(path.node);
+	    var save = {vars:vars};
+	    vars = {};
+	    stmt = 'query';
+	    this.visit(path.get('items'));
+	    this.visit(path.get('args'));
+	    this.visit(path.get('init'));
+	    this.visit(path.get('accum'));
+	    path.node.attrs.vars = vars;
+	    stmt = null;
+	    vars = save.vars;
+	    return false;
+	},
+	visitSnapExpression:      function(path) {
+	    this.markItemsWithId(path.node);
+	    var save = {vars:vars,stmt:stmt,item:item};
+	    vars = {};
+	    stmt = 'snap';
+	    item = null;
+	    this.visit(path.get('init'));
+	    this.visit(path.get('items'));
+	    this.visit(path.get('accum'));
+	    path.node.attrs.vars = vars;
+	    vars = save.vars;
+	    stmt = save.stmt;
+	    item = save.item;
+	    return false;
+	},
+	visitItemExpression:      function(path) {
+	    if (stmt!=='rule' && _.contains(['+','-'],path.node.op))
+		throw new util.Fail(util.format("updating store outside of rule: %j/%s",path.node,stmt));
+	    this.traverse(path);
+	    item = null;
+	},
+	visitIdentifier:          function(path) {
+	    vars[path.node.name] = vars[path.node.name] || {};
+	    return false;
+	},
+	visitMemberExpression:    function(path) {
+	    if (path.node.computed)
+		this.traverse(path);
+	    else if (path.node.object.type==='Identifier') 
+		return this.visitIdentifier(path.get('object'));
+	    else if (path.node.object.type==='MemberExpression')
+		return this.visitMemberExpression(path.get('object'));
+	    else
+		return false;
+	},
+	visitProperty:            function(path) { // keys may be Identifiers, don't mangle
+	    var prop = path.node;
+	    if (prop.value===null) 
+		return false;
+	    else if (prop.value.type==='Identifier') 
+		return this.visitIdentifier(path.get('value'));
+	    else {
+		this.visit(path.get('value'));
+		return false;
+	    }
+	},
+	doCall:                   function(path) {
+	    // don't track function names yet
+	    if (path.node.callee.type==='FunctionExpression')
+		this.traverse(path.get('callee'));
+	    this.traverse(path.get('arguments'));
+	},
+	visitCallExpression:      function(path){return this.doCall(path);},
+	visitNewExpression:       function(path){return this.doCall(path);}
+    });
+    return js;
+}
+
+function annotateParse2(chrjs) {	// poor man's attribute grammar - pass two
+    var setBoundHereAttr = function(js,vars) {
+	parser.visit(js,{
+	    visitIdentifier:          function(path) {
+		if (vars[path.node.name]!==undefined) {
+		    if (!vars[path.node.name].bound) {
+			path.node.attrs.boundHere  = true;
+			vars[path.node.name].bound = true;
+		    }
+		}
+		return false;
+	    },
+	    visitAssignmentExpression:function(path) {
+		if (path.node.left.type!=='Identifier')
+		    throw new util.Fail(util.format("bad assignment statement: %j",path.node));
+		return this.visitIdentifier(path.get('left'));
+	    },
+	    visitSnapExpression:      function(path) {
+		path.replace(annotateParse2(path.node));
+		return false;
+	    },
+	    // don't visit sites that can't bind vars
+	    visitUnaryExpression:     function(path){return false;},
+	    visitBinaryExpression:    function(path){return false;},
+	    visitMemberExpression:    function(path){return false;}
+	});
+	_.map(_.keys(vars),function(k) {
+	    if (!vars[k].bound)
+		throw new util.Fail(util.format("variable never bound: %s",k));
+	});
+    };
+    chrjs = deepClone(chrjs);
+    parser.visit(chrjs,{
+	visitRuleStatement: function(path) {
+	    //console.log("*** rule: %j",path.node);
+	    setBoundHereAttr(path.node,path.node.attrs.vars);
+	    return false;
+	},
+	visitQueryStatement:function(path) {
+	    //console.log("*** query: %j",path.node);
+	    setBoundHereAttr(path.node,path.node.attrs.vars);
+	    return false;
+	},
+	visitSnapExpression:function(path) {
+	    //console.log("*** snap: %j",path.node);
+	    setBoundHereAttr(path.node,path.node.attrs.vars);
+	    return false;
+	}
+    });
+    return chrjs;
+}
+
+function insertCode(chrjs,replaces,opts) {
+    var js = deepClone(chrjs);
+    var rs = {};
+    opts = opts || {};
+    opts.strict = opts.strict===undefined ? true : !!opts.strict;
+    parser.visit(js,{
+	visitExpressionStatement: function(path) {
+	    var expr = path.node.expression;
+	    if (expr.type==='Identifier') {
+		var m = /^INSERT_([A-Z_]+)$/.exec(expr.name);
+		if (m) {
+		    var r = replaces[m[1]];
+		    if (r)
+			path.replace(r)
+		    else if (opts.strict)
+			throw new Error(util.format("can't find code insertion for %s",m[1]));
+		    rs[m[1]] = true;
+		}
+	    }
+	    return false;
+	},
+    });
+    if (opts.strict) {
+	var ds = _.difference(_.keys(replaces),_.keys(rs));
+	if (ds.length>0)
+	    throw new Error(util.format("not replaced: %j",ds));
+    }
+    return js;
+}
+
+var bNoOp = b.blockStatement([]); // ??? is this the best no-op? ???
+
+function generateJS2(chrjs) {	// `js` is an annotated parse tree
+    var js = deepClone(chrjs);
+    parser.visit(js,{
+	visitStoreStatement: function(path) {
+	    var         storeJS = deepClone(templates['store'].body[0].expression);
+	    var           rules = [];
+	    var         queries = [];
+	    var        indexeds = [];
+	    var        generics = [];
+	    var           inits = [];
+	    var          genAdd = function(){}; // +++
+	    var  genRuleVariant = function(variant,js,chrjs,payload) {
+		var addenda = [];
+		var delenda = [];
+		var     pl1 = b.blockStatement([payload]);
+		for (var id=chrjs.items.length-1;id>=0;id--) {
+		    switch (chrjs.items[id].op) {
+		    case '+':
+			addenda.push(id);
+			break;
+		    case '-':
+			delenda.push(id);
+		    case'M':
+			// +++
+			break;
+		    case '=':
+			// +++
+			break;
+		    case '?':
+			// +++
+			break;
+		    default:
+			throw new Error(util.format("unknown item: %j",chrjs.items[id]));
+		    }
+		    // +++ update `payload` statement by statement
+		}
+		delenda.forEach(function(i) {
+		    var bv = b.identifier(variant===i ? 't_fact' : 't'+j);
+		    pl1.push(b.expressionStatement(
+			b.callExpression(b.identifier('_del'),[bv]) ));
+		});
+		
+		addenda.forEach(function(i) {
+		    pl1.push(b.expressionStatement(
+			b.callExpression(b.identifier('_add'),[genAdd(chr.items[i].expr)]) ) );
+		});
+	    };
+	    parser.visit(path.node,{
+		visitRuleStatement: function(path) {
+		    var ruleJS = deepClone(templates['rule'].body[0].declarations[0].init);
+		    genRule(ruleJS,path.node);
+		    rules.push(ruleJS);
+		},
+		visitQueryStatement: function(path) {
+		    var queryJS = deepClone(templates['query'].body[0].declarations[0].init);
+		    genRule(queryJS,path.node);
+		    queries.push(queryJS,payload); // +++ payload
+		}
+	    });
+	    parser.visit(storeJS,{ // +++ rewrite template code after move to new compiler +++
+		seenSwitch:false,
+		visitSwitchStatement:function(path) {
+		    assert(!seenSwitch); // There Should Be Only One
+		    seenSwitch = true;
+		}
+	    });
+	    insertCode(storeJS,{
+		INDEXED_MATCHES: indexeds,
+		GENERIC_MATCHES: generics,
+		RULES:           rules,
+		QUERIES:         queries,
+		INIT:            inits
+	    });
+	}
+    });
+    return js;
+}
+
 function mangle(js,vars) {
     if ((typeof js)==='string') {
 	assert(js.charAt(js.length-1)!=='_'); // !!! TESTING !!!
+	assert.equal(vars,undefined);
 	return js+'_';
     } else {
 	var doIdentifier = function(path) {
 	    var id = path.node;
-	    if (vars.indexOf(id.name)!==-1) 
+	    if (vars.indexOf(id.name)!==-1) {
+		//console.log(new Error(util.format("*** mangling id %j",id.name)).stack);
 		path.replace(b.identifier(mangle(id.name)));
+	    }
 	};
 	js = parser.visit(js,{
 	    visitIdentifier: function(path) {
@@ -212,15 +513,20 @@ function mangle(js,vars) {
 		return false;
 	    },
 	    visitProperty: function(path) {           // keys may be Identifiers, don't mangle
+		//console.log("*** mangle Property: %j",path.node);
 		var prop = path.node;
 		if (prop.value===null) {
+		    //console.log("*** mangle Property 1");
 		    return false;
 		} else if (prop.value.type==='Identifier') {
+		    //console.log("*** mangle Property 2: %j",path.get('value').node);
 		    doIdentifier(path.get('value'));
 		    return false;
 		}
-		else
+		else {
+		    //console.log("*** mangle Property 3: %j",path.get('value').node);
 		    this.traverse(path.get('value'));
+		}
 	    },
 	    visitMemberExpression: function(path) {
 		var expr = path.node;
@@ -230,13 +536,20 @@ function mangle(js,vars) {
 		    doIdentifier(path.get('object'));
 		    return false;
 		}
+	    },
+	    visitSnapExpression: function(path) {
+		//console.log("*** mangle SnapExpression: %j",path.node);
+		if (js.type==='SnapExpression')
+		    this.traverse(path);
+		else		// don't descend into a snap expression
+		    return false;
 	    }
 	});
-	return [js,_.map(vars,mangle)];
+	return [js,_.map(vars,function(x){return mangle(x);})];
     }
 }
 function unmangle(v) {
-    assert.strictEqual(v.charAt(v.length),'_');
+    assert.strictEqual(v.charAt(v.length-1),'_');
     return v.substr(v,v.length-1);
 }
 
@@ -278,7 +591,7 @@ function exprGetFreeVariables(expr) {
     case 'ObjectExpression': {
 	var ans = [];
 	for (var i in expr.properties) {
-	    if (expr.properties[i].kind=='init') {
+	    if (expr.properties[i].kind==='init') {
 		ans = _.union(ans,exprGetFreeVariables(expr.properties[i].value));
 	    }
 	}
@@ -339,6 +652,7 @@ function exprGetFreeVariables(expr) {
 	    ans = _.union(ans,exprGetFreeVariables(expr.items[i]));
 	return ans;
     }
+    case 'SnapExpression':
     case 'QueryStatement': {
 	var ans = [];
 	for (var i in expr.items)
@@ -413,6 +727,7 @@ function exprGetVariablesWithBindingSites(expr) {
 	    ans = _.union(ans,exprGetVariablesWithBindingSites(expr.items[i]));
 	return ans;
     }
+    case 'SnapExpression':
     case 'QueryStatement': {
 	assert.equal(expr.init.type,     'AssignmentExpression');
 	assert.equal(expr.init.operator, '=');
@@ -440,13 +755,10 @@ function exprGetVariablesWithBindingSites(expr) {
 		ans = _.union(ans,exprGetVariablesWithBindingSites(expr.body[i]))
 	return ans;
     }
+    case 'SnapExpression':
     default:
 	return [];
     }
-}
-
-function deepClone(json) {
-    return JSON.parse(JSON.stringify(json)); // lazy, very
 }
 
 function Ref(obj,path) {	// a location in a JSON structure
@@ -522,7 +834,6 @@ Ref.flatAt = function(obj,fn) {
     throw new Error("not found");
 };
 
-var b        = recast.types.builders;
 var bProp    = function(bobj,prop) {return b.memberExpression(bobj,b.identifier(prop),false)};
 var bIsEqual = bProp(b.identifier('_'),'isEqual');
 
@@ -546,64 +857,6 @@ function genAccessor(x,path) {
 	return genAccessor(b.memberExpression(x,b.literal(path[0]),true),path.slice(1));
     else
 	throw new Error(util.format("SNO: %j",path));
-}
-
-function genAdd(x) {
-    parser.namedTypes.Expression.assert(x);
-    var bindRest = null;
-    return parser.visit(deepClone(x),{
-	visitObjectExpression: function(path) {
-	    var bRsave = bindRest;
-	    bindRest = null;
-	    this.traverse(path);
-	    if (bindRest!==null) {
-		path.replace(b.callExpression(b.memberExpression(b.identifier('_'),
-								 b.identifier('extend'),
-								 false),
-					      [b.objectExpression([]),bindRest.value,path.node]) );
-	    }
-	    bindRest = bRsave;
-	},
-	visitProperty: function(path) {
-	    // ??? what about `...{}` ???
-	    var prop = path.node;
-	    if (prop.kind==='bindRest') {
-		bindRest = prop;
-		if (bindRest.value===null)
-		    throw new Error("anonymous ellipsis in value expression");
-		path.replace();
-	    }
-	    this.traverse(path);
-	},
-	visitArrayExpression: function(path) {
-	    var bRsave = bindRest;
-	    bindRest = null;
-	    this.traverse(path);
-	    if (bindRest!==null) {
-		var before = b.arrayExpression([]);
-		var  after = b.arrayExpression([]);
-		var   rest = null;
-		for (var i=0;i<path.node.elements.length;i++) {
-		    if (path.node.elements[i].type==='BindRest') 
-			rest = path.node.elements[i].id; 
-		    else if (rest!==null)
-			after.elements.push(path.node.elements[i]);
-		    else
-			before.elements.push(path.node.elements[i]);
-		}
-		var rep = b.callExpression(b.memberExpression(before,b.identifier('concat'),false),
-					   [rest,after]);
-		path.replace(rep);
-	    }
-	    bindRest = bRsave;
-	},
-	visitBindRest: function(path) {
-	    bindRest = path.node;
-	    if (bindRest.id===null)
-		throw new Error("anonymous ellipsis in value expression");
-	    this.traverse(path);
-	}
-    });
 }
 
 function genMatch(term,vars,genRest,bIdFact) { // genRest() >> [stmt,...]; returns BlockStatement
@@ -696,7 +949,9 @@ function genMatch(term,vars,genRest,bIdFact) { // genRest() >> [stmt,...]; retur
 	    var root;
 	    for (root=term;root.type==='MemberExpression';root=root.object)
 		;
-	    if (vars[root.name].bound) {
+	    if (vars[root.name]===undefined) {
+		throw new Error(util.format("can't find var: %s %j\n*** %j",root.name,vars,term));
+	    } else if (vars[root.name].bound) {
 		bools.push(genEqual(term,genAccessor(bIdFact,path)));
 	    } else if (root!==term) {
 		throw new Error("can't bind to subobject");
@@ -758,13 +1013,13 @@ function genMatch(term,vars,genRest,bIdFact) { // genRest() >> [stmt,...]; retur
     return stmt;
 }
 
-function generateJS(js) {
+function generateJS(js,what) {
     // +++ allow for malaya code referencing top-level JS vars +++
     // +++ N.B. this has implications for mangling             +++
     // +++      should mangle whole file, need to track TLVs   +++
-    
-    assert.equal(js.type,'Program');
 
+    what = what || 'Program'
+    
     var genCheckInPlay = function(jss,vt) { // >> Statement
 	parser.namedTypes.Statement.assert(jss[0]); // CBB
 	parser.namedTypes.Identifier.assert(vt);
@@ -785,7 +1040,7 @@ function generateJS(js) {
 								     false),
 						  [vt]) )].concat(jss,popStmt)),
 			     null);
-    }
+    };
 
     var genForFacts = function(item,bv,body,vars) { // >> [Statement]
 	if (item.rank) {
@@ -860,6 +1115,66 @@ function generateJS(js) {
 	}
     };
     
+    var genAdd = function(x) {
+	var bindRest = null;
+	return parser.visit(deepClone(x),{
+	    visitObjectExpression: function(path) {
+		var bRsave = bindRest;
+		bindRest = null;
+		this.traverse(path);
+		if (bindRest!==null) {
+		    path.replace(b.callExpression(b.memberExpression(b.identifier('_'),
+								     b.identifier('extend'),
+								     false),
+						  [b.objectExpression([]),bindRest.value,path.node]) );
+		}
+		bindRest = bRsave;
+	    },
+	    visitProperty: function(path) {
+		var prop = path.node;
+		if (prop.kind==='bindRest') {
+		    bindRest = prop;
+		    if (bindRest.value===null)
+			throw new Error("anonymous ellipsis in value expression");
+		    path.replace();
+		}
+		this.traverse(path);
+	    },
+	    visitArrayExpression: function(path) {
+		var bRsave = bindRest;
+		bindRest = null;
+		this.traverse(path);
+		if (bindRest!==null) {
+		    var before = b.arrayExpression([]);
+		    var  after = b.arrayExpression([]);
+		    var   rest = null;
+		    for (var i=0;i<path.node.elements.length;i++) {
+			if (path.node.elements[i].type==='BindRest') 
+			    rest = path.node.elements[i].id; 
+			else if (rest!==null)
+			    after.elements.push(path.node.elements[i]);
+			else
+			    before.elements.push(path.node.elements[i]);
+		    }
+		    var rep = b.callExpression(b.memberExpression(before,b.identifier('concat'),false),
+					       [rest,after]);
+		    path.replace(rep);
+		}
+		bindRest = bRsave;
+	    },
+	    visitBindRest: function(path) {
+		bindRest = path.node;
+		if (bindRest.id===null)
+		    throw new Error("anonymous ellipsis in value expression");
+		this.traverse(path);
+	    },
+	    visitSnapExpression: function(path) {
+		var qjs = genQuery(path.node,[]); // ??? what is `args` here? ???
+		throw new Error("NYI: snap");
+	    }
+	});
+    };
+    
     var genRuleVariant = function(chr,i,prebounds,genPayload) {
 	var bIdFact = b.identifier('fact');
 	var addenda = [];
@@ -926,6 +1241,14 @@ function generateJS(js) {
 	if (_.difference(frees,binds).length>0)
 	    throw new Error(util.format("cannot be assigned values: %j // %j %j",_.difference(frees,binds),frees,binds));
 
+	if (true) {		// !!! TESTING !!!
+	    if (_.difference(_.keys(chr.attrs.vars),binds).length>0 ||
+		_.difference(binds,_.keys(chr.attrs.vars)).length>0 ) {
+		console.log("*** free/bind: %j/%j\n=== %j",frees,binds,chr.attrs.vars)
+		console.log("... %j %j",_.difference(_.keys(chr.attrs.vars),binds),_.difference(binds,_.keys(chr.attrs.vars)))
+	    }
+	}
+	
 	var mangled = mangle(chr,binds);
 	chr   = mangled[0];
 	binds = mangled[1];
@@ -958,18 +1281,16 @@ function generateJS(js) {
 	    });
 	    addenda.forEach(function(j) {
 		payload.push(b.expressionStatement(
-		    b.callExpression(b.identifier('_add'),
-				     [genAdd(chr.items[j].expr)]) ) );
+		    b.callExpression(b.identifier('_add'),[genAdd(chr.items[j].expr)]) ) );
 	    });
 	    return payload;
 	};
-	
+
 	var js1 = genItem(0,i,genPayload);
 	if (binds.length!=0) 
 	    js1.unshift(b.variableDeclaration('var',
 					      _.map(binds,function(v){
 						  return b.variableDeclarator(b.identifier(v),null);} ) ))
-
 	parser.visit(js,{
 	    visitExpressionStatement: function(path) {
 		var expr = path.node.expression;
@@ -984,7 +1305,7 @@ function generateJS(js) {
 	return js;
     };
 
-    var genQuery = function(chr) {
+    var genQuery = function(chr,args) {
 	// a query is a hacked-up rule.  Do this better.
 	for (var item in chr.items)
 	    if (item.op=='+' || item.op=='-')
@@ -997,10 +1318,10 @@ function generateJS(js) {
 	};
 	var              rv = genRuleVariant(chr,
 					     null, // `null` as there's no incoming fact
-					     _.map(chr.args,function(arg){return mangle(arg.name);}),
+					     _.map(args,function(arg){return mangle(arg.name);}),
 					     genQueryPayload);
 
-	rv.params = chr.args;
+	rv.params = args;
 	if (exports.debug) {
 	    rv.body.body.push(b.expressionStatement(
 		b.callExpression(b.memberExpression(b.identifier('ee'),
@@ -1013,7 +1334,7 @@ function generateJS(js) {
 	    visitVariableDeclarator: function(path) {
 		var decl = path.node;
 		if (decl.id.name===chr.init.left.name ||
-		    _.any(chr.args,function(bId){return bId.name===decl.id.name}) )
+		    _.any(args,function(bId){return bId.name===decl.id.name}) )
 		    path.replace();
 		return false;
 	    }
@@ -1032,9 +1353,10 @@ function generateJS(js) {
 	return rv;
     };
     
-    var genStore = function(storeCHR) {
+    var genStore = function(path) {
+	var storeCHR = path.node;
 	// generate a JS `function` to implement a CHRJS `store`
-	var findTag = function(t) {
+	var  findTag = function(t) {
 	    return Ref.flatAt(storeJS.callee.body.body,
 			      function(x){return x.type==='ExpressionStatement' && x.expression.name===t} );
 	};
@@ -1044,6 +1366,13 @@ function generateJS(js) {
 
 	var storeJS = deepClone(templates['store'].body[0].expression);
 	var    code = {rules:[],queries:{},inits:[]};
+
+	// !!! just while I rewrite the compiler !!!
+	assert.deepEqual(templates['indexed_matches'].body[0].type,'SwitchStatement');
+	storeJS = insertCode(storeJS,{
+	    INDEXED_MATCHES:deepClone(templates['indexed_matches'].body[0])
+	},
+			     {strict:false});
 
 	var dispatchBranches = {};                    // used to build the `_add` function below 
 	var  dispatchGeneric = [];
@@ -1074,7 +1403,7 @@ function generateJS(js) {
 		break;
 	    }
 	    case 'QueryStatement': {
-		code.queries[storeCHR.body[i].id.name] = genQuery(storeCHR.body[i]);
+		code.queries[storeCHR.body[i].id.name] = genQuery(storeCHR.body[i],storeCHR.body[i].args);
 		break;
 	    }
 	    case 'ObjectExpression':
@@ -1163,24 +1492,36 @@ function generateJS(js) {
 	dispatchGeneric.forEach(function(ri){ins_gen.push(genInvokeRuleItem(ri));});
 	    
 	return storeJS;
-    }
+    };
 
-    parser.visit(js,{
-	visitStoreDeclaration: function(path) {
-	    var decl = path.node;
-	    if (decl.id===null)
-		path.replace(b.expressionStatement(genStore(decl)))
-	    else
-		path.replace(b.variableDeclaration('var',[
-		    b.variableDeclarator(decl.id,genStore(decl)) ]));
-	    return false;
-	},
-	visitStoreExpression: function(path) {
-	    var decl = path.node;
-	    path.replace(genStore(decl))
-	    return false;
-	}
-    });
+    switch (what) {
+    case 'Program': {
+	js = annotateParse2(annotateParse1(js)); // !!! TESTING !!!
+	parser.namedTypes.Program.assert(js);
+	parser.visit(js,{
+	    visitStoreDeclaration: function(path) {
+		if (path.node.id===null)
+		    path.replace(b.expressionStatement(genStore(path)))
+		else
+		    path.replace(b.variableDeclaration('var',[
+			b.variableDeclarator(path.node.id,genStore(path)) ]));
+		return false;
+	    },
+	    visitStoreExpression: function(path) {
+		path.replace(genStore(path))
+		return false;
+	    }
+	});
+	break;
+    }
+    case 'add': {
+	parser.namedTypes.Expression.assert(js);
+	js = genAdd(js);
+	break;
+    }
+    default:
+	throw new Error(util.format("what?!: %j",what));
+    }
 
     return js;
 }
@@ -1203,6 +1544,67 @@ function setCharAt(str,index,chr) {
     return str.substr(0,index)+chr+str.substr(index+1);
 }
 
+function compile(chr,opts) {
+    var js;
+    opts = opts || {ep:'Program'};
+    var markup = function(chr) {
+	var rule = null;
+	parser.visit(chr,{
+	    visitRuleStatement: function(path) {
+		rule = path.node;
+		this.traverse(path);
+		rule = null;
+	    }
+	});
+	throw new Error("NYI");
+    };
+    var finalEmit = function(chr) {
+	parser.visit(chr,{
+	    visitStoreStatement: function(path) {
+		this.traverse(path);
+		var js = deepClone(templates['store'].body[0].expression);
+		parser.visit(js,{
+		    visitSwitchCase: function(path) {
+			if (path.node.test.type==='Identifier' && path.node.test.name==='INSERT_CASE') {
+			    throw new Error("NYI"); // path.replace
+			}
+			return false;
+		    },
+		    visitIdentifier: function(path) {
+			this.traverse(path);
+			switch (path.node.name) {
+			case 'INSERT_GENERIC_MATCHES':
+			case 'INSERT_RULES':
+			case 'INSERT_QUERIES':
+			case 'INSERT_INIT':
+			    throw new Error("NYI"); // path.replace
+			}
+		    }
+		});
+		path.replace(js);
+	    },
+	    visitRuleStatement: function(path) {
+		throw new Error("NYI");
+	    },
+	    visitQueryStatement: function(path) {
+		throw new Error("NYI");
+	    },
+	    visitItemExpression: function(path) {
+		throw new Error("NYI");
+	    },
+	});
+    };
+    switch (opts.ep) {
+    case 'Program':
+	parser.namedTypes.Program.assert(js);
+	js = finalEmit(markup(chr));
+    default:
+	throw new util.Fail(util.format("can't compile: %j",js));
+    }
+    return js;
+}
+
+
 function buildStanzas(code,parsed) {
     assert(code.search('\t')===-1,"code should be tab-free");
     var  lines = [""].concat(code.split('\n')); // make zero-based
@@ -1220,7 +1622,7 @@ function buildStanzas(code,parsed) {
     }
 
     if (parsed===undefined)
-	parsed = parser.parse(code,{loc:true});
+	parsed = parser.parse(code,{loc:true,attrs:true});
     var currentRule;
     parser.visit(parsed,{
 	visitRuleStatement: function(path) {
@@ -1332,7 +1734,7 @@ require.extensions['.chrjs'] = function(module,filename) {
     filename = path.resolve(filename);
     var codegen = require('escodegen');
     var content = fs.readFileSync(filename,'utf8').replace(/\t/g,'        '); // remove tabs
-    var   chrjs = parser.parse(content,{loc:exports.debug});
+    var   chrjs = parser.parse(content,{loc:exports.debug,attrs:true});
     if (exports.debug)
 	stanzas[filename] = buildStanzas(content,chrjs); // +++ clone the parse! +++
     module._compile(codegen.generate(generateJS(chrjs)),filename);
@@ -1347,8 +1749,12 @@ if (util.env==='test') {
 	Ref:                              Ref,
 	mangle:                           mangle,
 	genAccessor:                      genAccessor,
-	genAdd:                           genAdd,
+	genAdd:                           function(chrjs) {return generateJS(chrjs,'add');},
 	genMatch:                         genMatch,
-	buildStanzas    :                 buildStanzas
+	buildStanzas    :                 buildStanzas,
+	insertCode:                       insertCode,
+	annotateParse1:                   annotateParse1,
+	annotateParse2:                   annotateParse2,
+	generateJS2:                      generateJS2
     };
 }
