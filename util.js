@@ -85,9 +85,11 @@ var deserialise = function(v) {
 };
 
 exports.Fail = function(msg) {
+    this.name    = 'Fail';
     this.message = msg;
 };
-exports.Fail.prototype = new Error();
+exports.Fail.prototype             = Object.create(Error.prototype);
+exports.Fail.prototype.constructor = exports.Fail;
 
 process.on('uncaughtException', function(err) {
     /*eslint-disable no-process-exit*/

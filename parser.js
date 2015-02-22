@@ -334,7 +334,7 @@ var util = require('./util.js');
         case 4:
             return (id === 'this') || (id === 'else') || (id === 'case') ||
                 (id === 'void') || (id === 'with') || (id === 'enum') ||
-		(id === 'rule') || (id === 'snap');		// chrjs
+		(id === 'rule');                      // chrjs
         case 5:
             return (id === 'while') || (id === 'break') || (id === 'catch') ||
                 (id === 'throw') || (id === 'const') || (id === 'yield') ||
@@ -1488,6 +1488,9 @@ var util = require('./util.js');
             if (extra.attachComment) {
                 this.processComment(node);
             }
+	    if (extra.attrs) {
+		node.attrs = {};
+	    }
             return node;
         },
 
@@ -1881,11 +1884,12 @@ var util = require('./util.js');
 	    };
 	},
 
-        createSnapExpression: function(items, init, accum) {
+        createSnapExpression: function(id, init, items, accum) {
 	    return {
 		type: Syntax.SnapExpression,
-		items: items,
+		id: id,
 		init: init,
+		items: items,
 		accum: accum
 	    };
 	}
@@ -2293,7 +2297,7 @@ var util = require('./util.js');
             if (matchKeyword('function')) {
                 return parseFunctionExpression();
             }
-	    if (state.inStore && matchKeyword('snap')) {          // chrjs
+	    if (state.inStore && matchKeyword('for')) {          // chrjs
                 return parseSnapExpression();
             }
 	    if (matchKeyword('store')) {                          // chrjs
@@ -3808,6 +3812,7 @@ var util = require('./util.js');
         if (typeof options !== 'undefined') {
             extra.range = (typeof options.range === 'boolean') && options.range;
             extra.loc = (typeof options.loc === 'boolean') && options.loc;
+	    extra.attrs = (typeof options.attrs === 'boolean') && options.attrs;
             extra.attachComment = (typeof options.attachComment === 'boolean') && options.attachComment;
 
             if (extra.loc && options.source !== null && options.source !== undefined) {
@@ -3968,6 +3973,8 @@ var util = require('./util.js');
 	var         id = delegate.createIdentifier('%rule-'+ruleGenId++);
 	var      items = [];
 	expectKeyword('rule');
+	if (!match('('))
+	    id = parseVariableIdentifier();
 	expect('(');
         if (!match(')')) {
             while (index<length) {
@@ -4018,11 +4025,29 @@ var util = require('./util.js');
     }
 
     function parseSnapExpression() {
+	var       init;
+	var      accum;
+	var      items = [];
 	var startToken = lookahead;
-	expectKeyword('snap');
+	var         id = delegate.createIdentifier('%for-'+ruleGenId++);
+	expectKeyword('for');
+	if (!match('('))
+	    id = parseVariableIdentifier() // only for testing?
 	expect('(');
-	var qsb = parseQuerySnapBackend();
-        return delegate.markEnd(delegate.createSnapExpression(qsb.items,qsb.init,qsb.accum),startToken);
+	init = parseAssignmentExpression();
+	expect(';');
+        if (!match(';')) {
+            while (index<length) {
+                items.push(parseChrjsItem());
+                if (match(';')) 
+                    break;
+                expect(',');
+            }
+        }
+	expect(';');
+	accum = parseConditionalExpression();
+	expect(')');
+        return delegate.markEnd(delegate.createSnapExpression(id,init,items,accum),startToken);
     }
 
     // Sync with *.json manifests.
@@ -4057,19 +4082,26 @@ var util = require('./util.js');
 	    .field('op',   or('+','-','M','=','?'))
 	    .field('expr', def('Expression'))
 	    .field('t',    or(def('Identifier'),null))
-	    .field('rank', def('Expression'))
+	    .field('rank', or(def('Expression'),null));
 	def('BindRest')
 	    .bases('Expression')
 	    .build('id')
-	    .field('id',   or(def('Identifier'),null))
+	    .field('id',   or(def('Identifier'),null));
 	def('QueryStatement')
 	    .bases('Statement')
-	    .build('id','args','items','accum')
+	    .build('id','args','init','items','accum')
 	    .field('id',   def('Identifier'))
 	    .field('args', [def('Identifier')])
-	    .field('items',[def('ItemExpression')])
-	    .field('accum',def('Expression'))
 	    .field('init', def('AssignmentExpression'))
+	    .field('items',[def('ItemExpression')])
+	    .field('accum',def('Expression'));
+	def('SnapExpression')
+	    .bases('Expression')
+	    .build('id','init','items','accum')
+	    .field('id',   def('Identifier'))
+	    .field('init', def('AssignmentExpression'))
+	    .field('items',[def('ItemExpression')])
+	    .field('accum',def('Expression'));
 	types.finalize();
 	return function(ast,methods) {
 	    return types.visit(ast,methods);
