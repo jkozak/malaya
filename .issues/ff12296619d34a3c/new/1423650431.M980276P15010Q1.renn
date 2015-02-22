@@ -1,0 +1,6 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Wed, 11 Feb 2015 10:27:11 +0000
+Subject: examples/idb: add ws[s]://SERVER/xml endpoint for XML over websocket
+State: new
+Message-Id: <ff12296619d34a3c-0-artemis@renn>
+

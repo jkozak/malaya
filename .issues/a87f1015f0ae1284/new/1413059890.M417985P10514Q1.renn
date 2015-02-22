@@ -1,8 +1,9 @@
 From: John Kozak <jk@thameslighter.net>
 Date: Sat, 11 Oct 2014 21:38:10 +0100
 Subject: query groups
-State: new
+State: resolved
 Message-Id: <a87f1015f0ae1284-0-artemis@renn>
+resolution: subsumed
 
 possible syntax:
  query (a,b,c) [q1(a),q2(b),q2(c)];

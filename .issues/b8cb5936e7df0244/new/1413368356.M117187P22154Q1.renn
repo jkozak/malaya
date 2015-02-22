@@ -33,3 +33,8 @@ Something like:
  };
  tfm.transform(stOld,stNew);
 
+When NODE_ENV===production, check that current code hash is same as
+previous code hash - fail if not, overrideable by a cmdline option or
+gui button.
+
+
