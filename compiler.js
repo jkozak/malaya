@@ -206,6 +206,39 @@ function deepClone(json) {
     return JSON.parse(JSON.stringify(json)); // lazy, very
 }
 
+var chrGlobalVars = {		// only javascript globals allowed in CHRjs
+    Infinity:   {ext:true,mutable:false},
+    NaN:        {ext:true,mutable:false},
+    undefined:  {ext:true,mutable:false},
+    //N.B. `null` is a keyword
+    isFinite:   {ext:true,mutable:false,type:'function'},
+    isNaN:      {ext:true,mutable:false,type:'function'},
+    parseFloat: {ext:true,mutable:false,type:'function'},
+    parseInt:   {ext:true,mutable:false,type:'function'},
+    Number:     {ext:true,mutable:false,type:'function'},
+    Object:     {ext:true,mutable:false,type:'function'},
+    Math:       {ext:true,mutable:false,type:'function'},
+    Date:       {ext:true,mutable:false,type:'function'},
+    require:    {ext:true,mutable:false,type:'function'},
+    module:     {ext:true,mutable:false,type:'function'},
+};
+if (util.env==='test')
+    chrGlobalVars = _.extend(chrGlobalVars,
+			     {	// the `mocha` globals
+				 describe:{ext:true,mutable:false,type:'function'},
+				 it:      {ext:true,mutable:false,type:'function'}
+			     });
+
+function findVar(v,path) {
+    //console.log("*** findVar %j %j",v,path===null?null:path.node);
+    if (path===null)
+	return chrGlobalVars[v];
+    else if (path.node.attrs && path.node.attrs.vars && path.node.attrs.vars[v])
+	return path.node.attrs.vars[v];
+    else
+	return findVar(v,path.parent);
+}
+
 function annotateParse1(js) {	// poor man's attribute grammar - pass one
     var vars = null;
     var item = null;	// `op` of active item or `null`
@@ -216,74 +249,87 @@ function annotateParse1(js) {	// poor man's attribute grammar - pass one
 	    for (var i=0;i<node.items.length;i++)
 		node.items[i].attrs.itemId = i;
 	},
+	noteDeclaredName:         function(name,type) {
+	    if (vars[name])
+		throw new util.Fail(util.format("function shadowed or overloaded: %s",name));
+	    vars[name] = {declared:true,type:type};
+	},
 	doFunction:               function(path) {
 	    var save = {vars:vars,stmt:stmt};
-	    vars = {};
+	    path.node.attrs.vars = vars = {};
 	    stmt = 'function';
+	    for (var i in path.node.params) {
+		var param = path.node.params[i];
+		assert.strictEqual(param.type,'Identifier');
+		vars[param.name] = {bound:true,declared:true};
+	    }
 	    this.traverse(path);
-	    path.node.attrs.vars = vars;
 	    stmt = save.stmt;;
 	    vars = save.vars;
 	},
 	visitProgram:             function(path) {
-	    vars = {};
+	    path.node.attrs.vars = vars = {};
 	    stmt = 'program';
 	    this.traverse(path);
-	    path.node.attrs.vars = vars;
 	    stmt = null;
 	    vars = null;
 	},
 	visitFunctionDeclaration: function(path) {
-	    var name = path.node.id.name;
-	    if (vars[name])
-		throw new util.Fail(util.format("function shadowed or overloaded: %s",name));
-	    vars[name] = {declared:true,type:'function'};
+	    this.noteDeclaredName(path.node.id.name,'function');
 	    return this.doFunction(path);
 	},
 	visitFunctionExpression:  function(path) {return this.doFunction(path);},
 	visitVariableDeclarator:  function(path) {
 	    var name = path.node.id.name;
 	    this.traverse(path);
+	    vars[name].bound    = true;
 	    vars[name].declared = true;
 	    vars[name].mutable  = path.parent.kind!=='const';
 	    vars[name].type     = (path.node.init&&path.node.init.type==='FunctionExpression') ? 'function' : null;
 	    if (!_.contains(['program','function',null],stmt)) // !!! null is for TESTING !!!
 		throw new util.Fail(util.format("variable %s declared in inappropriate context %s",name,stmt));
 	},
+	visitStoreDeclaration:    function(path) {
+	    if (path.node.id!==null)
+		this.noteDeclaredName(path.node.id.name,'store');
+	    this.traverse(path);
+	},
 	visitRuleStatement:       function(path) {
+	    if (path.node.id!==null)
+		this.noteDeclaredName(path.node.id.name,'store');
 	    this.markItemsWithId(path.node);
-	    var save = {vars:vars};
-	    vars = {};
+	    var save = {vars:vars,stmt:stmt};
+	    path.node.attrs.vars = vars = {};
 	    stmt = 'rule';
 	    this.traverse(path.get('items'));
-	    path.node.attrs.vars = vars;
-	    stmt = null;
 	    vars = save.vars;
+	    stmt = save.stmt;
 	},
 	visitQueryStatement:      function(path) {
+	    this.noteDeclaredName(path.node.id.name,'function');
 	    this.markItemsWithId(path.node);
-	    var save = {vars:vars};
-	    vars = {};
+	    var save = {vars:vars,stmt:stmt};
+	    path.node.attrs.vars = vars = {};
 	    stmt = 'query';
 	    this.visit(path.get('items'));
 	    this.visit(path.get('args'));
 	    this.visit(path.get('init'));
 	    this.visit(path.get('accum'));
-	    path.node.attrs.vars = vars;
-	    stmt = null;
 	    vars = save.vars;
+	    stmt = save.stmt;
 	    return false;
 	},
 	visitSnapExpression:      function(path) {
+	    if (path.node.id!==null)
+		this.noteDeclaredName(path.node.id.name,'store');
 	    this.markItemsWithId(path.node);
 	    var save = {vars:vars,stmt:stmt,item:item};
-	    vars = {};
+	    path.node.attrs.vars = vars = {};
 	    stmt = 'snap';
 	    item = null;
 	    this.visit(path.get('init'));
 	    this.visit(path.get('items'));
 	    this.visit(path.get('accum'));
-	    path.node.attrs.vars = vars;
 	    vars = save.vars;
 	    stmt = save.stmt;
 	    item = save.item;
@@ -296,18 +342,19 @@ function annotateParse1(js) {	// poor man's attribute grammar - pass one
 	    item = null;
 	},
 	visitIdentifier:          function(path) {
-	    vars[path.node.name] = vars[path.node.name] || {};
+	    if (vars[path.node.name]===undefined) {
+		if (!findVar(path.node.name,path)) 
+		    vars[path.node.name] = {};
+	    }
 	    return false;
 	},
 	visitMemberExpression:    function(path) {
 	    if (path.node.computed)
 		this.traverse(path);
-	    else if (path.node.object.type==='Identifier') 
-		return this.visitIdentifier(path.get('object'));
-	    else if (path.node.object.type==='MemberExpression')
-		return this.visitMemberExpression(path.get('object'));
-	    else
+	    else {
+		this.visit(path.get('object'));
 		return false;
+	    }
 	},
 	visitProperty:            function(path) { // keys may be Identifiers, don't mangle
 	    var prop = path.node;
@@ -321,10 +368,7 @@ function annotateParse1(js) {	// poor man's attribute grammar - pass one
 	    }
 	},
 	doCall:                   function(path) {
-	    // don't track function names yet
-	    if (path.node.callee.type==='FunctionExpression')
-		this.traverse(path.get('callee'));
-	    this.traverse(path.get('arguments'));
+	    this.traverse(path);
 	},
 	visitCallExpression:      function(path){return this.doCall(path);},
 	visitNewExpression:       function(path){return this.doCall(path);}
@@ -333,10 +377,17 @@ function annotateParse1(js) {	// poor man's attribute grammar - pass one
 }
 
 function annotateParse2(chrjs) {	// poor man's attribute grammar - pass two
+    var checkBound = function(vars) {
+	//console.log("*** checkBound: %j",vars);
+	_.map(_.keys(vars),function(k) {
+	    if (!vars[k].bound)
+		throw new util.Fail(util.format("variable never bound: %s",k));
+	});
+    };
     var setBoundHereAttr = function(js,vars) {
 	parser.visit(js,{
 	    visitIdentifier:          function(path) {
-		if (vars[path.node.name]!==undefined) {
+		if (path.node.name[0]!=='%' && vars[path.node.name]!==undefined) {
 		    if (!vars[path.node.name].bound) {
 			path.node.attrs.boundHere  = true;
 			vars[path.node.name].bound = true;
@@ -356,32 +407,91 @@ function annotateParse2(chrjs) {	// poor man's attribute grammar - pass two
 	    // don't visit sites that can't bind vars
 	    visitUnaryExpression:     function(path){return false;},
 	    visitBinaryExpression:    function(path){return false;},
-	    visitMemberExpression:    function(path){return false;}
+	    visitMemberExpression:    function(path){return false;} // only a bare var can bind
 	});
-	_.map(_.keys(vars),function(k) {
-	    if (!vars[k].bound)
-		throw new util.Fail(util.format("variable never bound: %s",k));
-	});
+	checkBound(vars);
     };
     chrjs = deepClone(chrjs);
     parser.visit(chrjs,{
-	visitRuleStatement: function(path) {
-	    //console.log("*** rule: %j",path.node);
+	visitRuleStatement:       function(path) {
 	    setBoundHereAttr(path.node,path.node.attrs.vars);
 	    return false;
 	},
-	visitQueryStatement:function(path) {
-	    //console.log("*** query: %j",path.node);
+	visitQueryStatement:      function(path) {
 	    setBoundHereAttr(path.node,path.node.attrs.vars);
 	    return false;
 	},
-	visitSnapExpression:function(path) {
-	    //console.log("*** snap: %j",path.node);
+	visitSnapExpression:      function(path) {
 	    setBoundHereAttr(path.node,path.node.attrs.vars);
 	    return false;
-	}
+	},
+	doVars:                   function(path) {
+	    this.traverse(path);
+	    //console.log("*** doVars: %j",path.node.attrs.vars);
+	    _.map(_.keys(path.node.attrs.vars),function(k) {
+		if (!findVar(k,path).declared)
+		    throw new util.Fail(util.format("variable never declared: %s",k));
+	    });
+	},
+	visitProgram:             function(path) {this.doVars(path);},
+	visitFunctionExpression:  function(path) {this.doVars(path);},
+	visitFunctionDeclaration: function(path) {this.doVars(path);}
     });
     return chrjs;
+}
+
+function mangleIdentifier(name) {
+    assert.strictEqual(typeof name,'string');
+    return name+'_';
+}
+function unmangleIdentifier(id) {
+    return id.attrs ? id.attrs.was : id.name; // allow for genned ids without attrs
+}
+function mangle(js) {		// `js` must have been previously annotated 
+    js = deepClone(js);
+    parser.visit(js,{
+	doVars:                   function(path) {
+	    for (var v in path.node.attrs.vars) 
+		path.node.attrs.vars[v].mangled = mangleIdentifier(v);
+	    this.traverse(path);
+	},
+	visitIdentifier:          function(path) {
+	    if (path.node.name[0]!=='%') { // ignore generated identifiers
+		var vattrs = findVar(path.node.name,path);
+		if (!vattrs)
+		    throw new util.Fail(util.format("var %s not found",path.node.name));
+		if (!vattrs.bound && !vattrs.declared && !vattrs.ext)
+		    throw new util.Fail(util.format("var %s gets no value",path.node.name));
+		if (!vattrs.ext) {
+		    path.node.attrs.was = path.node.name;
+		    path.node.name      = mangleIdentifier(path.node.name);
+		    assert.strictEqual(path.node.name,vattrs.mangled);
+		}
+	    }
+	    return false;
+	},
+	visitProgram:             function(path) {return this.doVars(path)},
+	visitRuleStatement:       function(path) {return this.doVars(path)},
+	visitQueryStatement:      function(path) {return this.doVars(path)},
+	visitSnapExpression:      function(path) {return this.doVars(path)},
+	visitFunctionExpression:  function(path) {return this.doVars(path)},
+	visitFunctionDeclaration: function(path) {return this.doVars(path)},
+	visitStoreExpression:     function(path) {return this.doVars(path)},
+	visitStoreDeclaration:    function(path) {return this.doVars(path)},
+	visitProperty:            function(path) {
+	    this.visit(path.get('value'));
+	    return false;
+	},
+	visitMemberExpression:    function(path) {
+	    if (path.node.computed)
+		this.traverse(path);
+	    else {
+		this.visit(path.get('object'));
+		return false
+	    }
+	}
+    });
+    return js;
 }
 
 function insertCode(chrjs,replaces,opts) {
@@ -492,65 +602,6 @@ function generateJS2(chrjs) {	// `js` is an annotated parse tree
 	}
     });
     return js;
-}
-
-function mangle(js,vars) {
-    if ((typeof js)==='string') {
-	assert(js.charAt(js.length-1)!=='_'); // !!! TESTING !!!
-	assert.equal(vars,undefined);
-	return js+'_';
-    } else {
-	var doIdentifier = function(path) {
-	    var id = path.node;
-	    if (vars.indexOf(id.name)!==-1) {
-		//console.log(new Error(util.format("*** mangling id %j",id.name)).stack);
-		path.replace(b.identifier(mangle(id.name)));
-	    }
-	};
-	js = parser.visit(js,{
-	    visitIdentifier: function(path) {
-		doIdentifier(path);
-		return false;
-	    },
-	    visitProperty: function(path) {           // keys may be Identifiers, don't mangle
-		//console.log("*** mangle Property: %j",path.node);
-		var prop = path.node;
-		if (prop.value===null) {
-		    //console.log("*** mangle Property 1");
-		    return false;
-		} else if (prop.value.type==='Identifier') {
-		    //console.log("*** mangle Property 2: %j",path.get('value').node);
-		    doIdentifier(path.get('value'));
-		    return false;
-		}
-		else {
-		    //console.log("*** mangle Property 3: %j",path.get('value').node);
-		    this.traverse(path.get('value'));
-		}
-	    },
-	    visitMemberExpression: function(path) {
-		var expr = path.node;
-		if (expr.computed)
-		    this.traverse(path);
-		else {
-		    doIdentifier(path.get('object'));
-		    return false;
-		}
-	    },
-	    visitSnapExpression: function(path) {
-		//console.log("*** mangle SnapExpression: %j",path.node);
-		if (js.type==='SnapExpression')
-		    this.traverse(path);
-		else		// don't descend into a snap expression
-		    return false;
-	    }
-	});
-	return [js,_.map(vars,function(x){return mangle(x);})];
-    }
-}
-function unmangle(v) {
-    assert.strictEqual(v.charAt(v.length-1),'_');
-    return v.substr(v,v.length-1);
 }
 
 function exprContainsVariable(expr) {
@@ -1016,7 +1067,7 @@ function genMatch(term,vars,genRest,bIdFact) { // genRest() >> [stmt,...]; retur
 function generateJS(js,what) {
     // +++ allow for malaya code referencing top-level JS vars +++
     // +++ N.B. this has implications for mangling             +++
-    // +++      should mangle whole file, need to track TLVs   +++
+    // +++      should mangleOLD whole file, need to track TLVs   +++
 
     what = what || 'Program'
     
@@ -1241,17 +1292,22 @@ function generateJS(js,what) {
 	if (_.difference(frees,binds).length>0)
 	    throw new Error(util.format("cannot be assigned values: %j // %j %j",_.difference(frees,binds),frees,binds));
 
+	var vars1 = {};
 	if (true) {		// !!! TESTING !!!
-	    if (_.difference(_.keys(chr.attrs.vars),binds).length>0 ||
-		_.difference(binds,_.keys(chr.attrs.vars)).length>0 ) {
-		console.log("*** free/bind: %j/%j\n=== %j",frees,binds,chr.attrs.vars)
-		console.log("... %j %j",_.difference(_.keys(chr.attrs.vars),binds),_.difference(binds,_.keys(chr.attrs.vars)))
+	    var binds1 = _.keys(chr.attrs.vars).map(function(k){return chr.attrs.vars[k].mangled;});
+	    if (_.difference(binds1,binds).length>0 ||
+		_.difference(binds,binds1).length>0 ) {
+		//console.log("*** free/bind: %j/%j\n=== %j",frees,binds,binds1)
+		//console.log("... %j %j",_.difference(binds1,binds),_.difference(binds,binds1))
+		throw new Error("balls");
 	    }
+	    binds = binds1;
+	    vars1 = {};
+	    //console.log("*** binds: %j",binds);
+	    for (var k in chr.attrs.vars)
+		vars[chr.attrs.vars[k].mangled] = chr.attrs.vars[k];
+	    //console.log("    vars: %j",vars);
 	}
-	
-	var mangled = mangle(chr,binds);
-	chr   = mangled[0];
-	binds = mangled[1];
 
 	binds.forEach(function(n){vars[n] = {bound:false};});
 	for (var pb in prebounds) { // non-empty for parametric ruley things
@@ -1272,7 +1328,9 @@ function generateJS(js,what) {
 		    b.callExpression(b.memberExpression(b.identifier('ee'),
 							b.identifier('emit'),
 							false),
-				     [b.literal('queue-rule'),b.literal(chr.id.name),b.arrayExpression(vars)] ) ));
+				     [b.literal('queue-rule'),
+				      b.literal(unmangleIdentifier(chr.id)),
+				      b.arrayExpression(vars) ] ) ));
 	    }
 	    delenda.forEach(function(j) {
 		var bv = b.identifier(i===j ? 't_fact' : 't'+j);
@@ -1318,7 +1376,7 @@ function generateJS(js,what) {
 	};
 	var              rv = genRuleVariant(chr,
 					     null, // `null` as there's no incoming fact
-					     _.map(args,function(arg){return mangle(arg.name);}),
+					     _.map(args,function(arg){return arg.name;}),
 					     genQueryPayload);
 
 	rv.params = args;
@@ -1327,7 +1385,7 @@ function generateJS(js,what) {
 		b.callExpression(b.memberExpression(b.identifier('ee'),
 						    b.identifier('emit'),
 						    false),
-				 [b.literal('query-done'),b.literal(chr.id.name)] ) ));
+				 [b.literal('query-done'),b.literal(unmangleIdentifier(chr.id))] ) ));
 	}
 	rv.body.body.push(b.returnStatement(chr.init.left));
 	parser.visit(rv,{	// remove query args and accum variable from binding site decls
@@ -1403,7 +1461,7 @@ function generateJS(js,what) {
 		break;
 	    }
 	    case 'QueryStatement': {
-		code.queries[storeCHR.body[i].id.name] = genQuery(storeCHR.body[i],storeCHR.body[i].args);
+		code.queries[storeCHR.body[i].id.attrs.was] = genQuery(storeCHR.body[i],storeCHR.body[i].args);
 		break;
 	    }
 	    case 'ObjectExpression':
@@ -1496,7 +1554,8 @@ function generateJS(js,what) {
 
     switch (what) {
     case 'Program': {
-	js = annotateParse2(annotateParse1(js)); // !!! TESTING !!!
+	js = annotateParse2(annotateParse1(js));
+	js = mangle(js);
 	parser.namedTypes.Program.assert(js);
 	parser.visit(js,{
 	    visitStoreDeclaration: function(path) {
@@ -1747,6 +1806,7 @@ if (util.env==='test') {
 	exprGetFreeVariables:             exprGetFreeVariables,
 	exprGetVariablesWithBindingSites: exprGetVariablesWithBindingSites,
 	Ref:                              Ref,
+	mangleIdentifier:                 mangleIdentifier,
 	mangle:                           mangle,
 	genAccessor:                      genAccessor,
 	genAdd:                           function(chrjs) {return generateJS(chrjs,'add');},

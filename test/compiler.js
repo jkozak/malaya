@@ -37,8 +37,12 @@ function equalU(s1,s2) {	// unordered equal (set-like)
     return _.difference(s1,s2).length===0 && _.difference(s2,s1).length===0;
 }
 
-function findById(js,name) {	// find subtree of `js` with id `name`
+var mangleId = compiler._private.mangleIdentifier;
+
+function findById(js,name,mangled) {	// find subtree of `js` with id `name`
     var ans = null;
+    if (mangled)
+	name = mangleId(name);
     parser.visit(js,{
 	visitIdentifier:function(path) {
 	    if (path.node.name===name && path.parent.get('id')===path)
@@ -315,48 +319,6 @@ describe("genMatch",function() {
     });
 });
 
-describe("mangle",function() {
-    var mangle = compiler._private.mangle;
-    it("should translate user variable names to something safe",function() {
-	var ast = parser.parse("store fred {['user',{name:'sid'}];rule(['user',{name:a}]);rule(['company',{user:a,name:b}]);}");
-	var  av = mangle(ast,['a','b']);
-	assert.deepEqual(av[1],_.map(['a','b'],function(x){return mangle(x);}));
-    });
-    it("should translate BindRest exprs",function() {
-	var ast = parser.parse("store fred {rule(['user',{...rB}]^rB.t);}");
-	var  av = mangle(ast,['rB']);
-	assert.equal(av[0].body[0].body[0].items[0].rank.object.name,'rB_');
-	assert.deepEqual(av[1],[mangle('rB')]);
-    });
-    it("should handle properties correctly",function() {
-	var ast = parser.parse("store fred {rule(['user',{name}]);}");
-	var  av = mangle(ast,['name']);
-	assert.equal(av[0].body[0].body[0].items[0].expr.elements[1].properties[0].key.name,'name');
-	assert.equal(av[0].body[0].body[0].items[0].expr.elements[1].properties[0].value.name,mangle('name'));
-	assert.deepEqual(av[1],[mangle('name')]);
-    });
-    it("should handle computed MemberExpressions [e39caf5ad040aa90]",function() {
-	var ast = parser.parse("store fred {rule(['user',{id,...rs}],d={'a':rs.x}['a']);}");
-	var  av = mangle(ast,['rs']);
-	assert.equal(av[0].body[0].body[0].items[1].expr.right.object.properties[0].value.object.name,'rs_');
-    });
-    // it("should handle nested snap expressions",function() {
-    // 	var ast = parser.parse("store fred {rule(['a',{n}],+['b',{n:for(p=n;['a'];p+1)}]);}");
-    // 	var  av = mangle(ast,['n']);
-    // 	console.log("*** av: %j",av);
-    // 	assert.equal(av[0].body[0].body[0].items[0].expr.elements[1].properties[0].key.name,'n');
-    // 	assert.equal(av[0].body[0].body[0].items[0].expr.elements[1].properties[0].value.name,mangle('n'));
-    // 	assert.deepEqual(av[1],[mangle('n')]);
-    // 	var item1 = av[0].body[0].body[0].items[1];
-    // 	assert.equal(item1.type,'ItemExpression');
-    // 	assert.equal(item1.expr.elements[1].type,'ObjectExpression');
-    // 	assert.equal(item1.expr.elements[1].properties[0].value.type,'SnapExpression');
-    // 	assert.equal(item1.expr.elements[1].properties[0].value.init.type,'AssignmentExpression');
-    // 	assert.equal(item1.expr.elements[1].properties[0].value.init.right.type,'Identifier');
-    // 	assert.equal(item1.expr.elements[1].properties[0].value.init.right.name,'n'); // not mangled
-    // });
-});
-
 describe("genAdd",function() {
     var genAdd = compiler._private.genAdd;
     it("should repackage ellipsis bindings",function() {
@@ -372,7 +334,7 @@ describe("compile",function() {
     it("should generate JS for trivial store",function() {
 	var js = compile("var st = store {['user',{name:'sid'}];rule(['user',{name:a}]);rule(['company',{user:a,name:b}]);};");
 	eval(recast.print(js).code);
-	assert.deepEqual(st._private.facts,{"1":['user',{name:'sid'}]});
+	assert.deepEqual(eval(mangleId('st'))._private.facts,{"1":['user',{name:'sid'}]});
     });
     // it("should generate JS for store containing `for`",function() {
     // 	var js = compiler.compile(parse("var st = store {rule(['a'],+['b',for(a=0;['a'];a+1)]);};"));
@@ -386,6 +348,7 @@ describe("EventEmitter",function() {
 	//console.log(recast.print(js).code);
 	eval(recast.print(js).code);
 	var fired = false;
+	var    st = eval(mangleId('st'));
 	st.once('fire',function(store,fact,adds,dels){
 	    fired = true;
 	    assert.deepEqual(fact,['user',{'name':'sid'}]);
@@ -404,6 +367,7 @@ describe("EventEmitter",function() {
 	//console.log(recast.print(js).code);
 	eval(recast.print(js).code);
 	var fired = false;
+	var    st = eval(mangleId('st'));
 	st.on('fire',function(store,fact,adds,dels){
 	    fired = true;
 	    assert.equal(fact[0],'user');
@@ -500,8 +464,10 @@ describe("first pass of new compiler",function() {
     it("should handle for-expressions",function() {
 	var prs0 = parse("store {rule R (a=for F(b=0;['a',...];b+1));}");
 	var prs1 = pass1(prs0);
-	assert.deepEqual(findById(prs1,'R').attrs.vars,{a:{}});
-	assert.deepEqual(findById(prs1,'F').attrs.vars,{b:{}});
+	assert.deepEqual(findById(prs1,'R').attrs.vars['a'],{});
+	assert.deepEqual(findById(prs1,'R').attrs.vars['b'],undefined);
+	assert.deepEqual(findById(prs1,'F').attrs.vars['a'],undefined);
+	assert.deepEqual(findById(prs1,'F').attrs.vars['b'],{});
     });
 });
 
@@ -536,10 +502,10 @@ describe("second pass of new compiler",function() {
 	p2("function fn(){return 1;};store{rule (a=fn())}");
     });
     it("should not complain about function names being unbound for object refs",function() {
-	p2("store{rule (a=_.extend())}");
+	p2("var _=require('lodash');store{rule (a=_.extend())}");
     });
-    it("XXX should not complain about function names being unbound for object refs 2",function() {
-	p2("store{rule (['p'],+['a',{a:call({X:_.extend({})})}])}");
+    it("should not complain about function names being unbound for object refs 2",function() {
+	p2("var _=require('lodash');store{rule (['p'],+['a',{a:call({X:_.extend({})})}])}");
     });
     it("should not complain about constructors being unbound",function() {
 	p2("function fn(){return 1;};store{rule (a=new fn())}");
@@ -549,12 +515,93 @@ describe("second pass of new compiler",function() {
 	    p2("function fn(){return 1;};store{rule (a=fn(b))}");
 	});
     });
-    it("should complain about unbound vars in local functions",function() {
+    // +++ nested for +++
+});
+
+describe("mangle",function() {
+    var    pass1 = compiler._private.annotateParse1;
+    var    pass2 = compiler._private.annotateParse2;
+    var   mangle = function(js) {return compiler._private.mangle(pass2(pass1(js)));};
+    it("should translate user variable names to something safe",function() {
+	var  ast = parse("var a;");
+	var ast1 = mangle(ast);
+	assert.strictEqual(_.keys(ast1.attrs.vars).length,1);
+	assert.strictEqual(ast1.attrs.vars['a'].mangled,mangleId('a'));
+	assert.strictEqual(ast1.attrs.vars['a'].declared,true);
+	assert.strictEqual(ast1.attrs.vars['a'].mutable,true);
+	assert.strictEqual(ast1.body[0].declarations[0].id.name,mangleId('a'));
+	assert.strictEqual(ast1.body[0].declarations[0].id.attrs.was,'a');
+    });
+    it("should not translate member names in ObjectExpressions",function() {
+	var  ast = parse("var a = {p:1};");
+	var ast1 = mangle(ast);
+	assert.strictEqual(ast1.body[0].declarations[0].id.name,mangleId('a'));
+	assert.strictEqual(ast1.body[0].declarations[0].init.properties[0].key.name,'p');
+    });
+    it("should not translate member names in uncomputed MemberExpressions",function() {
+	var  ast = parse("var a = {p:1}.p;");
+	var ast1 = mangle(ast);
+	var init = ast1.body[0].declarations[0].init;
+	assert.strictEqual(ast1.body[0].declarations[0].id.name,mangleId('a'));
+	assert.strictEqual(init.type,'MemberExpression');
+	assert.strictEqual(init.object.properties[0].key.name,'p');
+	assert.strictEqual(init.property.name,'p');
+    });
+    it("should translate member names in computed MemberExpressions",function() {
+	var  ast = parse("var a='p';var b={p:1}[a];");
+	var ast1 = mangle(ast);
+	var init = ast1.body[1].declarations[0].init;
+	assert.strictEqual(ast1.body[1].declarations[0].id.name,mangleId('b'));
+	assert.strictEqual(init.type,'MemberExpression');
+	assert.strictEqual(init.object.properties[0].key.name,'p');
+	assert.strictEqual(init.property.name,mangleId('a'));
+    });
+    it("should translate function names",function() {
+	var ast = mangle(parse("function fred(a) {return a;}"));
+	assert.strictEqual(ast.body[0].id.name,mangleId('fred'));
+    });
+    it("should translate function declaration args",function() {
+	var ast = mangle(parse("function fn(f){return f[0];}"));
+	assert.strictEqual(ast.body[0].id.name,mangleId('fn'));
+	assert.strictEqual(ast.body[0].params[0].name,mangleId('f'));
+    });
+    it("should translate function expression args",function() {
+	var ast = mangle(parse("var a = function (f){return f[0];}"));
+	assert.strictEqual(ast.body[0].declarations[0].init.params[0].name,mangleId('f'));
+    });
+    it("should translate nested function expression args",function() {
+	var ast = mangle(parse("[].map(function (f){return f[0];}).sort();"));
+	// +++
+    });
+    it("should not translate known global names",function() {
+	var ast = mangle(parse("var lib = require('lib');"));
+	assert.strictEqual(ast.body[0].declarations[0].id.name,mangleId('lib'));
+	assert.strictEqual(ast.body[0].declarations[0].init.callee.name,'require');
+    });
+    it("should balk at unknown global function names",function() {
 	assert.throws(function() {
-	    p2("store{rule (a=(function(){return b;})())}");
+	    mangle(parse("var tsne = thisShouldNotExist();"));
 	});
     });
-    // +++ nested for +++
+    it("should balk at unknown global variable names",function() {
+	assert.throws(function() {
+	    mangle(parse("var tsne = thisShouldNotExist;"));
+	});
+    });
+    it("should mangle array expression rest var names",function() {
+	var ast = mangle(parse("store {rule R (['a',...xs]);}"));
+	assert.strictEqual(findById(ast,'R',true).items[0].expr.elements[1].type,'BindRest');
+	assert.strictEqual(findById(ast,'R',true).items[0].expr.elements[1].id.name,mangleId('xs'));
+    });
+    it("should not molest module declarations",function() {
+	var ast = mangle(parse("module.test = 'test';"));
+	assert.strictEqual(ast.body[0].expression.left.object.name,'module');
+    });
+    it("should complain about unbound vars in local functions",function() {
+	assert.throws(function() {
+	    mangle(parse("store {rule (a=(function(){return b;})());}"));
+	});
+    });
 });
 
 describe("code generation by new compiler",function() {
@@ -563,38 +610,42 @@ describe("code generation by new compiler",function() {
 
 describe("query statement",function() {
     it("should compile and run a simple query",function() {
-	var js = compile("var st = store {query q(;['user',{name:n}];a=[]) a.concat(n);};");
+	var js = compile("var st = store {query q1(;['user',{name:n}];a=[]) a.concat(n);};");
 	eval(recast.print(js).code);
-	assert.equal(st.queries.q().result.length,0);
+	var st = eval(mangleId('st'));
+	assert.equal(st.queries.q1().result.length,0);
 	st.add(['user',{name:'tyson'}]);
-	assert.equal(st.queries.q().result.length,1);
+	assert.equal(st.queries.q1().result.length,1);
     });
     it("should compile and run a parameterized query",function() {
-	var js = compile("var st = store {query q(p;['user',{name:n}],n.length===p;a=[]) a.concat(n);};");
+	var js = compile("var st = store {query q2(p;['user',{name:n}],n.length===p;a=[]) a.concat(n);};");
 	eval(recast.print(js).code);
+	var st = eval(mangleId('st'));
 	st.add(['user',{name:'tyson'}]);
-	var qr1 = st.queries.q(1)
-	var qr5 = st.queries.q(5)
+	var qr1 = st.queries.q2(1)
+	var qr5 = st.queries.q2(5)
 	assert.equal(qr1.result.length,0);
 	assert.equal(qr5.result.length,1);
 	assert.equal(typeof qr1.t,'number');
 	assert.equal(qr1.t,qr5.t); // store has not been updated by queries
     });
     it("should run the 3-head benchmark",function() {
-	var js = compile("var st = store {query q(;['X',x,p],['X',x,q],['X',x,r],p>q && q>r;a=0) a+p+q+r};");
+	var js = compile("var st = store {query q3(;['X',x,p],['X',x,q],['X',x,r],p>q && q>r;a=0) a+p+q+r};");
 	eval(recast.print(js).code);
+	var st = eval(mangleId('st'));
 	var n = 100;
 	for (var i=0;i<n/3;i++) {
 	    st.add(["X",i,10]);
 	    st.add(["X",i,20]);
 	    st.add(["X",i,30]);
 	}
-	st.queries.q();
+	st.queries.q3();
     });
     it("should compile multiple queries",function() {
 	var chrjs = "store st {query q1(;['X',x,p];a=0) a+p;query q2(;['X',x,p],['X',x,q],p>q;a=0) a+p+q;query q3(;['X',x,p],['X',x,q],['X',x,r],p>q && q>r;a=0) a+p+q+r;}";
 	var js = compile(chrjs)
 	eval(recast.print(js).code);
+	var st = eval(mangleId('st'));
 	assert.equal(Object.keys(st.queries).length,3);
     });
 });
