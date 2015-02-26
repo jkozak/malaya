@@ -4155,14 +4155,6 @@ var util = require('./util.js');
 		peek();
 		strict = false;
 	    },
-	    parseRuleStatement: function() {
-		state.inStore = true;
-		try {
-		    return parseRuleStatement();
-		} finally {
-		    state.inStore = false;
-		}
-	    },
 	    parseExpression: function() {
 		state.inStore = true;
 		try {

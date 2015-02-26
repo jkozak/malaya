@@ -404,6 +404,10 @@ function annotateParse2(chrjs) {	// poor man's attribute grammar - pass two
 		path.replace(annotateParse2(path.node));
 		return false;
 	    },
+	    visitProperty:            function(path) {
+		this.visit(path.get('value')); // mark `value` as bound, not `key`
+		return false;
+	    },
 	    // don't visit sites that can't bind vars
 	    visitUnaryExpression:     function(path){return false;},
 	    visitBinaryExpression:    function(path){return false;},
@@ -524,295 +528,7 @@ function insertCode(chrjs,replaces,opts) {
     return js;
 }
 
-var bNoOp = b.blockStatement([]); // ??? is this the best no-op? ???
-
-function generateJS2(chrjs) {	// `js` is an annotated parse tree
-    var js = deepClone(chrjs);
-    parser.visit(js,{
-	visitStoreStatement: function(path) {
-	    var         storeJS = deepClone(templates['store'].body[0].expression);
-	    var           rules = [];
-	    var         queries = [];
-	    var        indexeds = [];
-	    var        generics = [];
-	    var           inits = [];
-	    var          genAdd = function(){}; // +++
-	    var  genRuleVariant = function(variant,js,chrjs,payload) {
-		var addenda = [];
-		var delenda = [];
-		var     pl1 = b.blockStatement([payload]);
-		for (var id=chrjs.items.length-1;id>=0;id--) {
-		    switch (chrjs.items[id].op) {
-		    case '+':
-			addenda.push(id);
-			break;
-		    case '-':
-			delenda.push(id);
-		    case'M':
-			// +++
-			break;
-		    case '=':
-			// +++
-			break;
-		    case '?':
-			// +++
-			break;
-		    default:
-			throw new Error(util.format("unknown item: %j",chrjs.items[id]));
-		    }
-		    // +++ update `payload` statement by statement
-		}
-		delenda.forEach(function(i) {
-		    var bv = b.identifier(variant===i ? 't_fact' : 't'+j);
-		    pl1.push(b.expressionStatement(
-			b.callExpression(b.identifier('_del'),[bv]) ));
-		});
-		
-		addenda.forEach(function(i) {
-		    pl1.push(b.expressionStatement(
-			b.callExpression(b.identifier('_add'),[genAdd(chr.items[i].expr)]) ) );
-		});
-	    };
-	    parser.visit(path.node,{
-		visitRuleStatement: function(path) {
-		    var ruleJS = deepClone(templates['rule'].body[0].declarations[0].init);
-		    genRule(ruleJS,path.node);
-		    rules.push(ruleJS);
-		},
-		visitQueryStatement: function(path) {
-		    var queryJS = deepClone(templates['query'].body[0].declarations[0].init);
-		    genRule(queryJS,path.node);
-		    queries.push(queryJS,payload); // +++ payload
-		}
-	    });
-	    parser.visit(storeJS,{ // +++ rewrite template code after move to new compiler +++
-		seenSwitch:false,
-		visitSwitchStatement:function(path) {
-		    assert(!seenSwitch); // There Should Be Only One
-		    seenSwitch = true;
-		}
-	    });
-	    insertCode(storeJS,{
-		INDEXED_MATCHES: indexeds,
-		GENERIC_MATCHES: generics,
-		RULES:           rules,
-		QUERIES:         queries,
-		INIT:            inits
-	    });
-	}
-    });
-    return js;
-}
-
-function exprContainsVariable(expr) {
-    return exprGetFreeVariables(expr).length!=0;
-}
-function exprGetFreeVariables(expr) {
-    switch (expr.type) {
-    case 'Identifier':
-	return [expr.name];
-    case 'BreakStatement':
-    case 'Literal':
-	return [];
-    case 'UnaryExpression':
-	return exprGetFreeVariables(expr.argument);
-    case 'LogicalExpression':
-    case 'BinaryExpression':
-	return _.union(exprGetFreeVariables(expr.left),exprGetFreeVariables(expr.right));
-    case 'SwitchStatement': {
-	var ans = exprGetFreeVariables(expr.discriminant);
-	for (var i in expr.cases) {
-	    assert(expr.cases[i].type=='SwitchCase');
-	    if (expr.cases[i].test!==null)
-		ans = _.union(ans,exprGetFreeVariables(expr.cases[i].test));
-	    for (var j in expr.cases[i].consequent)
-		ans = _.union(ans,exprGetFreeVariables(expr.cases[i].consequent[j]));
-	}
-	return ans;
-    }
-    case 'WhileStatement': 
-	return _.union(exprGetFreeVariables(expr.test),
-		       exprGetFreeVariables(expr.body) );
-    case 'ArrayExpression': {
-	var ans = [];
-	for (var i in expr.elements) 
-	    ans = _.union(ans,exprGetFreeVariables(expr.elements[i]));
-	return ans;
-    }
-    case 'ObjectExpression': {
-	var ans = [];
-	for (var i in expr.properties) {
-	    if (expr.properties[i].kind==='init') {
-		ans = _.union(ans,exprGetFreeVariables(expr.properties[i].value));
-	    }
-	}
-	return ans;
-    }
-    case 'NewExpression':	
-    case 'CallExpression': {
-	var ans = [];
-	if (expr.callee.type==='FunctionExpression') // don't record function names as free vars
-	    ans = exprGetFreeVariables(expr.callee);
-	for (var i in expr.arguments)
-	    ans = _.union(ans,exprGetFreeVariables(expr.arguments[i]))
-	return ans;
-    }
-    case 'FunctionExpression': {
-	var params = _.map(expr.params,function(e){return e.name;});
-	var    all = [];
-	for (var i in expr.body.body)
-	    all = _.union(all,exprGetFreeVariables(expr.body.body[i]));
-	return _.difference(all,params);
-    }
-    case 'ReturnStatement':
-	return exprGetFreeVariables(expr.argument);
-    case 'ConditionalExpression':
-	return _.union(exprGetFreeVariables(expr.test),
-		       exprGetFreeVariables(expr.consequent),
-		       exprGetFreeVariables(expr.alternate) );
-    case 'ExpressionStatement':
-	return exprGetFreeVariables(expr.expression);
-    case 'Program':
-    case 'StoreDeclaration':
-    case 'StoreExpression':
-    case 'BlockStatement': {
-	var ans = [];
-	for (var i in expr.body)
-	    ans = _.union(ans,exprGetFreeVariables(expr.body[i]))
-	return ans;
-    }
-    case 'VariableDeclaration': {
-	var ans = [];
-	for (var i in expr.declarations)
-	    ans = _.union(ans,exprGetFreeVariables(expr.declarations[i]));
-	return ans;
-    }
-    case 'VariableDeclarator': 
-	return expr.init!==null ? exprGetFreeVariables(expr.init) : [];
-    case 'AssignmentExpression':
-	return exprGetFreeVariables(expr.right);
-    case 'MemberExpression':
-	return exprGetFreeVariables(expr.object);
-    case 'IfStatement': 
-	return _.union(exprGetFreeVariables(expr.test),
-		       exprGetFreeVariables(expr.consequent),
-		       expr.alternate!==null ? exprGetFreeVariables(expr.alternate) : [] );
-    case 'RuleStatement': {
-	var ans = [];
-	for (var i in expr.items)
-	    ans = _.union(ans,exprGetFreeVariables(expr.items[i]));
-	return ans;
-    }
-    case 'SnapExpression':
-    case 'QueryStatement': {
-	var ans = [];
-	for (var i in expr.items)
-	    ans = _.union(ans,exprGetFreeVariables(expr.items[i]));
-	ans = _.union(ans,exprGetFreeVariables(expr.accum));
-	ans = _.union(ans,exprGetFreeVariables(expr.init.right));
-	return ans;
-    }
-    case 'ItemExpression': {
-	var ans = exprGetFreeVariables(expr.expr);
-	if (expr.rank!==null)
-	    ans = _.union(ans,exprGetFreeVariables(expr.rank));
-	return ans;
-    }
-    case 'BindRest':
-	return [];
-    default:
-	throw new Error(util.format("NYI: %j",expr));
-    }
-}
-
-function exprGetVariablesWithBindingSites(expr) {
-    switch (expr.type) {
-    case 'ArrayExpression': {
-	var ans = [];
-	for (var i in expr.elements) {
-	    if (expr.elements[i].type==='Identifier')
-		ans.push(expr.elements[i].name);
-	    else
-		ans = _.union(ans,exprGetVariablesWithBindingSites(expr.elements[i]));
-	}
-	return ans;
-    }
-    case 'ObjectExpression': {
-	var ans = [];
-	for (var i in expr.properties) {
-	    switch (expr.properties[i].kind) {
-	    case 'bindOne':
-		ans.push(expr.properties[i].value.name);
-		break;
-	    case 'bindRest':
-		if (expr.properties[i].value!==null)
-		    ans.push(expr.properties[i].value.name);
-		break;
-	    case 'init':
-		ans = _.union(ans,exprGetVariablesWithBindingSites(expr.properties[i].value));
-		break;
-	    default:
-		throw new Error('SNO');
-	    }
-	}
-	return ans;
-    }
-    case 'AssignmentExpression':
-	switch (expr.left.type) {
-	case 'Identifier':
-	    return [expr.left.name];
-	case 'MemberExpression':
-	    return [expr.left.object.name];
-	default:
-	    throw new Error('NYI');
-	}
-	break;
-    case 'BindRest':
-	if (expr.id===null)
-	    return []
-	else
-	    return [expr.id.name];
-    case 'RuleStatement': {
-	var ans = [];
-	for (var i in expr.items)
-	    ans = _.union(ans,exprGetVariablesWithBindingSites(expr.items[i]));
-	return ans;
-    }
-    case 'SnapExpression':
-    case 'QueryStatement': {
-	assert.equal(expr.init.type,     'AssignmentExpression');
-	assert.equal(expr.init.operator, '=');
-	assert.equal(expr.init.left.type,'Identifier');
-	var ans = _.map(expr.args,function(x){return x.name;});
-	for (var i in expr.items)
-	    ans = _.union(ans,exprGetVariablesWithBindingSites(expr.items[i]));
-	ans = _.union(ans,[expr.init.left.name]);
-	return ans;
-    }
-    case 'ItemExpression': {
-	var ans = exprGetVariablesWithBindingSites(expr.expr);
-	if (expr.rank!==null)
-	    ans = _.union(ans,exprGetVariablesWithBindingSites(expr.rank));
-	return ans;
-    }
-    case 'Literal':
-    case 'Identifier':
-	return [];
-    case 'StoreExpression':
-    case 'StoreDeclaration': {
-	var ans = [];
-	for (var i in expr.body)
-	    if (expr.body[i].type==='RuleStatement')
-		ans = _.union(ans,exprGetVariablesWithBindingSites(expr.body[i]))
-	return ans;
-    }
-    case 'SnapExpression':
-    default:
-	return [];
-    }
-}
-
-function Ref(obj,path) {	// a location in a JSON structure
+function Ref(obj,path) {	// a location in a JSON structure +++ replace with `NodePath` +++
     this.obj  = obj;
     this.path = path;
 }
@@ -899,7 +615,7 @@ function bWrapFunction(bid,bargs,fn) {
     return b.functionExpression(null,bargs,b.blockStatement([fn(b.callExpression(bid,bargs))]));
 }
 
-function genAccessor(x,path) {
+function genAccessor(x,path) {	//N.B. `path` is not a `NodePath`
     if (path.length===0)
 	return x;
     else if ((typeof path[0])==='string')
@@ -910,8 +626,7 @@ function genAccessor(x,path) {
 	throw new Error(util.format("SNO: %j",path));
 }
 
-function genMatch(term,vars,genRest,bIdFact) { // genRest() >> [stmt,...]; returns BlockStatement
-
+function genMatch(term,genRest,bIdFact) { // genRest() >> [stmt,...]; returns BlockStatement
     bIdFact = bIdFact || b.identifier('fact');
     
     var    bools = [];
@@ -979,20 +694,16 @@ function genMatch(term,vars,genRest,bIdFact) { // genRest() >> [stmt,...]; retur
 	    var sliced  = b.callExpression(bProp(acc,'slice'),sl_args);
 	    if (term.id===null) {
 		// anonymous, ignore
-	    } else if (vars[term.id.name].bound) {
+	    } else if (term.id.attrs.boundHere) {
+		binds[term.id.name] = sliced;
+	    } else
 		bools.push(genEqual(term,sliced));
-	    } else {
-		binds[term.id.name]      = sliced;
-		vars[term.id.name].bound = true;
-	    }
 	    break;
 	case 'Identifier':
-	    if (vars[term.name].bound) {
+	    if (term.attrs.boundHere)
+		binds[term.name] = genAccessor(bIdFact,path);
+	    else
 		bools.push(genEqual(term,genAccessor(bIdFact,path)));
-	    } else {
-		binds[term.name]      = genAccessor(bIdFact,path);
-		vars[term.name].bound = true;
-	    }
 	    break;
 	case 'MemberExpression': {
 	    if (term.computed)
@@ -1000,27 +711,21 @@ function genMatch(term,vars,genRest,bIdFact) { // genRest() >> [stmt,...]; retur
 	    var root;
 	    for (root=term;root.type==='MemberExpression';root=root.object)
 		;
-	    if (vars[root.name]===undefined) {
-		throw new Error(util.format("can't find var: %s %j\n*** %j",root.name,vars,term));
-	    } else if (vars[root.name].bound) {
+	    assert.strictEqual(root.type,'Identifier');
+	    if (root.attrs.boundHere) {
+		assert.strictEqual(root,term);
+		binds[root.object.name] = genAccessor(bIdFact,path);
+	    } else
 		bools.push(genEqual(term,genAccessor(bIdFact,path)));
-	    } else if (root!==term) {
-		throw new Error("can't bind to subobject");
-	    } else {
-		binds[term.name]      = genAccessor(bIdFact,path);
-		vars[term.name].bound = true;
-	    }
 	    break;
 	}
 	case 'Property': {
 	    switch (term.kind) {
 	    case 'bindOne':
-		if (vars[term.value.name].bound) {
+		if (term.value.attrs.boundHere)
+		    binds[term.value.name] = genAccessor(bIdFact,path);
+		else
 		    bools.push(genEqual(b.identifier(term.value.name),genAccessor(bIdFact,path)));
-		} else {
-		    binds[term.value.name]      = genAccessor(bIdFact,path);
-		    vars[term.value.name].bound = true;
-		}
 		break;
 	    case 'init':
 		visit(term.value,path);
@@ -1032,12 +737,10 @@ function genMatch(term,vars,genRest,bIdFact) { // genRest() >> [stmt,...]; retur
 					     [genAccessor(bIdFact,path.slice(0,path.length-1))].concat(
 						 _.map(term._leave_names,
 						       function(n){return b.literal(n);} ) ) );
-		if (vars[term.value.name].bound) {
+		if (term.value.attrs.boundHere)
+		    binds[term.value.name] = bRest;
+		else
 		    bools.push(genEqual(b.identifier(term.value.name),bRest));
-		} else {
-		    binds[term.value.name]      = bRest;
-		    vars[term.value.name].bound = true;
-		}
 		break;
 	    default:
 		throw new Error('SNO '+term.kind);
@@ -1065,10 +768,6 @@ function genMatch(term,vars,genRest,bIdFact) { // genRest() >> [stmt,...]; retur
 }
 
 function generateJS(js,what) {
-    // +++ allow for malaya code referencing top-level JS vars +++
-    // +++ N.B. this has implications for mangling             +++
-    // +++      should mangleOLD whole file, need to track TLVs   +++
-
     what = what || 'Program'
     
     var genCheckInPlay = function(jss,vt) { // >> Statement
@@ -1093,7 +792,7 @@ function generateJS(js,what) {
 			     null);
     };
 
-    var genForFacts = function(item,bv,body,vars) { // >> [Statement]
+    var genForFacts = function(item,bv,body) { // >> [Statement]
 	if (item.rank) {
 	    var        bSort = deepClone(templates['sort'].body);
 	    var bvCandidates = b.identifier(bv.name+'Candidates');
@@ -1120,7 +819,7 @@ function generateJS(js,what) {
 		    if (path.node.expression.type==='Identifier')
 			switch (path.node.expression.name) {
 			case 'GENMATCH':
-			    path.replace(genMatch(item.expr,vars,function(){
+			    path.replace(genMatch(item.expr,function(){
 				return [b.expressionStatement(
 				    b.callExpression(b.memberExpression(bvCandidates,
 									b.identifier('push'),
@@ -1232,7 +931,6 @@ function generateJS(js,what) {
 	var delenda = [];
 	var genItem = function(item_id,fixed_item,next) { // >> [Statement,...]
 	    var    js;
-	    var vars0 = deepClone(vars);
 	    var next1 = (item_id<chr.items.length-1) ?
 		function(){return genItem(item_id+1,fixed_item,next)} : next;
 	    var   js1;
@@ -1241,7 +939,7 @@ function generateJS(js,what) {
 		delenda.push(item_id);
 		// FALLTHROUGH
 	    case 'M':
-		js1 = genMatch(chr.items[item_id].expr,vars,next1,bIdFact).body;
+		js1 = genMatch(chr.items[item_id].expr,next1,bIdFact).body;
 		break;
 	    case '?':
 		js1 = [b.ifStatement(chr.items[item_id].expr,b.blockStatement(next1()),null)];
@@ -1249,7 +947,6 @@ function generateJS(js,what) {
 	    case '=':
 		if (chr.items[item_id].expr.left.type!=="Identifier")
 		    throw new Error(util.format("can't bind to non-variable: %j",chr.items[item_id].expr.left));
-		vars[chr.items[item_id].expr.left.name].bound = true;
 		js1 = [b.expressionStatement(chr.items[item_id].expr)].concat(next1())
 		break;
 	    case '+':
@@ -1278,41 +975,14 @@ function generateJS(js,what) {
 		    b.memberExpression(b.identifier('facts'),
 				       b.identifier(v),
 				       true) )));
-		js = genForFacts(chr.items[item_id],b.identifier(v),genCheckInPlay(js1,b.identifier(v)),vars0);
+		js = genForFacts(chr.items[item_id],b.identifier(v),genCheckInPlay(js1,b.identifier(v)));
 	    } else
 		js = js1;
 	    return js;
 	};
 	assert.strictEqual(templates['rule'].body.length,1);
 	var    js = deepClone(templates['rule'].body[0].declarations[0].init);
-	
-	var frees = exprGetFreeVariables(chr);
-	var binds = exprGetVariablesWithBindingSites(chr);
-	var  vars = {};
-	if (_.difference(frees,binds).length>0)
-	    throw new Error(util.format("cannot be assigned values: %j // %j %j",_.difference(frees,binds),frees,binds));
-
-	var vars1 = {};
-	if (true) {		// !!! TESTING !!!
-	    var binds1 = _.keys(chr.attrs.vars).map(function(k){return chr.attrs.vars[k].mangled;});
-	    if (_.difference(binds1,binds).length>0 ||
-		_.difference(binds,binds1).length>0 ) {
-		//console.log("*** free/bind: %j/%j\n=== %j",frees,binds,binds1)
-		//console.log("... %j %j",_.difference(binds1,binds),_.difference(binds,binds1))
-		throw new Error("balls");
-	    }
-	    binds = binds1;
-	    vars1 = {};
-	    //console.log("*** binds: %j",binds);
-	    for (var k in chr.attrs.vars)
-		vars[chr.attrs.vars[k].mangled] = chr.attrs.vars[k];
-	    //console.log("    vars: %j",vars);
-	}
-
-	binds.forEach(function(n){vars[n] = {bound:false};});
-	for (var pb in prebounds) { // non-empty for parametric ruley things
-	    vars[prebounds[pb]].bound = true;
-	}
+	var binds = _.keys(chr.attrs.vars).map(function(k){return chr.attrs.vars[k].mangled;});
 
 	genPayload = genPayload || function() { // >> [Statement]
 	    var payload = [];
@@ -1663,7 +1333,6 @@ function compile(chr,opts) {
     return js;
 }
 
-
 function buildStanzas(code,parsed) {
     assert(code.search('\t')===-1,"code should be tab-free");
     var  lines = [""].concat(code.split('\n')); // make zero-based
@@ -1802,19 +1471,15 @@ require.extensions['.chrjs'] = function(module,filename) {
 
 if (util.env==='test') {
     exports._private = {
-	exprContainsVariable:             exprContainsVariable,
-	exprGetFreeVariables:             exprGetFreeVariables,
-	exprGetVariablesWithBindingSites: exprGetVariablesWithBindingSites,
-	Ref:                              Ref,
-	mangleIdentifier:                 mangleIdentifier,
-	mangle:                           mangle,
-	genAccessor:                      genAccessor,
-	genAdd:                           function(chrjs) {return generateJS(chrjs,'add');},
-	genMatch:                         genMatch,
-	buildStanzas    :                 buildStanzas,
-	insertCode:                       insertCode,
-	annotateParse1:                   annotateParse1,
-	annotateParse2:                   annotateParse2,
-	generateJS2:                      generateJS2
+	Ref:               Ref,
+	mangleIdentifier:  mangleIdentifier,
+	mangle:            mangle,
+	genAccessor:       genAccessor,
+	genAdd:            function(chrjs) {return generateJS(chrjs,'add');},
+	genMatch:          genMatch,
+	buildStanzas:      buildStanzas,
+	insertCode:        insertCode,
+	annotateParse1:    annotateParse1,
+	annotateParse2:    annotateParse2
     };
 }

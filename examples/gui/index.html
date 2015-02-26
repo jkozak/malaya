@@ -149,7 +149,6 @@
 
      function updateCodeDraw(name) {
        var now = Date.now();
-       console.log("*** updateCodeDraw: '"+name+"'");
        codeDraws[name].forEach(function(cd) {
 	 cd[0][2] = Date.now();
        });
