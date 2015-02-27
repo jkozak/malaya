@@ -217,16 +217,26 @@ var chrGlobalVars = {		// only javascript globals allowed in CHRjs
     parseInt:   {ext:true,mutable:false,type:'function'},
     Number:     {ext:true,mutable:false,type:'function'},
     Object:     {ext:true,mutable:false,type:'function'},
+    JSON:       {ext:true,mutable:false,type:'function'},
     Math:       {ext:true,mutable:false,type:'function'},
     Date:       {ext:true,mutable:false,type:'function'},
     require:    {ext:true,mutable:false,type:'function'},
     module:     {ext:true,mutable:false,type:'function'},
+    __dirname:  {ext:true,mutable:false,type:'string'}
 };
 if (util.env==='test')
     chrGlobalVars = _.extend(chrGlobalVars,
-			     {	// the `mocha` globals
+			     {
+				 // the `mocha` globals
 				 describe:{ext:true,mutable:false,type:'function'},
-				 it:      {ext:true,mutable:false,type:'function'}
+				 it:      {ext:true,mutable:false,type:'function'},
+			     });
+if (util.env==='benchmark')
+    chrGlobalVars = _.extend(chrGlobalVars,
+			     {
+				 // the `matcha` globals
+				 suite:   {ext:true,mutable:false,type:'function'},
+				 bench:   {ext:true,mutable:false,type:'function'}
 			     });
 
 function findVar(v,path) {
@@ -286,14 +296,25 @@ function annotateParse1(js) {	// poor man's attribute grammar - pass one
 	    vars[name].declared = true;
 	    vars[name].mutable  = path.parent.kind!=='const';
 	    vars[name].type     = (path.node.init&&path.node.init.type==='FunctionExpression') ? 'function' : null;
-	    if (!_.contains(['program','function',null],stmt)) // !!! null is for TESTING !!!
+	    if (!_.contains(['program','function'],stmt)) // !!! null is for TESTING !!!
 		throw new util.Fail(util.format("variable %s declared in inappropriate context %s",name,stmt));
+	},
+	doStore:                  function(path) {
+	    var save = {vars:vars,stmt:stmt};
+	    path.node.attrs.vars = vars = {};
+	    stmt = 'store';
+	    if (path.node.id!==null)
+		this.noteDeclaredName(path.node.id.name,'store');
+	    this.traverse(path);
+	    stmt = save.stmt;
+	    vars = save.vars;
 	},
 	visitStoreDeclaration:    function(path) {
 	    if (path.node.id!==null)
 		this.noteDeclaredName(path.node.id.name,'store');
-	    this.traverse(path);
+	    return this.doStore(path);
 	},
+	visitStoreExpression:     function(path) {return this.doStore(path);},
 	visitRuleStatement:       function(path) {
 	    if (path.node.id!==null)
 		this.noteDeclaredName(path.node.id.name,'store');
@@ -925,7 +946,7 @@ function generateJS(js,what) {
 	});
     };
     
-    var genRuleVariant = function(chr,i,prebounds,genPayload) {
+    var genRuleVariant = function(chr,i,genPayload) {
 	var bIdFact = b.identifier('fact');
 	var addenda = [];
 	var delenda = [];
@@ -1039,15 +1060,11 @@ function generateJS(js,what) {
 	    if (item.op=='+' || item.op=='-')
 		throw new Error("query statement must not modify the store");
 
-	var genQueryPayload = function() {
+	var rv = genRuleVariant(chr,null,function() {
 	    var payload = [];
 	    payload.push(b.expressionStatement(b.assignmentExpression('=',chr.init.left,chr.accum)));
 	    return payload;
-	};
-	var              rv = genRuleVariant(chr,
-					     null, // `null` as there's no incoming fact
-					     _.map(args,function(arg){return arg.name;}),
-					     genQueryPayload);
+	});
 
 	rv.params = args;
 	if (exports.debug) {
@@ -1065,14 +1082,11 @@ function generateJS(js,what) {
 		    _.any(args,function(bId){return bId.name===decl.id.name}) )
 		    path.replace();
 		return false;
-	    }
-	});
-	parser.visit(rv,{	// if we just removed all the declarators, remove the declaration
+	    },
 	    visitVariableDeclaration: function(path) {
-		var decl = path.node;
-		if (decl.declarations.length===0)
+		this.traverse(path);
+		if (path.node.declarations.length===0) // did we just remove just all decls?
 		    path.replace();
-		return false;
 	    }
 	});
 	// +++
@@ -1123,7 +1137,7 @@ function generateJS(js,what) {
 		for (var j=0;j<chr.items.length;j++) {
 		    if (chr.items[j].op=='-' || chr.items[j].op=='M') {
 			noteDispatch(chr.items[j].expr,r,variants.length);  // variants.length will be...
-			variants.push(genRuleVariant(deepClone(chr),j,[])); // ...allocated now
+			variants.push(genRuleVariant(deepClone(chr),j));    // ...allocated now
 		    }
 		}
 		code.rules.push(b.arrayExpression(variants));

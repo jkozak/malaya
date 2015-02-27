@@ -7,7 +7,7 @@ var   util = require('../util.js');
 var     fs = require('fs');
 var bl_src = "test/bl/simple.js";
 
-var consts = prvl._private.consts;
+//var consts = prvl._private.consts;
 
 temp.track();			// auto-cleanup at exit
 

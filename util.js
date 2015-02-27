@@ -143,7 +143,7 @@ exports.env = (function() {
         env = 'prod';
     if (env==='' || env===undefined || env==='development')
         env = 'dev';
-    if (!{dev:true,prod:true,test:true}[env])
+    if (!{dev:true,prod:true,test:true,benchmark:true}[env])
         throw new exports.Fail(_util.format("bad NODE_ENV: %j",env));
     return env;
 })();
