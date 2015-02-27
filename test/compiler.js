@@ -368,6 +368,14 @@ describe("first pass of new compiler",function() {
 	assert.deepEqual(findById(prs1,'F').attrs.vars['a'],undefined);
 	assert.deepEqual(findById(prs1,'F').attrs.vars['b'],{});
     });
+    it("should give stores disjoint namespaces",function() {
+	var prs0 = parse("store st1 {query Q(a;[];a=[])a+1;};store st2 {query Q(a;[];a=[])a+1;}");
+	pass1(prs0);		// don't want complaint about Q being shadowed
+    });
+    it("should give unnamed stores disjoint namespaces",function() {
+	var prs0 = parse("var st1=store {query Q(a;[];a=[])a+1;};var st2=store {query Q(a;[];a=[])a+1;}");
+	pass1(prs0);		// don't want complaint about Q being shadowed
+    });
 });
 
 describe("second pass of new compiler",function() {
@@ -435,6 +443,9 @@ describe("second pass of new compiler",function() {
 	assert.strictEqual(q.type,'QueryStatement');
 	assert.strictEqual(q.items[0].expr.elements[1].properties[0].value.name,'p');
 	assert(!q.items[0].expr.elements[1].properties[0].value.attrs.boundHere);
+    });
+    it("should believe stores to be declared",function() {
+	p2("store st{};st.add([]);");
     });
     // +++ nested for +++
 });
@@ -533,10 +544,6 @@ describe("mangle",function() {
 	    mangle(parse("store {rule (['a',b.p]);}"));
 	});
     });
-});
-
-describe("code generation by new compiler",function() {
-    // +++
 });
 
 describe("query statement",function() {

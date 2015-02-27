@@ -2,9 +2,9 @@ var    fe3 = require('../fe3.js');
 var events = require('events');
 var assert = require('assert');
 
-var FE3_HDR_LENGTH = fe3._private.FE3_HDR_LENGTH;
-var AP_XML2        = fe3._private.AP_XML2;
-var AP_XML2A       = fe3._private.AP_XML2A;
+var FE3_HDR_LENGTH = fe3.consts.FE3_HDR_LENGTH;
+var AP_XML2        = fe3.consts.AP_XML2;
+var AP_XML2A       = fe3.consts.AP_XML2A;
 
 var mkFE3 = function(s,ap_type) {
     ap_type = ap_type || AP_XML2A;

@@ -12,9 +12,9 @@ var      _ = require('underscore');
 temp.track();			// auto-cleanup at exit
 
 
-var FE3_HDR_LENGTH = fe3._private.FE3_HDR_LENGTH;
-var AP_XML2        = fe3._private.AP_XML2;
-var AP_XML2A       = fe3._private.AP_XML2A;
+var FE3_HDR_LENGTH = fe3.consts.FE3_HDR_LENGTH;
+var AP_XML2        = fe3.consts.AP_XML2;
+var AP_XML2A       = fe3.consts.AP_XML2A;
 
 var json = JSON.parse(fs.readFileSync(path.join(__dirname,'../data/idb.json')));
 
@@ -64,7 +64,7 @@ suite('IDB',function() {
     });
     bench("logon and logoff",function() {
 	sock = mkSock();
-	fe3c = new fe3._private.FE3Connection(sock,srvr);
+	fe3c = new fe3.FE3Connection(sock,srvr);
 	sock.emit('data',mkFE3("<logon user='John Kozak' pw='JK'/>"));
 	sock.emit('data',mkFE3("<start/>"));
 	sock.emit('close');

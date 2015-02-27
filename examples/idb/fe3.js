@@ -191,10 +191,11 @@ exports.createServer = function(options) {
     return this;
 };
 
-if (util.env==='test')
-    exports._private = {FE3Connection: FE3Connection,
-                        FE3_HDR_LENGTH:FE3_HDR_LENGTH,
-                        AP_HEARTBEAT:  AP_HEARTBEAT,
-                        AP_XML2:       AP_XML2,
-                        AP_XML2A:      AP_XML2A
-                       };
+exports.consts = {
+    FE3_HDR_LENGTH:FE3_HDR_LENGTH,
+    AP_HEARTBEAT:  AP_HEARTBEAT,
+    AP_XML2:       AP_XML2,
+    AP_XML2A:      AP_XML2A
+};
+
+exports.FE3Connection = FE3Connection;

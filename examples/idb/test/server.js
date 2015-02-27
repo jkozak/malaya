@@ -9,9 +9,9 @@ var assert = require('assert');
 var   temp = require('temp');
 var     fs = require('fs');
 
-var FE3_HDR_LENGTH = fe3._private.FE3_HDR_LENGTH;
-var AP_XML2        = fe3._private.AP_XML2;
-var AP_XML2A       = fe3._private.AP_XML2A;
+var FE3_HDR_LENGTH = fe3.consts.FE3_HDR_LENGTH;
+var AP_XML2        = fe3.consts.AP_XML2;
+var AP_XML2A       = fe3.consts.AP_XML2A;
 
 temp.track();			// auto-cleanup at exit
 
@@ -292,7 +292,7 @@ function mkSock(id) {
 
 function logOnOffFE3ConnectionTest(srvr) {
     var sock = mkSock();
-    var fe3c = new fe3._private.FE3Connection(sock,srvr);
+    var fe3c = new fe3.FE3Connection(sock,srvr);
     var  buf = '';
     sock.write = function(x){buf+=x;};
     
@@ -313,9 +313,9 @@ function logOnOffFE3ConnectionTest(srvr) {
 
 function logOnOffMultipleFE3ConnectionTest(srvr) {
     var sock1 = mkSock(1);
-    var fe3c1 = new fe3._private.FE3Connection(sock1,srvr);
+    var fe3c1 = new fe3.FE3Connection(sock1,srvr);
     var sock2 = mkSock(2);
-    var fe3c2 = new fe3._private.FE3Connection(sock2,srvr);
+    var fe3c2 = new fe3.FE3Connection(sock2,srvr);
     
     sock1.emit('data',mkFE3("<logon user='John Kozak' pw='JK'/>"));
     sock2.emit('data',mkFE3("<logon user='Floy Murazik' pw='241tykxKcB_n6fR'/>"));
