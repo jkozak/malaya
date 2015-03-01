@@ -3956,7 +3956,7 @@ var util = require('./util.js');
 	    ans = parseChrjsFullTermItemExpression('-');
 	} else if (match('[') || match('{')) {
 	    ans = parseChrjsFullTermItemExpression('M');
-	} else if (lookahead.type===Token.Identifier) {
+	} else if (lookahead.type===Token.Identifier || match('!')) {
 	    var expr = parseAssignmentExpression();
 	    if (expr.type=='AssignmentExpression')
 		ans = delegate.createItemExpression('=',expr);                    // bind

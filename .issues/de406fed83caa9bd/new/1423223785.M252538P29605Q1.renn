@@ -1,0 +1,7 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Fri, 06 Feb 2015 11:56:25 +0000
+Subject: Bug: condition items should be able to start with !
+State: resolved
+Message-Id: <de406fed83caa9bd-0-artemis@renn>
+resolution: fixed
+
