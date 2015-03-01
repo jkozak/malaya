@@ -205,37 +205,6 @@ describe("genMatch",function() {
     });
 });
 
-describe("compile",function() {
-    it("should generate JS for trivial store",function() {
-	var js = compile("var st = store {['user',{name:'sid'}];rule(['user',{name:a}]);rule(['company',{user:a,name:b}]);};");
-	eval(recast.print(js).code);
-	assert.deepEqual(eval(mangleId('st'))._private.facts,{"1":['user',{name:'sid'}]});
-    });
-    it("should handle store containing `for`",function() {
-	var  ast = parse("var st = store {rule(-['a',p],+['b',for(a=0;['c',q];a+p+q+1)]);};");
-     	var   js = compiler.compile(ast);
-     	eval(recast.print(js).code);
-	var   st = eval(mangleId('st'));
-	st.add(['a',17]);
-	assert.deepEqual(_.values(st._private.facts),[['b',0]]);
-	st.reset();
-	assert.deepEqual(st._private.facts,{});
-	st.add(['c',1]);
-	var ans = st.add(['a',17]);
-	assert.strictEqual(ans.adds.length,1);
-	assert.deepEqual(st.get(ans.adds[0]),['b',19]);
-    });
-    it("should handle store containing `for` (non-deleting variant)",function() {
-	var  ast = parse("var st = store {rule(['a',p],+['b',for(a=0;['c',q];a+p+q+1)]);};");
-     	var   js = compiler.compile(ast);
-     	eval(recast.print(js).code);
-	var   st = eval(mangleId('st'));
-	st.add(['c',1]);
-	st.add(['a',17]);
-	assert.deepEqual(_.values(st._private.facts),[['c',1],['a',17],['b',19]]);
-    });
-});
-
 describe("EventEmitter",function() {
     it("should emit `fire` event to `once`",function(){
 	var js = compile("var st = store {rule(-['user',{name:a}]);};");
@@ -566,6 +535,47 @@ describe("mangle",function() {
 	assert.throws(function() {
 	    mangle(parse("store {rule (['a',b.p]);}"));
 	});
+    });
+});
+
+describe("compile",function() {
+    it("should generate JS for trivial store",function() {
+	var js = compile("var st = store {['user',{name:'sid'}];rule(['user',{name:a}]);rule(['company',{user:a,name:b}]);};");
+	eval(recast.print(js).code);
+	assert.deepEqual(eval(mangleId('st'))._private.facts,{"1":['user',{name:'sid'}]});
+    });
+    it("should handle store containing `for`",function() {
+	var  ast = parse("var st = store {rule(-['a',p],+['b',for(a=0;['c',q];a+p+q+1)]);};");
+     	var   js = compiler.compile(ast);
+     	eval(recast.print(js).code);
+	var   st = eval(mangleId('st'));
+	st.add(['a',17]);
+	assert.deepEqual(_.values(st._private.facts),[['b',0]]);
+	st.reset();
+	assert.deepEqual(st._private.facts,{});
+	st.add(['c',1]);
+	var ans = st.add(['a',17]);
+	assert.strictEqual(ans.adds.length,1);
+	assert.deepEqual(st.get(ans.adds[0]),['b',19]);
+    });
+    it("should handle store containing `for` (non-deleting variant)",function() {
+	var  ast = parse("var st = store {rule(['a',p],+['b',for(a=0;['c',q];a+p+q+1)]);};");
+     	var   js = compiler.compile(ast);
+     	eval(recast.print(js).code);
+	var   st = eval(mangleId('st'));
+	st.add(['c',1]);
+	st.add(['a',17]);
+	assert.deepEqual(_.values(st._private.facts),[['c',1],['a',17],['b',19]]);
+    });
+    it("should handle guards starting with ! [cd50013ab17474a6]",function() {
+	var ast = parse("var st = store {rule(['a',b],!b==0,+['c']);rule(-['a',...]);};");
+     	var  js = compiler.compile(ast);
+     	eval(recast.print(js).code);
+	var   st = eval(mangleId('st'));
+	st.add(['a',0]);
+	assert.deepEqual(_.values(st._private.facts),[]);
+	st.add(['a',1]);
+	assert.deepEqual(_.values(st._private.facts),[['c']]);
     });
 });
 
