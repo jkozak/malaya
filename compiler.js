@@ -240,7 +240,6 @@ if (util.env==='benchmark')
 			     });
 
 function findVar(v,path) {
-    //console.log("*** findVar %j %j",v,path===null?null:path.node);
     if (path===null)
 	return chrGlobalVars[v];
     else if (path.node.attrs && path.node.attrs.vars && path.node.attrs.vars[v])
@@ -259,10 +258,10 @@ function annotateParse1(js) {	// poor man's attribute grammar - pass one
 	    for (var i=0;i<node.items.length;i++)
 		node.items[i].attrs.itemId = i;
 	},
-	noteDeclaredName:         function(name,type) {
+	noteDeclaredName:         function(name,type,bound) {
 	    if (vars[name])
 		throw new util.Fail(util.format("function shadowed or overloaded: %s",name));
-	    vars[name] = {declared:true,type:type};
+	    vars[name] = {declared:true,type:type,bound:bound};
 	},
 	doFunction:               function(path) {
 	    var save = {vars:vars,stmt:stmt};
@@ -341,15 +340,26 @@ function annotateParse1(js) {	// poor man's attribute grammar - pass one
 	    return false;
 	},
 	visitSnapExpression:      function(path) {
+	    if (stmt==='rule') {
+		if (item!=='+')
+		    throw new util.Fail(util.format("snap expression must occur in create item"));
+	    } else if (stmt==='function') {
+		// +++ check the function is inside a store +++
+	    } else
+		throw new util.Fail(util.format("snap expression not in rule or function"));
 	    if (path.node.id!==null)
-		this.noteDeclaredName(path.node.id.name,'store');
+		this.noteDeclaredName(path.node.id.name,'snap',true);
 	    this.markItemsWithId(path.node);
 	    var save = {vars:vars,stmt:stmt,item:item};
 	    path.node.attrs.vars = vars = {};
+	    _.keys(save.vars).forEach(function(k){ // copy over bound vars from container
+		if (save.vars[k].bound)
+		    vars[k] = _.extend({inherited:true},save.vars[k]);
+	    });
 	    stmt = 'snap';
 	    item = null;
-	    this.visit(path.get('init'));
 	    this.visit(path.get('items'));
+	    this.visit(path.get('init'));
 	    this.visit(path.get('accum'));
 	    vars = save.vars;
 	    stmt = save.stmt;
@@ -359,6 +369,7 @@ function annotateParse1(js) {	// poor man's attribute grammar - pass one
 	visitItemExpression:      function(path) {
 	    if (stmt!=='rule' && _.contains(['+','-'],path.node.op))
 		throw new util.Fail(util.format("updating store outside of rule: %j/%s",path.node,stmt));
+	    item = path.node.op;
 	    this.traverse(path);
 	    item = null;
 	},
@@ -399,8 +410,7 @@ function annotateParse1(js) {	// poor man's attribute grammar - pass one
 
 function annotateParse2(chrjs) {	// poor man's attribute grammar - pass two
     var checkBound = function(vars) {
-	//console.log("*** checkBound: %j",vars);
-	_.map(_.keys(vars),function(k) {
+	_.keys(vars).map(function(k) {
 	    if (!vars[k].bound)
 		throw new util.Fail(util.format("variable never bound: %s",k));
 	});
@@ -410,6 +420,7 @@ function annotateParse2(chrjs) {	// poor man's attribute grammar - pass two
 	    visitIdentifier:          function(path) {
 		if (path.node.name[0]!=='%' && vars[path.node.name]!==undefined) {
 		    if (!vars[path.node.name].bound) {
+			assert(!vars[path.node.name].inherited);
 			path.node.attrs.boundHere  = true;
 			vars[path.node.name].bound = true;
 		    }
@@ -421,26 +432,28 @@ function annotateParse2(chrjs) {	// poor man's attribute grammar - pass two
 		    throw new util.Fail(util.format("bad assignment statement: %j",path.node));
 		return this.visitIdentifier(path.get('left'));
 	    },
-	    visitSnapExpression:      function(path) {
-		path.replace(annotateParse2(path.node));
-		return false;
-	    },
 	    visitProperty:            function(path) {
 		this.visit(path.get('value')); // mark `value` as bound, not `key`
 		return false;
 	    },
+	    visitSnapExpression:      function(path){
+		if (path.node===js)
+		    this.traverse(path); // process iff initial value
+		else
+		    return false;        // will be handled in own pass from below 
+	    },
 	    // don't visit sites that can't bind vars
 	    visitUnaryExpression:     function(path){return false;},
 	    visitBinaryExpression:    function(path){return false;},
-	    visitMemberExpression:    function(path){return false;} // only a bare var can bind
+	    visitMemberExpression:    function(path){return false;}  // only a bare var can bind
 	});
 	checkBound(vars);
     };
     chrjs = deepClone(chrjs);
     parser.visit(chrjs,{
 	visitRuleStatement:       function(path) {
+	    this.traverse(path); // may contain SnapExpressions
 	    setBoundHereAttr(path.node,path.node.attrs.vars);
-	    return false;
 	},
 	visitQueryStatement:      function(path) {
 	    setBoundHereAttr(path.node,path.node.attrs.vars);
@@ -452,8 +465,7 @@ function annotateParse2(chrjs) {	// poor man's attribute grammar - pass two
 	},
 	doVars:                   function(path) {
 	    this.traverse(path);
-	    //console.log("*** doVars: %j",path.node.attrs.vars);
-	    _.map(_.keys(path.node.attrs.vars),function(k) {
+	    _.keys(path.node.attrs.vars).map(function(k) {
 		if (!findVar(k,path).declared)
 		    throw new util.Fail(util.format("variable never declared: %s",k));
 	    });
@@ -667,7 +679,7 @@ function genMatch(term,genRest,bIdFact) { // genRest() >> [stmt,...]; returns Bl
 		    non_rests.push(prop);
 	    }
 	    if (rest!==null)
-		rest._leave_names = _.map(non_rests,function(p){return p.key.name;});
+		rest._leave_names = non_rests.map(function(p){return p.key.name;});
 	    for (var p in term.properties) {
 		var prop = term.properties[p];
 		if (prop.key==='' && prop.value===null) {
@@ -756,8 +768,7 @@ function genMatch(term,genRest,bIdFact) { // genRest() >> [stmt,...]; returns Bl
 		    throw new Error("ellipsis operator not valid here");
 		var bRest = b.callExpression(bProp(b.identifier('_'),'omit'),
 					     [genAccessor(bIdFact,path.slice(0,path.length-1))].concat(
-						 _.map(term._leave_names,
-						       function(n){return b.literal(n);} ) ) );
+						 term._leave_names.map(function(n){return b.literal(n);}) ) );
 		if (term.value.attrs.boundHere)
 		    binds[term.value.name] = bRest;
 		else
@@ -940,8 +951,9 @@ function generateJS(js,what) {
 		this.traverse(path);
 	    },
 	    visitSnapExpression: function(path) {
-		var qjs = genQuery(path.node,[]); // ??? what is `args` here? ???
-		throw new Error("NYI: snap");
+		var qjs = genQuery(path.node,[]);
+		path.replace(b.callExpression(qjs,[]));
+		return false;
 	    }
 	});
     };
@@ -1001,9 +1013,6 @@ function generateJS(js,what) {
 		js = js1;
 	    return js;
 	};
-	assert.strictEqual(templates['rule'].body.length,1);
-	var    js = deepClone(templates['rule'].body[0].declarations[0].init);
-	var binds = _.keys(chr.attrs.vars).map(function(k){return chr.attrs.vars[k].mangled;});
 
 	genPayload = genPayload || function() { // >> [Statement]
 	    var payload = [];
@@ -1035,11 +1044,16 @@ function generateJS(js,what) {
 	    return payload;
 	};
 
+	assert.strictEqual(templates['rule'].body.length,1);
+	var    js = deepClone(templates['rule'].body[0].declarations[0].init);
+	var binds = _.keys(chr.attrs.vars)
+	    .filter(function(k){return !chr.attrs.vars[k].inherited && k[0]!=='%'})
+	    .map(function(k){return chr.attrs.vars[k].mangled;});
 	var js1 = genItem(0,i,genPayload);
-	if (binds.length!=0) 
-	    js1.unshift(b.variableDeclaration('var',
-					      _.map(binds,function(v){
-						  return b.variableDeclarator(b.identifier(v),null);} ) ))
+	js1.unshift(b.variableDeclaration('var',
+					  binds.map(function(v) {
+					      return b.variableDeclarator(b.identifier(v),null);
+					  }) ));
 	parser.visit(js,{
 	    visitExpressionStatement: function(path) {
 		var expr = path.node.expression;
@@ -1080,13 +1094,9 @@ function generateJS(js,what) {
 		var decl = path.node;
 		if (decl.id.name===chr.init.left.name ||
 		    _.any(args,function(bId){return bId.name===decl.id.name}) )
+		    // +++ maybe also remove outer function params? +++
 		    path.replace();
 		return false;
-	    },
-	    visitVariableDeclaration: function(path) {
-		this.traverse(path);
-		if (path.node.declarations.length===0) // did we just remove just all decls?
-		    path.replace();
 	    }
 	});
 	// +++
@@ -1148,6 +1158,21 @@ function generateJS(js,what) {
 		code.queries[storeCHR.body[i].id.attrs.was] = genQuery(storeCHR.body[i],storeCHR.body[i].args);
 		break;
 	    }
+	    case 'FunctionDeclaration': { // never a FunctionExpression (must be top level in `store`, no `var`)
+		var funjs = deepClone(storeCHR.body[i]);
+		var  name = funjs.id.attrs.was;
+		parser.visit(funjs,{
+		    visitSnapExpression: function(path) {
+			path.replace(b.callExpression(genQuery(path.node,[]),[]));
+			return false;
+		    }
+		});
+		path.replace();
+		funjs.type         = 'FunctionExpression';
+		funjs.id           = null;
+		code.queries[name] = funjs;
+		break;
+	    }
 	    case 'ObjectExpression':
 	    case 'ArrayExpression': {
 		var init = storeCHR.body[i];
@@ -1160,10 +1185,6 @@ function generateJS(js,what) {
 	    }
 	}
 
-	findTag('INSERT_RULES').insertAfter(b.variableDeclaration('var',[
-	    b.variableDeclarator(b.identifier('rules'),
-				 b.arrayExpression(code.rules))
-	] ));
 	var bQueryReturn = function(bq) {
 	    return b.returnStatement(b.objectExpression([b.property('init',
 								    b.identifier('t'),
@@ -1172,6 +1193,10 @@ function generateJS(js,what) {
 								    b.identifier('result'),
 								    bq) ]));
 	};
+	findTag('INSERT_RULES').insertAfter(b.variableDeclaration('var',[
+	    b.variableDeclarator(b.identifier('rules'),
+				 b.arrayExpression(code.rules))
+	] ));
 	if (_.keys(code.queries).length>0)
 	    findTag('INSERT_QUERIES').insertAfter(b.variableDeclaration('var',[
 		b.variableDeclarator(b.identifier('queries'),
@@ -1180,20 +1205,18 @@ function generateJS(js,what) {
 					 [],
 					 b.blockStatement([
 					     b.variableDeclaration('var',
-								   _.map(_.keys(code.queries),
-									 function(k) {
-									     return b.variableDeclarator(
-										 b.identifier(k),
-										 code.queries[k]); } ) ),
+								   _.keys(code.queries).map(function(k) {
+								       return b.variableDeclarator(
+									   b.identifier(k),
+									   code.queries[k]); }) ),
 					     b.returnStatement(b.objectExpression(
-						 _.map(_.keys(code.queries),
-						       function(k) {
-							   return b.property(
-							       'init',
-							       b.identifier(k),
-							       bWrapFunction(b.identifier(k),
-									     code.queries[k].params,
-									     bQueryReturn) ); } ) )) ]) ),
+						 _.keys(code.queries).map(function(k) {
+						     return b.property(
+							 'init',
+							 b.identifier(k),
+							 bWrapFunction(b.identifier(k),
+								       code.queries[k].params,
+								       bQueryReturn) ); }) )) ]) ),
 						      []) ) ]));
 	findTag('INSERT_INIT').insertAfter(b.variableDeclaration('var',[
 	    b.variableDeclarator(b.identifier('init'),
@@ -1224,7 +1247,7 @@ function generateJS(js,what) {
 	assert.equal(_addSwitch.cases[0].test.name,'INSERT_CASE');
 	_addSwitch.cases.shift(); // we have now found and extracted the case INSERT_CASE from the template
 	for (var k in dispatchBranches) {
-	    var brs = _.map(dispatchBranches[k],genInvokeRuleItem);
+	    var brs = dispatchBranches[k].map(function(br){return genInvokeRuleItem(br);});
 	    _addSwitch.cases.push(b.switchCase(b.literal(k),brs.concat(b.breakStatement())));
 	}
 	var ins_gen = _addDef.declarations[0].init.body.body[0].consequent.body;
@@ -1233,6 +1256,17 @@ function generateJS(js,what) {
 	assert.equal(ins_gen.splice(8,1)[0].expression.name,'INSERT_GENERIC_MATCHES');
 	dispatchGeneric.forEach(function(ri){ins_gen.push(genInvokeRuleItem(ri));});
 	    
+	parser.visit(storeJS,{	// remove any `var;` that we have generated
+	    visitVariableDeclaration: function(path) {
+		this.traverse(path);
+		if (path.node.declarations.length===0) 
+		    path.replace();
+	    },
+	    visitSnapExpression:      function(path) {
+		throw new util.Fail(util.format("unexpected for-expression"));
+	    }
+	});
+	
 	return storeJS;
     };
 
@@ -1251,7 +1285,7 @@ function generateJS(js,what) {
 		return false;
 	    },
 	    visitStoreExpression: function(path) {
-		path.replace(genStore(path))
+		path.replace(genStore(path));
 		return false;
 	    }
 	});
@@ -1350,7 +1384,7 @@ function compile(chr,opts) {
 function buildStanzas(code,parsed) {
     assert(code.search('\t')===-1,"code should be tab-free");
     var  lines = [""].concat(code.split('\n')); // make zero-based
-    var lines1 = _.map(lines,function(s) {
+    var lines1 = lines.map(function(s) {
 	return Array(s.length).join(' ');       // initially a blank copy
     });
     var    stanzas = [];

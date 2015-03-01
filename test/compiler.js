@@ -32,16 +32,10 @@ function findById(js,name,mangled) {	// find subtree of `js` with id `name`
 }
 
 var parseItem = function(code) {
-    if (false) {
-	parser._private.setupParse(code);
-	var js = parser._private.parseExpression();
-	return js;
-    } else {
-	var  ast = compiler._private.annotateParse2(compiler._private.annotateParse1(parse("store{rule RULE1("+code+")}")));
-	var rule = findById(ast,'RULE1');
-	assert.strictEqual(rule.items.length,1);
-	return rule.items[0].expr;
-    }
+    var  ast = compiler._private.annotateParse2(compiler._private.annotateParse1(parse("store{rule RULE1("+code+")}")));
+    var rule = findById(ast,'RULE1');
+    assert.strictEqual(rule.items.length,1);
+    return rule.items[0].expr;
 };
 
 var compile = function(code) {
@@ -217,10 +211,29 @@ describe("compile",function() {
 	eval(recast.print(js).code);
 	assert.deepEqual(eval(mangleId('st'))._private.facts,{"1":['user',{name:'sid'}]});
     });
-    // it("should generate JS for store containing `for`",function() {
-    // 	var js = compiler.compile(parse("var st = store {rule(['a'],+['b',for(a=0;['a'];a+1)]);};"));
-    // 	eval(recast.print(js).code);
-    // });
+    it("should handle store containing `for`",function() {
+	var  ast = parse("var st = store {rule(-['a',p],+['b',for(a=0;['c',q];a+p+q+1)]);};");
+     	var   js = compiler.compile(ast);
+     	eval(recast.print(js).code);
+	var   st = eval(mangleId('st'));
+	st.add(['a',17]);
+	assert.deepEqual(_.values(st._private.facts),[['b',0]]);
+	st.reset();
+	assert.deepEqual(st._private.facts,{});
+	st.add(['c',1]);
+	var ans = st.add(['a',17]);
+	assert.strictEqual(ans.adds.length,1);
+	assert.deepEqual(st.get(ans.adds[0]),['b',19]);
+    });
+    it("should handle store containing `for` (non-deleting variant)",function() {
+	var  ast = parse("var st = store {rule(['a',p],+['b',for(a=0;['c',q];a+p+q+1)]);};");
+     	var   js = compiler.compile(ast);
+     	eval(recast.print(js).code);
+	var   st = eval(mangleId('st'));
+	st.add(['c',1]);
+	st.add(['a',17]);
+	assert.deepEqual(_.values(st._private.facts),[['c',1],['a',17],['b',19]]);
+    });
 });
 
 describe("EventEmitter",function() {
@@ -361,12 +374,23 @@ describe("first pass of new compiler",function() {
 	assert.deepEqual(findById(prs1,'R').attrs.vars,{c:{},s:{}});
     });
     it("should handle for-expressions",function() {
-	var prs0 = parse("store {rule R (a=for F(b=0;['a',...];b+1));}");
+	var prs0 = parse("store {rule R ([],a=0,+[for F(b=0;['a',...];b+1)]);}");
 	var prs1 = pass1(prs0);
 	assert.deepEqual(findById(prs1,'R').attrs.vars['a'],{});
 	assert.deepEqual(findById(prs1,'R').attrs.vars['b'],undefined);
 	assert.deepEqual(findById(prs1,'F').attrs.vars['a'],undefined);
 	assert.deepEqual(findById(prs1,'F').attrs.vars['b'],{});
+    });
+    it("should moan about for-expressions in non-+ rule items",function() {
+	assert.throws(function() {
+	    pass1(parse("store {rule R (['a',for(b=0;['a',...];b+1)]);}"));
+	});
+	assert.throws(function() {
+	    pass1(parse("store {rule R (['a',a],a==for(b=0;['a',...];b+1));}"));
+	});
+	assert.throws(function() {
+	    pass1(parse("store {rule R (a=for(b=0;['a',...];b+1));}"));
+	});
     });
     it("should give stores disjoint namespaces",function() {
 	var prs0 = parse("store st1 {query Q(a;[];a=[])a+1;};store st2 {query Q(a;[];a=[])a+1;}");
@@ -447,7 +471,6 @@ describe("second pass of new compiler",function() {
     it("should believe stores to be declared",function() {
 	p2("store st{};st.add([]);");
     });
-    // +++ nested for +++
 });
 
 describe("mangle",function() {
@@ -543,6 +566,49 @@ describe("mangle",function() {
 	assert.throws(function() {
 	    mangle(parse("store {rule (['a',b.p]);}"));
 	});
+    });
+});
+
+describe("function/for style query",function() {
+    it("should compile and run a simple query",function() {
+	var js = compile("var st = store {function q1(){return for(a=[];['user',{name:n}];a.concat(n));}};");
+	eval(recast.print(js).code);
+	var st = eval(mangleId('st'));
+	assert.equal(st.queries.q1().result.length,0);
+	st.add(['user',{name:'tyson'}]);
+	assert.equal(st.queries.q1().result.length,1);
+    });
+    it("should compile and run a parameterized query",function() {
+	var js = compile("var st = store {function q2(p){return for(a=[];['user',{name:n}],n.length===p;a.concat(n));}};");
+	eval(recast.print(js).code);
+	var st = eval(mangleId('st'));
+	st.add(['user',{name:'tyson'}]);
+	var qr1 = st.queries.q2(1)
+	var qr5 = st.queries.q2(5)
+	assert.equal(qr1.result.length,0);
+	assert.equal(qr5.result.length,1);
+	assert.equal(typeof qr1.t,'number');
+	assert.equal(qr1.t,qr5.t); // store has not been updated by queries
+    });
+    it("should run the 3-head benchmark",function() {
+	var js = compile("var st = store {function q3(){return for(a=0;['X',x,p],['X',x,q],['X',x,r],p>q && q>r;a+p+q+r);};}");
+	eval(recast.print(js).code);
+	var st = eval(mangleId('st'));
+	var n = 100;
+	for (var i=0;i<n/3;i++) {
+	    st.add(["X",i,10]);
+	    st.add(["X",i,20]);
+	    st.add(["X",i,30]);
+	}
+	st.queries.q3();
+    });
+    it("should work in nested function",function() {
+	var js = compile("var st = store {function q4(){return function(){return for(a=[];['user',{name:n}];a.concat(n));}();}};");
+	eval(recast.print(js).code);
+	var st = eval(mangleId('st'));
+	assert.equal(st.queries.q4().result.length,0);
+	st.add(['user',{name:'tyson'}]);
+	assert.equal(st.queries.q4().result.length,1);
     });
 });
 
