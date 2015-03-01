@@ -3865,6 +3865,8 @@ var util = require('./util.js');
 	    return parseRuleStatement();
 	else if (matchKeyword('query'))
 	    return parseQueryStatement();
+	else if (matchKeyword('function'))
+	    return parseFunctionDeclaration();
 	else if (match('[')) 
 	    return parseArrayInitialiser();
 	else if (match('{'))
