@@ -20,7 +20,13 @@ var       _ = require('underscore');
 var templates       = {};
 var template_marker = 'TEMPLATE_';
 
-var b = recast.types.builders;
+var b = (function() {
+    var b = recast.types.builders;
+    // +++ add `attrs` to more things if needed +++
+    return _.extend({},b,{
+	identifier: function(id) {return _.extend({attrs:{}},b.identifier(id));}
+    });
+})();
 
 function TEMPLATE_store() {
     (function() {
@@ -346,7 +352,7 @@ function annotateParse1(js) {	// poor man's attribute grammar - pass one
 	    } else if (stmt==='function') {
 		// +++ check the function is inside a store +++
 	    } else
-		throw new util.Fail(util.format("snap expression not in rule or function"));
+		throw new util.Fail(util.format("snap expression not in rule or function [%s]",stmt));
 	    if (path.node.id!==null)
 		this.noteDeclaredName(path.node.id.name,'snap',true);
 	    this.markItemsWithId(path.node);
@@ -403,7 +409,12 @@ function annotateParse1(js) {	// poor man's attribute grammar - pass one
 	    this.traverse(path);
 	},
 	visitCallExpression:      function(path){return this.doCall(path);},
-	visitNewExpression:       function(path){return this.doCall(path);}
+	visitNewExpression:       function(path){return this.doCall(path);},
+	visitSequenceExpression:  function(path) { // allow these for arrow functions only, s/be translated
+	    if (path.node.expressions.length===0)
+		throw new util.Fail("escaped ()");
+	    this.traverse(path);
+	}
     });
     return js;
 }
@@ -951,7 +962,7 @@ function generateJS(js,what) {
 		this.traverse(path);
 	    },
 	    visitSnapExpression: function(path) {
-		var qjs = genQuery(path.node,[]);
+		var qjs = genSnap(path.node,[]);
 		path.replace(b.callExpression(qjs,[]));
 		return false;
 	    }
@@ -1075,9 +1086,7 @@ function generateJS(js,what) {
 		throw new Error("query statement must not modify the store");
 
 	var rv = genRuleVariant(chr,null,function() {
-	    var payload = [];
-	    payload.push(b.expressionStatement(b.assignmentExpression('=',chr.init.left,chr.accum)));
-	    return payload;
+	    return [b.expressionStatement(b.assignmentExpression('=',chr.init.left,chr.accum))];
 	});
 
 	rv.params = args;
@@ -1101,6 +1110,43 @@ function generateJS(js,what) {
 	});
 	// +++
 	rv.body.body.unshift(b.variableDeclaration('var',[b.variableDeclarator(chr.init.left,chr.init.right)]));
+	
+	return rv;
+    };
+    
+    var genSnap = function(chr,args) {
+	// a snap is a hacked-up rule.  CBB?
+	var bVarAccum = b.identifier('accum');
+	for (var item in chr.items)
+	    if (item.op=='+' || item.op=='-')
+		throw new util.Fail("for expression must not modify the store");
+
+	var rv = genRuleVariant(chr,null,function() {
+	    return [b.expressionStatement(b.assignmentExpression('=',
+								 bVarAccum,
+								 b.callExpression(chr.accum,[bVarAccum]) ))];
+	});
+
+	rv.params = args;
+	if (exports.debug) {
+	    rv.body.body.push(b.expressionStatement(
+		b.callExpression(b.memberExpression(b.identifier('ee'),
+						    b.identifier('emit'),
+						    false),
+				 [b.literal('for-done'),b.literal(unmangleIdentifier(chr.id))] ) ));
+	}
+	rv.body.body.push(b.returnStatement(bVarAccum));
+	parser.visit(rv,{	// remove query args from binding site decls
+	    visitVariableDeclarator: function(path) {
+		var decl = path.node;
+		if (_.any(args,function(bId){return bId.name===decl.id.name}))
+		    // +++ maybe also remove outer function params? +++
+		    path.replace();
+		return false;
+	    }
+	});
+	// +++
+	rv.body.body.unshift(b.variableDeclaration('var',[b.variableDeclarator(bVarAccum,chr.init)]));
 	
 	return rv;
     };
@@ -1163,7 +1209,7 @@ function generateJS(js,what) {
 		var  name = funjs.id.attrs.was;
 		parser.visit(funjs,{
 		    visitSnapExpression: function(path) {
-			path.replace(b.callExpression(genQuery(path.node,[]),[]));
+			path.replace(b.callExpression(genSnap(path.node,[]),[]));
 			return false;
 		    }
 		});

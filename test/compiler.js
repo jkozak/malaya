@@ -343,22 +343,20 @@ describe("first pass of new compiler",function() {
 	assert.deepEqual(findById(prs1,'R').attrs.vars,{c:{},s:{}});
     });
     it("should handle for-expressions",function() {
-	var prs0 = parse("store {rule R ([],a=0,+[for F(b=0;['a',...];b+1)]);}");
+	var prs0 = parse("store {rule R ([],b=0,+[for F(0;['a',...];a=>a+1)]);}");
 	var prs1 = pass1(prs0);
-	assert.deepEqual(findById(prs1,'R').attrs.vars['a'],{});
-	assert.deepEqual(findById(prs1,'R').attrs.vars['b'],undefined);
+	assert.deepEqual(findById(prs1,'R').attrs.vars['a'],undefined);
 	assert.deepEqual(findById(prs1,'F').attrs.vars['a'],undefined);
-	assert.deepEqual(findById(prs1,'F').attrs.vars['b'],{});
     });
     it("should moan about for-expressions in non-+ rule items",function() {
 	assert.throws(function() {
-	    pass1(parse("store {rule R (['a',for(b=0;['a',...];b+1)]);}"));
+	    pass1(parse("store {rule R (['a',for(0;['a',...];b=>b+1)]);}"));
 	});
 	assert.throws(function() {
-	    pass1(parse("store {rule R (['a',a],a==for(b=0;['a',...];b+1));}"));
+	    pass1(parse("store {rule R (['a',a],a==for(0;['a',...];b=>b+1));}"));
 	});
 	assert.throws(function() {
-	    pass1(parse("store {rule R (a=for(b=0;['a',...];b+1));}"));
+	    pass1(parse("store {rule R (a=for(0;['a',...];b=>b+1));}"));
 	});
     });
     it("should give stores disjoint namespaces",function() {
@@ -368,6 +366,11 @@ describe("first pass of new compiler",function() {
     it("should give unnamed stores disjoint namespaces",function() {
 	var prs0 = parse("var st1=store {query Q(a;[];a=[])a+1;};var st2=store {query Q(a;[];a=[])a+1;}");
 	pass1(prs0);		// don't want complaint about Q being shadowed
+    });
+    it("should catch misplaced () ",function() {
+	assert.throws(function() {
+	    pass1(parse("1+();"));
+	});
     });
 });
 
@@ -545,7 +548,7 @@ describe("compile",function() {
 	assert.deepEqual(eval(mangleId('st'))._private.facts,{"1":['user',{name:'sid'}]});
     });
     it("should handle store containing `for`",function() {
-	var  ast = parse("var st = store {rule(-['a',p],+['b',for(a=0;['c',q];a+p+q+1)]);};");
+	var  ast = parse("var st = store {rule(-['a',p],+['b',for(0;['c',q];a=>a+p+q+1)]);};");
      	var   js = compiler.compile(ast);
      	eval(recast.print(js).code);
 	var   st = eval(mangleId('st'));
@@ -559,7 +562,7 @@ describe("compile",function() {
 	assert.deepEqual(st.get(ans.adds[0]),['b',19]);
     });
     it("should handle store containing `for` (non-deleting variant)",function() {
-	var  ast = parse("var st = store {rule(['a',p],+['b',for(a=0;['c',q];a+p+q+1)]);};");
+	var  ast = parse("var st = store {rule(['a',p],+['b',for(0;['c',q];a=>a+p+q+1)]);};");
      	var   js = compiler.compile(ast);
      	eval(recast.print(js).code);
 	var   st = eval(mangleId('st'));
@@ -577,11 +580,45 @@ describe("compile",function() {
 	st.add(['a',1]);
 	assert.deepEqual(_.values(st._private.facts),[['c']]);
     });
+    it("should handle nuladic arrow functions",function() {
+	var js = compiler.compile(parse("var fn = ()=>23;"));
+     	eval(recast.print(js).code);
+	var fn = eval(mangleId('fn'));
+	assert.strictEqual(fn(),23);
+    });
+    it("should handle monadic arrow functions",function() {
+	var js = compiler.compile(parse("var fn = x=>x+1;"));
+     	eval(recast.print(js).code);
+	var fn = eval(mangleId('fn'));
+	assert.strictEqual(fn(1),2);
+	assert.strictEqual(fn(2),3);
+    });
+    it("should handle bracketed monadic arrow functions",function() {
+	var js = compiler.compile(parse("var fn = (x)=>x+1;"));
+     	eval(recast.print(js).code);
+	var fn = eval(mangleId('fn'));
+	assert.strictEqual(fn(1),2);
+	assert.strictEqual(fn(2),3);
+    });
+    it("should handle dyadic arrow functions",function() {
+	var js = compiler.compile(parse("var fn = (x,y)=>x+y+1;"));
+     	eval(recast.print(js).code);
+	var fn = eval(mangleId('fn'));
+	assert.strictEqual(fn(1,2),4);
+	assert.strictEqual(fn(2,3),6);
+    });
+    it("should handle dyadic arrow functions in a store",function() {
+	var js = compiler.compile(parse("var t=fn=>fn(2,3);store st {rule (-['a'],+['b',t((x,y)=>x+y+1)]);};"));
+     	eval(recast.print(js).code);
+	var st = eval(mangleId('st'));
+	st.add(['a']);
+	assert.deepEqual(_.values(st._private.facts),[['b',6]]);
+    });
 });
 
 describe("function/for style query",function() {
     it("should compile and run a simple query",function() {
-	var js = compile("var st = store {function q1(){return for(a=[];['user',{name:n}];a.concat(n));}};");
+	var js = compile("var st = store {function q1(){return for([];['user',{name:n}];$=>$.concat(n));}};");
 	eval(recast.print(js).code);
 	var st = eval(mangleId('st'));
 	assert.equal(st.queries.q1().result.length,0);
@@ -589,7 +626,7 @@ describe("function/for style query",function() {
 	assert.equal(st.queries.q1().result.length,1);
     });
     it("should compile and run a parameterized query",function() {
-	var js = compile("var st = store {function q2(p){return for(a=[];['user',{name:n}],n.length===p;a.concat(n));}};");
+	var js = compile("var st = store {function q2(p){return for([];['user',{name:n}],n.length===p;a=>a.concat(n));}};");
 	eval(recast.print(js).code);
 	var st = eval(mangleId('st'));
 	st.add(['user',{name:'tyson'}]);
@@ -601,7 +638,7 @@ describe("function/for style query",function() {
 	assert.equal(qr1.t,qr5.t); // store has not been updated by queries
     });
     it("should run the 3-head benchmark",function() {
-	var js = compile("var st = store {function q3(){return for(a=0;['X',x,p],['X',x,q],['X',x,r],p>q && q>r;a+p+q+r);};}");
+	var js = compile("var st = store {function q3(){return for(0;['X',x,p],['X',x,q],['X',x,r],p>q && q>r;a=>a+p+q+r);};}");
 	eval(recast.print(js).code);
 	var st = eval(mangleId('st'));
 	var n = 100;
@@ -613,7 +650,7 @@ describe("function/for style query",function() {
 	st.queries.q3();
     });
     it("should work in nested function",function() {
-	var js = compile("var st = store {function q4(){return function(){return for(a=[];['user',{name:n}];a.concat(n));}();}};");
+	var js = compile("var st = store {function q4(){return function(){return for([];['user',{name:n}];a=>a.concat(n));}();}};");
 	eval(recast.print(js).code);
 	var st = eval(mangleId('st'));
 	assert.equal(st.queries.q4().result.length,0);

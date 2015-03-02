@@ -57,8 +57,142 @@ var chrjsTestFixture = {	// see esprima/test/test.js for format
                 start: { line: 1, column: 0 },
                 end: { line: 1, column: 9 }
             }
-        }
-     }
+        },
+	'x=>1;': {
+	    type: 'ExpressionStatement',
+	    expression: {
+		type: 'FunctionExpression',
+		id: null,
+		params: [{type:'Identifier',
+			  name:'x',
+			  range:[0,1],
+			  loc:{start:{line:1,column:0},end:{line:1,column:1}} }],
+		defaults: [],
+		body: {
+		    type: "BlockStatement",
+		    body: [
+			{
+			    type: "ReturnStatement",
+			    argument: {
+				range: [3,4],
+				loc: {
+				    start: {line: 1, column: 3},
+				    end: {line: 1,column: 4}
+				},
+				type: "Literal",
+				value: 1,
+				raw: "1"
+			    }
+			}
+		    ]
+		},
+		rest: null,
+		generator: false,
+		expression: false,
+		range: [0, 4],
+		loc: {
+		    start: { line:1, column: 0},
+		    end: { line:1, column: 4},
+		}
+	    },
+	    range: [0, 5],
+	    loc: {
+		start: { line:1, column: 0},
+		end: { line:1, column: 5},
+	    }
+	},
+	'(x)=>1;': {
+	    type: 'ExpressionStatement',
+	    expression: {
+		type: 'FunctionExpression',
+		id: null,
+		params: [{type:'Identifier',
+			  name:'x',
+			  range:[1,2],
+			  loc:{start:{line:1,column:1},end:{line:1,column:2}} }],
+		defaults: [],
+		body: {
+		    type: "BlockStatement",
+		    body: [
+			{
+			    type: "ReturnStatement",
+			    argument: {
+				range: [5,6],
+				loc: {
+				    start: {line: 1, column: 5},
+				    end: {line: 1,column: 6}
+				},
+				type: "Literal",
+				value: 1,
+				raw: "1"
+			    }
+			}
+		    ]
+		},
+		rest: null,
+		generator: false,
+		expression: false,
+		range: [0, 6],
+		loc: {
+		    start: { line:1, column: 0},
+		    end: { line:1, column: 6}
+		}
+	    },
+	    range: [0, 7],
+	    loc: {
+		start: { line:1, column: 0},
+		end: { line:1, column: 7}
+	    }
+	},
+	'(x,y)=>1;': {
+	    type: 'ExpressionStatement',
+	    expression: {
+		type: 'FunctionExpression',
+		id: null,
+		params: [{type:'Identifier',
+			  name:'x',
+			  range:[1,2],
+			  loc:{start:{line:1,column:1},end:{line:1,column:2}} },
+			 {type:'Identifier',
+			  name:'y',
+			  range:[3,4],
+			  loc:{start:{line:1,column:3},end:{line:1,column:4}} }
+			],
+		defaults: [],
+		body: {
+		    type: "BlockStatement",
+		    body: [
+			{
+			    type: "ReturnStatement",
+			    argument: {
+				range: [7,8],
+				loc: {
+				    start: {line: 1, column: 7},
+				    end: {line: 1,column: 8}
+				},
+				type: "Literal",
+				value: 1,
+				raw: "1"
+			    }
+			}
+		    ]
+		},
+		rest: null,
+		generator: false,
+		expression: false,
+		range: [0, 8],
+		loc: {
+		    start: { line:1, column: 0},
+		    end: { line:1, column: 8}
+		}
+	    },
+	    range: [0, 9],
+	    loc: {
+		start: { line:1, column: 0},
+		end: { line:1, column: 9}
+	    }
+	}
+    }
 };
 
 describe("esprima-based parser",function() {
@@ -359,7 +493,7 @@ describe("esprima-based parser",function() {
 		    console.log("!!! "+e);
 		    e.source = source;
 		    // massage this into something I can actually read
-		    console.log(util.format("\n%s.%s fails:\n wanted: %j\n got:    %j",
+		    console.log(util.format("\n%s.%s fails:\n wanted: %s\n got:    %s",
 					    category,source,e.expected,e.actual));
 		    failures.push(e);
 		}
