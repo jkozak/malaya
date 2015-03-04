@@ -201,17 +201,29 @@ describe("matching",function() {
 });
 
 describe("in-store `for` expression",function() {
-    // it("should accumulate over a store",function() {
-    // 	var st = store {
-    // 	    ['a',{p:1}];
-    // 	    ['a',{p:2}];
-    // 	    ['b',{p:99}];
-    // 	    rule (-['accumulate'],
-    // 		  +['_ans',{sum:for(a=0;['a',{p}];a+p)}] );
-    // 	};
-    // 	st.add(['accumulate']);
-    // 	assert.equal(_.filter(_.values(st._private.facts),function(f){return f[0]==='_ans';})[0].sum,3);
-    // });
+    it("should accumulate over a store",function() {
+    	var st = store {
+    	    ['a',{p:1}];
+    	    ['a',{p:2}];
+    	    ['b',{p:99}];
+    	    rule (-['accumulate'],
+    		  +['_ans',{sum:for(0;['a',{p}];a=>a+p)}] );
+    	};
+    	st.add(['accumulate']);
+    	assert.equal(_.values(st._private.facts).filter(f=>f[0]==='_ans')[0][1].sum,3);
+    });
+    it("should nest",function() {
+    	var st = store {
+    	    ['a',{p:1}];
+    	    ['a',{p:2}];
+    	    ['b',{p:1,q:5}];
+    	    ['b',{p:2,q:6}];
+    	    rule (-['accumulate'],
+    		  +['_ans',{sum:for(0;['a',{p}];a=>a+for(0;['b',{p,q}];b=>b+q))}] );
+    	};
+    	st.add(['accumulate']);
+    	assert.equal(_.values(st._private.facts).filter(f=>f[0]==='_ans')[0][1].sum,11);
+    });
 });
 
 describe("regression tests",function() {

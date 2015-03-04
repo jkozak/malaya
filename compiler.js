@@ -233,6 +233,8 @@ var chrGlobalVars = {		// only javascript globals allowed in CHRjs
 if (util.env==='test')
     chrGlobalVars = _.extend(chrGlobalVars,
 			     {
+				 // general testing stuff
+				 console: {ext:true,mutable:false,type:'function'},
 				 // the `mocha` globals
 				 describe:{ext:true,mutable:false,type:'function'},
 				 it:      {ext:true,mutable:false,type:'function'},
@@ -347,8 +349,8 @@ function annotateParse1(js) {	// poor man's attribute grammar - pass one
 	},
 	visitSnapExpression:      function(path) {
 	    if (stmt==='rule') {
-		if (item!=='+')
-		    throw new util.Fail(util.format("snap expression must occur in create item"));
+		if ("+=".indexOf(item)===-1)
+		    throw new util.Fail(util.format("snap expression must occur in create or assign item"));
 	    } else if (stmt==='function') {
 		// +++ check the function is inside a store +++
 	    } else
@@ -472,7 +474,7 @@ function annotateParse2(chrjs) {	// poor man's attribute grammar - pass two
 	},
 	visitSnapExpression:      function(path) {
 	    setBoundHereAttr(path.node,path.node.attrs.vars);
-	    return false;
+	    this.traverse(path.get('accum')); // snap expressions can nest here
 	},
 	doVars:                   function(path) {
 	    this.traverse(path);
@@ -907,6 +909,12 @@ function generateJS(js,what) {
 				     false)];
 	}
     };
+
+    var visitSnapExpressionAndCompile = function(path) {
+	var qjs = genSnap(path.node,[]);
+	path.replace(b.callExpression(qjs,[]));
+	return false;
+    };
     
     var genAdd = function(x) {
 	var bindRest = null;
@@ -961,11 +969,7 @@ function generateJS(js,what) {
 		    throw new Error("anonymous ellipsis in value expression");
 		this.traverse(path);
 	    },
-	    visitSnapExpression: function(path) {
-		var qjs = genSnap(path.node,[]);
-		path.replace(b.callExpression(qjs,[]));
-		return false;
-	    }
+	    visitSnapExpression: visitSnapExpressionAndCompile
 	});
     };
     
@@ -988,11 +992,14 @@ function generateJS(js,what) {
 	    case '?':
 		js1 = [b.ifStatement(chr.items[item_id].expr,b.blockStatement(next1()),null)];
 		break;
-	    case '=':
-		if (chr.items[item_id].expr.left.type!=="Identifier")
-		    throw new Error(util.format("can't bind to non-variable: %j",chr.items[item_id].expr.left));
-		js1 = [b.expressionStatement(chr.items[item_id].expr)].concat(next1())
+	    case '=': {
+		var expr = chr.items[item_id].expr;
+		if (expr.left.type!=="Identifier")
+		    throw new Error(util.format("can't bind to non-variable: %j",expr.left));
+		parser.visit(expr,{visitSnapExpression:visitSnapExpressionAndCompile});
+		js1 = [b.expressionStatement(expr)].concat(next1())
 		break;
+	    }
 	    case '+':
 		addenda.push(item_id);
 		js1 = next1();
@@ -1122,6 +1129,12 @@ function generateJS(js,what) {
 		throw new util.Fail("for expression must not modify the store");
 
 	var rv = genRuleVariant(chr,null,function() {
+	    parser.visit(chr.accum,{ // handle nested for-expressions
+		visitSnapExpression: function(path) {
+		    var qjs = genSnap(path.node,[]);
+		    path.replace(b.callExpression(qjs,[]));
+		    this.traverse(path);
+		} });
 	    return [b.expressionStatement(b.assignmentExpression('=',
 								 bVarAccum,
 								 b.callExpression(chr.accum,[bVarAccum]) ))];
@@ -1367,66 +1380,6 @@ function setCharAt(str,index,chr) {
     return str.substr(0,index)+chr+str.substr(index+1);
 }
 
-function compile(chr,opts) {
-    var js;
-    opts = opts || {ep:'Program'};
-    var markup = function(chr) {
-	var rule = null;
-	parser.visit(chr,{
-	    visitRuleStatement: function(path) {
-		rule = path.node;
-		this.traverse(path);
-		rule = null;
-	    }
-	});
-	throw new Error("NYI");
-    };
-    var finalEmit = function(chr) {
-	parser.visit(chr,{
-	    visitStoreStatement: function(path) {
-		this.traverse(path);
-		var js = deepClone(templates['store'].body[0].expression);
-		parser.visit(js,{
-		    visitSwitchCase: function(path) {
-			if (path.node.test.type==='Identifier' && path.node.test.name==='INSERT_CASE') {
-			    throw new Error("NYI"); // path.replace
-			}
-			return false;
-		    },
-		    visitIdentifier: function(path) {
-			this.traverse(path);
-			switch (path.node.name) {
-			case 'INSERT_GENERIC_MATCHES':
-			case 'INSERT_RULES':
-			case 'INSERT_QUERIES':
-			case 'INSERT_INIT':
-			    throw new Error("NYI"); // path.replace
-			}
-		    }
-		});
-		path.replace(js);
-	    },
-	    visitRuleStatement: function(path) {
-		throw new Error("NYI");
-	    },
-	    visitQueryStatement: function(path) {
-		throw new Error("NYI");
-	    },
-	    visitItemExpression: function(path) {
-		throw new Error("NYI");
-	    },
-	});
-    };
-    switch (opts.ep) {
-    case 'Program':
-	parser.namedTypes.Program.assert(js);
-	js = finalEmit(markup(chr));
-    default:
-	throw new util.Fail(util.format("can't compile: %j",js));
-    }
-    return js;
-}
-
 function buildStanzas(code,parsed) {
     assert(code.search('\t')===-1,"code should be tab-free");
     var  lines = [""].concat(code.split('\n')); // make zero-based
@@ -1438,14 +1391,21 @@ function buildStanzas(code,parsed) {
     var noteSource = function(node,node1) {
 	if (node1===undefined)
 	    node1 = node;
-	if (sources[node.loc.start.line]===undefined)
-	    sources[node.loc.start.line] = {};
-	sources[node.loc.start.line][node.loc.start.column] = node1;
+	for (var l=node.loc.start.line;l<=node.loc.end.line;l++) {
+	    if (sources[l]===undefined)
+		sources[l] = {};
+	    sources[l][node.loc.start.column] = node1;
+	    break;		// !!! playing around here
+	}
     }
 
     if (parsed===undefined)
 	parsed = parser.parse(code,{loc:true,attrs:true});
     var currentRule;
+    var ruleColours = {}	// <ruleName> -> <identifier> -> <tag>
+    var   idColours = '0123456';
+    var     idAlloc = 0;
+    var       isVar = true;
     parser.visit(parsed,{
 	visitRuleStatement: function(path) {
 	    var node = path.node;
@@ -1453,7 +1413,9 @@ function buildStanzas(code,parsed) {
 		lines1[node.loc.start.line] = setCharAt(lines1[node.loc.start.line],node.loc.start.column+i,'R');
 	    noteSource(node);
 	    currentRule = node;
+	    ruleColours[currentRule.id.name] = {};
 	    this.traverse(path);
+	    currentRule = null;
 	},
 	visitQueryStatement: function(path) {
 	    var node = path.node;
@@ -1462,6 +1424,7 @@ function buildStanzas(code,parsed) {
 	    noteSource(node);
 	    currentRule = node;
 	    this.traverse(path);
+	    currentRule = null;
 	}, 
 	visitItemExpression: function(path) {
 	    var node = path.node;
@@ -1470,6 +1433,47 @@ function buildStanzas(code,parsed) {
 		    lines1[l] = setCharAt(lines1[l],c,node.op);
 		}
 	    noteSource(node,currentRule);
+	    this.traverse(path);
+	},
+	visitProperty:   function(path) {
+	    var save = {isVar:isVar};
+	    isVar = false;
+	    this.visit(path.get('key'));
+	    isVar = save.isVar;
+	    this.visit(path.get('value'));
+	    return false;
+	},
+	visitMemberExpression: function(path) {
+	    var save = {isVar:isVar};
+	    this.visit(path.get('object'));
+	    isVar = path.node.computed;
+	    this.visit(path.get('property'));
+	    isVar = save.isVar;
+	    return false;
+	},
+	visitIdentifier: function(path) {
+	    var node = path.node;
+	    var name = node.name;
+	    if (currentRule && node.loc) {
+		var colours = ruleColours[currentRule.id.name];
+		var  colour = colours[name];
+		if (!isVar)
+		    colour = 'F';
+		else if (colour===undefined) {
+		    if (_.keys(colours).length<idColours.length) {
+			colour   = ruleColours[currentRule.id.name][name] = idColours[idAlloc++];
+			idAlloc %= idColours.length;
+		    } else {
+			console.log("no colour left in %s for: %s",currentRule.id.name,name);
+			colour = 'I'
+		    }
+		}
+		for (var l=node.loc.start.line;l<=node.loc.end.line;l++)
+		    for (var c=node.loc.start.column;c<node.loc.end.column;c++) {
+			lines1[l] = setCharAt(lines1[l],c,colour);
+		    }
+		noteSource(node,currentRule);
+	    }
 	    this.traverse(path);
 	}
     });
@@ -1507,14 +1511,19 @@ function buildStanzas(code,parsed) {
     stanzas.forEach(function(stanza) {
 	var addDraw = function(l,l1,c,n,ch) {
 	    if (ch!=null && n>0 && stanza.lines[l][c]!=' ') {
-		if (sources[stanza.line+l])
-		    stanza.draws.push({node:sources[stanza.line+l][c],
-				       ch:ch,
-				       x:c,
-				       y:l1,
-				       n:n+1});
+		if (sources[stanza.line+l]) {
+		    if (sources[stanza.line+l][c]!==undefined)
+			stanza.draws.push({node:sources[stanza.line+l][c],
+					   ch:ch,
+					   x:c,
+					   y:l1,
+					   n:n+1});
+		    else
+			console.warn("can't find node for stanza %s %d line %d:%d",stanza.tag,stanza.line,l,c);
+
+		}
 		else
-		    console.warn("cqn't find draw for stanza %d line %d",stanza.line,l);
+		    console.warn("can't find draw for stanza %s %d line %d",stanza.tag,stanza.line,l);
 	    }
 	};
 	var l1 = 0;
