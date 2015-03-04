@@ -20,6 +20,18 @@ function brighten(elem,amount) {
     elem.css('background-color',"rgb("+p[0]+","+p[1]+","+p[2]+')');
 }
 
+// console.log and friends should do 'printf' on args but don't in `nw`
+['log','warn','error'].forEach(function(method) {
+    console[method] = (function() {
+	var old = console[method].bind(console);
+	return function() {
+	    var s = util.format.apply(null,arguments);
+	    //return old(s);
+	    process.stderr.write(s+'\n'); // let's make the console readable
+	};
+    })();
+});
+
 $(document).ready(function() {	// 'control' panel
     var  state = 'stopped';	// 'starting','started','stopping'
     var   opts = {};

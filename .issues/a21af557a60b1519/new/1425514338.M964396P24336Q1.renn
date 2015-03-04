@@ -1,0 +1,7 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Thu, 05 Mar 2015 00:12:18 +0000
+Subject: allow `for` in assignment items
+State: new
+Message-Id: <a21af557a60b1519-0-artemis@renn>
+
+Check later that the assignment is sane - i.e. only goes to a transient output.

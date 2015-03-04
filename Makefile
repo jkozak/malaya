@@ -18,3 +18,6 @@ benchmarks:	init
 	NODE_ENV=benchmark matcha -R plain $(sort $(wildcard benchmark/*.js examples/*/benchmark/*.js) $(patsubst %.chrjs,%.chrjs.js,$(CHRJSS)))
 	-@rm $(patsubst %.chrjs,%.chrjs.js,$(CHRJSS))
 
+clean:
+	rm -rf node_modules/* examples/*/node_modules/*
+

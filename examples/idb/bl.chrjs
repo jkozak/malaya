@@ -95,6 +95,79 @@ var IDB = store {
 	  +['_output','self',{logon:{OK:0,error_code:17,text:"bad password"}}] );
     rule (-['logon',...],
 	  +['_output','self',{logon:{OK:0,error_code:18,text:"user unknown"}}] );
+    rule (-['start',{},{port}],
+	  ['Permissions',{port,ApplicationID,ApplicationName,AppRole,...}],
+	  +['_output','self',{
+	      'static-data':{
+		  _children:
+		  [].concat(
+		      for([];
+			  ['Permissions',{ApplicationID:appId,TeamID:teamId,CompanyID:companyId,...}],
+			  ['Team',{TeamID:teamId,TeamName:team,...}];
+			  a=>a.concat([{counterparty:{app:appId,team:teamId,Name:team}}]) ),
+		      [{self:{ID:ApplicationID,Name:ApplicationName,Role:AppRole}}],
+		      for([];	                     // +++ should be per-user +++
+			  ['Instrument',inst];
+			  a=>a.concat([{instrument:{
+			      ID:               inst.InstID,
+			      Name:             inst.InstName,
+			      SubClass:         inst.InstSubClassID,
+			      Maturity:         dateToYYYYMMDD(inst.MaturityDate),
+			      'new':            0,
+			      Visible:          inst.VisibleFlag,
+			      Description:      inst.InstDesc,
+			      AuctionInstTitle: inst.AuctionInstTitle,
+			      PriceTick:        inst.PriceTick
+			  }}]) ),
+		      for([];
+			  ['FEConfig',{TabID,CookieData,...}];
+			  a=>a.concat([{_XML:CookieData}]) ),
+		      for([];
+			  ['InstrumentClass',sc];
+			  a=>a.concat([{SubClass:{
+			      ID:                sc.InstSubClassID,
+			      Name:              sc.InstSubClassName,
+			      AssociatedTitleID: sc.AssociatedTitle,
+			      Title:             sc.Title,
+			      DefltVol:          sc.DefaultVolume,
+			      PriceTick:         sc.PriceTick,
+			      ShowSign:          sc.Display_ShowPlusMinus,
+			      xBidMinus1:        sc.Match_xBidMinus1,
+			      AuctionVolumes:    sc.AuctionVolumes
+			  }}]) ) ) } }],
+	  +['_output','self',{
+	      contexts:{
+		  _children:for([];
+				['MarketManager',{MarketID:id,Status,...}],
+				['SequenceNumbers',{MarketID,PriceSequenceNo,TradeSequenceNo,...}];
+				m=>m.concat([{"market-status":{
+				    ID:        id,
+				    status:    Status,
+				    priceSeqNo:PriceSequenceNo,
+				    tradeSeqNo:TradeSequenceNo,
+				    _children: [].concat(
+					for([];
+					    ['Price',{Action,Status:ps,MarketID:id,...rs}],
+					    "UC".indexOf(Action)!==-1 && "RATS".indexOf(ps)!==-1;
+					    // +++ above tests not complete +++
+					    p=>p.concat([{price:{ID:        rs.PriceID,
+						  		 seqNo:     rs.PriceSequenceNo,
+						  		 isBuy:     rs.BidOrOffer,
+						  		 instrument:rs.InstID,
+						  		 x:         rs.Rate,
+						  		 volume:    rs.Amount,
+						  		 action:    Action,
+						  		 status:    ps,
+						  		 valueDate: rs.ValuationDate,
+						  		 owner:     rs.OwnerAppID,
+						  		 marketID:  id,
+						  		 minLotSize:rs.MinLotSize}}]) )
+					    // +++ trades +++
+					    ) }}]) ) } }],
+	  // +++ BigFigs +++
+	  +['_output','self',{initialised:{}}]
+	 );
+    rule (-['start',...]);	// might get here if link fails at just the wrong moment
     rule (['Permissions',{ApplicationID}],
 	  -['Permissions',{ApplicationID}]);
     rule (-['logoff',     {appId,...},...],
@@ -122,6 +195,47 @@ var IDB = store {
 
     // auction
     rule (['restart',...], -['auction',...]); // !!! TESTING !!!
+    rule (-['AuctionTemplateBlock',...],
+	  +['_output','self',{AuctionTemplateBlock:{_children:
+						    for([];
+							['AuctionTemplate',at];
+							a=>a.concat([{AuctionTemplate:{
+							    cls:                  1,
+							    name:                 at.AuctionName,
+							    id:                   at.AuctionTemplateID,
+							    instance:             0,
+							    phases:               at.AuctionPhases,
+							    duration:             at.AuctionDuration,
+							    MatchingDuration:     at.MatchingDuration,
+							    SecondChanceDuration: 0 }}]) ) }}] );
+    rule (-['AuctionTemplate',{id:idS},{port,...}],
+	  id        = parseInt(idS),
+	  AuctionID = for(0;
+			  ['AuctionInstrumentsTemplate',{AuctionTemplateID:id,
+							 AuctionID,
+							 ...}];
+			  a=>Math.max(a,AuctionID) ),
+	  ['AuctionTemplate',{AuctionTemplateID:id,...at}],
+	  +['_output',port,{AuctionTemplate:{
+	      cls:                  1,
+	      name:                 at.AuctionName,
+	      id:                   id,
+	      instance:             0,
+	      phases:               at.AuctionPhases,
+	      duration:             at.AuctionDuration,
+	      MatchingDuration:     at.MatchingDuration,
+	      SecondChanceDuration: 0,
+	      _children: for([];
+			     ['AuctionInstrumentsTemplate',{AuctionTemplateID:id,
+							    InstID,
+							    AuctionID,
+							    ...ait}],
+			     ['Instrument',{InstID,...inst}];
+			     a=>a.concat([{AInst:{
+				 InstID:       InstID,
+				 Midprice:     inst.MidPrice,
+				 Tolerance:    inst.VolatilityPercent,
+				 AddTolerance: inst.VolatilitySpread }}]) ) }}] ); 
     rule (-['PrepareAuction',{id,action:'I',...prs},...],
 	  -['MarketManager',{auctionId,...mrs}],
 	  +['MarketManager',{auctionId:auctionId+1,...mrs}],
@@ -155,116 +269,6 @@ var IDB = store {
     // output
     rule (['_take-outputs',...], -['_output',...]);
     rule (-['_take-outputs',...]);
-
-
-    query users(;
-		['Permissions',{ApplicationID,ApplicationName,Password,...}];
-		a=[])  a.concat([[ApplicationID,ApplicationName,Password]]);
-    query user(appId;
-	       ['Permissions',{ApplicationID:appId,...rs}];
-	       a=[])  a.concat([rs]);
-
-    query staticdata(;
-		     ['Permissions',{ApplicationID:appId,TeamID:teamId,CompanyID:companyId,...}],
-		     ['Team',{TeamID:teamId,TeamName:team,...}];
-		     a=[]) a.concat([{app:appId,team:teamId,Name:team}]);
-
-    query instruments(appId;	// +++ make per-user
-		      ['Instrument',inst];
-		      a=[]) a.concat([{
-			  ID:               inst.InstID,
-			  Name:             inst.InstName,
-			  SubClass:         inst.InstSubClassID,
-			  Maturity:         dateToYYYYMMDD(inst.MaturityDate),
-			  'new':            0,
-			  Visible:          inst.VisibleFlag,
-			  Description:      inst.InstDesc,
-			  AuctionInstTitle: inst.AuctionInstTitle,
-			  PriceTick:        inst.PriceTick
-		      }]);
-
-    query feCookies(;
-		    ['FEConfig',{TabID,CookieData,...}];
-		    a=[]) a.concat(CookieData);
-
-    query subclasses(appId;	// +++ make per-user
-		     ['InstrumentClass',sc];
-		     a=[]) a.concat([{
-			 ID:                sc.InstSubClassID,
-			 Name:              sc.InstSubClassName,
-			 AssociatedTitleID: sc.AssociatedTitle,
-			 Title:             sc.Title,
-			 DefltVol:          sc.DefaultVolume,
-			 PriceTick:         sc.PriceTick,
-			 ShowSign:          sc.Display_ShowPlusMinus,
-			 xBidMinus1:        sc.Match_xBidMinus1,
-			 AuctionVolumes:    sc.AuctionVolumes
-		     }]);
-
-    query cookie(appId,id;
-		 ['Cookies',{ApplicationID:appId,CookieID:id,Cookie,...}];
-		 a=[]) a.concat(Cookie);
-
-    query markets(id;
-		  ['MarketManager',{MarketID:id,Status,...}],
-		  ['SequenceNumbers',{MarketID,PriceSequenceNo,TradeSequenceNo,...}];
-		  a=[]) a.concat({ID:        id,
-		                  status:    Status,
-				  priceSeqNo:PriceSequenceNo,
-				  tradeSeqNo:TradeSequenceNo});
-    query prices(id;
-		 ['Price',{Action,Status,...rs}],
-		 ("UC").indexOf(Action)!==-1 && ("RATS").indexOf(Status)!==-1;
-		 // +++ above tests not complete +++
-		 a=[]) a.concat({ID:        rs.PriceID,
-				 seqNo:     rs.PriceSequenceNo,
-				 isBuy:     rs.BidOrOffer,
-				 instrument:rs.InstID,
-				 x:         rs.Rate,
-				 volume:    rs.Amount,
-				 action:    Action,
-				 status:    Status,
-				 valueDate: rs.ValuationDate,
-				 owner:     rs.OwnerAppID,
-				 marketID:  2,
-				 minLotSize:rs.MinLotSize});
-
-    // +++ query trades(id; +++
-
-    query auctionTemplates(;
-			   ['AuctionTemplate',at];
-			   a=[]) a.concat([{
-			       cls:                  1,
-			       name:                 at.AuctionName,
-			       id:                   at.AuctionTemplateID,
-			       instance:             0,
-			       phases:               at.AuctionPhases,
-			       duration:             at.AuctionDuration,
-			       MatchingDuration:     at.MatchingDuration,
-			       SecondChanceDuration: 0
-			   }]);
-    query auctionTemplate(id;
-			  ['AuctionTemplate',{AuctionTemplateID:id,...at}];
-			  a=[]) {
-			      cls:                  1,
-			      name:                 at.AuctionName,
-			      id:                   id,
-			      instance:             0,
-			      phases:               at.AuctionPhases,
-			      duration:             at.AuctionDuration,
-			      MatchingDuration:     at.MatchingDuration,
-			      SecondChanceDuration: 0
-			   };
-    query auctionInstrumentsTemplate(id;
-				     ['AuctionInstrumentsTemplate',{AuctionTemplateID:id,InstID,...ait}],
-				     ['Instrument',{InstID,...inst}];
-				     a=[]) addToIndexList(a,ait.AuctionTemplateInstance,{
-					 InstID:       InstID,
-					 Midprice:     inst.MidPrice,
-					 Tolerance:    inst.VolatilityPercent,
-					 AddTolerance: inst.VolatilitySpread
-				     });
-    // +++ templates -> template,... -> instance,... -> instrument,... +++
 };
 
 module.exports = IDB;

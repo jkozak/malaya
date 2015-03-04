@@ -1,15 +1,14 @@
 var compiler = require("../compiler.js");
+var   parser = require("../parser.js");
+var   assert = require("assert");
+var   recast = require("recast");
+var     util = require('../util.js');
+var     temp = require('temp');
+var     path = require('path');
+var       fs = require('fs');
+var        _ = require('underscore');
 
-var parser = require("../parser.js");
-var  assert = require("assert");
-var  recast = require("recast");
-var    util = require('../util.js');
-var    temp = require('temp');
-var    path = require('path');
-var      fs = require('fs');
-var       _ = require('underscore');
-
-var       b = recast.types.builders;
+var        b = recast.types.builders;
 
 temp.track();
 
@@ -348,15 +347,12 @@ describe("first pass of new compiler",function() {
 	assert.deepEqual(findById(prs1,'R').attrs.vars['a'],undefined);
 	assert.deepEqual(findById(prs1,'F').attrs.vars['a'],undefined);
     });
-    it("should moan about for-expressions in non-+ rule items",function() {
+    it("should moan about for-expressions in non-+= rule items",function() {
 	assert.throws(function() {
 	    pass1(parse("store {rule R (['a',for(0;['a',...];b=>b+1)]);}"));
 	});
 	assert.throws(function() {
 	    pass1(parse("store {rule R (['a',a],a==for(0;['a',...];b=>b+1));}"));
-	});
-	assert.throws(function() {
-	    pass1(parse("store {rule R (a=for(0;['a',...];b=>b+1));}"));
 	});
     });
     it("should give stores disjoint namespaces",function() {
@@ -614,6 +610,9 @@ describe("compile",function() {
 	st.add(['a']);
 	assert.deepEqual(_.values(st._private.facts),[['b',6]]);
     });
+    it("should handle nested for-expressions",function() {
+	compile("store{rule(['a'],+['b',for(0;['p'];a=>a+for(0;['q'];b=>b+1))]);}");
+    })
 });
 
 describe("function/for style query",function() {
@@ -710,7 +709,9 @@ describe("compile hook",function() {
 	    ok = true;
 	});
 	fs.writeFileSync(fn,"store {\nrule (['1']);}");
-	require(fn);
+	//N.B. used to use just `require(fn)` but that doesn't work 
+	//     with another version of node under `nvm`.
+	require.extensions['.chrjs'](module,fn);
 	assert(ok);
     });
 });
@@ -726,8 +727,8 @@ describe("code stanzas",function() {
 		assert.equal(compiler.getStanzas(filename).length,1);
 		ok = true;
 	    });
-	    fs.writeFileSync(fn,"store {\nrule (['1']);}");
-	    require(fn);
+	    fs.writeFileSync(fn,"store {\nrule (['1'],+['2',for(0;[];a=>a+1)]);}");
+	    require.extensions['.chrjs'](module,fn);
 	    assert(ok);
 	} finally {
 	    compiler.debug = false;
@@ -736,7 +737,7 @@ describe("code stanzas",function() {
     it("should not build stanzas unless asked",function() {
 	var fn = path.join(tdir,'b.chrjs');
 	fs.writeFileSync(fn,"store {\nrule (['1']);}");
-	require(fn);
+	require.extensions['.chrjs'](module,fn);
 	assert.throws(function() {
 	    compiler.getStanzas(filename)
 	});

@@ -137,9 +137,11 @@
        
        compiler.getStanzas(sourcePath).forEach(function(stanza) {
 	 stanza.draws.forEach(function(draw) {
-	   if (codeDraws[draw.node.id.name]===undefined)
-	   codeDraws[draw.node.id.name] = [];
-	   codeDraws[draw.node.id.name].push([[x,y,Date.now()],draw]);
+	   if (draw.node && draw.node.id!==undefined) { // !!! SNO !!!
+  	     if (codeDraws[draw.node.id.name]===undefined)
+ 	       codeDraws[draw.node.id.name] = [];
+               codeDraws[draw.node.id.name].push([[x,y,Date.now()],draw]);
+	   }			       
 	 });
 	 y += 3*lineWidth+stanza.draws[stanza.draws.length-1].y*(lineWidth+1);
        });
@@ -260,6 +262,9 @@
 	   faColours.set(rgba,8*draw.i);
 	   faColours.set(rgba,8*draw.i+4);
 	 };
+	 var setIdColours = function(r,g,b) {
+	   setFAColours(r,r+0x3F,g,g+0x3F,b,b+0x3F); 
+	 };
 	 switch (draw.ch) {
 	   case 'R':
 	     setFAColours(0x80,0x80,0xA0,0xC0,0xC0,0xF0);
@@ -275,6 +280,33 @@
 	     break;
 	   case 'M':
 	     setFAColours(0x80,0xF0,0x80,0xF0,0x80,0x00);
+	     break;
+	   case 'I':            // excess Identifier
+	     setIdColours(0x80,0x80,0x80);
+	     break;
+	   case 'F':            // field name
+	     setIdColours(0x40,0x40,0x40);
+	     break;
+	   case '0':
+	     setIdColours(0xA0,0x80,0x80);
+	     break;
+	   case '1':
+	     setIdColours(0x80,0xA0,0x80);
+	     break;
+	   case '2':
+	     setIdColours(0x80,0x80,0xA0);
+	     break;
+	   case '3':
+	     setIdColours(0xA0,0xA0,0x80);
+	     break;
+	   case '4':
+	     setIdColours(0xA0,0x80,0xA0);
+	     break;
+	   case '5':
+	     setIdColours(0x80,0xA0,0xA0);
+	     break;
+	   case '6':
+	     setIdColours(0xA0,0xA0,0xA0);
 	     break;
 	   default:
 	     setFAColours(0x80,0xC0,0x80,0xC0,0x80,0xC0);

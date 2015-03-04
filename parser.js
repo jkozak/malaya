@@ -3983,14 +3983,14 @@ var util = require('./util.js');
 	    ans = parseChrjsFullTermItemExpression('-');
 	} else if (match('[') || match('{')) {
 	    ans = parseChrjsFullTermItemExpression('M');
-	} else if (lookahead.type===Token.Identifier || match('!')) {
+	} else if (match('(')) {
+	    ans = delegate.createItemExpression('?',parseAssignmentExpression()); // guard
+	} else {
 	    var expr = parseAssignmentExpression();
 	    if (expr.type=='AssignmentExpression')
 		ans = delegate.createItemExpression('=',expr);                    // bind
 	    else
 		ans = delegate.createItemExpression('?',expr);                    // guard
-	} else if (match('(')) {
-	    ans = delegate.createItemExpression('?',parseAssignmentExpression()); // guard
 	}
 	if (ans===null)
 	    throwUnexpected(lex());
