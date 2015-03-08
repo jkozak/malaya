@@ -67,6 +67,10 @@ exports.createServer = function(opts) {
         get size() {
             return bl.size;
         },
+
+	getFact: function(t) {
+	    return bl.getFact(t);
+	},
         
         start: function(done) {
             if (opts.init) {
