@@ -126,6 +126,21 @@ exports.build = function(opts) {
     };
 
     server.fe3 = fe3srv;
+
+    if (opts.debug) {
+	server.on('queue-rule',function(ruleName,bindings) {
+	    console.log("fire rule: %s",ruleName);
+	    for (var i in bindings)
+		if (bindings[i]!==null)
+		    console.log("   %d %s %j",i,bindings[i],server.getFact(bindings[i]));
+	});
+	server.on('add',function(t,fact) {
+	    console.log("add fact: %s %j",t,fact);
+	});
+	server.on('command',function(cmd) {
+	    console.log("command: %j",cmd);
+	});
+    }
     
     return server;
 };

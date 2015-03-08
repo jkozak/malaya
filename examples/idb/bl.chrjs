@@ -55,9 +55,12 @@ var IDB = store {
 
     // market control
     rule (['MarketManager',{MarketID}],  -['MarketManager',{MarketID}]);
-    rule (-['market-status',{ID,status,...},...],
+    rule (-['market-status',{ID:ID_s,status:status_s,...},...],
+	  ID = parseInt(ID_s),
+	  status = parseInt(status_s),
 	  -['MarketManager',{MarketID:ID,Status,...rs}],
-	  +['MarketManager',{MarketID:ID,Status:status,...rs}]);
+	  +['MarketManager',{MarketID:ID,Status:status,...rs}],
+	  +['_output','all',{'market-status':{ID:ID,status:status}}] );
 
     // restart
     rule (['restart',...],
@@ -66,6 +69,7 @@ var IDB = store {
     rule (['restart',...], -['_output',...]);
     rule (['restart',...], -['_take-outputs',...]);
     rule (['restart',...], -['tick',...]);
+    rule (['restart',...], -['market-status',...]);
     rule (-['restart',...]);
     
     // logon processing

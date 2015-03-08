@@ -304,6 +304,10 @@ function wrap(dir,bl,options) {
 	get size() {
 	    return bl.size;
 	},
+	getFact:function(t) {
+	    // +++ deepClone for safety +++
+	    return bl.get(t);
+	},
 	query:function(q) {
 	    try {
 		bl_running = true;

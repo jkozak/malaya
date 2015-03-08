@@ -76,7 +76,7 @@ function FE3Connection(sock,server) {
     };
     sock.on('data',function(data) {
         recved = Buffer.concat([recved,data]);
-        if (recved.length>=FE3_HDR_LENGTH) {
+        while (recved.length>=FE3_HDR_LENGTH) {
             var   type = recved.readInt32LE( 0);
             var cbData = recved.readInt32LE(12);
             if (recved.length>=FE3_HDR_LENGTH+cbData) {
