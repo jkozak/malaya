@@ -15,17 +15,6 @@ function mkHeartbeat(d) {
 	return {heartbeat:{timestamp:d.toTimeString().substring(0,9)+d.getDate()+'/'+(d.getMonth()+1)+'/'+(d.getYear()+1900)}};
 }
 
-function addToPropertyList(obj,prop,value) {
-    if (obj[prop]===undefined)
-	obj[prop] = [];
-    obj[prop].push(value);
-    return obj;
-}
-function addToIndexList(obj,prop,value) {
-    obj[prop] = value;
-    return obj;
-}
-
 // need to handle these messages:
 //  X AuctionTemplateBlock
 //    AuctionTemplate
