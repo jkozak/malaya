@@ -1,0 +1,21 @@
+Malaya IDB example
+==================
+
+The IDB example runs like this (assume `make tests` has run clean):
+
+ $ cd ~/malaya/examples/idb
+ $ ./run --fsync none --init init_db.py
+
+Where `init_db.py` is a `dbsync` dump. This builds the prevalent store
+then starts the system.
+
+To run thereafter:
+
+ $ ~/malaya/examples/idb/run
+
+Ctrl-C to stop and save.
+
+You should then be able to log FE3 clients into it.  The demo just
+does log{on,off} so far, no price/trade/auction yet.
+
+(This will not be part of the free software release)

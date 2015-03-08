@@ -1,56 +1,47 @@
-John's new trading system
-=========================
+Malaya
+======
 
-Visualisation
--------------
+How to get started
+------------------
 
-CHR should visualise quite well:
+Use linux.  The core stuff should work on windows, but the Makefile at
+least is linux specific. 
 
- store         rule
-  ...       ... ... ... 
-  ...       ... ...
-  ...       ... ... ... ....
-           (one ... per term)
+Install `nodejs`.  I've run the tests against 0.10.29,0.10.36,0.12.0
+io.js 1.4.3 and 1.5.0.  Probably won't work with earlier versions.
+Most distributions have a nodejs package: _but_ you need `npm` as
+well.  You may shortly be placing your immortal soul in jeopardy by
+installing `npm` from outside the distribution, so you may as well
+install `nvm` which manages multiple parallel versions of node+tools.
 
-Highlight active term in store and rule in red
-and matching terms in store in other colours.
-Rest grey?
-non-quiescent facts glow.
-Glow new arrivals and fade to merely active.
-Animate deletions.
-reflow at end of input/transaction.
+Given you've installed it at ~/malaya and have GNU make and a C
+compiler installed you should be able to do this:
 
-Show each term as a box containing first element,
+ $ cd ~/malaya
+ $ make tests
 
-Control panel showing full versions of current rule
-and active fact.
-
-Use emoji for a quick visual "type".  Or just a
-plain old icon library.
-
-It's a Hollywood interface!
-
-Forced-directed layout:
- * Facts repel each other.
- * Facts are attracted:
-  * to one another when joined
-  * to the centre when:
-   * mentioned in a rule (small)
-   * mentioned in a fired rule (big)
-
-Set icons by a rule; also context menu items as
-<name>,<binding-match>,<fact>
-
-Perhaps I should use `immutable-js` for the fact store:
- https://github.com/facebook/immutable-js
+all 150+ tests should pass.
 
 
-Performance
------------
+What else can I do with it?
+---------------------------
 
-Using an SSD (the one on `renn`) get just below 1k updates/sec
-journalised (as opposed to about 20 on a rotary drive!).  Using the
-'kludge' setting get 14k.  Should get a factor of four speedup using
-the technique in ticket b2594b10848c4aec, so expect 4k updates/sec on
-cheap stock hardware.
+See ~/malaya/examples/idb/README
+
+Can compile `chrjs` files with ~/malaya/bin/chrjsc`: resulting
+`.chrjs.js` files can be `require`d and used elsewhere, nothing else
+from malaya should be needed (does need `underscore`).
+
+
+Hollywood interface
+-------------------
+
+Requires `node-webkit`.  Instructions to come, but, if you have it
+installed and have initialised the IDB example prevalent store above:
+
+ $ cd ~/malaya/examples/gui
+ $ nw .
+
+will bring up the gui.  It's pretty picky about `node-webkit`
+versions at the moment: I'm using v0.10.4
 
