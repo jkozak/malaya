@@ -68,9 +68,9 @@ exports.createServer = function(opts) {
             return bl.size;
         },
 
-	getFact: function(t) {
-	    return bl.getFact(t);
-	},
+        getFact: function(t) {
+            return bl.getFact(t);
+        },
         
         start: function(done) {
             if (opts.init) {

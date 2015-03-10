@@ -228,6 +228,7 @@ var chrGlobalVars = {		// only javascript globals allowed in CHRjs
     Date:       {ext:true,mutable:false,type:'function'},
     require:    {ext:true,mutable:false,type:'function'},
     module:     {ext:true,mutable:false,type:'function'},
+    console:    {ext:true,mutable:false,type:'function'},
     __dirname:  {ext:true,mutable:false,type:'string'}
 };
 if (util.env==='test')
