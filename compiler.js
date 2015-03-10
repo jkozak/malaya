@@ -186,7 +186,7 @@ function TEMPLATE_query() {	// to be embedded in store above, whence `adds`, `de
 
 function TEMPLATE_sort() {
     var SORTED = [];
-    for (var T in facts) {
+    for (var T in facts) {	// +++ use fact index +++
 	fact = facts[T];
 	GENMATCH;
     }
@@ -838,11 +838,20 @@ function generateJS(js,what) {
 			     null);
     };
 
+    var genForFactsIndexVariable = function(item,bv) {
+	return (item.rank) ? b.identifier(bv.name+'S') : b.identifier(bv.name+'x');
+    };
+    var itemExprIsIndexed = function(item) {
+	return (item.expr.type==='ArrayExpression'            &&
+		item.expr.elements.length>0                   &&
+		item.expr.elements[0].type==='Literal'        &&
+		(typeof item.expr.elements[0].value)==='string');
+    };
     var genForFacts = function(item,bv,body) { // >> [Statement]
+	var bvx = genForFactsIndexVariable(item,bv);
 	if (item.rank) {
 	    var        bSort = deepClone(templates['sort'].body);
 	    var bvCandidates = b.identifier(bv.name+'Candidates');
-	    var          bv1 = b.identifier(bv.name+'S');
 	    parser.visit(bSort,{
 		visitIdentifier: function(path) {
 		    switch (path.node.name) {
@@ -853,7 +862,7 @@ function generateJS(js,what) {
 			path.replace(bv);
 			break;
 		    case 'S':
-			path.replace(bv1);
+			path.replace(bvx);
 			break;
 		    case 'RANK':
 			path.replace(item.rank);
@@ -881,34 +890,53 @@ function generateJS(js,what) {
 		}
 	    });
 	    return bSort;
-	}
-	if (item.expr.type==='ArrayExpression'            &&
-	    item.expr.elements.length>0                   &&
-	    item.expr.elements[0].type==='Literal'        &&
-	    (typeof item.expr.elements[0].value)==='string')
-	{
-	    var bvx = b.identifier(bv.name+'x');
-	    var  bx = b.binaryExpression('+',
-					 b.literal(''),
-					 b.memberExpression(b.memberExpression(b.identifier('index'),
-									       item.expr.elements[0],
-									       true),
-							    bvx,
-							    true) );
-	    return [b.forInStatement(b.variableDeclaration('var',[b.variableDeclarator(bvx,null)]),
-				     b.memberExpression(b.identifier('index'),
-							item.expr.elements[0],
-							true),
-				     b.blockStatement([
-					 b.variableDeclaration('var',[b.variableDeclarator(bv,bx)]),
-					 body]),
-				    false)];
+	} else if (itemExprIsIndexed(item)) {
+	    var   bx = b.binaryExpression('+',
+					  b.literal(''),
+					  b.memberExpression(b.memberExpression(b.identifier('index'),
+										item.expr.elements[0],
+										true),
+							     bvx,
+							     true) );
+	    var bidv = b.memberExpression(b.identifier('index'),item.expr.elements[0],true);
+	    return [b.forStatement(b.variableDeclaration('var',[b.variableDeclarator(bvx,b.literal(0))]),
+				   b.logicalExpression(
+				       '&&',
+				       bidv,
+				       b.binaryExpression('<',
+							  bvx,
+							  b.memberExpression(bidv,
+									     b.identifier('length'),
+									     false) ) ),
+				   b.updateExpression('++',bvx,true),
+				   b.blockStatement([
+				       b.variableDeclaration('var',[b.variableDeclarator(bv,bx)]),
+				       body]) )];
 	} else {
 	    return [b.forInStatement(b.variableDeclaration('var',[b.variableDeclarator(bv,null)]),
 				     b.identifier('facts'),
 				     body,
 				     false)];
 	}
+    };
+    var genBack1 = function(item,bv) { // gen code to go back one step in `genForFacts` iteration
+	assert.equal(bv.type,'Identifier');
+	return b.expressionStatement(b.updateExpression('--',genForFactsIndexVariable(item,bv),true));
+    };
+    var genFFwd = function(item,bv) { // gen code to go to end of `genForFacts` iteration
+	assert("M-".indexOf(item.op)!==-1);
+	assert.equal(bv.type,'Identifier');
+	var bvx = genForFactsIndexVariable(item,bv);
+	var end = itemExprIsIndexed(item) ?
+	    b.memberExpression(b.memberExpression(b.identifier('index'),
+						  item.expr.elements[0],
+						  true),
+			       b.identifier('length'),
+			       false) :
+	    b.memberExpression(b.identifier('facts'),
+			       b.identifier('length'),
+			       false);
+	return b.expressionStatement(b.assignmentExpression('=',bvx,end));
     };
 
     var visitSnapExpressionAndCompile = function(path) {
@@ -978,6 +1006,7 @@ function generateJS(js,what) {
 	var bIdFact = b.identifier('fact');
 	var addenda = [];
 	var delenda = [];
+	var      bv = function(item_id) {return b.identifier('t'+item_id);};
 	var genItem = function(item_id,fixed_item,next) { // >> [Statement,...]
 	    var    js;
 	    var next1 = (item_id<chr.items.length-1) ?
@@ -1020,14 +1049,13 @@ function generateJS(js,what) {
 				    null),
 		      genCheckInPlay(js1,b.identifier('t_fact'))];
 	    } else if (['M','-'].indexOf(chr.items[item_id].op)!==-1) {
-		var v = 't'+item_id;
 		js1.unshift(b.expressionStatement(b.assignmentExpression(
 		    '=',
 		    bIdFact,
 		    b.memberExpression(b.identifier('facts'),
-				       b.identifier(v),
+				       bv(item_id),
 				       true) )));
-		js = genForFacts(chr.items[item_id],b.identifier(v),genCheckInPlay(js1,b.identifier(v)));
+		js = genForFacts(chr.items[item_id],bv(item_id),genCheckInPlay(js1,bv(item_id)));
 	    } else
 		js = js1;
 	    return js;
@@ -1035,6 +1063,7 @@ function generateJS(js,what) {
 
 	genPayload = genPayload || function() { // >> [Statement]
 	    var payload = [];
+	    var bailOut = false;
 	    if (exports.debug) {
 		var vars = [];
 		for (var j=0;j<chr.items.length;j++) {
@@ -1052,14 +1081,30 @@ function generateJS(js,what) {
 				      b.arrayExpression(vars) ] ) ));
 	    }
 	    delenda.forEach(function(j) {
-		var bv = b.identifier(i===j ? 't_fact' : 't'+j);
+		var bvj = i===j ? b.identifier('t_fact') : bv(j);
 		payload.push(b.expressionStatement(
-		    b.callExpression(b.identifier('_del'),[bv]) ));
+		    b.callExpression(b.identifier('_del'),[bvj]) ));
+		if (i===j)
+		    bailOut = true;
+		else {
+		    var back1 = genBack1(chr.items[j],bvj);
+		    if (back1)
+			payload.push(back1);
+		}
 	    });
 	    addenda.forEach(function(j) {
 		payload.push(b.expressionStatement(
 		    b.callExpression(b.identifier('_add'),[genAdd(chr.items[j].expr)]) ) );
 	    });
+	    // if we have deleted t_fact, return immediately as we can't match it again
+	    if (bailOut)
+		payload.push(b.returnStatement(null));
+	    else if (delenda.length>0) {
+		// gen code to fast-forward all iterations nested below this +++
+		for (var j=_.min(delenda)+1;j<chr.items.length;j++)
+		    if (i!==j && "M-".indexOf(chr.items[j].op)!==-1)
+			payload.push(genFFwd(chr.items[j],bv(j)));
+	    }
 	    return payload;
 	};
 

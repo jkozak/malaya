@@ -1,0 +1,42 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Tue, 10 Mar 2015 17:57:26 +0000
+Subject: can attempt to delete matched terms more than once
+State: resolved
+Message-Id: <c7a6a7bda0c0b517-0-artemis@renn>
+resolution: fixed
+
+Fails with:
+ TypeError: Cannot read property '0' of undefined
+
+Partly fixed by bail-out code, but more complicated matches can still
+cause problems.
+
+For code like:
+
+   var st = store {
+       ['a'];
+       ['b'];
+       ['b'];
+       rule (['c'],-['a'],['b'])
+   };
+
+we'll generate a rule variant like:
+
+   t_fact matches ['c']:
+     for t_a in facts matching ['a']:
+       for t_b in facts matching ['b']:
+         delete facts[t_a]
+
+This will cause facts[t_a] to be deleted twice when ['c'] is fed in.
+	 
+After the delete, need to fast forward the iterations nested in the t_a one
+to their ends.  This will let the t_a iteration resume at the next candidate.
+
+Perhaps replace the `for (tN in index['blah'])` with explicit index
+management in good-old-C style (taking care to maintain the for-loop
+indices into the fact indices correctly given the deletions).  Can the
+just set e.g. `tN` to `index['blah'].length` to skip further
+processing there.
+
+N.B. ^ sorting operator must be handled specially.
+
