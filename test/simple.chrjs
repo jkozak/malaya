@@ -198,6 +198,31 @@ describe("matching",function() {
 	st.add(['a',{p:29}]);
 	assert.equal(st._private.size,1); // not matched, retained
     });
+    it("should match correctly given of t_fact deletion during iteration",function() {
+	var st = store {
+	    ['b'];
+	    ['b'];
+	    ['b'];
+	    ['b'];
+	    rule (-['a',n],-['b'],+['a',n+1]);
+	};
+	assert.equal(st.size,4);
+	st.add(['a',0]);
+	assert.equal(st.size,1);
+	assert.deepEqual(_.values(st._private.facts)[0],['a',4]);
+    });
+    it("XXX should match correctly given deletion during iteration",function() {
+	var st = store {
+	    ['b'];
+	    ['b'];
+	    ['b'];
+	    ['b'];
+	    rule (['c'],-['b']);
+	};
+	assert.equal(st.size,4);
+	st.add(['c']);
+	assert.deepEqual(_.values(st._private.facts),[['c']]);
+    });
 });
 
 describe("in-store `for` expression",function() {
@@ -304,4 +329,25 @@ describe("regression tests",function() {
 	st.add(['b',{}]);
 	assert.equal(st._private.size,0);
     });
+    it("should not try to delete matched terms multiple times [c7a6a7bda0c0b517]",function() {
+	var st = store {
+	    ['b'];
+	    ['b'];
+	    rule (-['a'],['b'])
+	};
+	st.add(['a']);
+	assert.equal(st.size,2);
+    });
+    it("should really not try to delete matched terms multiple times [c7a6a7bda0c0b517]",function() {
+	var st = store {
+	    ['a'];
+	    ['b'];
+	    ['b'];
+	    rule (['c'],-['a'],['b'])
+	};
+	assert.equal(st.size,3);
+	st.add(['c']);
+	assert.equal(st.size,3);
+    });
 });
+
