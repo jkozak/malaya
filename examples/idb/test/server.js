@@ -270,7 +270,8 @@ describe("server",function() {
 	}
     };
     it("inits nicely and performs a simple logon and logoff",function() {
-	test({init:true,prevalenceDir:prevalenceDir});
+	this.timeout(5000);
+	test({init:true,prevalenceDir:prevalenceDir,fsync:'none'});
     });
     it("loads nicely and performs a simple logon and logoff",function() {
 	test({init:false,prevalenceDir:prevalenceDir});
@@ -305,10 +306,11 @@ function logOnOffFE3ConnectionTest(srvr) {
     buf = '';
     sock.emit('data',mkFE3("<start/>"));
     jsxs = rcveFE3(buf);
-    assert.equal(jsxs.length,3);
+    assert.equal(jsxs.length,4);
     assert.deepEqual(Object.keys(jsxs[0]),['static-data']);
     assert.deepEqual(Object.keys(jsxs[1]),['contexts']);
-    assert.deepEqual(Object.keys(jsxs[2]),['initialised']);
+    assert.deepEqual(Object.keys(jsxs[2]),['BigFigBlock']);
+    assert.deepEqual(Object.keys(jsxs[3]),['initialised']);
 }
 
 function logOnOffMultipleFE3ConnectionTest(srvr) {
@@ -334,21 +336,23 @@ function logOnOffMultipleFE3ConnectionTest(srvr) {
 
     sock1.emit('data',mkFE3("<start/>"));
     jsxs1 = rcveFE3(sock1.buf);
-    assert.equal(jsxs1.length,3);
+    assert.equal(jsxs1.length,4);
     assert(JSON.stringify(jsxs1).indexOf('Kozak')!==-1); // lazy!
     assert(JSON.stringify(jsxs1).indexOf('Murazik')===-1);
     assert.deepEqual(Object.keys(jsxs1[0]),['static-data']);
     assert.deepEqual(Object.keys(jsxs1[1]),['contexts']);
-    assert.deepEqual(Object.keys(jsxs1[2]),['initialised']);
+    assert.deepEqual(Object.keys(jsxs1[2]),['BigFigBlock']);
+    assert.deepEqual(Object.keys(jsxs1[3]),['initialised']);
 
     sock2.emit('data',mkFE3("<start/>"));
     jsxs2 = rcveFE3(sock2.buf);
-    assert.equal(jsxs2.length,3);
+    assert.equal(jsxs2.length,4);
     assert.deepEqual(Object.keys(jsxs2[0]),['static-data']);
     assert(JSON.stringify(jsxs2).indexOf('Kozak')===-1);
     assert(JSON.stringify(jsxs2).indexOf('Murazik')!==-1);
     assert.deepEqual(Object.keys(jsxs2[1]),['contexts']);
-    assert.deepEqual(Object.keys(jsxs2[2]),['initialised']);
+    assert.deepEqual(Object.keys(jsxs1[2]),['BigFigBlock']);
+    assert.deepEqual(Object.keys(jsxs2[3]),['initialised']);
 }
 
 describe("FE3Connection",function() {

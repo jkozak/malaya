@@ -33,6 +33,18 @@ describe("build",function() {
     it("should handle raw XML hack",function() {
 	assert.equal(x2j.build({a:{_children:[{_XML:'<spqr/>'}]}}),"<a><spqr/></a>");
     });
+    it("should use single <> encoding",function() {
+	assert.equal(x2j.build({a:{}}),"<a/>");
+    });
+    it("should use canonical encoding for boolean true",function() {
+	assert.equal(x2j.build({a:{b:true}}),"<a b=\"1\"/>");
+    });
+    it("should use canonical encoding for boolean false",function() {
+	assert.equal(x2j.build({a:{b:false}}),"<a b=\"0\"/>");
+    });
+    it("should use canonical encoding for null",function() {
+	assert.equal(x2j.build({a:{b:null}}),"<a b=\"\"/>");
+    });
 });
 
 describe("roundTrip",function() {
