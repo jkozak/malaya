@@ -8,9 +8,8 @@ A `transform` is like a `store` but:
  * no `query` statements
  * runs to exhaustion, stops
 
-But needs to be cognisant of prevalence, so
-this should be mediate through the malaya server
-which can wrap the transform also.
+But needs to be aware of prevalence, so this should be mediated
+through the malaya server which can wrap the transform also.
 
 A transform converts an the facts in a store between
 one set of rules and another.  If we have stores
@@ -37,4 +36,15 @@ When NODE_ENV===production, check that current code hash is same as
 previous code hash - fail if not, overrideable by a cmdline option or
 gui button.
 
+Or, avoiding extra syntax:
+
+A transform is just anotehr store.
+
+Add a method to `store`:
+ * `forEach` which is just `facts.forEach`
+
+The transform operation is then:
+ stOld.forEach(tfm.add); tfm.forEach(stNew.add);
+
+Could be more stream-y, perhaps?
 
