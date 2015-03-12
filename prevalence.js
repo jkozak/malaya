@@ -435,8 +435,8 @@ exports.installHandlers = function(app,options) {
 	app.use(options.prefix+'/hash',express.static(dir+'/hashes'));
     }
     app.get(options.prefix+'/journal',function(req,res) {
-	var   live = req.param('live')==='1';
-	var resume = req.param('resume');
+	var   live = req.params.live==='1';
+	var resume = req.params.resume;
 	if (resume) {
 	    // +++ format is <size-in-bytes>,<hash> +++
 	    throw new Error("WriteMe");

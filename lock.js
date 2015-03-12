@@ -10,13 +10,14 @@ temp.track();
 
 exports.lockSync = function(filename,opts) {
     var tmp = temp.openSync({dir:path.dirname(filename)});
+    var pid;
     fs.writeSync(tmp.fd,process.pid,null,null,null);
     for (var i=0;i<2;i++) 
         try {
             fs.linkSync(tmp.path,filename);     // if locked, fails here
             return;
         } catch (e) {
-            var pid = parseInt(fs.readFileSync(filename));
+            pid = parseInt(fs.readFileSync(filename));
             try {
                 process.kill(pid,0);
             } catch (e1) {
