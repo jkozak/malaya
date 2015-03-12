@@ -1,0 +1,9 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Thu, 12 Mar 2015 09:09:55 +0000
+Subject: Bug: generic matches not processed
+State: resolved
+Message-Id: <e51ce8f66eebf51e-0-artemis@renn>
+resolution: fixed
+
+Interleave individual generic index entries in appropriate place, only do
+final generic processing for facts that don't fit (`default` branch).

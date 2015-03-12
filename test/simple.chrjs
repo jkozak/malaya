@@ -251,6 +251,37 @@ describe("in-store `for` expression",function() {
     });
 });
 
+describe("evaluation order",function() {
+    it("should fire rules in occurence order",function() {
+    	var st = store {
+	    rule (['a'],+['h',1]);
+	    rule (['a'],+['h',2]);
+	    rule (['a'],+['h',3]);
+	    rule (-['a']);
+    	};
+    	st.add(['a']);
+    	assert.deepEqual(_.values(st._private.orderedFacts),[['h',1],['h',2],['h',3]]);
+    });
+    it("should fire generic rules in occurence order",function() {
+    	var st = store {
+	    rule (['a'],+['h',1]);
+	    rule ([tag],+['h',tag]);
+	    rule (['a'],+['h',3]);
+	    rule (-['a']);
+    	};
+    	st.add(['a']);
+    	assert.deepEqual(_.values(st._private.orderedFacts),[['h',1],['h','a'],['h',3]]);
+    });
+    it("should fire generic rules for unseen tags",function() {
+    	var st = store {
+	    rule ([tag],+['i',tag]);
+	    rule ([tag],+['j',tag]);
+    	};
+    	st.add(['b']);
+    	assert.deepEqual(_.values(st._private.orderedFacts),[['b'],['i','b'],['j','b']]);
+    });
+});
+
 describe("regression tests",function() {
     it("should have fixed [955dab]",function() {
 	var IDB = store {
