@@ -52,7 +52,6 @@ function TEMPLATE_store() {
 		    index[fact[0]] = [];
 		index[fact[0]].push(ti);
 		INSERT_INDEXED_MATCHES;
-		INSERT_GENERIC_MATCHES;
 		return t_fact;
 	    } else
 		throw new Error("unloved fact format: "+JSON.stringify(fact));
@@ -134,7 +133,11 @@ function TEMPLATE_store() {
 	if (process.env.NODE_ENV==='test')
 	    obj._private = {
 		get facts()   {return facts;},
-		get size()    {return Object.keys(facts).length;}
+		get size()    {return Object.keys(facts).length;},
+		get orderedFacts() {
+		    var keys = _.keys(facts).map(function(t){return parseInt(t);});
+		    return keys.sort().map(function(t){return facts[t];});
+		}
 	    };
 	// +++ obj = Object.freeze(obj) if it's not too slow. +++
 
@@ -814,7 +817,7 @@ function genMatch(term,genRest,bIdFact) { // genRest() >> [stmt,...]; returns Bl
 }
 
 function generateJS(js,what) {
-    what = what || 'Program'
+    what = what || 'Program';
     
     var genCheckInPlay = function(jss,vt) { // >> Statement
 	parser.namedTypes.Statement.assert(jss[0]); // CBB
@@ -1240,8 +1243,12 @@ function generateJS(js,what) {
 		    dispatchBranches[item.elements[0].value] = [[r,i]];
 		else
 		    dispatchBranches[item.elements[0].value].push([r,i]);
-	    } else
+	    } else {
+		_.keys(dispatchBranches).forEach(function(tag) {
+		    dispatchBranches[tag].push([r,i]);
+		});
 		dispatchGeneric.push([r,i]);
+	    }
 	}
 
 	for (var i=0,r=0;i<storeCHR.body.length;i++) {
@@ -1340,10 +1347,10 @@ function generateJS(js,what) {
 				   true),
 		[b.identifier('t_fact')] ));
 	};
-	
+
 	var    _addDef = Ref.flatAt(storeJS.callee.body.body,
-				 function(x){return x.type==='VariableDeclaration' &&
-					     x.declarations[0].id.name==='_add';}).get();
+				    function(x){return x.type==='VariableDeclaration' &&
+						x.declarations[0].id.name==='_add';}).get();
 	if (_.keys(dispatchBranches).length>128)
 	    console.log("Warning: more than 128 cases in switch statement");
 	var _addSwitch = _addDef.declarations[0].init.body.body[0].consequent.body[7];
@@ -1355,11 +1362,10 @@ function generateJS(js,what) {
 	    var brs = dispatchBranches[k].map(function(br){return genInvokeRuleItem(br);});
 	    _addSwitch.cases.push(b.switchCase(b.literal(k),brs.concat(b.breakStatement())));
 	}
-	var ins_gen = _addDef.declarations[0].init.body.body[0].consequent.body;
-	assert.equal(ins_gen.length,10);
-	assert.equal(ins_gen[8].type,'ExpressionStatement');
-	assert.equal(ins_gen.splice(8,1)[0].expression.name,'INSERT_GENERIC_MATCHES');
-	dispatchGeneric.forEach(function(ri){ins_gen.push(genInvokeRuleItem(ri));});
+	{
+	    var brs = dispatchGeneric.map(function(br){return genInvokeRuleItem(br);})
+	    _addSwitch.cases.push(b.switchCase(null,brs.concat(b.breakStatement())));
+	}
 	    
 	parser.visit(storeJS,{	// remove any `var;` that we have generated
 	    visitVariableDeclaration: function(path) {
