@@ -1,5 +1,3 @@
-var    fe3 = require('../fe3.js');
-
 var   util = require('../../../util.js');
 var assert = require('assert');
 var      _ = require('underscore');
@@ -39,21 +37,59 @@ function mkIDB(fixture) {	// bare server without prevalence layer
 	assert(outs.length===0,util.format("expected no output, not: %j",outs));
     };
     return bl;
-};
+}
 
-function mkUsersFixtureWithUserLoggedIn(appId,channel) {
-    var users = util.deepClone(USERS);
-    users.forEach(function(user) {
-	if (user[1].ApplicationID===appId) {
-	    user[1].LoggedOn = 1;
-	    user[1].port     = util.format('test://%s/',channel);
-	} });
-    return users;
-};
+function mkUserLoggedIn(user,channel) {
+    user = util.deepClone(user);
+    user[1].LoggedOn = 1;
+    user[1].port     = util.format('test://%s/',channel);
+    return user;
+}
 
-var USERS = mkFixture([
-    [":Permissions",{"DirtyFlag":0,"TeamID":100,"UpdateDate":"date:Fri Jul 25 17:49:33 2014","ApplicationID":51,"Deleted":0,"MatchingVolEntry":":B","UpdateUserID":51,"SessionID":0,"Enabled":1,"AppRole":1283,"CurrFailCount":0,"LogOnTime":"date:Fri Jul 25 17:49:29 2014","CountryID":44,"CompanyID":100,"CSPID":1,"LoggedOn":0,"ApplicationName":":John Kozak","Password":":JK"}],
-    [":Permissions",{"DirtyFlag":0,"TeamID":1,"UpdateDate":"date:Thu Dec  2 16:25:14 2004","ApplicationID":1,"Deleted":0,"MatchingVolEntry":":B","UpdateUserID":1,"SessionID":76601,"Enabled":1,"AppRole":2,"CurrFailCount":0,"LoggedOn":0,"LogOnTime":"date:Wed Dec  1 14:54:11 2004","CountryID":44,"CompanyID":1,"CSPID":1,"ApplicationName":":Floy Murazik","Password":":241tykxKcB_n6fR","anon":true}],
+var USER_JK = mkFixture([":Permissions",{
+    "DirtyFlag":0,
+    "TeamID":100,
+    "UpdateDate":"date:Fri Jul 25 17:49:33 2014",
+    "ApplicationID":51,
+    "Deleted":0,
+    "MatchingVolEntry":":B",
+    "UpdateUserID":51,
+    "SessionID":0,
+    "Enabled":1,
+    "AppRole":1283,
+    "CurrFailCount":0,
+    "LogOnTime":"date:Fri Jul 25 17:49:29 2014",
+    "CountryID":44,
+    "CompanyID":100,
+    "CSPID":1,
+    "LoggedOn":0,
+    "ApplicationName":":John Kozak",
+    "Password":":JK"
+}]);
+
+var USER_FM = mkFixture([":Permissions",{
+    "DirtyFlag":0,
+    "TeamID":1,
+    "UpdateDate":"date:Thu Dec  2 16:25:14 2004",
+    "ApplicationID":1,
+    "Deleted":0,
+    "MatchingVolEntry":":B",
+    "UpdateUserID":1,
+    "SessionID":76601,
+    "Enabled":1,
+    "AppRole":2,
+    "CurrFailCount":0,
+    "LoggedOn":0,
+    "LogOnTime":"date:Wed Dec  1 14:54:11 2004",
+    "CountryID":44,
+    "CompanyID":1,
+    "CSPID":1,
+    "ApplicationName":":Floy Murazik",
+    "Password":":241tykxKcB_n6fR",
+    "anon":true
+}]);
+
+var TCS = mkFixture([
     [":Cookies", 
      {
          "CookieID": 2, 
@@ -101,7 +137,9 @@ var USERS = mkFixture([
     ] 
 ]);
 
-var USERS_JK_LOGGED_IN = mkUsersFixtureWithUserLoggedIn(51,'JK');
+var              USERS = [USER_JK,USER_FM].concat(TCS);
+var USERS_JK_LOGGED_IN = [mkUserLoggedIn(USER_JK,'JK'),USER_FM].concat(TCS);
+var USERS_FM_LOGGED_IN = [mkUserLoggedIn(USER_FM,'FM'),USER_JK].concat(TCS);
 
 var INSTRUMENTS = mkFixture([
     [":InstrumentClass", 
@@ -206,6 +244,46 @@ var INSTRUMENTS = mkFixture([
     ]
 ]);
 
+var MARKET = mkFixture([
+    [":MarketManager",{
+	"ClosingTime":"date:Wed Sep 29 1999 18:30:00 GMT+0100 (BST)",
+	"OpenAutomatically":0,
+	"RegionID":1,
+	"MinMarketVol":10000,
+	"UpdateDate":"date:Wed Sep 29 1999 07:00:00 GMT+0100 (BST)",
+	"OpenPriceSeqNo":1,
+	"Status":1,
+	"MaxMarketVol":100000000,
+	"SpecialsOrderIndex":0,
+	"UpdateUserID":-1,
+	"ForwardOrderIndex":0,
+	"OpeningTime":"date:Wed Sep 29 1999 07:00:00 GMT+0100 (BST)",
+	"RollOver2Automatically":0,
+	"PriceDisplayOrderIndex":0,
+	"RollOver2Time":"date:Wed Sep 29 1999 00:00:00 GMT+0100 (BST)",
+	"InstDisplayOrderIndex":0,
+	"MarketName":":Gilt",
+	"MinIncrementBetweenPrices":1000,
+	"RollOver1Automatically":0,
+	"CountryID":44,
+	"OpenTradeSeqNo":1,
+	"MarketID":2,
+	"OperationalStatus":":L",
+	"RollOver1Time":"date:Wed Sep 29 1999 00:00:00 GMT+0100 (BST)",
+	"MinMarketVal":1000,
+	"auctionId":10000
+     }
+    ],
+    [":SequenceNumbers",{
+	"PriceID":4,
+	"PriceSequenceNo":5,
+	"MarketID":2,
+	"TradeID":7,
+	"TradeSequenceNo":7
+     }
+    ]
+]);
+
 function assertJustOne(arr,fn) {
     assert.equal(arr.filter(fn).length,1);
 }
@@ -291,19 +369,36 @@ describe("json-for-xml cookie interactions",function() {
 	var users = USERS_JK_LOGGED_IN;
 	var   out = mkIDB(users).addReturningOneOutput(['cookie',{id:'2'},{port:users[0][1].port}]);
 	assert.deepEqual(out[2].cookie._children,['eikooC']);
+	assert.deepEqual(users,USERS_JK_LOGGED_IN);
     });
     it("should return error for non-existent cookie",function() {
 	var users = USERS_JK_LOGGED_IN;
 	var   out = mkIDB(users).addReturningOneOutput(['cookie',{id:'0'},{port:users[0][1].port}]);
 	assert.equal(out[2].cookie._children.length,0);
 	assert.equal(out[2].cookie.error,"not found");
+	assert.deepEqual(users,USERS_JK_LOGGED_IN);
     });
     it("should update cookies",function() {
-	var users = util.deepClone(USERS_JK_LOGGED_IN);
+	var users = USERS_JK_LOGGED_IN;
 	var   idb = mkIDB(users);
 	idb.addReturningNoOutput(['store-cookie',{id:'2',_children:["cOOKIE"]},{port:users[0][1].port}]);
 	var out = idb.addReturningOneOutput(['cookie',{id:'2'},{port:users[0][1].port}]);
 	assert.deepEqual(out[2].cookie._children,['cOOKIE']);
     });
-    
+});
+
+describe("json-for-xml market interactions",function() {
+    it("should change market state on command from broker",function(){
+	var users = USERS_JK_LOGGED_IN;
+	var   idb = mkIDB(users.concat(MARKET));
+	var   out = idb.addReturningOneOutput(['market-status',{ID:2,status:2},{port:users[0][1].port}]);
+	assert.deepEqual(out,["_output","all",{"market-status":{ID:2,status:2}}]);
+	out = idb.addReturningOneOutput(['market-status',{ID:2,status:1},{port:users[0][1].port}]);
+	assert.deepEqual(out,["_output","all",{"market-status":{ID:2,status:1}}]);
+    });
+    it("should not change market state on command from just anyone",function(){
+	var users = USERS_FM_LOGGED_IN;
+	var   idb = mkIDB(users.concat(MARKET));
+	idb.addReturningNoOutput(['market-status',{ID:2,status:2},{port:users[0][1].port}]);
+    });
 });

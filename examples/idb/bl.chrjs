@@ -1,7 +1,9 @@
-var      _ = require('underscore');
-var     fs = require('fs');
-var  faker = require('faker');
-var moment = require('moment');
+const      _ = require('underscore');
+const     fs = require('fs');
+const  faker = require('faker');
+const moment = require('moment');
+
+const  ROLES = {broker:1,trader:2,developer:256};
 
 function dateToYYYYMMDD(md) {
     var d = new Date(md).toISOString();
@@ -36,7 +38,7 @@ function mkHeartbeat(d) {
 //    EndBigFigBlock
 //    AuctionPriceBlock
 
-var IDB = store {
+const IDB = store {
     // filter the db data on its way in to remove the more egregious nasties
     // +++ this should be a transform +++
     rule (-['Permissions',{Password,...rs}],                              // remove trailing pwd spaces
@@ -56,10 +58,13 @@ var IDB = store {
 
     // market control
     rule (['MarketManager',{MarketID}],  -['MarketManager',{MarketID}]);
-    rule (-['market-status',{ID,status,...},...],
+    rule (-['market-status',{ID,status,...},{port}],
+	  ['Permissions',{port,AppRole,...}],
+	  (AppRole&ROLES.broker)!==0,
 	  -['MarketManager',{MarketID:ID,Status,...rs}],
 	  +['MarketManager',{MarketID:ID,Status:status,...rs}],
-	  +['_output','all',{'market-status':{ID:ID,status:status}}] );
+	  +['_output','all',{'market-status':{ID,status}}] );
+    rule(-['market-status',...]);
 
     // restart
     rule (['restart',...],
@@ -176,7 +181,7 @@ var IDB = store {
 	  ['Permissions',{port,ApplicationID,...}],
 	  ['Cookies',{ApplicationID,CookieID:id,Cookie,...}],
 	  +['_output','self',{'cookie':{id,_children:[Cookie]}}] );
-    rule (-['cookie',{id:ids},{port}],
+    rule (-['cookie',{id},{port}],
 	  +['_output','self',{'cookie':{id,_children:[],error:"not found"}}] );
     rule (-['store-cookie',{id,_children:[cookie]},{port}],
 	  ['Permissions',{port,ApplicationID}],
@@ -356,7 +361,7 @@ var IDB = store {
     rule (-['PrepareAuction',{id,action:'I',...prs},...],
 	  -['MarketManager',{auctionId,...mrs}],
 	  +['MarketManager',{auctionId:auctionId+1,...mrs}],
-	  +['annotatePrepareAuction',{id:auctionId+1,templateId:id,instruments:[],state:'P',...prs}] );
+	  +['annotatePrepareAuction',{id:auctionId+1,templateId:id,instruments:[],...prs}] );
     rule (-['annotatePrepareAuction',{instruments,_children:[child,...irs],...rs}],
     	  ['Instrument',{InstID:child.AInst.InstID,SubClass}],
     	  ['InstrumentClass',{InstSubClassID:SubClass,AuctionVolumes:av}],
@@ -365,8 +370,13 @@ var IDB = store {
     				      _children:[...irs],
     				      ...rs}] );
     rule (-['annotatePrepareAuction',{id,instruments,_children:[],phases,...rs}],
-	  +['auction',{id,instruments,curPhase:phases[0],phases,...rs}],
+	  +['auction',{id,instruments,curPhase:phases[0],phases,state:'S',...rs}],
 	  +['_output','all',{PrepareAuction:{AuctionID:id,Class:1,action:'I',_children:instruments,...rs}}] );
+    rule (-['StartPreparedAuction',{id},{port}],
+	  -['auction',{id,state:'S',phases,...rs}],
+	  state = {M:'Z',A:'R'}[phases[0]],
+	  +['auction',{id,state:state,phases,port,...rs}] );
+    rule(-['auction',{state:undefined,port}],+['_output',port,{error:{msg:"arse"}}]);
     rule (['tick',...],
 	  ['auction',{state,id,curPhase,...rs}],
 	  state!='N',
