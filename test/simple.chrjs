@@ -1,6 +1,17 @@
 var assert = require("assert");
 var      _ = require('underscore');
 
+describe("store common code",function() {
+    it("should provide facts in order for testing",function() {
+	var st = store{};
+	for (var i=0;i<20;i++)
+	    st.add([''+i]);
+	var facts = st._private.orderedFacts;
+	for (var i=0;i<20;i++)
+	    assert.equal(parseInt(facts[i][0]),i);
+    });
+});
+
 describe("match example",function() {
     it("should generate JS for less trivial store",function() {
 	var match = store {
@@ -211,7 +222,7 @@ describe("matching",function() {
 	assert.equal(st.size,1);
 	assert.deepEqual(_.values(st._private.facts)[0],['a',4]);
     });
-    it("XXX should match correctly given deletion during iteration",function() {
+    it("should match correctly given deletion during iteration",function() {
 	var st = store {
 	    ['b'];
 	    ['b'];
