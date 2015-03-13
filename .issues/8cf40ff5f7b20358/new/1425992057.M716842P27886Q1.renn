@@ -1,6 +1,7 @@
 From: John Kozak <jk@thameslighter.net>
 Date: Tue, 10 Mar 2015 12:54:17 +0000
 Subject: allow extended objexpr syntax (... and bindOne) in rule value exprs
-State: new
+State: resolved
 Message-Id: <8cf40ff5f7b20358-0-artemis@renn>
+resolution: fixed
 
