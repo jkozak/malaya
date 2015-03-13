@@ -136,7 +136,7 @@ function TEMPLATE_store() {
 		get size()    {return Object.keys(facts).length;},
 		get orderedFacts() {
 		    var keys = _.keys(facts).map(function(t){return parseInt(t);});
-		    return keys.sort().map(function(t){return facts[t];});
+		    return keys.sort(function(p,q){return p-q;}).map(function(t){return facts[t];});
 		}
 	    };
 	// +++ obj = Object.freeze(obj) if it's not too slow. +++
@@ -211,9 +211,7 @@ for (var i in autoparse.program.body) {
     }
 }
 
-function deepClone(json) {
-    return JSON.parse(JSON.stringify(json)); // lazy, very
-}
+var deepClone = util.deepClone;
 
 var chrGlobalVars = {		// only javascript globals allowed in CHRjs
     Infinity:   {ext:true,mutable:false},
