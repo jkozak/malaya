@@ -612,7 +612,14 @@ describe("compile",function() {
     });
     it("should handle nested for-expressions",function() {
 	compile("store{rule(['a'],+['b',for(0;['p'];a=>a+for(0;['q'];b=>b+1))]);}");
-    })
+    });
+    it("should handle object expression extensions on 'RHS'",function() {
+	var js = compile("var st = store{rule(-['a',{p,...qs}],+['b',{p,...qs}]);}");
+	eval(recast.print(js).code);
+	var st = eval(mangleId('st'));
+	st.add(['a',{p:67,a:'a',b:23}]);
+	assert.deepEqual(st._private.orderedFacts,[['b',{p:67,a:'a',b:23}]]);
+    });
 });
 
 describe("function/for style query",function() {
