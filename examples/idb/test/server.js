@@ -14,6 +14,7 @@ var AP_XML2        = fe3.consts.AP_XML2;
 var AP_XML2A       = fe3.consts.AP_XML2A;
 
 temp.track();			// auto-cleanup at exit
+require('../bl.chrjs');		// do this here to avoid timeout in tests
 
 function mkFixture(msjson) {
     return util.deserialise(JSON.stringify(msjson));
@@ -172,14 +173,6 @@ var INSTRUMENTS = mkFixture([
     ]
 ]);
 
-var mkIDB = function(fixture) {	// bare server without prevalence layer
-    var bl = require('../bl.chrjs');
-    bl.reset();			// `bl` is effectively shared by `require`
-    for (var i in fixture)
-	bl.add(fixture[i]);
-    return bl;
-};
-
 var mkFE3 = function(s,ap_type) {
     ap_type = ap_type || AP_XML2A;
     var hdr = new Buffer(FE3_HDR_LENGTH+4);
@@ -270,7 +263,6 @@ describe("server",function() {
 	}
     };
     it("inits nicely and performs a simple logon and logoff",function() {
-	this.timeout(5000);
 	test({init:true,prevalenceDir:prevalenceDir,fsync:'none'});
     });
     it("loads nicely and performs a simple logon and logoff",function() {
@@ -397,52 +389,4 @@ describe("multiple connection",function() {
     });
 });
 
-describe("business logic queries",function() {
-    it("should return cookie appropriately",function() {
-	var users = _.clone(USERS);
-	assert.equal(users[0][1].ApplicationName,"John Kozak");
-	users[0][1].LoggedOn = 1;
-	users[0][1].port     = 'test://JK/';
-	var   IDB = mkIDB(users);
-	IDB.add(['cookie',{id:'2'},{port:users[0][1].port}]);
-	var ok = false;
-	var  n = 0;
-	_.values(IDB._private.facts).forEach(function(f) {
-	    if (f[0]==='_output') {
-		n++;
-		if (_.isEqual(f[2].cookie._children,['eikooC'])) 
-		    ok = true;
-	    }
-	});
-	assert.equal(n,1);
-	assert(ok);
-    });
-    it("should return error for non-existent cookie",function() {
-	var users = _.clone(USERS);
-	assert.equal(users[0][1].ApplicationName,"John Kozak");
-	users[0][1].LoggedOn = 1;
-	users[0][1].port     = 'test://JK/';
-	var   IDB = mkIDB(users);
-	IDB.add(['cookie',{id:'0'},{port:users[0][1].port}]);
-	var ok = false;
-	var  n = 0;
-	_.values(IDB._private.facts).forEach(function(f) {
-	    if (f[0]==='_output') {
-		n++;
-		if (f[2].cookie.error==="not found") 
-		    ok = true;
-	    }
-	});
-	assert.equal(n,1);
-	assert(ok);
-    });
-    // it("should return static data for user",function() {
-    // 	var fixture = _.clone(USERS).concat(INSTRUMENTS);
-    // 	assert.equal(fixture[0][1].ApplicationName,"John Kozak");
-    // 	fixture[0][1].LoggedOn = 1;
-    // 	fixture[0][1].port     = 'test://JK/';
-    // 	var   IDB = mkIDB(fixture);
-    // 	IDB.add(['start',{},{port:fixture[0][1].port}]);
-    // 	console.log("*** %j",IDB._private.facts);
-    // });
-});
+
