@@ -178,7 +178,7 @@ var IDB = store {
 	  +['_output','self',{'cookie':{id,_children:[Cookie]}}] );
     rule (-['cookie',{id:ids},{port}],
 	  +['_output','self',{'cookie':{id,_children:[],error:"not found"}}] );
-    rule (-['store-cookie',{id,cookie},{port}],
+    rule (-['store-cookie',{id,_children:[cookie]},{port}],
 	  ['Permissions',{port,ApplicationID}],
 	  -['Cookies',{ApplicationID,CookieID:id}],
 	  +['Cookies',{ApplicationID,CookieID:id,Cookie:cookie}] );
@@ -396,6 +396,7 @@ IDB.add = function(fact) {	// replace some type information lost to XML
 	fact[1].status     = parseInt(fact[1].status);
 	break;
     case 'cookie':
+    case 'store-cookie':
 	fact[1].id         = parseInt(fact[1].id);
 	break;
     case 'price':
@@ -417,6 +418,9 @@ IDB.add = function(fact) {	// replace some type information lost to XML
 	fact[1].priceSeqNo = parseInt(fact[1].priceSeqNo);
 	fact[1].hitter     = parseInt(fact[1].hitter);
 	fact[1].marketID   = parseInt(fact[1].marketID);
+	break;
+    case 'AuctionTemplate':
+	fact[1].id = parseInt(fact[1].id);
 	break;
     case 'PrepareAuction':
 	fact[1].id                   = parseInt(fact[1].id);
