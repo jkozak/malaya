@@ -120,6 +120,10 @@ exports.deserialise = function(s) {
     });
 };
 
+exports.deepClone = function(json) {
+    return JSON.parse(JSON.stringify(json)); // lazy, very
+};
+
 exports.sourceVersion = (function() {
     var cmd;
     var out;
