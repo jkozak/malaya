@@ -1,6 +1,7 @@
 From: John Kozak <jk@thameslighter.net>
 Date: Sun, 08 Feb 2015 23:30:26 +0000
 Subject: review using `_.isEqual` - 2 is not '2'
-State: new
+State: resolved
 Message-Id: <8f44c5b29e463a8b-0-artemis@renn>
+resolution: fixed
 
