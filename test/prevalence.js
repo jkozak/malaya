@@ -1,11 +1,10 @@
-var prvl   = require("../prevalence.js");
+var prevalence = require("../prevalence.js");
 
-var assert = require("assert");
-var temp   = require('temp');  
-var fs     = require('fs');
-var util   = require('../util.js');
-var path   = require('path');
-var qc     = require('quickcheck');
+var     assert = require("assert");
+var       temp = require('temp');  
+var         fs = require('fs');
+var       util = require('../util.js');
+var       path = require('path');
 
 temp.track();			// auto-cleanup at exit
 
@@ -34,16 +33,18 @@ function BL() {
 
 describe('wrap()',function() {
     it("should init",function() {
-	var  bl = new BL();
-	var dir = temp.mkdirSync();
-	var wbl = prvl._private.wrap(dir,bl,{audit:false});
+	var prvl = prevalence();
+	var   bl = new BL();
+	var  dir = temp.mkdirSync();
+	var  wbl = prvl._private.wrap(dir,bl,{audit:false});
 	wbl.init();
 	assert.equal(wbl.query('n'),100);
     });
     it("should save and reload",function() {
-	var  bl = new BL();
-	var dir = temp.mkdirSync();
-	var wbl = prvl._private.wrap(dir,bl,{audit:false});
+	var prvl = prevalence();
+	var   bl = new BL();
+	var  dir = temp.mkdirSync();
+	var  wbl = prvl._private.wrap(dir,bl,{audit:false});
 	wbl.init();
 	wbl.open();
 	wbl.update('tick');
@@ -62,9 +63,10 @@ describe('wrap()',function() {
 	wbl.close();
     });
     it("should restore from journal",function() {
-	var  bl = new BL();
-	var dir = temp.mkdirSync();
-	var wbl = prvl._private.wrap(dir,bl,{audit:false});
+	var prvl = prevalence();
+	var   bl = new BL();
+	var  dir = temp.mkdirSync();
+	var  wbl = prvl._private.wrap(dir,bl,{audit:false});
 	wbl.init();
 	wbl.open();
 	wbl.save();
@@ -92,7 +94,7 @@ function clonefile(filename) {
     return fn;
 }
 
-function simple_prvl_http_get_test(bl_src,path,fn_setup,fn_check,done) {
+function simple_prvl_http_get_test(prvl,bl_src,path,fn_setup,fn_check,done) {
     bl_src = clonefile(bl_src);
     var express = require('express');
     var     app = express();
@@ -127,7 +129,8 @@ describe('http replication',function() {
     var bl_src = 'test/bl/simple.js';
     var bl_hash;
     it("returns single-element hash list",function(done) {
-	simple_prvl_http_get_test(bl_src,'/replication/hashes',
+	var prvl = prevalence();
+	simple_prvl_http_get_test(prvl,bl_src,'/replication/hashes',
 				  function(app) {
 				      prvl.installHandlers(app,{prefix:'/replication'});
 				  },
@@ -142,7 +145,8 @@ describe('http replication',function() {
 				  done);
     });
     it("returns hash list",function(done) {
-	simple_prvl_http_get_test(bl_src,'/replication/hashes',
+	var prvl = prevalence();
+	simple_prvl_http_get_test(prvl,bl_src,'/replication/hashes',
 				  function(app) {
 				      var hash_store = prvl._private.getHashStore();
 				      prvl.installHandlers(app,{prefix:'/replication'});
@@ -160,7 +164,8 @@ describe('http replication',function() {
 				  done);
     });
     it("returns a hash from the store",function(done) {
-	simple_prvl_http_get_test(bl_src,'/replication/hash/'+bl_hash,
+	var prvl = prevalence();
+	simple_prvl_http_get_test(prvl,bl_src,'/replication/hash/'+bl_hash,
 				  function(app) {
 				      prvl.installHandlers(app,{prefix:'/replication'});
 				  },
@@ -171,7 +176,8 @@ describe('http replication',function() {
 				  done);
     });
     it("returns the current journal snapshot",function(done) {
-	simple_prvl_http_get_test(bl_src,'/replication/journal',
+	var prvl = prevalence();
+	simple_prvl_http_get_test(prvl,bl_src,'/replication/journal',
 				  function(app) {
 				      prvl.installHandlers(app,{prefix:'/replication'});
 				  },
@@ -183,7 +189,8 @@ describe('http replication',function() {
 				  done);
     });
     it("returns the current journal (explicitly requested) snapshot",function(done) {
-	simple_prvl_http_get_test(bl_src,'/replication/journal?live=0',
+	var prvl = prevalence();
+	simple_prvl_http_get_test(prvl,bl_src,'/replication/journal?live=0',
 				  function(app) {
 				      prvl.installHandlers(app,{prefix:'/replication'});
 				  },
@@ -200,10 +207,11 @@ describe('prevalence hash_store',function() {
     var  bl_src = 'test/bl/simple.js';
     var express = require('express');
     it("captures a file requested by GET",function(done) {
+	var       prvl = prevalence();
 	var    web_dir = temp.mkdirSync();
 	var index_html = "<html><head></head><body></body></html>";
 	fs.writeFileSync(path.join(web_dir,'index.html'),index_html);
-	simple_prvl_http_get_test(bl_src,'/index.html',
+	simple_prvl_http_get_test(prvl,bl_src,'/index.html',
 				  function(app) {
 				      app.use(prvl.createExpressMiddleware(web_dir));
 				      app.use(express.static(web_dir));

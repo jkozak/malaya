@@ -8,7 +8,7 @@ var       fs = require('fs');
 
 var     util = require('./util.js');
 
-var     prvl = require('./prevalence.js');
+var     prvl = require('./prevalence.js')();
 
 var compiler = require("./compiler.js");  // adds support for .chrjs files
 

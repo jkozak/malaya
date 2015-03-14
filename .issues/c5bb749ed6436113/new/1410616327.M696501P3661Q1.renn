@@ -1,6 +1,7 @@
 From: John Kozak <jk@thameslighter.net>
 Date: Sat, 13 Sep 2014 14:52:07 +0100
 Subject: move module-local stuff in prevalence.js into objects
-State: new
+State: resolved
 Message-Id: <c5bb749ed6436113-0-artemis@renn>
+resolution: fixed
 
