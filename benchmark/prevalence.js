@@ -1,13 +1,11 @@
 "use strict";
 
-var   prvl = require("../prevalence.js");
-var   temp = require('temp');
-var   path = require('path');
-var   util = require('../util.js');
-var     fs = require('fs');
-var bl_src = "test/bl/simple.js";
-
-//var consts = prvl._private.consts;
+var prevalence = require("../prevalence.js");
+var       temp = require('temp');
+var       path = require('path');
+var       util = require('../util.js');
+var         fs = require('fs');
+var     bl_src = "test/bl/simple.js";
 
 temp.track();			// auto-cleanup at exit
 
@@ -22,7 +20,8 @@ function clonefile(filename) {
 // ['fsync','fdatasync','o_sync','o_dsync','none','kludge'] is the full set of options here
 ['none','kludge'].forEach(function(f) {
     suite("journalise, sync style: "+f,function() {
-	var wbl;
+	var prvl = prevalence()
+	var  wbl;
 	before(function() {
 	    var dir = temp.mkdirSync();
 	    wbl = prvl.wrap(dir,clonefile(bl_src),{audit:true,sync_journal:f});
@@ -41,7 +40,8 @@ function clonefile(filename) {
 suite("load/save/load 10k small JSON items",function() {
     var wbl;
     before(function() {
-	var dir = temp.mkdirSync();
+	var prvl = prevalence()
+	var  dir = temp.mkdirSync();
 	wbl = prvl.wrap(dir,clonefile(bl_src),{audit:false,sync_journal:'none'});
 	wbl.init();
 	wbl.open();
