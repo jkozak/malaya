@@ -1629,6 +1629,7 @@ if (util.env==='test') {
 	mangle:            mangle,
 	genAccessor:       genAccessor,
 	genAdd:            function(chrjs) {return generateJS(chrjs,'add');},
+	genEqual:          genEqual,
 	genMatch:          genMatch,
 	buildStanzas:      buildStanzas,
 	insertCode:        insertCode,

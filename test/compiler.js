@@ -108,6 +108,37 @@ function literalise(x) {
 	return b.literal(x);
 }
 
+describe("equality test the compiler generates",function() {
+    var eq = function(p,q) {
+	// generate and eval equality testing code.  A call to `deepClone` gives non-identity
+	var p1 = parse(util.format('var x=%j;',p)).body[0].declarations[0].init;
+	var q1 = parse(util.format('var x=util.deepClone(%j);',q)).body[0].declarations[0].init;
+	return eval(recast.print(compiler._private.genEqual(p1,q1)).code);
+    };
+    it("should not treat strings and numbers as comparable",function() {
+	assert.equal(false,eq(0,'0'));
+	assert.equal(false,eq(2,'2'));
+    });
+    it("should compare strings by value",function() {
+	assert.equal(true,eq('0','0'));
+    });
+    it("should compare strings case-sensitively",function() {
+	assert.equal(false,eq('a','A'));
+    });
+    it("should compare arrays",function() {
+	assert.equal(true,eq(['0',1,'two'],['0',1,'two']));
+    });
+    it("should compare objects",function() {
+	assert.equal(true,eq({p:1,q:2},{p:1,q:2}));
+    });
+    it("should compare deeply",function() {
+	assert.equal(true,eq({p:1,q:[2]},{p:1,q:[2]}));
+    });
+    it("should compare deeply -vely",function() {
+	assert.equal(false,eq({p:1,q:[2]},{p:1,q:['2']}));
+    });
+});
+
 describe("genAdd",function() {
     var  genAdd = compiler._private.genAdd;
     var evalAdd = function(add,bindings) {
