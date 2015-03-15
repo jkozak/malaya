@@ -5,6 +5,7 @@ var crypto = require('crypto');
 var fs     = require('fs');
 var util   = require('./util.js');
 var events = require('events');
+var   path = require('path');
 
 module.exports = function(algorithm) {
     var ans = {
@@ -30,7 +31,7 @@ module.exports = function(algorithm) {
             var store = {
                 on:           function(what,handler) {ee.on(what,handler);},
                 makeFilename: function(h) {
-                    return dirname+'/'+h;
+                    return path.join(dirname,h);
                 },
                 contains: function(h) {
                     return fs.existsSync(store.makeFilename(h));
@@ -45,6 +46,8 @@ module.exports = function(algorithm) {
                         ee.emit('add',h);
                         fs.writeFileSync(filename,x);
                     }
+                    if (util.env==='prod')
+                        fs.chmodSync(filename,4*8*8+4*8+4); // mode 0444
                     return h;
                 },
                 getSync: function(h) {
