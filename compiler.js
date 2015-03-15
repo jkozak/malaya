@@ -1613,12 +1613,11 @@ exports.once = function(what,handler) {
 
 require.extensions['.chrjs'] = function(module,filename) {
     filename = path.resolve(filename);
-    var codegen = require('escodegen');
     var content = fs.readFileSync(filename,'utf8').replace(/\t/g,'        '); // remove tabs
     var   chrjs = parser.parse(content,{loc:exports.debug,attrs:true});
     if (exports.debug)
 	stanzas[filename] = buildStanzas(content,chrjs); // +++ clone the parse! +++
-    module._compile(codegen.generate(generateJS(chrjs)),filename);
+    module._compile(recast.print(generateJS(chrjs)).code,filename);
     ee.emit('compile',filename);
 };
 
