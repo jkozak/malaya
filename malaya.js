@@ -119,6 +119,9 @@ exports.createServer = function(opts) {
         uninit: function() {
             if (!opts.init)
                 throw new util.Fail("not initialising, won't uninit");
+            if (bl)
+                bl.close();
+            bl = null;
             rmRF.sync(opts.prevalenceDir);
         },
 
