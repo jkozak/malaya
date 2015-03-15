@@ -1,6 +1,7 @@
 From: John Kozak <jk@thameslighter.net>
 Date: Sun, 15 Mar 2015 15:02:09 +0000
 Subject: in production, set precious files to read-only
-State: new
+State: resolved
 Message-Id: <e4a10e594ce8ca86-0-artemis@renn>
+resolution: fixed
 

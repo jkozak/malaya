@@ -5,6 +5,7 @@ var temp   = require('temp');
 var util   = require('../util.js');  
 var fs     = require('fs');
 var path   = require('path');
+var os     = require('os');
 var qc     = require('quickcheck');
 
 
@@ -86,4 +87,30 @@ describe("hash('sha1')",function() {
 	    store.sanityCheck({});
 	});
     });
+    var  permModeMask = 7*8*8+7*8+7;
+    var testHashMode = function(env,mode) {
+	var  save = {env:util.env};
+	var   dir = temp.mkdirSync();
+	var store = hash('sha1').make_store(dir);
+	util.env = env;
+	try {
+	    var  h = store.putSync('keep me for a bit');
+	    var fn = store.makeFilename(h);
+	    assert.equal(fs.statSync(fn).mode&permModeMask,mode); 
+	    fs.chmodSync(fn,438); // 0666
+	} finally {
+	    util.env = save.env;
+	}
+    };
+    it("should set stashed hashes to read-only in production mode",function() {
+	testHashMode('prod',4*8*8+4*8+4);
+    });
+    if (!/^win/.test(os.platform())) { // +++ make work on windows +++
+	it("should leave stashed hashes read-write in dev mode",function() {
+	    testHashMode('dev', 6*8*8+4*8+4);
+	});
+	it("should leave stashed hashes read-write in test mode",function() {
+	    testHashMode('test',6*8*8+4*8+4);
+	});
+    }
 });
