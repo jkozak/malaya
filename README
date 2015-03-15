@@ -57,4 +57,6 @@ These are found in the c:\Utils directory which should be on the PATH.
 `MinGW` is needed to run the tests, and the clean-up code run after
 the tests crashes, but the tests run clean at the time of writing.
 
-The idb example doesn't have a script to start in under windows.
+The idb example can be started with `node run`.  Python is required to
+import a DB from an `init_db.py` file.
+
