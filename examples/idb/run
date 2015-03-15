@@ -6,6 +6,7 @@
 var  argv = require('minimist')(process.argv.slice(2),{
     string:['init','fsync'],
     boolean:['debug'],
+    int:['fe3'],
     defaults:{fsync:'kludge'} });
 
 var setup = require('./setup.js');
@@ -24,5 +25,5 @@ process.on('SIGHUP',function() {
 process.on('exit',function(code) {
 });
 
-var server = setup.build({init:argv.init,sync_journal:argv.fsync,debug:argv.debug});
+var server = setup.build({init:argv.init,sync_journal:argv.fsync,debug:argv.debug,fe3port:argv.fe3});
 server.run();

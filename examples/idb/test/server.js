@@ -366,6 +366,15 @@ describe("FE3Connection",function() {
     it("reloads nicely and performs a simple logon and logoff",function() {
 	test({init:false,prevalenceDir:prevalenceDir});
     });
+    it("does not init over an existing prevalence dir",function() {
+	assert.throws(function() {
+	    test({init:true,prevalenceDir:prevalenceDir});
+	});
+	fs.statSync(prevalenceDir); // not removed!
+    });
+    it("runs nicely after rejecting init over existing prevalence dir",function() {
+	test({init:false,prevalenceDir:prevalenceDir});
+    });
 });
 
 describe("multiple connection",function() {

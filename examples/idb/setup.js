@@ -120,7 +120,12 @@ exports.build = function(opts) {
             });
         };
         if (opts.init==='' || !!opts.init)
-            doInit(server,opts.init,listen);
+            try {
+                doInit(server,opts.init,listen);
+            } catch (e) {
+                server.uninit();
+                throw e;
+            }
         else
             listen();
     };
