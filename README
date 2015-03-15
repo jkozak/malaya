@@ -45,3 +45,16 @@ installed and have initialised the IDB example prevalent store above:
 will bring up the gui.  It's pretty picky about `node-webkit`
 versions at the moment: I'm using v0.10.4
 
+
+Does it run on windows?
+-----------------------
+
+Mostly.
+
+The `Makefile` needs the `zsh.exe`, `rm.py` and `make.exe` to run.
+These are found in the c:\Utils directory which should be on the PATH.
+
+`MinGW` is needed to run the tests, and the clean-up code run after
+the tests crashes, but the tests run clean at the time of writing.
+
+The idb example doesn't have a script to start in under windows.

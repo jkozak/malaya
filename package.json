@@ -31,7 +31,7 @@
   ],
   "repository": {
     "type": "hg",
-    "url": "ssh://pooka.vm.bytemark.co.uk/malaya"
+    "url": "ssh://pooka.vm.bytemark.co.uk//var/local/data/hg/malaya"
   },
   "scripts": {
     "test": "NODE_ENV=test mocha -R min --compilers chrjs:compiler -C test examples/*/test",
