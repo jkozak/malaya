@@ -1,16 +1,15 @@
 "use strict";
 /*eslint-disable no-process-exit*/
 
-var        _ = require('underscore');
-var   events = require('events');
-var   assert = require('assert');
-var       fs = require('fs');
+var          _ = require('underscore');
+var     events = require('events');
+var     assert = require('assert');
+var         fs = require('fs');
+var       rmRF = require("rimraf");
 
-var     util = require('./util.js');
-
-var     prvl = require('./prevalence.js')();
-
-var compiler = require("./compiler.js");  // adds support for .chrjs files
+var       util = require('./util.js');
+var prevalence = require('./prevalence.js');
+var   compiler = require("./compiler.js");  // adds support for .chrjs files
 
 function WsConnection(conn,server) {
     var ee = new events.EventEmitter();
@@ -50,6 +49,7 @@ exports.createServer = function(opts) {
     var syshash = null;         // at startup
     var conns   = {};
     var ee      = new events.EventEmitter();
+    var prvl    = prevalence();
 
     if (opts.debug)
         compiler.debug = true;
@@ -73,22 +73,33 @@ exports.createServer = function(opts) {
         },
         
         start: function(done) {
-            if (opts.init) {
+            if (opts.init)
                 try {
                     fs.statSync(opts.prevalenceDir);
-                    throw new util.Fail("prevalence state dir already exists, won't init");
-                } catch (err) {if (err instanceof util.Fail) throw err;}
-                fs.mkdirSync(opts.prevalenceDir);
-                bl = prvl.wrap(opts.prevalenceDir,opts.businessLogic,opts);
-                bl.init();
-                bl.open();
-                bl.save();
-                bl.close();
-            } else
-                bl = prvl.wrap(opts.prevalenceDir,opts.businessLogic,opts);
-            bl.open(opts.prevalenceDir);
-            syshash = bl.load(bl.set_root,bl.update);
-            ee.emit('loaded',syshash);
+                    throw new util.Fail(util.format("prevalence state dir %s already exists, won't init",
+                                                    opts.prevalenceDir ));
+                } catch (err) {
+                    if (err instanceof util.Fail)
+                        throw err;
+                }
+            try {
+                if (opts.init) {
+                    fs.mkdirSync(opts.prevalenceDir);
+                    bl = prvl.wrap(opts.prevalenceDir,opts.businessLogic,opts);
+                    bl.init();
+                    bl.open();
+                    bl.save();
+                    bl.close();
+                } else
+                    bl = prvl.wrap(opts.prevalenceDir,opts.businessLogic,opts);
+                bl.open(opts.prevalenceDir);
+                syshash = bl.load(bl.set_root,bl.update);
+                ee.emit('loaded',syshash);
+            } catch(e) {
+                if (opts.init)
+                    this.uninit();
+                throw e;
+            }
 
             if (bl.transform!==undefined) {
                 bl.transform();
@@ -103,6 +114,12 @@ exports.createServer = function(opts) {
             //     needs a target store to save into
             //     how does prevalence wrapping work here?
             //     (must stash the transform code)
+        },
+
+        uninit: function() {
+            if (!opts.init)
+                throw new util.Fail("not initialising, won't uninit");
+            rmRF.sync(opts.prevalenceDir);
         },
 
         listen: function (port,done) {
