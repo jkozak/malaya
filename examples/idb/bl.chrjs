@@ -1,5 +1,6 @@
 const      _ = require('underscore');
 const     fs = require('fs');
+const    x2j = require('./x2j');
 const  faker = require('faker');
 const moment = require('moment');
 
@@ -52,9 +53,12 @@ const IDB = store {
 	  aname = faker.name.findName(),
 	  apwd  = faker.internet.password(),
 	  +['Permissions',{ApplicationName:aname,Password:apwd,anon:null,...rs}]);
-    rule (-['MarketManager',{auctionId,...rs}],
+    rule (-['MarketManager',{auctionId,...rs}],                           // set a default start auctionId
 	  _.isUndefined(auctionId),
 	  +['MarketManager',{auctionId:10000,...rs}] );
+    rule (-['FEConfig',{CookieData,data,...ps}],                          // remove embedded XML
+	  _.isUndefined(data),
+	  +['FEConfig',{data:x2j.parse(CookieData),...ps}] );
 
     // market control
     rule (['MarketManager',{MarketID}],  -['MarketManager',{MarketID}]);
@@ -117,8 +121,8 @@ const IDB = store {
 			      PriceTick:        inst.PriceTick
 			  }}]) ),
 		      for([];
-			  ['FEConfig',{TabID,CookieData,...}];
-			  a=>a.concat([{_XML:CookieData}]) ),
+			  ['FEConfig',{TabID,data,CookieData,ConfigID,...}]^ConfigID;
+			  a=>a.concat([data]) ),
 		      for([];
 			  ['InstrumentClass',sc];
 			  a=>a.concat([{SubClass:{
@@ -391,6 +395,9 @@ const IDB = store {
     // background
     rule (['tick',{date,...},...],
 	  +['_output','all',mkHeartbeat(date)] );
+    rule (['tick',{...},...],
+	  n = for(0;['Permissions',{LoggedOn:1,...}];a=>a+1),
+	  console.log("%d users logged on",n) );
     rule (-['tick',...]);
 
     // output

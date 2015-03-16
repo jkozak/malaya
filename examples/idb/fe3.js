@@ -87,7 +87,6 @@ function FE3Connection(sock,server) {
                     break;
                 }
                 case AP_HEARTBEAT:
-                    util.debug("heartbeat");
                     break;
                 default:
                     util.error("unknown FE3 pkt type: "+type);
