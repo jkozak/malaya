@@ -1,0 +1,7 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Mon, 16 Mar 2015 08:18:57 +0000
+Subject: Translate embedded XML in `FEConfig` entries in init
+State: resolved
+Message-Id: <b52b497a6611656f-0-artemis@renn>
+resolution: fixed
+
