@@ -66,7 +66,7 @@ exports.readFileLinesSync = function(path0,fn) {
 var serialise = function(v0) {
     return JSON.stringify(v0,function(k,v) {
         if (v instanceof Date)
-            return "date:"+v;
+            return "date:"+v.toISOString();
         else if (typeof v==="string")
             return ":"+v;
         else
