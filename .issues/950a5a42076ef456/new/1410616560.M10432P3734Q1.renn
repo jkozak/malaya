@@ -4,3 +4,4 @@ Subject: do journalising and update in parallel
 State: new
 Message-Id: <950a5a42076ef456-0-artemis@renn>
 
+underscore's `_.after` will do this.
