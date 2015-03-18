@@ -4,3 +4,26 @@ Subject: replication via websockets
 State: new
 Message-Id: <c0d3f7f0cdbea019-0-artemis@renn>
 
+Note that `static` supports HTTP ranges.
+
+Open websocket stream for journal, get response header specifying
+current size of journal's disk file; replicator opens output file for
+journal, seeks to that position, starts saving from that position,
+writes file as it comes in to the start (is this sane POSIXly?).  Or
+just keep the received live journal entries in memory until GET
+finishes.
+
+Special first item in stream:
+
+  {journal:{previous:<hash>,size:<nbytes>}}
+
+On receipt GET the first <nbytes> of the journal, then recursively GET
+everything from <hash> (which is teh hash of the previous journal, can
+be null).  Visuals: go to amber when journal all fetched, then green
+when all hashes up to date.
+
+Fetch hashes as they're mentioned in the journal stream.
+
+If the replicatee closes nicely, replicator stashes the journal as a
+hash and tries to reconnect.  It should get the just-stashed-hash as
+`previous`, moans if not.
