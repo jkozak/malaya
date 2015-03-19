@@ -1,5 +1,6 @@
 var prevalence = require("../prevalence.js");
 
+var          _ = require("underscore");
 var     assert = require("assert");
 var       temp = require('temp');  
 var         fs = require('fs');
@@ -159,7 +160,7 @@ describe("cacheFile",function() {
     });
 });
 
-function simple_prvl_http_get_test(prvl,bl_src,path,fn_setup,fn_check,done) {
+function simple_prvl_http_get_test(prvl,bl_src,path,fn_setup,fn_check,statusCode,done) {
     bl_src = clonefile(bl_src);
     var express = require('express');
     var     app = express();
@@ -167,14 +168,19 @@ function simple_prvl_http_get_test(prvl,bl_src,path,fn_setup,fn_check,done) {
     var httpsrv = http.Server(app)
     var     dir = temp.mkdirSync();
     var     wbl = prvl.wrap(dir,bl_src,{audit:true});
+    if (done===undefined) {
+        done       = statusCode;
+        statusCode = 200;
+    }
     wbl.init();
     wbl.open();
     fn_setup(app);
     httpsrv.listen(0,function() { // +++ rewrite to use `supertest` +++
         var port = httpsrv.address().port;
-        http.get({server:'localhost',port:port,path:path},function(res) {
+        var opts = (typeof path)==='string' ? {path:path} : path;
+        http.get(_.extend({server:'localhost',port:port},opts),function(res) {
             var data = '';
-            assert.equal(res.statusCode,200);
+            assert.equal(res.statusCode,statusCode);
             res.on('data',function(chunk) {
                 data += chunk;
             });
@@ -240,30 +246,50 @@ describe('http replication',function() {
                                   },
                                   done);
     });
-    it("returns the current journal snapshot",function(done) {
+    var deserialiseBody = function(data) {
+        var lines = data.split('\n');
+        return lines.splice(0,lines.length-1)
+            .map(function(s){return util.deserialise(s);});
+    };
+    it("returns the world file",function(done) {
         var prvl = prevalence();
-        simple_prvl_http_get_test(prvl,bl_src,'/replication/journal',
+        simple_prvl_http_get_test(prvl,bl_src,'/replication/state/world',
                                   function(app) {
                                       prvl.installHandlers(app,{prefix:'/replication'});
                                   },
                                   function(data,done) {
-                                      var jrnls = data.split('\n');
-                                      assert.equal(util.deserialise(jrnls[0])[1],'init');
+                                      var lines = deserialiseBody(data);
+                                      assert.deepEqual(lines[0],null); // this is a virgin world
+                                      assert.deepEqual(lines[1],{});
                                       done();
                                   },
                                   done);
     });
-    it("returns the current journal (explicitly requested) snapshot",function(done) {
+    it("returns the journal file whole",function(done) {
         var prvl = prevalence();
-        simple_prvl_http_get_test(prvl,bl_src,'/replication/journal?live=0',
+        simple_prvl_http_get_test(prvl,bl_src,'/replication/state/journal',
                                   function(app) {
                                       prvl.installHandlers(app,{prefix:'/replication'});
                                   },
                                   function(data,done) {
-                                      var jrnls = data.split('\n');
-                                      assert.equal(util.deserialise(jrnls[0])[1],'init');
+                                      var lines = deserialiseBody(data);
+                                      assert.equal(lines[0][1],"init");
                                       done();
                                   },
+                                  done);
+    });
+    it("returns the journal file in part",function(done) {
+        var prvl = prevalence();
+        simple_prvl_http_get_test(prvl,bl_src,{path:'/replication/state/journal',
+                                               headers:{'Range':'bytes=0-0'}},
+                                  function(app) {
+                                      prvl.installHandlers(app,{prefix:'/replication'});
+                                  },
+                                  function(data,done) {
+                                      assert.equal(data,'['); // 0-0 should return exactly one char (the first)
+                                      done();
+                                  },
+                                  206,
                                   done);
     });
 });
@@ -291,3 +317,5 @@ describe('prevalence hash_store',function() {
                                   done);
     });
 });
+
+// +++ test sanity checking +++

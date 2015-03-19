@@ -68,7 +68,7 @@ exports.build = function(opts) {
         tag:           'idb',
         businessLogic: path.join(__dirname,'bl.chrjs'),
         debug:         false,
-        onCompile:     null},
+        on:            {} },
                     opts);
 
     if (opts.init==='')
@@ -78,6 +78,10 @@ exports.build = function(opts) {
     var  fe3srv = fe3.createServer({malaya:server});
     var fe3port = opts.fe3port || 5110;
     var  wsport = opts.wsport  || 3000;
+    
+    _.keys(opts.on).forEach(function(k) {
+        server.on(k,opts.on[k]);
+    });
     
     fe3srv.on('listening',function() {
         util.debug('fe3  listening on *:%s',fe3port);
@@ -100,8 +104,6 @@ exports.build = function(opts) {
         fe3srv.close();
         fe3srv = null;
     });
-    if (opts.onCompile)
-        server.on('compile',opts.onCompile);
 
     server.start();
     

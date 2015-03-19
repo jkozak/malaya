@@ -48,6 +48,7 @@ describe("server wrapper",function() {
             mkServer({init:false,prevalenceDir:prevDir});
         });
     });
+    // +++ test per-process locking +++
     describe("uninit",function() {
         it("cleans up a failed init",function() {
             var prevalenceDir = path.join(temp.mkdirSync(),'prevalence');
@@ -71,7 +72,7 @@ describe("server wrapper",function() {
     });
 });
 
-describe("XXX express app",function() {
+describe("express app",function() {
     var tdir = temp.mkdirSync();
     var wdir = path.join(tdir,'www');
     var srvr = mkServer({init:true,
@@ -128,7 +129,7 @@ describe("XXX express app",function() {
     });
 });
 
-describe("XXX webserver",function() {
+describe("webserver",function() {
     var tdir = temp.mkdirSync();
     var wdir = path.join(tdir,'www');
     var srvr = mkServer({init:true,

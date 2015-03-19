@@ -3,17 +3,19 @@
 
 "use strict";
 
-var  argv = require('minimist')(process.argv.slice(2),{
-    string:['init','fsync'],
+var   argv = require('minimist')(process.argv.slice(2),{
+    string:['init','fsync','slave'],
     boolean:['debug'],
-    int:['fe3'],
+    int:['fe3','port'],
     defaults:{fsync:'kludge'} });
 
-var setup = require('./setup.js');
+var  setup = require('./setup.js');
+
+var server = null;
     
 process.on('SIGINT',function() {
     if (server)
-	server.close();
+        server.close();
     process.exit(1);
 });
 process.on('SIGQUIT',function() {
@@ -25,5 +27,28 @@ process.on('SIGHUP',function() {
 process.on('exit',function(code) {
 });
 
-var server = setup.build({init:argv.init,sync_journal:argv.fsync,debug:argv.debug,fe3port:argv.fe3});
-server.run();
+if (argv.slave) {
+    var prvl = require('../../prevalence.js')();
+    var path = require('path');
+    var pdir = process.cwd();   //path.join(__dirname,'.prevalence');
+    prvl.on('ready',function(syshash) {
+        console.log("slaved to: %s",argv.slave);
+        console.log("opening hash is: %s",syshash);
+        // +++ 
+    });
+    prvl.on('closed',function(tidy,syshash) {
+        if (!tidy) {
+            console.log("*** I am the master now");
+            prvl.becomeMaster();
+            server = setup.build({prevalence:  prvl,
+                                  sync_journal:argv.fsync,
+                                  debug:       argv.debug,
+                                  fe3port:     argv.fe3});
+            server.run();
+        }
+    });
+    prvl.replicateFrom(pdir,argv.slave);
+} else {
+    server = setup.build({init:argv.init,sync_journal:argv.fsync,debug:argv.debug,fe3port:argv.fe3});
+    server.run();
+}

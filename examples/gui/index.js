@@ -23,21 +23,21 @@ function brighten(elem,amount) {
 // console.log and friends should do 'printf' on args but don't in `nw`
 ['log','warn','error'].forEach(function(method) {
     console[method] = (function() {
-	var old = console[method].bind(console);
-	return function() {
-	    var s = util.format.apply(null,arguments);
-	    //return old(s);
-	    process.stderr.write(s+'\n'); // let's make the console readable
-	};
+        var old = console[method].bind(console);
+        return function() {
+            var s = util.format.apply(null,arguments);
+            //return old(s);
+            process.stderr.write(s+'\n'); // let's make the console readable
+        };
     })();
 });
 
-$(document).ready(function() {	// 'control' panel
-    var  state = 'stopped';	// 'starting','started','stopping'
+$(document).ready(function() {  // 'control' panel
+    var  state = 'stopped';     // 'starting','started','stopping'
     var   opts = {};
     var cFacts = 0;
     var cConns = 0;
-    var    dir = fs.realpathSync('../idb');	// +++ should be selected in the GUI
+    var    dir = fs.realpathSync('../idb');     // +++ should be selected in the GUI
     var  build = require(path.join(dir,'setup.js'));
     var server;
     opts.fe3Port       = 5110
@@ -49,78 +49,78 @@ $(document).ready(function() {	// 'control' panel
     opts.audit         = true;
     opts.webDir        = fs.realpathSync('.');
     opts.debug         = true;
-    opts.onCompile     = function(filename) {initStanzas(filename);};
+    opts.on            = {compile:function(filename){initStanzas(filename);}};
     $('#title').text(util.format("malaya.%s control panel",opts.tag))
     // set parameter table
     $('#paramPort').text(opts.port);
     $('#paramBL')  .text(opts.businessLogic);
     $('#paramPrvD').text(opts.prevalenceDir);
     for (var k in build.extraOpts) {
-	var xo = build.extraOpts[k];
-	$('#parameters tr:first').before(util.format("<tr><td>%s</td><td><code><span id='#xparam%s'>%s</span></code></td></tr>",xo[0],k,xo[1]));
+        var xo = build.extraOpts[k];
+        $('#parameters tr:first').before(util.format("<tr><td>%s</td><td><code><span id='#xparam%s'>%s</span></code></td></tr>",xo[0],k,xo[1]));
     }
     // +++ get from above +++
     if (!(fs.existsSync(opts.prevalenceDir)))
-	throw new Error("NYI - init");
+        throw new Error("NYI - init");
     $('#bigButton').hover(function() {brighten($(this),1.2)},
-			  function() {brighten($(this),0.83333)} );
+                          function() {brighten($(this),0.83333)} );
     $('#bigButton').click(function() {
-	$('#bigButton').css('backgroundColor','rgb(198,198,198)');
-	$('#bigButton').text('');
-	setTimeout(function() {
-	    switch (state) {
-	    case 'started':
-		state = 'stopping';
-		server.close();
-		break;
-	    case 'stopped':
-		state  = 'starting';
-		server = build.build(opts);
-		process.on('SIGHUP',function() {server.save();});
-		server.fe3.on('listening',function() {
-		    cFacts = server.size;
-		    $('#varNF').text(cFacts);
-		    $('#varNC').text(cConns);
-		    server.on('makeConnection',function() {$('#varNC').text(++cConns);});
-		    server.on('loseConnection',function() {$('#varNC').text(--cConns);});
-		    server.ready();
-		});
-		server.on('loaded',function(hash) {
-		    // !!! this is now called too late to do anything !!!
-		    $('#varHash').text(hash);
-		});
-		server.on('ready',function() {
-		    $('#bigButton').css('background','rgb(254,0,0)');
-		    $('#bigButton').text('STOP');
-		    state = 'started';
-		});
-		server.on('closed',function(hash) {
-		    $('#varHash').text(hash);
-		    $('#bigButton').css('background','rgb(0,254,0)');
-		    $('#bigButton').text('START');
-		    state = 'stopped';
-		});
-		server.on('fire',function(obj,fact,adds,dels) {
-		    cFacts += adds.length;
-		    cFacts -= dels.length;
-		    $('#varNF').text(cFacts);
-		});
-		server.on('queue-rule',function(ruleName,bindings) {
-		    updateCodeDraw(ruleName);
-		});
-		server.on('query-done',function(queryName) {
-		    updateCodeDraw(queryName);
-		});
-		server.on('add',function(t) {
-		    addFact(t);
-		});
-		server.on('del',function(t) {
-		    delFact(t);
-		});
-		server.run();
-		break;
-	    }
-	},0);
+        $('#bigButton').css('backgroundColor','rgb(198,198,198)');
+        $('#bigButton').text('');
+        setTimeout(function() {
+            switch (state) {
+            case 'started':
+                state = 'stopping';
+                server.close();
+                break;
+            case 'stopped':
+                state  = 'starting';
+                server = build.build(opts);
+                process.on('SIGHUP',function() {server.save();});
+                server.fe3.on('listening',function() {
+                    cFacts = server.size;
+                    $('#varNF').text(cFacts);
+                    $('#varNC').text(cConns);
+                    server.on('makeConnection',function() {$('#varNC').text(++cConns);});
+                    server.on('loseConnection',function() {$('#varNC').text(--cConns);});
+                    server.ready();
+                });
+                server.on('loaded',function(hash) {
+                    // !!! this is now called too late to do anything !!!
+                    $('#varHash').text(hash);
+                });
+                server.on('ready',function() {
+                    $('#bigButton').css('background','rgb(254,0,0)');
+                    $('#bigButton').text('STOP');
+                    state = 'started';
+                });
+                server.on('closed',function(hash) {
+                    $('#varHash').text(hash);
+                    $('#bigButton').css('background','rgb(0,254,0)');
+                    $('#bigButton').text('START');
+                    state = 'stopped';
+                });
+                server.on('fire',function(obj,fact,adds,dels) {
+                    cFacts += adds.length;
+                    cFacts -= dels.length;
+                    $('#varNF').text(cFacts);
+                });
+                server.on('queue-rule',function(ruleName,bindings) {
+                    updateCodeDraw(ruleName);
+                });
+                server.on('query-done',function(queryName) {
+                    updateCodeDraw(queryName);
+                });
+                server.on('add',function(t) {
+                    addFact(t);
+                });
+                server.on('del',function(t) {
+                    delFact(t);
+                });
+                server.run();
+                break;
+            }
+        },0);
     });
 });
 

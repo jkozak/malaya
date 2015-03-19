@@ -55,7 +55,7 @@ exports.createServer = function(opts) {
     var syshash = null;         // at startup
     var conns   = {};
     var ee      = new events.EventEmitter();
-    var prvl    = prevalence();
+    var prvl    = opts.prevalence || prevalence();
     var tempDir = temp.mkdirSync();
 
     if (opts.debug)
@@ -80,38 +80,42 @@ exports.createServer = function(opts) {
         },
         
         start: function() {
-            if (opts.init)
-                try {
-                    fs.statSync(opts.prevalenceDir);
-                    throw new util.Fail(util.format("prevalence state dir %s already exists, won't init",
-                                                    opts.prevalenceDir ));
-                } catch (err) {
-                    if (err instanceof util.Fail)
-                        throw err;
-                }
-            try {
-                if (opts.init) {
-                    fs.mkdirSync(opts.prevalenceDir);
-                    bl = prvl.wrap(opts.prevalenceDir,opts.businessLogic,opts);
-                    bl.init();
-                    bl.open();
-                    bl.save();
-                    bl.close();
-                } else
-                    bl = prvl.wrap(opts.prevalenceDir,opts.businessLogic,opts);
-                bl.open(opts.prevalenceDir);
-                syshash = bl.load(bl.set_root,bl.update);
-                ee.emit('loaded',syshash);
-            } catch(e) {
+            if (opts.prevalence) {
+                bl = opts.prevalence.wrapper;
+            } else {
                 if (opts.init)
-                    this.uninit();
-                throw e;
-            }
+                    try {
+                        fs.statSync(opts.prevalenceDir);
+                        throw new util.Fail(util.format("prevalence state dir %s already exists, won't init",
+                                                        opts.prevalenceDir ));
+                    } catch (err) {
+                        if (err instanceof util.Fail)
+                            throw err;
+                    }
+                try {
+                    if (opts.init) {
+                        fs.mkdirSync(opts.prevalenceDir);
+                        bl = prvl.wrap(opts.prevalenceDir,opts.businessLogic,opts);
+                        bl.init();
+                        bl.open();
+                        bl.save();
+                        bl.close();
+                    } else
+                        bl = prvl.wrap(opts.prevalenceDir,opts.businessLogic,opts);
+                    bl.open(opts.prevalenceDir);
+                    syshash = bl.load(bl.set_root,bl.update);
+                    ee.emit('loaded',syshash);
+                } catch(e) {
+                    if (opts.init)
+                        this.uninit();
+                    throw e;
+                }
 
-            if (bl.transform!==undefined) {
-                bl.transform();
-                bl.save();
-                process.exit(0);
+                if (bl.transform!==undefined) { // !!! moribund !!!
+                    bl.transform();
+                    bl.save();
+                    process.exit(0);
+                }
             }
         },
 
@@ -189,22 +193,30 @@ exports.createServer = function(opts) {
         port: null,
         app:  null,
         listen: function (port,done) {
-            var sock = require('sockjs').createServer();
+            var sock = require('sockjs').createServer({log:function(severity,text) {
+                if (['error','info'].indexOf(severity)!==-1)
+                    console.log(text);
+            }});
 
             server.app = server.makeExpressApp();
             
             http = require('http').Server(server.app);
-            
+
             sock.on('connection',function(conn) {
                 switch (conn.prefix) {
                 case '/data':
                     util.debug("client connection from: %s:%s to %s",conn.remoteAddress,conn.remotePort,conn.prefix);
                     server.addConnection(new WsConnection(conn,server));
                     break;
+                case '/replication/journal':
+                    util.debug("replication connection from: %s:%s",conn.remoteAddress,conn.remotePort);
+                    prvl.addReplicationConnection(conn);
+                    break;
                 }
             });
             
             sock.installHandlers(http,{prefix:'/data'});
+            sock.installHandlers(http,{prefix:'/replication/journal'});
 
             ee.emit('listen',port,sock);
 

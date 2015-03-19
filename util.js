@@ -35,14 +35,17 @@ exports.readFdLinesSync = function(fd,fn) {
     var bufferSize = 1024;
     var buffer     = new Buffer(bufferSize);
     var leftOver   = '';
+    var done       = false;
     var read,line,idxStart,idx;
-    while ((read=fs.readSync(fd,buffer,0,bufferSize,null))!==0) {
+    while (!done && (read=fs.readSync(fd,buffer,0,bufferSize,null))!==0) {
         leftOver += buffer.toString('utf8',0,read);
         idxStart  = 0;
         while ((idx=leftOver.indexOf("\n",idxStart))!==-1) {
             line = leftOver.substring(idxStart,idx);
-            if (!fn(line))
+            if (!fn(line)) {
+                done = true;
                 break;
+            }
             idxStart = idx+1;
         }
         leftOver = leftOver.substring(idxStart);

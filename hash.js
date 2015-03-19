@@ -56,6 +56,12 @@ module.exports = function(algorithm) {
                 getHashes:function() {
                     return fs.readdirSync(dirname);
                 },
+                check: function(hash) {
+                    var b = ans.hash(store.getSync(hash))===hash;
+                    if (!b)
+                        fs.unlinkSync(store.makeFilename(hash)); // not worth keeping?
+                    return b;
+                },
                 sanityCheck:function() {
                     var hashes = store.getHashes();
                     for (var k in hashes) { // check all hashes are sound
