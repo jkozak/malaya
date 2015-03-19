@@ -52,12 +52,14 @@ module.exports = function() {
 
     var sync_journal = 'kludge';
 
-    var sanity_check = true;    // default to true if running production
+    var sanity_check = true;
 
     var source_version = util.sourceVersion;
 
     function init(dirname,options) {
         // prepare a directory to be a store
+        if (options.sanityCheck!==undefined)
+            sanity_check = options.sanityCheck;
         fs.mkdirSync(dirname+"/state");
         fs.writeFileSync(path.join(dirname,"state/world"),util.serialise(null)+"\n");
         fs.appendFileSync(path.join(dirname,"state/world"),util.serialise({})+"\n");
@@ -384,30 +386,37 @@ module.exports = function() {
         return wrap(dir,bl,options);
     };
 
-    exports.createExpressMiddleware = function(path) {
-        var express = require('express');
+    exports.cacheFile = function(fn) {
         var    seen = {};
         var encache = function(url,filename,entry) {
             entry.hash = hash_store.putFileSync(filename);
             journalise('http',[url,entry.hash]);
             seen[url] = entry;
         };
+        var      sn = seen[fn];
+        var      st = fs.statSync(fn);
+        var      en = {mtime:st.mtime,size:st.size};
+        if (sn) {
+            if (st.size!==sn.size || st.mtime.getTime()!==sn.mtime.getTime()) // has base file changed?
+                encache(fn,fn,en);
+        } else
+            encache(fn,fn,en);
+        sn = seen[fn];
+        return [sn.hash,hash_store.makeFilename(sn.hash)];
+    };
+
+    exports.createExpressMiddleware = function(p) {
+        var express = require('express');
         return function(req,res,next) {
             if (req.method==='GET' || req.method==='HEAD') {
                 try {
-                    var sn = seen[req.url];
-                    var fn = path+req.url;
-                    var st = fs.statSync(fn);
-                    var en = {mtime:st.mtime,size:st.size};
-                    if (sn) {
-                        if (st.size!==sn.size || st.mtime.getTime()!==sn.mtime.getTime()) // has base file changed?
-                            encache(req.url,fn,en);
-                    } else
-                        encache(req.url,fn,en);
-                    sn = seen[req.url];
-                    res.setHeader("Content-Type",express.static.mime.lookup(req.url));
-                    res.setHeader("ETag",        sn.hash);
-                    res.status(200).sendFile(hash_store.makeFilename(sn.hash));
+                    var fn = path.join(p,req.path);
+                    var cf = exports.cacheFile(fn);
+                    res.setHeader("Content-Type",express.static.mime.lookup(fn));
+                    res.setHeader("ETag",        cf[0]);
+                    res.status(200);
+                    if (req.method==='GET')
+                        res.sendFile(path.resolve(cf[1]));
                     return;
                 } catch (e) {
                     if (e.code!=='ENOENT')

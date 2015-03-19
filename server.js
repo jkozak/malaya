@@ -16,4 +16,5 @@ var malaya = require('./malaya.js').createServer({
     businessLogic: argv.bl
 });
 
-malaya.run();
+malaya.start();
+malaya.listen(0,function(){});

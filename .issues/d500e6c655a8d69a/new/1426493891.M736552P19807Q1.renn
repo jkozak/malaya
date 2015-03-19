@@ -1,0 +1,7 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Mon, 16 Mar 2015 08:18:11 +0000
+Subject: add express middleware to invoke chrjs compiler
+State: resolved
+Message-Id: <d500e6c655a8d69a-0-artemis@renn>
+resolution: fixed
+
