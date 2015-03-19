@@ -6,10 +6,16 @@ var     events = require('events');
 var     assert = require('assert');
 var         fs = require('fs');
 var       rmRF = require("rimraf");
+var       temp = require('temp');
+var       path = require('path');
+var     recast = require('recast');
 
 var       util = require('./util.js');
 var prevalence = require('./prevalence.js');
+var     parser = require("./parser.js");
 var   compiler = require("./compiler.js");  // adds support for .chrjs files
+
+temp.track();
 
 function WsConnection(conn,server) {
     var ee = new events.EventEmitter();
@@ -50,6 +56,7 @@ exports.createServer = function(opts) {
     var conns   = {};
     var ee      = new events.EventEmitter();
     var prvl    = prevalence();
+    var tempDir = temp.mkdirSync();
 
     if (opts.debug)
         compiler.debug = true;
@@ -72,7 +79,7 @@ exports.createServer = function(opts) {
             return bl.getFact(t);
         },
         
-        start: function(done) {
+        start: function() {
             if (opts.init)
                 try {
                     fs.statSync(opts.prevalenceDir);
@@ -125,15 +132,68 @@ exports.createServer = function(opts) {
             rmRF.sync(opts.prevalenceDir);
         },
 
-        listen: function (port,done) {
+        makeExpressApp: function() {
             var express = require('express');
             var     app = express();
-            var    sock = require('sockjs').createServer();
-            
-            http = require('http').Server(app);
-            
+            var jscache = {};   // req.path -> [compiled,stat]
+
             if (opts.logging)
                 app.use(require('morgan')(":remote-addr - :remote-user [:date] \":method :url HTTP/:http-version\" :status :res[content-length] \":referrer\" \":user-agent\" :res[etag]"));
+            
+            prvl.installHandlers(app, {prefix:'/replication'});
+            
+            app.get('/',function(req,res) {
+                res.redirect('/index.html');
+            });
+            app.use('/temp',express.static(tempDir));
+
+            if (opts.webDir) {
+                app.get('/*.chrjs',function(req,res) { // +++ eventually use disk cache +++
+                    try {
+                        var filename = path.join(opts.webDir,req.path.substr(1));
+                        var     stat = fs.statSync(filename);
+                        var    entry = jscache[req.path];
+                        if (entry) {
+                            if (stat.size===entry[1].size ||
+                                stat.mtime.getTime()===entry[1].mtime.getTime() ) {
+                                res.setHeader("Content-Type","application/javascript");
+                                res.status(200).send(entry[0]);
+                                return;
+                            }
+                        }
+                        var chrjs = fs.readFileSync(filename);
+                        var    js = recast.print(compiler.compile(parser.parse(chrjs,{attrs:true}))).code;
+                        jscache[req.path] = [js,stat];
+                        res.setHeader("Content-Type","application/javascript");
+                        res.status(200).send(js);
+                        if (opts.audit)
+                            prvl.cacheFile(filename); // ensure chrjs source gets journalised+cached
+                        return;
+                    } catch (e) {
+                        if (e.code==='ENOENT') {
+                            delete jscache[req.path];
+                            res.status(404).send();
+                            return;
+                        } else
+                            throw e;
+                    }
+                });
+                if (opts.audit)
+                    app.use(prvl.createExpressMiddleware(opts.webDir));
+                app.use(express.static(opts.webDir));
+            }
+
+            return app;
+        },
+
+        port: null,
+        app:  null,
+        listen: function (port,done) {
+            var sock = require('sockjs').createServer();
+
+            server.app = server.makeExpressApp();
+            
+            http = require('http').Server(server.app);
             
             sock.on('connection',function(conn) {
                 switch (conn.prefix) {
@@ -147,18 +207,10 @@ exports.createServer = function(opts) {
             sock.installHandlers(http,{prefix:'/data'});
 
             ee.emit('listen',port,sock);
-            
-            prvl.installHandlers(app, {prefix:'/replication'});
-            
-            app.get('/',function(req,res) {
-                res.redirect('/index.html');
-            });
-            if (opts.audit)
-                app.use(prvl.createExpressMiddleware(opts.webDir));
-            app.use(express.static(opts.webDir));
-            
+
             http.listen(port,function() {
-                util.debug('http listening on *:%s',port);
+                server.port = http.address().port;
+                util.debug('http listening on *:%s',server.port);
                 done();
             });
         },
@@ -253,8 +305,9 @@ exports.createServer = function(opts) {
     };
     if (util.env==='test')
         server._private = {
-            get bl()    {return bl;},
-            get facts() {return bl._private.bl._private.facts;}
+            get bl()      {return bl;},
+            get facts()   {return bl._private.bl._private.facts;},
+            get tempDir() {return tempDir;}
         };
     return server;
 };
