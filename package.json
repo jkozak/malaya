@@ -21,6 +21,7 @@
   },
   "devDependencies": {
     "faker": "^2.0.1",
+    "iocat": "0.0.5",
     "matcha": "^0.6.0",
     "mocha": "^2.1.0",
     "prettyjson": "^1.0.0",

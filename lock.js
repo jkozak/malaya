@@ -2,9 +2,9 @@
 
 "use strict";
 
-var temp = require('temp');
-var path = require('path');
-var   fs = require('fs');
+var   temp = require('temp');
+var   path = require('path');
+var     fs = require('fs');
 
 temp.track();
 
