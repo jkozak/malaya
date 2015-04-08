@@ -199,6 +199,7 @@ describe("esprima-based parser",function() {
     it("should pass original javascript tests",function() {
 	var total    = 0;
 	var failures = [];
+	this.timeout(5000);
 	vm.runInThisContext(fs.readFileSync(__dirname+'/../node_modules/esprima/test/test.js','utf-8'));
 	// this code largely taken from the esprima test runner
 	var adjustRegexLiteral = function(key,value) {
