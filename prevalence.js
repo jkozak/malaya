@@ -25,17 +25,18 @@
 "use strict";
 /*eslint-disable*/
 
-var _       = require("underscore");
-var events  = require('events');
-var assert  = require("assert");
-var fs      = require("fs");
-var rm_rf   = require("rimraf");
-var hash    = require("./hash.js")('sha1');
-var path    = require("path");
-var util    = require("./util.js");
-var lock    = require("./lock.js");
-var express = require('express');
-var http    = require('http');
+var _         = require("underscore");
+var events    = require('events');
+var assert    = require("assert");
+var fs        = require("fs");
+var rm_rf     = require("rimraf");
+var hash      = require("./hash.js")('sha1');
+var path      = require("path");
+var util      = require("./util.js");
+var lock      = require("./lock.js");
+var express   = require('express');
+var http      = require('http');
+var timestamp = require('monotonic-timestamp');
 
 module.exports = function() {
     var exports = {};
@@ -122,7 +123,7 @@ module.exports = function() {
         // write a journal entry
         if (fd_jrnl===null)
             throw new Error("journal is closed");
-        date = new Date();
+        date = timestamp();
         if (!master)
             throw new Error("can't journalise, not master");
         writeJournalSync([date,type,datum]);
@@ -133,7 +134,7 @@ module.exports = function() {
         if (fd_jrnl===null)
             callback(new Error("journal is closed"),null);
         else {
-            date = new Date();
+            date = timestamp();
             t_jrnl++;
             var s = util.serialise([date,type,datum])+'\n';
             fs.write(fd_jrnl,s,s.length,null,function(err,x) {

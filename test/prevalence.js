@@ -318,4 +318,26 @@ describe('prevalence hash_store',function() {
     });
 });
 
+describe("journal",function() {
+    it("has monotonic, unique, ascending timestamps",function() {
+        var prvl = prevalence();
+        var tdir = temp.mkdirSync();
+        prvl._private.init(tdir,{});
+        prvl._private.open(tdir);
+        prvl._private.set_syncjrnl('none');
+        for (var i=0;i<100;i++)
+            prvl._private.journalise('test',i);
+        prvl._private.close();
+        var ts = null;
+        util.readFileLinesSync(path.join(tdir,'state','journal'),function(json) {
+            var l = JSON.parse(json);
+            if (ts!==null)
+                assert(ts<l[0]);
+            ts = l[0];
+            return true;
+        });
+        assert(ts!==null);      // check we actually did something!
+    });
+});
+
 // +++ test sanity checking +++
