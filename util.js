@@ -6,7 +6,8 @@ var shell = require('shelljs');
 var    fs = require('fs');
 var  path = require('path');
 
-exports.verbosity = 3;
+exports.verbosity     = 3;
+exports.hashAlgorithm = 'sha1';
 
 exports.format = _util.format;
 
@@ -29,7 +30,7 @@ exports.printf  = function (msg) {
     _util.print(_util.format.apply(null,arguments));
 };
 
-exports.inherit = _util.inherit;
+exports.inherits = _util.inherits;
 
 exports.readFdLinesSync = function(fd,fn) {
     var bufferSize = 1024;
@@ -126,6 +127,16 @@ exports.deserialise = function(s) {
 exports.deepClone = function(json) {
     return JSON.parse(JSON.stringify(json)); // lazy, very
 };
+
+exports.startsWith = function(str,prefix) {
+    return str.indexOf(prefix)===0;
+};
+
+exports.endsWith = function(str,suffix) {
+    return str.indexOf(suffix,str.length-suffix.length)!==-1;
+};
+
+// environmental stuff
 
 exports.sourceVersion = (function() {
     var cmd;

@@ -3,20 +3,20 @@ var root;
 exports.init = function() {
     root = {n:100};
 };
-exports.get_root = function() {
+exports.getRoot = function() {
     return root;
 };
 
-exports.set_root = function(r) {
+exports.setRoot = function(r) {
     root = r;
 };
 
 exports.query = function(q) {
     if (q=='n')
-	return root.n;
+        return root.n;
 };
 
 exports.update = function(u) {
     if (u=='tick')
-	root.n++;
+        root.n++;
 };

@@ -3,11 +3,11 @@ var root;
 exports.init = function() {
     root = [];
 };
-exports.get_root = function() {
+exports.getRoot = function() {
     return root;
 };
 
-exports.set_root = function(r) {
+exports.setRoot = function(r) {
     root = r;
 };
 

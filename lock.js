@@ -2,39 +2,62 @@
 
 "use strict";
 
+var      _ = require('underscore');
 var   temp = require('temp');
 var   path = require('path');
 var     fs = require('fs');
+var VError = require('verror');
 
 temp.track();
 
-exports.lockSync = function(filename,opts) {
+exports.lockSync = function(filename,data) {
     var tmp = temp.openSync({dir:path.dirname(filename)});
-    var pid;
-    fs.writeSync(tmp.fd,process.pid,null,null,null);
+
+    data = _.extend({},data,{pid:process.pid});
+    
+    fs.writeSync(tmp.fd,JSON.stringify(data),null,null,null);
     for (var i=0;i<2;i++) 
         try {
             fs.linkSync(tmp.path,filename);     // if locked, fails here
             return;
         } catch (e) {
-            pid = parseInt(fs.readFileSync(filename));
-            try {
-                process.kill(pid,0);
-            } catch (e1) {
-                // +++ check e===ESRCH +++
+            var pid = exports.pidLockedSync(filename);
+            if (pid===null) {
                 try {
-                    console.log("removing stale lockfile %s created by process %s",filename,pid);
+                    console.log("removing stale lockfile %s",filename);
                     fs.unlinkSync(filename);
                     continue;
-                } catch (e2) {
-                    throw new Error("lockfile is stale but can't be removed");
+                } catch (e1) {
+                    throw new VError(e,"lockfile %s is stale but can't be removed",filename);
                 }
             }
-            throw new Error("lock "+filename+" is held by process "+pid);
+            throw new VError(e,"lockfile %s is held by process %d",filename,pid);
         }
-    throw new Error("failed to acquire lock "+filename);
+    throw new VError("failed to acquire lockfile %s",filename);
 };
 
-exports.unlockSync = function(filename,opts) {
+exports.lockDataSync = function(filename) {
+    var data;
+    try {
+        data = JSON.parse(fs.readFileSync(filename));
+    } catch (e) {
+        if (e.code!=='ENOENT')
+            throw new VError(e,"can't read or parse lockfile %s",filename);
+        return null;
+    }
+    try {
+        process.kill(data.pid,0);
+        return data;
+    } catch (e) {
+        return null;
+    }
+};
+
+exports.pidLockedSync = function(filename) {
+    var data = exports.lockDataSync(filename);
+    return data===null ? null : data.pid;
+};
+
+exports.unlockSync = function(filename) {
     fs.unlinkSync(filename);
 };
