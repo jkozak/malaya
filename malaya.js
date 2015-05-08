@@ -25,7 +25,6 @@ function WsConnection(conn,server) {
         conn.write(JSON.stringify(js));
     };
     var end = function(msg) {
-        write(['ERR',msg]);
         conn.end();
     };
 
@@ -43,20 +42,23 @@ function WsConnection(conn,server) {
             end("junk");
         server.command(js,conn);
     });
+
     conn.on('close',function() {
         ee.emit('close');
     });
+
     return this;
 }
 
 exports.createServer = function(opts) {
-    var http    = null;
-    var bl      = null;         // business logic
-    var syshash = null;         // at startup
-    var conns   = {};
-    var ee      = new events.EventEmitter();
-    var prvl    = opts.prevalence || prevalence();
-    var tempDir = temp.mkdirSync();
+    var http      = null;
+    var bl        = null;         // business logic
+    var syshash   = null;         // at startup
+    var conns     = {};
+    var ee        = new events.EventEmitter();
+    var prvl      = opts.prevalence || prevalence();
+    var tempDir   = temp.mkdirSync();
+    var adminConn = null;
 
     if (opts.debug)
         compiler.debug = true;
@@ -82,6 +84,8 @@ exports.createServer = function(opts) {
         start: function() {
             if (opts.prevalence) {
                 bl = opts.prevalence.wrapper;
+            } else if (opts.slave) {
+                /* eslint no-empty:0 */
             } else {
                 if (opts.init)
                     try {
@@ -103,7 +107,7 @@ exports.createServer = function(opts) {
                     } else
                         bl = prvl.wrap(opts.prevalenceDir,opts.businessLogic,opts);
                     bl.open(opts.prevalenceDir);
-                    syshash = bl.load(bl.set_root,bl.update);
+                    syshash = bl.load(bl.setRoot,bl.update);
                     ee.emit('loaded',syshash);
                 } catch(e) {
                     if (opts.init)
@@ -117,6 +121,10 @@ exports.createServer = function(opts) {
                     process.exit(0);
                 }
             }
+        },
+
+        startReplication: function() {
+            prvl.replicateFrom(opts.prevalenceDir,opts.slave);
         },
 
         transform: function(blt) { // `blt` implements bl transform protocol (transform, no update/query)
@@ -150,6 +158,8 @@ exports.createServer = function(opts) {
                 res.redirect('/index.html');
             });
             app.use('/temp',express.static(tempDir));
+            if (opts.bowerDir)
+                app.use('/bower',express.static(opts.bowerDir));
 
             if (opts.webDir) {
                 app.get('/*.chrjs',function(req,res) { // +++ eventually use disk cache +++
@@ -190,6 +200,26 @@ exports.createServer = function(opts) {
             return app;
         },
 
+        addAdminConnection: function(conn) {
+            var port = util.format('websocket://%s:%d/',conn.remoteAddress,conn.remotePort);
+            if (conn.remoteAddress!=='127.0.0.1' || adminConn!==null)
+                conn.close();
+            else {
+                ee.emit('makeAdminConnection',port);
+                adminConn = conn;
+                conn.on('data',function(data) {
+                    server.adminCommand(data);
+                });
+                conn.on('close',function() {
+                    adminConn = null;
+                    ee.emit('loseAdminConnection',port);
+                });
+            }
+        },
+        adminCommand: function(cmd) {
+            console.log("*** adminCommand: %j",cmd);
+        },
+
         port: null,
         app:  null,
         listen: function (port,done) {
@@ -212,11 +242,16 @@ exports.createServer = function(opts) {
                     util.debug("replication connection from: %s:%s",conn.remoteAddress,conn.remotePort);
                     prvl.addReplicationConnection(conn);
                     break;
+                case '/admin':
+                    util.debug("admin connection from: %s:%s",conn.remoteAddress,conn.remotePort);
+                    server.addAdminConnection(conn);
+                    break;
                 }
             });
             
             sock.installHandlers(http,{prefix:'/data'});
             sock.installHandlers(http,{prefix:'/replication/journal'});
+            sock.installHandlers(http,{prefix:'/admin'});
 
             ee.emit('listen',port,sock);
 

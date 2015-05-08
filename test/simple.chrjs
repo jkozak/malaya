@@ -3,393 +3,395 @@ var      _ = require('underscore');
 
 describe("store common code",function() {
     it("should provide facts in order for testing",function() {
-	var st = store{};
-	for (var i=0;i<20;i++)
-	    st.add([''+i]);
-	var facts = st._private.orderedFacts;
-	for (var i=0;i<20;i++)
-	    assert.equal(parseInt(facts[i][0]),i);
+        var st = store{};
+        for (var i=0;i<20;i++)
+            st.add([''+i]);
+        var facts = st._private.orderedFacts;
+        for (var i=0;i<20;i++)
+            assert.equal(parseInt(facts[i][0]),i);
     });
 });
 
 describe("match example",function() {
     it("should generate JS for less trivial store",function() {
-	var match = store {
-	    ['user',{name:"John Kozak",company:"Acecomp"}];
-	    ['user',{name:"Val Wardlaw",company:"Perluceo"}];
-	    
-	    ['instrument',{name:"IL21"}];
-	    
-	    rule (-['match-price', {volume:0}]);
-	    rule (-['match-price', {user:uB, instrument, volume:vB, isBuy:true,  ...rB}]^rB.t,
-    		  -['match-price', {user:uS, instrument, volume:vS, isBuy:false, ...rS}]^rS.t,
-    		  ["user", {name:uB, company:cB}],
-    		  ["user", {name:uS, company:cS}],
-    		  cB!==cS,
-    		  vT = Math.min(vB,vS),
-    		  +['match-trade', {buyer:uB, seller:uS, instrument, volume:vT}],
-    		  +['match-price', {user:uB, instrument, volume:vB-vT, isBuy:true,  ...rB}],
-    		  +['match-price', {user:uS, instrument, volume:vS-vT, isBuy:false, ...rS}] );
-	    
-	    rule (['user', {name}],       -['user', {name}]);
-	    rule (['instrument', {name}], -['instrument', {name}]);
-	};
-	
-	assert.strictEqual(Object.keys(match._private.facts).length,3); // 3 facts from the match.chrjs source
-	var r1 = match.add(['match-price',{user:"John Kozak", instrument:"IL21",volume:10000000,isBuy:true, t:1}]);
-	assert.equal(r1.adds.length,1);
-	assert.deepEqual(match._private.facts[r1.adds[0]],
-			 ['match-price',{user:"John Kozak", instrument:"IL21",volume:10000000,isBuy:true, t:1}] );
-	assert.equal(r1.dels.length,0);
-	var r2 = match.add(['match-price',{user:"Val Wardlaw",instrument:"IL21",volume: 9000000,isBuy:false,t:1}]);
-	assert.equal(r2.adds.length,2); // new trade and new price
-	assert.equal(r2.dels.length,1); // original price deleted
-	var r2adds = _.map(r2.adds,function(a){return match.get(a);});
-	r2adds.sort();
-	assert.deepEqual(r2adds,
-			 [["match-price",{t:1,user:"John Kozak",instrument:"IL21",volume:1000000,isBuy:true}],
-			  ["match-trade",{buyer:"John Kozak",seller:"Val Wardlaw",instrument:"IL21",volume:9000000}] ]);
-	assert.deepEqual(r2.refs[r2.dels[0]],
-			 ['match-price',{user:"John Kozak", instrument:"IL21",volume:10000000,isBuy:true, t:1}] );
-	assert(_.every(_.map(r2.dels,function(t){return r2.refs[t][0]==='match-price';})));
-	assert(_.every(r2.adds,function(x){return (typeof parseInt(x))==='number';}));
-	assert.strictEqual(Object.keys(match._private.facts).length,5); // original 3, trade and residual price
+        var match = store {
+            ['user',{name:"John Kozak",company:"Acecomp"}];
+            ['user',{name:"Val Wardlaw",company:"Perluceo"}];
+            
+            ['instrument',{name:"IL21"}];
+            
+            rule (-['match-price', {volume:0}]);
+            rule (-['match-price', {user:uB, instrument, volume:vB, isBuy:true,  ...rB}]^rB.t,
+                  -['match-price', {user:uS, instrument, volume:vS, isBuy:false, ...rS}]^rS.t,
+                  ["user", {name:uB, company:cB}],
+                  ["user", {name:uS, company:cS}],
+                  cB!==cS,
+                  vT = Math.min(vB,vS),
+                  +['match-trade', {buyer:uB, seller:uS, instrument, volume:vT}],
+                  +['match-price', {user:uB, instrument, volume:vB-vT, isBuy:true,  ...rB}],
+                  +['match-price', {user:uS, instrument, volume:vS-vT, isBuy:false, ...rS}] );
+            
+            rule (['user', {name}],       -['user', {name}]);
+            rule (['instrument', {name}], -['instrument', {name}]);
+        };
+        
+        assert.strictEqual(Object.keys(match._private.facts).length,3); // 3 facts from the match.chrjs source
+        var r1 = match.add(['match-price',{user:"John Kozak", instrument:"IL21",volume:10000000,isBuy:true, t:1}]);
+        assert.equal(r1.adds.length,1);
+        assert.deepEqual(match._private.facts[r1.adds[0]],
+                         ['match-price',{user:"John Kozak", instrument:"IL21",volume:10000000,isBuy:true, t:1}] );
+        assert.equal(r1.dels.length,0);
+        var r2 = match.add(['match-price',{user:"Val Wardlaw",instrument:"IL21",volume: 9000000,isBuy:false,t:1}]);
+        assert.equal(r2.adds.length,2); // new trade and new price
+        assert.equal(r2.dels.length,1); // original price deleted
+        var r2adds = _.map(r2.adds,function(a){return match.get(a);});
+        r2adds.sort();
+        assert.deepEqual(r2adds,
+                         [["match-price",{t:1,user:"John Kozak",instrument:"IL21",volume:1000000,isBuy:true}],
+                          ["match-trade",{buyer:"John Kozak",seller:"Val Wardlaw",instrument:"IL21",volume:9000000}] ]);
+        assert.deepEqual(r2.refs[r2.dels[0]],
+                         ['match-price',{user:"John Kozak", instrument:"IL21",volume:10000000,isBuy:true, t:1}] );
+        assert(_.every(_.map(r2.dels,function(t){return r2.refs[t][0]==='match-price';})));
+        assert(_.every(r2.adds,function(x){return (typeof parseInt(x))==='number';}));
+        assert.strictEqual(Object.keys(match._private.facts).length,5); // original 3, trade and residual price
     });
     it("should reset",function() {
-	var match = store {
-	    ['user',{name:"John Kozak",company:"Acecomp"}];
-	    ['user',{name:"Val Wardlaw",company:"Perluceo"}];
-	    
-	    ['instrument',{name:"IL21"}];
-	    
-	    rule (-['match-price', {volume:0}]);
-	    rule (-['match-price', {user:uB, instrument, volume:vB, isBuy:true,  ...rB}]^rB.t,
-    		  -['match-price', {user:uS, instrument, volume:vS, isBuy:false, ...rS}]^rS.t,
-    		  ["user", {name:uB, company:cB}],
-    		  ["user", {name:uS, company:cS}],
-    		  cB!==cS,
-    		  vT = Math.min(vB,vS),
-    		  +['match-trade', {buyer:uB, seller:uS, instrument, volume:vT}],
-    		  +['match-price', {user:uB, instrument, volume:vB-vT, isBuy:true,  ...rB}],
-    		  +['match-price', {user:uS, instrument, volume:vS-vT, isBuy:false, ...rS}] );
-	    
-	    rule (['user', {name}],       -['user', {name}]);
-	    rule (['instrument', {name}], -['instrument', {name}]);
-	};
+        var match = store {
+            ['user',{name:"John Kozak",company:"Acecomp"}];
+            ['user',{name:"Val Wardlaw",company:"Perluceo"}];
+            
+            ['instrument',{name:"IL21"}];
+            
+            rule (-['match-price', {volume:0}]);
+            rule (-['match-price', {user:uB, instrument, volume:vB, isBuy:true,  ...rB}]^rB.t,
+                  -['match-price', {user:uS, instrument, volume:vS, isBuy:false, ...rS}]^rS.t,
+                  ["user", {name:uB, company:cB}],
+                  ["user", {name:uS, company:cS}],
+                  cB!==cS,
+                  vT = Math.min(vB,vS),
+                  +['match-trade', {buyer:uB, seller:uS, instrument, volume:vT}],
+                  +['match-price', {user:uB, instrument, volume:vB-vT, isBuy:true,  ...rB}],
+                  +['match-price', {user:uS, instrument, volume:vS-vT, isBuy:false, ...rS}] );
+            
+            rule (['user', {name}],       -['user', {name}]);
+            rule (['instrument', {name}], -['instrument', {name}]);
+        };
 
-	for (var i=0;i<10;i++)
-	    match.add(['match-price',{user:"John Kozak", instrument:"IL21",volume:10000000,isBuy:true, t:1}]);
-	assert.strictEqual(match._private.size,13);
+        for (var i=0;i<10;i++)
+            match.add(['match-price',{user:"John Kozak", instrument:"IL21",volume:10000000,isBuy:true, t:1}]);
+        assert.strictEqual(match._private.size,13);
 
-	match.reset();
-	assert.strictEqual(match._private.size,3);
-	
-	for (var i=0;i<10;i++)
-	    match.add(['match-price',{user:"John Kozak", instrument:"IL21",volume:10000000,isBuy:true, t:1}]);
-	assert.strictEqual(match._private.size,13);
+        match.reset();
+        assert.strictEqual(match._private.size,3);
+        
+        for (var i=0;i<10;i++)
+            match.add(['match-price',{user:"John Kozak", instrument:"IL21",volume:10000000,isBuy:true, t:1}]);
+        assert.strictEqual(match._private.size,13);
 
     });
 });
 
 describe("query",function() {
     it("should be able to add up",function(){
-	var st = store {
-	    query q(;['x',{x}];a=0) a+x;
-	};
-	assert.equal(st.queries.q().result,0);
-	st.add(['x',{x:1}]);
-	assert.equal(st.queries.q().result,1);
-	st.add(['x',{x:1}]);
-	assert.equal(st.queries.q().result,2);
+        var st = store {
+            query q(;['x',{x}];a=0) a+x;
+        };
+        assert.equal(st.queries.q().result,0);
+        st.add(['x',{x:1}]);
+        assert.equal(st.queries.q().result,1);
+        st.add(['x',{x:1}]);
+        assert.equal(st.queries.q().result,2);
     });
     it("should sort as needed",function(){
-	var st = store {
-	    ['x',{x:1}];
-	    ['x',{x:2}];
-	    query qu(;['x',{x}];a=0)    a===0?x:a;
-	    query qa(;['x',{x}]^x;a=0)  a===0?x:a;
-	    query qd(;['x',{x}]^-x;a=0) a===0?x:a;
-	};
-	assert.equal(st.queries.qa().result,1);
-	assert.equal(st.queries.qd().result,2);
+        var st = store {
+            ['x',{x:1}];
+            ['x',{x:2}];
+            query qu(;['x',{x}];a=0)    a===0?x:a;
+            query qa(;['x',{x}]^x;a=0)  a===0?x:a;
+            query qd(;['x',{x}]^-x;a=0) a===0?x:a;
+        };
+        assert.equal(st.queries.qa().result,1);
+        assert.equal(st.queries.qd().result,2);
     });
     it("should use parameters",function(){
-	var st = store {
-	    ['Cookies',{ApplicationID:51,CookieID:0,Cookie:"with jam"}];
-	    query cookie(appId,id;
-			 ['Cookies',{ApplicationID:appId,CookieID:id,Cookie}];
-			 a=[]) a.concat(Cookie);
-	};
-	assert.deepEqual(st.queries.cookie(51,0).result,["with jam"]);
+        var st = store {
+            ['Cookies',{ApplicationID:51,CookieID:0,Cookie:"with jam"}];
+            query cookie(appId,id;
+                         ['Cookies',{ApplicationID:appId,CookieID:id,Cookie}];
+                         a=[]) a.concat(Cookie);
+        };
+        assert.deepEqual(st.queries.cookie(51,0).result,["with jam"]);
     });
     it("should generate even silly code",function(){
-	// this cropped up while testing nested queries
-    	var st = store {
-    	    ['Cookies',{ApplicationID:51,CookieID:0,Cookie:"with jam"}];
-    	    query cookie(appId,id;
-    			 ['Cookies',{ApplicationID:appId,CookieID:id}];
-    			 a=[]) a.concat([[appId,id]]);
-    	};
-	assert.deepEqual(st.queries.cookie(51,0).result,[[51,0]]);
+        // this cropped up while testing nested queries
+        var st = store {
+            ['Cookies',{ApplicationID:51,CookieID:0,Cookie:"with jam"}];
+            query cookie(appId,id;
+                         ['Cookies',{ApplicationID:appId,CookieID:id}];
+                         a=[]) a.concat([[appId,id]]);
+        };
+        assert.deepEqual(st.queries.cookie(51,0).result,[[51,0]]);
     });
     // !!! nested queries are broken but will be replaced by simpler function+forexpr notation !!!
 });
 
 describe("store generic operations",function() {
     it("should reset",function() {
-	var st = store {
-	};
-	st.add(['one']);
-	st.add(['two']);
-	assert.equal(st._private.size,2);
-	st.reset();
-	assert.equal(st._private.size,0);
+        var st = store {
+        };
+        st.add(['one']);
+        st.add(['two']);
+        assert.equal(st._private.size,2);
+        st.reset();
+        assert.equal(st._private.size,0);
     });
 });
 
 describe("ellipsis bindings",function() {
     it("should not leak [9d893bfbf0ea11b0]",function() {
-	var st = store {
-	    rule (-['a',{...rs}],
-		  +['b',{b:1,...rs}],
-		  +['c',{c:2,...rs}]
-		 );
-	};
-	st.add(['a',{p:99}]);
-	assert.equal(st._private.size,2);
-	assert.deepEqual(st._private.facts["2"],['b',{p:99,b:1}]);
-	assert.deepEqual(st._private.facts["3"],['c',{p:99,c:2}]);
+        var st = store {
+            rule (-['a',{...rs}],
+                  +['b',{b:1,...rs}],
+                  +['c',{c:2,...rs}]
+                 );
+        };
+        st.add(['a',{p:99}]);
+        assert.equal(st._private.size,2);
+        assert.deepEqual(st._private.facts["2"],['b',{p:99,b:1}]);
+        assert.deepEqual(st._private.facts["3"],['c',{p:99,c:2}]);
     });
     it("should support anonymous ellipsis in array matchers",function() {
-	var st = store {
-	    rule (-['a',...]);
-	};
-	assert.equal(st._private.size,0);
-	st.add(['a',{p:99}]);
-	assert.equal(st._private.size,0);
-	st.add(['a']);
-	assert.equal(st._private.size,0);
+        var st = store {
+            rule (-['a',...]);
+        };
+        assert.equal(st._private.size,0);
+        st.add(['a',{p:99}]);
+        assert.equal(st._private.size,0);
+        st.add(['a']);
+        assert.equal(st._private.size,0);
     });
     it("should support anonymous ellipsis in object matchers",function() {
-	var st = store {
-	    rule (-['a',{p,...}]);
-	};
-	assert.equal(st._private.size,0);
-	st.add(['a',{p:99}]);
-	assert.equal(st._private.size,0);
+        var st = store {
+            rule (-['a',{p,...}]);
+        };
+        assert.equal(st._private.size,0);
+        st.add(['a',{p:99}]);
+        assert.equal(st._private.size,0);
     });
 });
 
 describe("matching",function() {
     it("should not match unequal length arrays",function() {
-	var st = store {
-	    rule (-['a']);
-	};
-	assert.equal(st._private.size,0);
-	st.add(['a',{b:88}]);
-	assert.equal(st._private.size,1); // not matched, not deleted
+        var st = store {
+            rule (-['a']);
+        };
+        assert.equal(st._private.size,0);
+        st.add(['a',{b:88}]);
+        assert.equal(st._private.size,1); // not matched, not deleted
     });
     it("should match unequal length arrays given ellipsis",function() {
-	var st = store {
-	    rule (-['a',...]);
-	};
-	assert.equal(st._private.size,0);
-	st.add(['a',{b:88}]);
-	assert.equal(st._private.size,0); // matched and deleted
-	st.add(['a']);
-	assert.equal(st._private.size,0); // matched and deleted
+        var st = store {
+            rule (-['a',...]);
+        };
+        assert.equal(st._private.size,0);
+        st.add(['a',{b:88}]);
+        assert.equal(st._private.size,0); // matched and deleted
+        st.add(['a']);
+        assert.equal(st._private.size,0); // matched and deleted
     });
     it("should match member pattern (test moved from test/compiler.js)",function() {
-	var st = store {
-	    rule(a={b:30},
-		 -['a',{p:a.b}] );
-	};
-	st.add(['a',{p:30}]);
-	assert.equal(st._private.size,0); // matched and deleted
-	st.add(['a',{p:29}]);
-	assert.equal(st._private.size,1); // not matched, retained
+        var st = store {
+            rule(a={b:30},
+                 -['a',{p:a.b}] );
+        };
+        st.add(['a',{p:30}]);
+        assert.equal(st._private.size,0); // matched and deleted
+        st.add(['a',{p:29}]);
+        assert.equal(st._private.size,1); // not matched, retained
     });
     it("should match correctly given of t_fact deletion during iteration",function() {
-	var st = store {
-	    ['b'];
-	    ['b'];
-	    ['b'];
-	    ['b'];
-	    rule (-['a',n],-['b'],+['a',n+1]);
-	};
-	assert.equal(st.size,4);
-	st.add(['a',0]);
-	assert.equal(st.size,1);
-	assert.deepEqual(_.values(st._private.facts)[0],['a',4]);
+        var st = store {
+            ['b'];
+            ['b'];
+            ['b'];
+            ['b'];
+            rule (-['a',n],-['b'],+['a',n+1]);
+        };
+        assert.equal(st.size,4);
+        st.add(['a',0]);
+        assert.equal(st.size,1);
+        assert.deepEqual(_.values(st._private.facts)[0],['a',4]);
     });
     it("should match correctly given deletion during iteration",function() {
-	var st = store {
-	    ['b'];
-	    ['b'];
-	    ['b'];
-	    ['b'];
-	    rule (['c'],-['b']);
-	};
-	assert.equal(st.size,4);
-	st.add(['c']);
-	assert.deepEqual(_.values(st._private.facts),[['c']]);
+        var st = store {
+            ['b'];
+            ['b'];
+            ['b'];
+            ['b'];
+            rule (['c'],-['b']);
+        };
+        assert.equal(st.size,4);
+        st.add(['c']);
+        assert.deepEqual(_.values(st._private.facts),[['c']]);
     });
 });
 
 describe("in-store `for` expression",function() {
     it("should accumulate over a store",function() {
-    	var st = store {
-    	    ['a',{p:1}];
-    	    ['a',{p:2}];
-    	    ['b',{p:99}];
-    	    rule (-['accumulate'],
-    		  +['_ans',{sum:for(0;['a',{p}];a=>a+p)}] );
-    	};
-    	st.add(['accumulate']);
-    	assert.equal(_.values(st._private.facts).filter(f=>f[0]==='_ans')[0][1].sum,3);
+        var st = store {
+            ['a',{p:1}];
+            ['a',{p:2}];
+            ['b',{p:99}];
+            rule (-['accumulate'],
+                  +['_ans',{sum:for(0;['a',{p}];a=>a+p)}] );
+        };
+        st.add(['accumulate']);
+        assert.equal(_.values(st._private.facts).filter(f=>f[0]==='_ans')[0][1].sum,3);
     });
     it("should nest",function() {
-    	var st = store {
-    	    ['a',{p:1}];
-    	    ['a',{p:2}];
-    	    ['b',{p:1,q:5}];
-    	    ['b',{p:2,q:6}];
-    	    rule (-['accumulate'],
-    		  +['_ans',{sum:for(0;['a',{p}];a=>a+for(0;['b',{p,q}];b=>b+q))}] );
-    	};
-    	st.add(['accumulate']);
-    	assert.equal(_.values(st._private.facts).filter(f=>f[0]==='_ans')[0][1].sum,11);
+        var st = store {
+            ['a',{p:1}];
+            ['a',{p:2}];
+            ['b',{p:1,q:5}];
+            ['b',{p:2,q:6}];
+            rule (-['accumulate'],
+                  +['_ans',{sum:for(0;['a',{p}];a=>a+for(0;['b',{p,q}];b=>b+q))}] );
+        };
+        st.add(['accumulate']);
+        assert.equal(_.values(st._private.facts).filter(f=>f[0]==='_ans')[0][1].sum,11);
     });
 });
 
 describe("evaluation order",function() {
     it("should fire rules in occurence order",function() {
-    	var st = store {
-	    rule (['a'],+['h',1]);
-	    rule (['a'],+['h',2]);
-	    rule (['a'],+['h',3]);
-	    rule (-['a']);
-    	};
-    	st.add(['a']);
-    	assert.deepEqual(_.values(st._private.orderedFacts),[['h',1],['h',2],['h',3]]);
+        var st = store {
+            rule (['a'],+['h',1]);
+            rule (['a'],+['h',2]);
+            rule (['a'],+['h',3]);
+            rule (-['a']);
+        };
+        st.add(['a']);
+        assert.deepEqual(_.values(st._private.orderedFacts),[['h',1],['h',2],['h',3]]);
     });
     it("should fire generic rules in occurence order",function() {
-    	var st = store {
-	    rule (['a'],+['h',1]);
-	    rule ([tag],+['h',tag]);
-	    rule (['a'],+['h',3]);
-	    rule (-['a']);
-    	};
-    	st.add(['a']);
-    	assert.deepEqual(_.values(st._private.orderedFacts),[['h',1],['h','a'],['h',3]]);
+        var st = store {
+            rule (['a'],+['h',1]);
+            rule ([tag],+['h',tag]);
+            rule (['a'],+['h',3]);
+            rule (-['a']);
+        };
+        st.add(['a']);
+        assert.deepEqual(_.values(st._private.orderedFacts),[['h',1],['h','a'],['h',3]]);
     });
     it("should fire generic rules for unseen tags",function() {
-    	var st = store {
-	    rule ([tag],+['i',tag]);
-	    rule ([tag],+['j',tag]);
-    	};
-    	st.add(['b']);
-    	assert.deepEqual(_.values(st._private.orderedFacts),[['b'],['i','b'],['j','b']]);
+        var st = store {
+            rule ([tag],+['i',tag]);
+            rule ([tag],+['j',tag]);
+        };
+        st.add(['b']);
+        assert.deepEqual(_.values(st._private.orderedFacts),[['b'],['i','b'],['j','b']]);
     });
 });
 
 describe("regression tests",function() {
     it("should have fixed [955dab]",function() {
-	var IDB = store {
-	    rule (-['annotatePrepareAuction',{instruments,_children:[child,...irs],...rs}],
-    		  ['Instrument',{InstID:child.AInst.InstID,SubClass}],
-    		  ['InstrumentClass',{InstSubClassID:SubClass,AuctionVolumes:av}],
-    		  +['annotatePrepareAuction',{instruments:instruments.push({AInst:_.extend(child.AInst,
-											   {AuctionVolumes:av} )}),
+        var IDB = store {
+            rule (-['annotatePrepareAuction',{instruments,_children:[child,...irs],...rs}],
+                  ['Instrument',{InstID:child.AInst.InstID,SubClass}],
+                  ['InstrumentClass',{InstSubClassID:SubClass,AuctionVolumes:av}],
+                  +['annotatePrepareAuction',{instruments:instruments.push({AInst:_.extend(child.AInst,
+                                                                                           {AuctionVolumes:av} )}),
                                               _children:[...irs],
-       	                                      ...rs}] );
-	};
+                                              ...rs}] );
+        };
     });
     it("should have fixed [e39caf5ad040aa90] (mangling)",function() {
-	var IDB = store {
-	    rule (['tick'],
-		  ['auction',{state,id,curPhase,...rs}],
-		  state!='N',
-		  d = {'M':rs.MatchingDuration,'A':rs.Duration,'S':rs.SecondChanceDuration}[curPhase],
-		  +['_output','all',{AuctionState:{AuctionID:id,Class:1,State:state,Duration:d}}] );
-	};
-	IDB.add(['auction',{state:'P',id:1,curPhase:'A'}]);
-	IDB.add(['tick']);
-	assert.equal(IDB._private.size,3); // check rule fired
+        var IDB = store {
+            rule (['tick'],
+                  ['auction',{state,id,curPhase,...rs}],
+                  state!='N',
+                  d = {'M':rs.MatchingDuration,'A':rs.Duration,'S':rs.SecondChanceDuration}[curPhase],
+                  +['_output','all',{AuctionState:{AuctionID:id,Class:1,State:state,Duration:d}}] );
+        };
+        IDB.add(['auction',{state:'P',id:1,curPhase:'A'}]);
+        IDB.add(['tick']);
+        assert.equal(IDB._private.size,3); // check rule fired
     });
     it("should have fixed [c50b9588e7f6632b] (array match should check size)",function() {
-	var st = store {
-	    rule (-['a',[car,...cdr]],
-		  +['a',cdr]);
-	};
-	st.add(['a',[]]);
-	assert.equal(st._private.size,1);
-	assert.deepEqual(_.values(st._private.facts),[['a',[]]]);
+        var st = store {
+            rule (-['a',[car,...cdr]],
+                  +['a',cdr]);
+        };
+        st.add(['a',[]]);
+        assert.equal(st._private.size,1);
+        assert.deepEqual(_.values(st._private.facts),[['a',[]]]);
     });
     it("should have fixed [9e15c3b9134c259c] (['a',{b}] should not match ['a'])",function() {
-	var st = store {
-	    rule (-['a',{b}]);
-	};
-	st.add(['a']);
-	assert.deepEqual(_.values(st._private.facts),[['a']]); // i.e. not consumed
+        var st = store {
+            rule (-['a',{b}]);
+        };
+        st.add(['a']);
+        assert.deepEqual(_.values(st._private.facts),[['a']]); // i.e. not consumed
     });
     it("should have fixed problem observed in the wild",function() {
-	var IDB = store {
-	    rule (-['annotatePrepareAuction',{instruments,_children:[child,...irs],...rs}],
-    		  ['Instrument',{InstID:child.AInst.InstID,SubClass}],
-    		  ['InstrumentClass',{InstSubClassID:SubClass,AuctionVolumes:av}],
-    		  +['annotatePrepareAuction',{instruments:instruments.concat([{AInst:_.extend(child.AInst,
-    											      {AuctVols:av} )}]),
-    					      _children:[...irs],
-    					      ...rs}] );
-	    rule (-['annotatePrepareAuction',{id,instruments,_children:[],phases,...rs}],
-		  +['auction',{id,instruments,curPhase:phases[0],phases,...rs}],
-		  +['_o',{PrepareAuction:{AuctionID:id,Class:1,action:'I',_children:instruments,...rs}}] );
-	};
-	IDB.add(['Instrument',{InstID:999,SubClass:777}]);
-	IDB.add(['InstrumentClass',{InstSubClassID:777,AuctionVolumes:"10 20 30"}]);
-	assert.equal(IDB._private.size,2);
-	IDB.add(['annotatePrepareAuction',{instruments:[],_children:[{AInst:{InstID:999}}],phases:'A',id:8}]);
-	assert.deepEqual(_.values(IDB._private.facts).map(function(f){return f[0];}).sort(),
-			 ["Instrument","InstrumentClass","_o","auction"] );
-	_.values(IDB._private.facts).forEach(function(f) {
-	    if (f[0]==='auction') 
-		assert.deepEqual(f[1].instruments,[{AInst:{InstID:999,AuctVols:"10 20 30"}}]);
-	    else if (f[0]==='_o')
-		assert.deepEqual(f[1].PrepareAuction._children,[{AInst:{InstID:999,AuctVols:"10 20 30"}}]);
-	});
+        var IDB = store {
+            rule (-['annotatePrepareAuction',{instruments,_children:[child,...irs],...rs}],
+                  ['Instrument',{InstID:child.AInst.InstID,SubClass}],
+                  ['InstrumentClass',{InstSubClassID:SubClass,AuctionVolumes:av}],
+                  +['annotatePrepareAuction',{instruments:instruments.concat([{AInst:_.extend(child.AInst,
+                                                                                              {AuctVols:av} )}]),
+                                              _children:[...irs],
+                                              ...rs}] );
+            rule (-['annotatePrepareAuction',{id,instruments,_children:[],phases,...rs}],
+                  +['auction',{id,instruments,curPhase:phases[0],phases,...rs}],
+                  +['_o',{PrepareAuction:{AuctionID:id,Class:1,action:'I',_children:instruments,...rs}}] );
+        };
+        IDB.add(['Instrument',{InstID:999,SubClass:777}]);
+        IDB.add(['InstrumentClass',{InstSubClassID:777,AuctionVolumes:"10 20 30"}]);
+        assert.equal(IDB._private.size,2);
+        IDB.add(['annotatePrepareAuction',{instruments:[],_children:[{AInst:{InstID:999}}],phases:'A',id:8}]);
+        assert.deepEqual(_.values(IDB._private.facts).map(function(f){return f[0];}).sort(),
+                         ["Instrument","InstrumentClass","_o","auction"] );
+        _.values(IDB._private.facts).forEach(function(f) {
+            if (f[0]==='auction') 
+                assert.deepEqual(f[1].instruments,[{AInst:{InstID:999,AuctVols:"10 20 30"}}]);
+            else if (f[0]==='_o')
+                assert.deepEqual(f[1].PrepareAuction._children,[{AInst:{InstID:999,AuctVols:"10 20 30"}}]);
+        });
     });
     it("should have fixed [de90f7821b78bfa9] compiler miscounting bind items as matches",function() {
-	var st = store {
-	    rule (-['a',{}],
-		  x = 0,
-		  -['b',{}] );
-	};
-	assert.equal(st._private.size,0);
-	st.add(['a',{}]);
-	assert.equal(st._private.size,1);
-	st.add(['b',{}]);
-	assert.equal(st._private.size,0);
+        var st = store {
+            rule (-['a',{}],
+                  x = 0,
+                  -['b',{}] );
+        };
+        assert.equal(st._private.size,0);
+        st.add(['a',{}]);
+        assert.equal(st._private.size,1);
+        st.add(['b',{}]);
+        assert.equal(st._private.size,0);
     });
     it("should not try to delete matched terms multiple times [c7a6a7bda0c0b517]",function() {
-	var st = store {
-	    ['b'];
-	    ['b'];
-	    rule (-['a'],['b'])
-	};
-	st.add(['a']);
-	assert.equal(st.size,2);
+        var st = store {
+            ['b'];
+            ['b'];
+            rule (-['a'],['b'])
+        };
+        st.add(['a']);
+        assert.equal(st.size,2);
     });
     it("should really not try to delete matched terms multiple times [c7a6a7bda0c0b517]",function() {
-	var st = store {
-	    ['a'];
-	    ['b'];
-	    ['b'];
-	    rule (['c'],-['a'],['b'])
-	};
-	assert.equal(st.size,3);
-	st.add(['c']);
-	assert.equal(st.size,3);
+        var st = store {
+            ['a'];
+            ['b'];
+            ['b'];
+            rule (['c'],-['a'],['b'])
+        };
+        assert.equal(st.size,3);
+        st.add(['c']);
+        assert.equal(st.size,3);
     });
 });
+
+
 

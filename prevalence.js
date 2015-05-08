@@ -348,13 +348,13 @@ module.exports = function() {
                 }
             },
             save:function() {
-                return save(bl.get_root());
+                return save(bl.getRoot());
             },
             close:function() {
                 close();
             },
             load:function() {
-                return load(bl.set_root,bl.update);
+                return load(bl.setRoot,bl.update);
             },
             on:function(what,handler) {
                 return bl.on(what,handler);
@@ -430,7 +430,7 @@ module.exports = function() {
         audit = !!options.audit;
         if (audit) {
             bl_files   = {};
-            hash_store = hash.make_store(path.join(dir,'hashes'));
+            hash_store = hash.makeStore(path.join(dir,'hashes'));
             for (var k in require.extensions) {
                 require.extensions[k] = (function(ext) {
                     return function(module,filename) {
@@ -637,7 +637,7 @@ module.exports = function() {
 
         lock.lockSync(path.join(dir,'lock'));
 
-        hash_store = hash.make_store(path.join(dir,'hashes'));
+        hash_store = hash.makeStore(path.join(dir,'hashes'));
 
         rm_rf.sync(path.join(dir,'state'));   // clear out state directory
         fs.mkdirSync(path.join(dir,'state'));

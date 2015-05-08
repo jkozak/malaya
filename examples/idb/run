@@ -27,10 +27,9 @@ process.on('SIGHUP',function() {
 process.on('exit',function(code) {
 });
 
-if (argv.slave) {
+if (argv.slave && false) {
     var prvl = require('../../prevalence.js')();
-    var path = require('path');
-    var pdir = process.cwd();   //path.join(__dirname,'.prevalence');
+    var pdir = process.cwd();
     prvl.on('ready',function(syshash) {
         console.log("slaved to: %s",argv.slave);
         console.log("opening hash is: %s",syshash);
@@ -43,12 +42,25 @@ if (argv.slave) {
             server = setup.build({prevalence:  prvl,
                                   sync_journal:argv.fsync,
                                   debug:       argv.debug,
+                                  port:        argv.port,
                                   fe3port:     argv.fe3});
             server.run();
         }
     });
     prvl.replicateFrom(pdir,argv.slave);
+} else if (argv.slave) {
+    server = setup.build({slave:        argv.slave,
+                          prevalenceDir:'.prevalence',
+                          sync_journal: argv.fsync,
+                          debug:        argv.debug,
+                          port:         argv.port,
+                          fe3port:      argv.fe3});
+    server.run();
 } else {
-    server = setup.build({init:argv.init,sync_journal:argv.fsync,debug:argv.debug,fe3port:argv.fe3});
+    server = setup.build({init:        argv.init,
+                          sync_journal:argv.fsync,
+                          debug:       argv.debug,
+                          port:        argv.port,
+                          fe3port:     argv.fe3});
     server.run();
 }

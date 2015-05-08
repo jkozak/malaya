@@ -54,7 +54,7 @@ function TEMPLATE_store() {
                 INSERT_INDEXED_MATCHES;
                 return t_fact;
             } else
-                throw new Error("unloved fact format: "+JSON.stringify(fact));
+                ee.emit('error',"unloved fact format: "+JSON.stringify(fact));
         };
         var   _del = function(t) {
             var   ti = parseInt(t);  // use this in indices
@@ -107,14 +107,14 @@ function TEMPLATE_store() {
             init: function() {
                 obj.reset();
             },
-            get_root: function() {
+            getRoot: function() {
                 return {tag:  obj.tag,
                         t:    t,
                         facts:facts};
             },
-            set_root: function(r) {
-                if (obj.tag!==undefined && r.tag!==obj.tag) 
-                    throw new Error("wrong tag: "+JSON.stringify(r.tag)+", expected: "+JSON.stringify(obj.tag));
+            setRoot: function(r) {
+                if (obj.tag!==undefined && r.tag!==obj.tag)
+                    ee.emit('error',new Error("wrong tag: "+JSON.stringify(r.tag)+", expected: "+JSON.stringify(obj.tag)));
                 t     = r.t;
                 facts = r.facts;
                 _rebuild();

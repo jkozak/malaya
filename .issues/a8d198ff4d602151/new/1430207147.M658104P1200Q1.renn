@@ -1,0 +1,7 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Tue, 28 Apr 2015 08:45:47 +0100
+Subject: consider using `jsverify` (replacing `quickcheck`)
+State: resolved
+Message-Id: <a8d198ff4d602151-0-artemis@renn>
+resolution: fixed
+

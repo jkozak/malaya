@@ -49,7 +49,7 @@ function FE3Connection(sock,server) {
             switch (tag1) {
             case 'Permissions':
                 assert.equal(add0[1].LoggedOn,1);
-                appId   = add0[1].ApplicationID;
+                appId = add0[1].ApplicationID;
                 break;
             case '_output':
                 break;
@@ -117,9 +117,10 @@ function FE3Connection(sock,server) {
 }
 
 exports.createServer = function(options) {
+    options.FE3Connection = options.FE3Connection || FE3Connection;
     var ee     = new events.EventEmitter();
     var server = net.createServer(function(sock) {
-        options.malaya.addConnection(new FE3Connection(sock,options.malaya));
+        options.malaya.addConnection(new options.FE3Connection(sock,options.malaya));
     });
     this.listen = function(p,h) {
         server.listen(p,h);

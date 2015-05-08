@@ -2,39 +2,39 @@ var   util = require('../../../util.js');
 var assert = require('assert');
 var      _ = require('underscore');
 
-require('../bl.chrjs');		// do this here to avoid timeout in tests
+require('../bl.chrjs');         // do this here to avoid timeout in tests
 
-function mkFixture(msjson) {	// make test fixture from prevalence serialisation format data
+function mkFixture(msjson) {    // make test fixture from prevalence serialisation format data
     return util.deserialise(JSON.stringify(msjson));
 }
 
-function mkIDB(fixture) {	// bare server without prevalence layer
+function mkIDB(fixture) {       // bare server without prevalence layer
     var bl = require('../bl.chrjs');
-    bl.reset();			// `bl` is effectively shared by `require`
+    bl.reset();                 // `bl` is effectively shared by `require`
     for (var i in fixture)
-	bl.add(fixture[i]);
+        bl.add(fixture[i]);
     bl.getOutputs = function() {
-	var ans = [];
-	this._private.orderedFacts.forEach(function(f) {
-	    if (f[0]==='_output')
-		ans.push(f);
-	});
-	return ans;
+        var ans = [];
+        this._private.orderedFacts.forEach(function(f) {
+            if (f[0]==='_output')
+                ans.push(f);
+        });
+        return ans;
     };
     bl.addReturningOutputs = function(x) {
-	this.add(x);
-	var outs = this.getOutputs();
-	this.add(['_take-outputs']); // convention to delete `_output` from store
-	return outs;
+        this.add(x);
+        var outs = this.getOutputs();
+        this.add(['_take-outputs']); // convention to delete `_output` from store
+        return outs;
     };
     bl.addReturningOneOutput = function(x) {
-	var outs = this.addReturningOutputs(x);
-	assert(outs.length===1,util.format("expected single output, not: %j",outs));
-	return outs[0];
+        var outs = this.addReturningOutputs(x);
+        assert(outs.length===1,util.format("expected single output, not: %j",outs));
+        return outs[0];
     };
     bl.addReturningNoOutput = function(x) {
-	var outs = this.addReturningOutputs(x);
-	assert(outs.length===0,util.format("expected no output, not: %j",outs));
+        var outs = this.addReturningOutputs(x);
+        assert(outs.length===0,util.format("expected no output, not: %j",outs));
     };
     return bl;
 }
@@ -57,6 +57,7 @@ var USER_JK = mkFixture([":Permissions",{
     "SessionID":0,
     "Enabled":1,
     "AppRole":1283,
+    "roles":":ABDT",
     "CurrFailCount":0,
     "LogOnTime":"date:Fri Jul 25 17:49:29 2014",
     "CountryID":44,
@@ -78,6 +79,7 @@ var USER_FM = mkFixture([":Permissions",{
     "SessionID":76601,
     "Enabled":1,
     "AppRole":2,
+    "roles":":T",
     "CurrFailCount":0,
     "LoggedOn":0,
     "LogOnTime":"date:Wed Dec  1 14:54:11 2004",
@@ -133,53 +135,53 @@ var TCS = mkFixture([
 
 var FE_COOKIES = mkFixture([
     [":FEConfig",
-	{
-	    "CookieData": ":<blotter-cell-prototype name=\"broker\">$STOCKNAME +999.9999 - +999.9999 99* A99999 X 99999A 99*</blotter-cell-prototype>",
-	    "TabID": 0,
-	    "ConfigID": 70
-	}],
+        {
+            "CookieData": ":<blotter-cell-prototype name=\"broker\">$STOCKNAME +999.9999 - +999.9999 99* A99999 X 99999A 99*</blotter-cell-prototype>",
+            "TabID": 0,
+            "ConfigID": 70
+        }],
     [":FEConfig",
-	{
-	    "TabID": 0,
-	    "CookieData": ":<blotter-cell-prototype name=\"trader\">$STOCKNAME +999.9999 - +999.9999       A99999 X 99999A</blotter-cell-prototype>",
-	    "ConfigID": 72
-	}],
+        {
+            "TabID": 0,
+            "CookieData": ":<blotter-cell-prototype name=\"trader\">$STOCKNAME +999.9999 - +999.9999       A99999 X 99999A</blotter-cell-prototype>",
+            "ConfigID": 72
+        }],
     [":FEConfig",
-	{
-	    "CookieData": ":<custom-page-count brokerTabs=\"3\" traderTabs=\"2\" />",
-	    "TabID": 0,
-	    "ConfigID": 80
-	}],
+        {
+            "CookieData": ":<custom-page-count brokerTabs=\"3\" traderTabs=\"2\" />",
+            "TabID": 0,
+            "ConfigID": 80
+        }],
     [":FEConfig",
-	{
-	    "ConfigID": 90,
-	    "TabID": 0,
-	    "CookieData": ":<remove-all-colour-schemes/>"
-	}],
+        {
+            "ConfigID": 90,
+            "TabID": 0,
+            "CookieData": ":<remove-all-colour-schemes/>"
+        }],
     [":FEConfig",
-	{
-	    "ConfigID": 1,
-	    "TabID": 0,
-	    "CookieData": ":<remove-all-blotter-tabs/>"
-	}],
+        {
+            "ConfigID": 1,
+            "TabID": 0,
+            "CookieData": ":<remove-all-blotter-tabs/>"
+        }],
     [":FEConfig",
-	{
-	    "ConfigID": 100,
-	    "TabID": 0,
-	    "CookieData": ":<new-instrument-wait timeout=\"15.0\" />"
-	}],
+        {
+            "ConfigID": 100,
+            "TabID": 0,
+            "CookieData": ":<new-instrument-wait timeout=\"15.0\" />"
+        }],
     [":FEConfig",
-	{
-	    "TabID": 0,
-	    "CookieData": ":<blotter-custom-tab>1 2 26 47 40 41 43 44 3 23 28 46 27 31 33 32 45 34</blotter-custom-tab>",
-	    "ConfigID": 50
-	}],
+        {
+            "TabID": 0,
+            "CookieData": ":<blotter-custom-tab>1 2 26 47 40 41 43 44 3 23 28 46 27 31 33 32 45 34</blotter-custom-tab>",
+            "ConfigID": 50
+        }],
     [":FEConfig",
-	{
-	    "CookieData": ":<add-blotter-tab name=\"All\">1 2 26 47 40 41 43 44 3 23 28 46 27 31 33 32 45 34</add-blotter-tab>",
-	    "TabID": 0,
-	    "ConfigID": 10
-	}]
+        {
+            "CookieData": ":<add-blotter-tab name=\"All\">1 2 26 47 40 41 43 44 3 23 28 46 27 31 33 32 45 34</add-blotter-tab>",
+            "TabID": 0,
+            "ConfigID": 10
+        }]
 ]);
 
 var              USERS = [USER_JK,USER_FM].concat(TCS).concat(FE_COOKIES);
@@ -189,7 +191,7 @@ var USERS_FM_LOGGED_IN = [mkUserLoggedIn(USER_FM,'FM'),USER_JK].concat(TCS).conc
 var INSTRUMENTS = mkFixture([
     [":InstrumentClass", 
      {
-	 "SellBrokerage": 20,
+         "SellBrokerage": 20,
          "AssociatedTitle": 1, 
          "Title": ":Straight Prices", 
          "Display_ShowPlusMinus": 0, 
@@ -288,39 +290,39 @@ var INSTRUMENTS = mkFixture([
 
 var MARKET = mkFixture([
     [":MarketManager",{
-	"ClosingTime":"date:Wed Sep 29 1999 18:30:00 GMT+0100 (BST)",
-	"OpenAutomatically":0,
-	"RegionID":1,
-	"MinMarketVol":10000,
-	"UpdateDate":"date:Wed Sep 29 1999 07:00:00 GMT+0100 (BST)",
-	"OpenPriceSeqNo":1,
-	"Status":1,
-	"MaxMarketVol":100000000,
-	"SpecialsOrderIndex":0,
-	"UpdateUserID":-1,
-	"ForwardOrderIndex":0,
-	"OpeningTime":"date:Wed Sep 29 1999 07:00:00 GMT+0100 (BST)",
-	"RollOver2Automatically":0,
-	"PriceDisplayOrderIndex":0,
-	"RollOver2Time":"date:Wed Sep 29 1999 00:00:00 GMT+0100 (BST)",
-	"InstDisplayOrderIndex":0,
-	"MarketName":":Gilt",
-	"MinIncrementBetweenPrices":1000,
-	"RollOver1Automatically":0,
-	"CountryID":44,
-	"OpenTradeSeqNo":1,
-	"MarketID":2,
-	"OperationalStatus":":L",
-	"RollOver1Time":"date:Wed Sep 29 1999 00:00:00 GMT+0100 (BST)",
-	"MinMarketVal":1000,
-	"auctionId":10000
+        "ClosingTime":"date:Wed Sep 29 1999 18:30:00 GMT+0100 (BST)",
+        "OpenAutomatically":0,
+        "RegionID":1,
+        "MinMarketVol":10000,
+        "UpdateDate":"date:Wed Sep 29 1999 07:00:00 GMT+0100 (BST)",
+        "OpenPriceSeqNo":1,
+        "Status":1,
+        "MaxMarketVol":100000000,
+        "SpecialsOrderIndex":0,
+        "UpdateUserID":-1,
+        "ForwardOrderIndex":0,
+        "OpeningTime":"date:Wed Sep 29 1999 07:00:00 GMT+0100 (BST)",
+        "RollOver2Automatically":0,
+        "PriceDisplayOrderIndex":0,
+        "RollOver2Time":"date:Wed Sep 29 1999 00:00:00 GMT+0100 (BST)",
+        "InstDisplayOrderIndex":0,
+        "MarketName":":Gilt",
+        "MinIncrementBetweenPrices":1000,
+        "RollOver1Automatically":0,
+        "CountryID":44,
+        "OpenTradeSeqNo":1,
+        "MarketID":2,
+        "OperationalStatus":":L",
+        "RollOver1Time":"date:Wed Sep 29 1999 00:00:00 GMT+0100 (BST)",
+        "MinMarketVal":1000,
+        "auctionId":10000
     }],
     [":SequenceNumbers",{
-	"PriceID":4,
-	"PriceSequenceNo":5,
-	"MarketID":2,
-	"TradeID":7,
-	"TradeSequenceNo":7
+        "PriceID":4,
+        "PriceSequenceNo":5,
+        "MarketID":2,
+        "TradeID":7,
+        "TradeSequenceNo":7
     }]
 ]);
 
@@ -381,124 +383,124 @@ function assertJustOne(arr,fn) {
 
 describe("json-for-xml interactions",function() {
     describe("logon",function() {
-	it("should handle logon0 unencrypted",function() {
-	    var IDB = mkIDB(USERS);	// not set to require encrypted logons
-	    IDB.add(['logon0',{},{port:'test://'}]);
-	    assert.deepEqual(IDB.getOutputs(),[['_output','self',{logon0:{}}]]);
-	});
-	var tryLogon = function(user,pw,idb) { // unencrypted
-	    idb = idb || mkIDB(util.deepClone(USERS));
-	    var out = idb.addReturningOneOutput(
-		['logon',{protocol:12,t:1,pw:pw,j:'1.8.0_31',user:user},{port:'test://'}] );
-	    assert.equal(out[1],'self');
-	    assert.equal(_.keys(out[2]).length,1);
-	    return out[2].logon;
-	}
-	it("should handle good logon",function() {
-	    var resp = tryLogon("John Kozak","JK");
-	    assert.equal(resp.OK,1);
-	    assert.notStrictEqual(resp.session_key,undefined);
-	});
-	it("should handle bad user logon",function() {
-	    var resp = tryLogon("Bad Jock McBad","JK");
-	    assert.equal(resp.OK,0);
-	    assert.strictEqual(resp.session_key,undefined);
-	});
-	it("should handle blank password logon",function() {
-	    var resp = tryLogon("John Kozak",'');
-	    assert.equal(resp.OK,0);
-	    assert.strictEqual(resp.session_key,undefined);
-	});
-	it("should handle bad password logon",function() {
-	    var resp = tryLogon("John Kozak",'KJ');
-	    assert.equal(resp.OK,0);
-	    assert.strictEqual(resp.session_key,undefined);
-	});
-	it("should only allow one simultaneous logon per user",function() {
-	    var  idb = mkIDB(util.deepClone(USERS));
-	    var resp = tryLogon("John Kozak",'JK',idb);
-	    assert.equal(resp.OK,1);
-	    assert.notStrictEqual(resp.session_key,undefined);
-	    resp = tryLogon("John Kozak",'JK',idb);
-	    assert.equal(resp.OK,0);
-	    assert.strictEqual(resp.session_key,undefined);
-	});
-	it("XXX should return static data",function() {
-    	    var fixture = USERS_JK_LOGGED_IN.concat(INSTRUMENTS);
-	    var    user = fixture[0][1];
-	    var    outs = mkIDB(fixture).addReturningOutputs(['start',{},{port:user.port}]);
-	    var    seen = {};
-	    outs.forEach(function(out) {
-		assert.strictEqual(out[1],'self'); // all outputs to user
-		assert.equal(_.keys(out[2]).length,1);
-		var  tag = _.keys(out[2])[0];
-		var xmls = out[2][tag]._children;
-		seen[tag] = true;
-		switch (tag) {
-		case 'static-data': {
-		    assertJustOne(xmls,function(x){return x.self                      &&
-						   x.self.ID===user.ApplicationID     &&
-						   x.self.Name===user.ApplicationName &&
-						   x.self.Role===user.AppRole });
-		    assert(xmls.some(function(x){return x.counterparty;}));
-		    assert(xmls.some(function(x){return x.instrument;}));
-		    break;
-		}
-		case 'contexts':
-		    // +++
-		    break;
-		}
-	    });
-	    assert(seen['static-data']);
-	    assert(seen['contexts']);
-	    assert(seen['BigFigBlock']);
-	    assert(seen['initialised']);
-	    assert.deepEqual(outs[outs.length-1],["_output","self",{initialised:{}}]);
-	});
+        it("should handle logon0 unencrypted",function() {
+            var IDB = mkIDB(USERS);     // not set to require encrypted logons
+            IDB.add(['logon0',{},{port:'test://'}]);
+            assert.deepEqual(IDB.getOutputs(),[['_output','self',{logon0:{}}]]);
+        });
+        var tryLogon = function(user,pw,idb) { // unencrypted
+            idb = idb || mkIDB(util.deepClone(USERS));
+            var out = idb.addReturningOneOutput(
+                ['logon',{protocol:12,t:1,pw:pw,j:'1.8.0_31',user:user},{port:'test://'}] );
+            assert.equal(out[1],'self');
+            assert.equal(_.keys(out[2]).length,1);
+            return out[2].logon;
+        }
+        it("should handle good logon",function() {
+            var resp = tryLogon("John Kozak","JK");
+            assert.equal(resp.OK,1);
+            assert.notStrictEqual(resp.session_key,undefined);
+        });
+        it("should handle bad user logon",function() {
+            var resp = tryLogon("Bad Jock McBad","JK");
+            assert.equal(resp.OK,0);
+            assert.strictEqual(resp.session_key,undefined);
+        });
+        it("should handle blank password logon",function() {
+            var resp = tryLogon("John Kozak",'');
+            assert.equal(resp.OK,0);
+            assert.strictEqual(resp.session_key,undefined);
+        });
+        it("should handle bad password logon",function() {
+            var resp = tryLogon("John Kozak",'KJ');
+            assert.equal(resp.OK,0);
+            assert.strictEqual(resp.session_key,undefined);
+        });
+        it("should only allow one simultaneous logon per user",function() {
+            var  idb = mkIDB(util.deepClone(USERS));
+            var resp = tryLogon("John Kozak",'JK',idb);
+            assert.equal(resp.OK,1);
+            assert.notStrictEqual(resp.session_key,undefined);
+            resp = tryLogon("John Kozak",'JK',idb);
+            assert.equal(resp.OK,0);
+            assert.strictEqual(resp.session_key,undefined);
+        });
+        it("should return static data",function() {
+            var fixture = USERS_JK_LOGGED_IN.concat(INSTRUMENTS);
+            var    user = fixture[0][1];
+            var    outs = mkIDB(fixture).addReturningOutputs(['start',{},{port:user.port}]);
+            var    seen = {};
+            outs.forEach(function(out) {
+                assert.strictEqual(out[1],'self'); // all outputs to user
+                assert.equal(_.keys(out[2]).length,1);
+                var  tag = _.keys(out[2])[0];
+                var xmls = out[2][tag]._children;
+                seen[tag] = true;
+                switch (tag) {
+                case 'static-data': {
+                    assertJustOne(xmls,function(x){return x.self                      &&
+                                                   x.self.ID===user.ApplicationID     &&
+                                                   x.self.Name===user.ApplicationName &&
+                                                   x.self.Role===user.AppRole });
+                    assert(xmls.some(function(x){return x.counterparty;}));
+                    assert(xmls.some(function(x){return x.instrument;}));
+                    break;
+                }
+                case 'contexts':
+                    // +++
+                    break;
+                }
+            });
+            assert(seen['static-data']);
+            assert(seen['contexts']);
+            assert(seen['BigFigBlock']);
+            assert(seen['initialised']);
+            assert.deepEqual(outs[outs.length-1],["_output","self",{initialised:{}}]);
+        });
     });
     describe("cookie",function() {
-	it("should return cookie appropriately",function() {
-	    var users = USERS_JK_LOGGED_IN;
-	    var   out = mkIDB(users).addReturningOneOutput(['cookie',{id:'2'},{port:users[0][1].port}]);
-	    assert.deepEqual(out[2].cookie._children,['eikooC']);
-	    assert.deepEqual(users,USERS_JK_LOGGED_IN);
-	});
-	it("should return error for non-existent cookie",function() {
-	    var users = USERS_JK_LOGGED_IN;
-	    var   out = mkIDB(users).addReturningOneOutput(['cookie',{id:'0'},{port:users[0][1].port}]);
-	    assert.equal(out[2].cookie._children.length,0);
-	    assert.equal(out[2].cookie.error,"not found");
-	    assert.deepEqual(users,USERS_JK_LOGGED_IN);
-	});
-	it("should update cookies",function() {
-	    var users = USERS_JK_LOGGED_IN;
-	    var   idb = mkIDB(users);
-	    idb.addReturningNoOutput(['store-cookie',{id:'2',_children:["cOOKIE"]},{port:users[0][1].port}]);
-	    var out = idb.addReturningOneOutput(['cookie',{id:'2'},{port:users[0][1].port}]);
-	    assert.deepEqual(out[2].cookie._children,['cOOKIE']);
-	});
+        it("should return cookie appropriately",function() {
+            var users = USERS_JK_LOGGED_IN;
+            var   out = mkIDB(users).addReturningOneOutput(['cookie',{id:'2'},{port:users[0][1].port}]);
+            assert.deepEqual(out[2].cookie._children,['eikooC']);
+            assert.deepEqual(users,USERS_JK_LOGGED_IN);
+        });
+        it("should return error for non-existent cookie",function() {
+            var users = USERS_JK_LOGGED_IN;
+            var   out = mkIDB(users).addReturningOneOutput(['cookie',{id:'0'},{port:users[0][1].port}]);
+            assert.equal(out[2].cookie._children.length,0);
+            assert.equal(out[2].cookie.error,"not found");
+            assert.deepEqual(users,USERS_JK_LOGGED_IN);
+        });
+        it("should update cookies",function() {
+            var users = USERS_JK_LOGGED_IN;
+            var   idb = mkIDB(users);
+            idb.addReturningNoOutput(['store-cookie',{id:'2',_children:["cOOKIE"]},{port:users[0][1].port}]);
+            var out = idb.addReturningOneOutput(['cookie',{id:'2'},{port:users[0][1].port}]);
+            assert.deepEqual(out[2].cookie._children,['cOOKIE']);
+        });
     });
     describe("market",function() {
-	it("should change market state on command from broker",function(){
-	    var users = USERS_JK_LOGGED_IN;
-	    var   idb = mkIDB(users.concat(MARKET));
-	    var   out = idb.addReturningOneOutput(['market-status',{ID:2,status:2},{port:users[0][1].port}]);
-	    assert.deepEqual(out,["_output","all",{"market-status":{ID:2,status:2}}]);
-	    out = idb.addReturningOneOutput(['market-status',{ID:2,status:1},{port:users[0][1].port}]);
-	    assert.deepEqual(out,["_output","all",{"market-status":{ID:2,status:1}}]);
-	});
-	it("should not change market state on command from just anyone",function(){
-	    var users = USERS_FM_LOGGED_IN;
-	    var   idb = mkIDB(users.concat(MARKET));
-	    idb.addReturningNoOutput(['market-status',{ID:2,status:2},{port:users[0][1].port}]);
-	});
+        it("should change market state on command from broker",function(){
+            var users = USERS_JK_LOGGED_IN;
+            var   idb = mkIDB(users.concat(MARKET));
+            var   out = idb.addReturningOneOutput(['market-status',{ID:2,status:2},{port:users[0][1].port}]);
+            assert.deepEqual(out,["_output","all",{"market-status":{ID:2,status:2}}]);
+            out = idb.addReturningOneOutput(['market-status',{ID:2,status:1},{port:users[0][1].port}]);
+            assert.deepEqual(out,["_output","all",{"market-status":{ID:2,status:1}}]);
+        });
+        it("should not change market state on command from just anyone",function(){
+            var users = USERS_FM_LOGGED_IN;
+            var   idb = mkIDB(users.concat(MARKET));
+            idb.addReturningNoOutput(['market-status',{ID:2,status:2},{port:users[0][1].port}]);
+        });
     });
     describe("auction",function() {
-	it("should list auction templates",function() {
-	    var users = USERS_JK_LOGGED_IN;
-	    var   idb = mkIDB(users.concat(MARKET).concat(INSTRUMENTS).concat(AUCTION));
-	    var   out = idb.addReturningOneOutput(['AuctionTemplateBlock',{},{port:users[0][1].port}]);
-	    console.log("*** +++ %j",out);
-	})
+        it("should list auction templates",function() {
+            var users = USERS_JK_LOGGED_IN;
+            var   idb = mkIDB(users.concat(MARKET).concat(INSTRUMENTS).concat(AUCTION));
+            var   out = idb.addReturningOneOutput(['AuctionTemplateBlock',{},{port:users[0][1].port}]);
+            console.log("*** +++ %j",out);
+        })
     });
 });

@@ -3,6 +3,7 @@
   "version": "0.3.3",
   "description": "tiny vegetarian mosquito",
   "dependencies": {
+    "argparse": "^1.0.2",
     "eslint": "^0.17.0",
     "esprima": "=1.2.2",
     "express": "^4.6.1",
@@ -11,21 +12,24 @@
     "monotonic-timestamp": "0.0.9",
     "morgan": "^1.2.2",
     "node-sockjs-client": "^1.0.7",
-    "quickcheck": "0.0.4",
     "recast": "^0.7.2",
     "rimraf": "~2.2.6",
     "sax": "^0.6.1",
     "shelljs": "^0.3.0",
     "sockjs": "^0.3.9",
     "temp": "^0.8.0",
-    "underscore": "^1.6.0"
+    "through2": "^0.6.3",
+    "underscore": "^1.6.0",
+    "verror": "^1.6.0"
   },
   "devDependencies": {
     "faker": "^2.0.1",
     "iocat": "0.0.5",
+    "jsverify": "^0.6.0-alpha.5",
     "matcha": "^0.6.0",
     "mocha": "^2.1.0",
     "prettyjson": "^1.0.0",
+    "resumer": "0.0.0",
     "supertest": "^0.15.0",
     "xml2js": "^0.4.4"
   },

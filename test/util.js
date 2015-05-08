@@ -1,9 +1,9 @@
-var util   = require("../util.js");
+var util    = require("../util.js");
 
-var fs     = require("fs");
-var temp   = require("temp");
-var path   = require("path");
-var assert = require("assert");
+var fs      = require("fs");
+var temp    = require("temp");
+var path    = require("path");
+var assert  = require("assert");
 
 temp.track();
 
@@ -48,5 +48,24 @@ describe("readFileLinesSync",function() {
             return i!=2;
         });
         assert.equal(i,2);
+    });
+});
+
+describe("string utils",function() {
+    describe('startsWith',function() {
+        it("matches at start of string",function() {
+            assert(util.startsWith("abcdef","abc"));
+        });
+        it("matches if exact fit",function() {
+            assert(util.startsWith("abc","abc"));
+        });
+    });
+    describe('endsWith',function() {
+        it("matches at end of string",function() {
+            assert(util.endsWith("abcdef","def"));
+        });
+        it("matches if exact fit",function() {
+            assert(util.endsWith("abc","abc"));
+        });
     });
 });

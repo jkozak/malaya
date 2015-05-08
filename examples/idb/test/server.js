@@ -13,16 +13,16 @@ var FE3_HDR_LENGTH = fe3.consts.FE3_HDR_LENGTH;
 var AP_XML2        = fe3.consts.AP_XML2;
 var AP_XML2A       = fe3.consts.AP_XML2A;
 
-temp.track();			// auto-cleanup at exit
-require('../bl.chrjs');		// do this here to avoid timeout in tests
+temp.track();                   // auto-cleanup at exit
+require('../bl.chrjs');         // do this here to avoid timeout in tests
 
 function mkFixture(msjson) {
     return util.deserialise(JSON.stringify(msjson));
 }
 
 var USERS = mkFixture([
-    [":Permissions",{"DirtyFlag":0,"TeamID":100,"UpdateDate":"date:Fri Jul 25 17:49:33 2014","ApplicationID":51,"Deleted":0,"MatchingVolEntry":":B","UpdateUserID":51,"SessionID":0,"Enabled":1,"AppRole":1283,"CurrFailCount":0,"LogOnTime":"date:Fri Jul 25 17:49:29 2014","CountryID":44,"CompanyID":100,"CSPID":1,"LoggedOn":0,"ApplicationName":":John Kozak","Password":":JK"}],
-    [":Permissions",{"DirtyFlag":0,"TeamID":1,"UpdateDate":"date:Thu Dec  2 16:25:14 2004","ApplicationID":1,"Deleted":0,"MatchingVolEntry":":B","UpdateUserID":1,"SessionID":76601,"Enabled":1,"AppRole":2,"CurrFailCount":0,"LoggedOn":0,"LogOnTime":"date:Wed Dec  1 14:54:11 2004","CountryID":44,"CompanyID":1,"CSPID":1,"ApplicationName":":Floy Murazik","Password":":241tykxKcB_n6fR","anon":true}],
+    [":Permissions",{"DirtyFlag":0,"TeamID":100,"UpdateDate":"date:Fri Jul 25 17:49:33 2014","ApplicationID":51,"Deleted":0,"MatchingVolEntry":":B","UpdateUserID":51,"SessionID":0,"Enabled":1,"AppRole":1283,"roles":":ABDT","CurrFailCount":0,"LogOnTime":"date:Fri Jul 25 17:49:29 2014","CountryID":44,"CompanyID":100,"CSPID":1,"LoggedOn":0,"ApplicationName":":John Kozak","Password":":JK"}],
+    [":Permissions",{"DirtyFlag":0,"TeamID":1,"UpdateDate":"date:Thu Dec  2 16:25:14 2004","ApplicationID":1,"Deleted":0,"MatchingVolEntry":":B","UpdateUserID":1,"SessionID":76601,"Enabled":1,"AppRole":2,"roles":":T","CurrFailCount":0,"LoggedOn":0,"LogOnTime":"date:Wed Dec  1 14:54:11 2004","CountryID":44,"CompanyID":1,"CSPID":1,"ApplicationName":":Floy Murazik","Password":":241tykxKcB_n6fR","anon":true}],
     [":Cookies", 
      {
          "CookieID": 2, 
@@ -73,7 +73,7 @@ var USERS = mkFixture([
 var INSTRUMENTS = mkFixture([
     [":InstrumentClass", 
      {
-	 "SellBrokerage": 20,
+         "SellBrokerage": 20,
          "AssociatedTitle": 1, 
          "Title": ":Straight Prices", 
          "Display_ShowPlusMinus": 0, 
@@ -186,39 +186,39 @@ var mkFE3 = function(s,ap_type) {
     return Buffer.concat([hdr,new Buffer(s),new Buffer('\0')]);
 };
 
-var rcveFE3 = function(s) {	// >> [<jsx>,...]   assumes it gets entire  FE3 frames (maybe more than 1)
+var rcveFE3 = function(s) {     // >> [<jsx>,...]   assumes it gets entire  FE3 frames (maybe more than 1)
     var ans = [];
     do {
-	var hdr = new Buffer(s);
-	assert.equal(hdr.readInt32LE(0),AP_XML2);
-	var cb = hdr.readInt32LE(12)
-	ans.push(x2j.parse(s.substr(24,cb-1)));
-	s = s.substr(24+cb);
+        var hdr = new Buffer(s);
+        assert.equal(hdr.readInt32LE(0),AP_XML2);
+        var cb = hdr.readInt32LE(12)
+        ans.push(x2j.parse(s.substr(24,cb-1)));
+        s = s.substr(24+cb);
     } while (s!=='');
     return ans;
 };
 
 var mkServer = function(opts,fixture) { // full server with prevalence layer
     var srvr =  require('../../../malaya.js').createServer(_.extend({
-	prevalenceDir: path.join(temp.mkdirSync(),'prevalence'),
-	audit:         true,
-	logging:       false,
-	init:          true,
-	tag:           'idb-test',
-	businessLogic: path.join(__dirname,'../bl.chrjs'),
-	sync_journal:  'none'
+        prevalenceDir: path.join(temp.mkdirSync(),'prevalence'),
+        audit:         true,
+        logging:       false,
+        init:          true,
+        tag:           'idb-test',
+        businessLogic: path.join(__dirname,'../bl.chrjs'),
+        sync_journal:  'none'
     },opts));
     srvr.start();
     srvr._private.bl._private.bl.reset();
     for (var i in fixture)
-	srvr._private.bl._private.bl.add(fixture[i]); // add fact directly to store, bypassing context append
+        srvr._private.bl._private.bl.add(fixture[i]); // add fact directly to store, bypassing context append
     return srvr;
 };
 
 function logOnOffServerTest(srvr) {
     var  out = null;
     var  ans = srvr.command(['logon',{user:"John Kozak",pw:"JK"}],{port:'test:',
-								   write:function(js){out=js;} });
+                                                                   write:function(js){out=js;} });
     assert.equal(ans.adds.length,2);            // one nett addition and _output
     assert.equal(ans.dels.length,1);            // one nett deletion
 
@@ -236,7 +236,7 @@ function logOnOffServerTest(srvr) {
     assert.deepEqual(out.logon.OK,1);
     out = null;
     ans = srvr.command(['logoff',{appId:51}],{port:'test:',
-					      write:function(js){out=js;} });
+                                              write:function(js){out=js;} });
     assert.equal(ans.adds.length,1);            // one nett addition
     assert.equal(ans.dels.length,1);            // one nett deletion
 
@@ -255,21 +255,21 @@ function logOnOffServerTest(srvr) {
 describe("server",function() {
     var prevalenceDir = path.join(temp.mkdirSync(),'prevalence');
     var          test = function(opts) {
-	var srvr = mkServer(opts,USERS);
-	try {
- 	    logOnOffServerTest(srvr);
-	} finally {
-	    srvr.close();
-	}
+        var srvr = mkServer(opts,USERS);
+        try {
+            logOnOffServerTest(srvr);
+        } finally {
+            srvr.close();
+        }
     };
     it("inits nicely and performs a simple logon and logoff",function() {
-	test({init:true,prevalenceDir:prevalenceDir,fsync:'none'});
+        test({init:true,prevalenceDir:prevalenceDir,fsync:'none'});
     });
     it("loads nicely and performs a simple logon and logoff",function() {
-	test({init:false,prevalenceDir:prevalenceDir});
+        test({init:false,prevalenceDir:prevalenceDir});
     });
     it("reloads nicely and performs a simple logon and logoff",function() {
-	test({init:false,prevalenceDir:prevalenceDir});
+        test({init:false,prevalenceDir:prevalenceDir});
     });
 });
 
@@ -350,51 +350,51 @@ function logOnOffMultipleFE3ConnectionTest(srvr) {
 describe("FE3Connection",function() {
     var prevalenceDir = path.join(temp.mkdirSync(),'prevalence');
     var          test = function(opts) {
-	var srvr = mkServer(opts,USERS);
-	try {
-	    logOnOffFE3ConnectionTest(srvr);
-	} finally {
-	    srvr.close();
-	}
+        var srvr = mkServer(opts,USERS);
+        try {
+            logOnOffFE3ConnectionTest(srvr);
+        } finally {
+            srvr.close();
+        }
     };
     it("inits nicely and performs a simple logon and logoff",function() {
-	test({init:true,prevalenceDir:prevalenceDir});
+        test({init:true,prevalenceDir:prevalenceDir});
     });
     it("loads nicely and performs a simple logon and logoff",function() {
-	test({init:false,prevalenceDir:prevalenceDir});
+        test({init:false,prevalenceDir:prevalenceDir});
     });
     it("reloads nicely and performs a simple logon and logoff",function() {
-	test({init:false,prevalenceDir:prevalenceDir});
+        test({init:false,prevalenceDir:prevalenceDir});
     });
     it("does not init over an existing prevalence dir",function() {
-	assert.throws(function() {
-	    test({init:true,prevalenceDir:prevalenceDir});
-	});
-	fs.statSync(prevalenceDir); // not removed!
+        assert.throws(function() {
+            test({init:true,prevalenceDir:prevalenceDir});
+        });
+        fs.statSync(prevalenceDir); // not removed!
     });
     it("runs nicely after rejecting init over existing prevalence dir",function() {
-	test({init:false,prevalenceDir:prevalenceDir});
+        test({init:false,prevalenceDir:prevalenceDir});
     });
 });
 
 describe("multiple connection",function() {
     var prevalenceDir = path.join(temp.mkdirSync(),'prevalence');
     var          test = function(opts) {
-	var srvr = mkServer(opts,USERS);
-	try {
-	    logOnOffMultipleFE3ConnectionTest(srvr);
-	} finally {
-	    srvr.close();
-	}
+        var srvr = mkServer(opts,USERS);
+        try {
+            logOnOffMultipleFE3ConnectionTest(srvr);
+        } finally {
+            srvr.close();
+        }
     };
     it("inits nicely and performs a brace of logons and logoffs",function() {
-	test({init:true,prevalenceDir:prevalenceDir});
+        test({init:true,prevalenceDir:prevalenceDir});
     });
     it("loads nicely and performs a brace of logons and logoffs",function() {
-	test({init:false,prevalenceDir:prevalenceDir});
+        test({init:false,prevalenceDir:prevalenceDir});
     });
     it("reloads nicely and performs a brace of logons and logoffs",function() {
-	test({init:false,prevalenceDir:prevalenceDir});
+        test({init:false,prevalenceDir:prevalenceDir});
     });
 });
 

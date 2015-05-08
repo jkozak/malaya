@@ -16,10 +16,10 @@ function BL() {
     this.init = function() {
         root = {n:100};
     };
-    this.get_root = function() {
+    this.getRoot = function() {
         return root;
     };
-    this.set_root = function(r) {
+    this.setRoot = function(r) {
         root = r;
     };
     this.query = function(q) {

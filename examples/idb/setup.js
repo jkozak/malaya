@@ -4,6 +4,7 @@
 // +++ apps should specialise this to add their own comms &c
 
 var      _ = require('underscore');
+var assert = require('assert');
 var   util = require('../../util.js');
 var   path = require('path');
 var malaya = require('../../malaya.js');
@@ -62,12 +63,14 @@ exports.build = function(opts) {
     opts = _.extend({
         prevalenceDir: path.join(__dirname,'.prevalence'),
         webDir:        path.join(__dirname,'www'),
+        bowerDir:      path.join(__dirname,'bower_components'),
         audit:         true,
         logging:       true,
         init:          false,
         tag:           'idb',
         businessLogic: path.join(__dirname,'bl.chrjs'),
         debug:         false,
+        slave:         null,
         on:            {} },
                     opts);
 
@@ -76,21 +79,25 @@ exports.build = function(opts) {
 
     var  server = malaya.createServer(opts);
     var  fe3srv = fe3.createServer({malaya:server});
+    var   slave = opts.slave;
+    var    port = opts.port    || 3000;
     var fe3port = opts.fe3port || 5110;
-    var  wsport = opts.wsport  || 3000;
+    var   timer = null;
     
     _.keys(opts.on).forEach(function(k) {
         server.on(k,opts.on[k]);
     });
     
-    fe3srv.on('listening',function() {
-        util.debug('fe3  listening on *:%s',fe3port);
-        server.ready();
-    });
-    var timer = setInterval(function() {
-        server.command(['tick',{date:new Date()}],{port:'server:'});
-        server.command(['_take-outputs',{}],{port:'server:'}); // !!! improve this !!!
-    },1000);
+    if (!slave) {
+        fe3srv.on('listening',function() {
+            util.debug('fe3  listening on *:%s',fe3port);
+            server.ready('master');
+        });
+        setInterval(function() {
+            server.command(['tick',{date:new Date()}],{port:'server:'});
+            server.command(['_take-outputs',{}],{port:'server:'}); // !!! improve this !!!
+        },1000);
+    }
 
     server.on('loaded',function(hash) {
         util.debug("opening hash is: %s",hash);
@@ -116,19 +123,26 @@ exports.build = function(opts) {
     
     server.run = function() {
         var listen = function() {
-            server.command(['restart',{}],{port:'server:'});
-            server.listen(wsport,function() {
-                fe3srv.listen(fe3port);
-            });
+            if (slave) {
+                server.listen(port,function() {
+                    server.ready('slave'); // 
+                });
+            } else {
+                server.command(['restart',{}],{port:'server:'});
+                server.listen(port,function() {
+                    fe3srv.listen(fe3port);
+                });
+            }
         };
-        if (opts.init==='' || !!opts.init)
+        if (opts.init==='' || !!opts.init) {
+            assert.equal(slave,null);
             try {
                 doInit(server,opts.init,listen);
             } catch (e) {
                 server.uninit();
                 throw e;
             }
-        else
+        }else
             listen();
     };
 
