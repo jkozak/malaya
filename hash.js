@@ -7,6 +7,7 @@ var fs     = require('fs');
 var util   = require('./util.js');
 var events = require('events');
 var path   = require('path');
+var VError = require('verror');
 
 // This module is largely sync but is only called during single-activity time
 // (loading,saving) so that doesn't really matter.
@@ -70,12 +71,12 @@ module.exports = function(algorithm) {
                         fs.unlinkSync(store.makeFilename(hash)); // not worth keeping?
                     return b;
                 },
-                sanityCheck: function() {
+                sanityCheck: function(cb) {
                     var hashes = store.getHashes();
                     for (var k in hashes) { // check all hashes are sound
                         var h = hashes[k];
                         if (ans.hash(store.getSync(h))!==h)
-                            ee.emit("error",util.format("broken hash: %j",h));
+                            cb(new VError("broken hash: %j",h));
                     }
                 },
                 stageId: 1,

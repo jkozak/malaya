@@ -1,7 +1,8 @@
 From: John Kozak <jk@thameslighter.net>
 Date: Sat, 13 Sep 2014 14:56:00 +0100
 Subject: do journalising and update in parallel
-State: new
+State: resolved
 Message-Id: <950a5a42076ef456-0-artemis@renn>
+resolution: fixed
 
 underscore's `_.after` will do this.

@@ -1,8 +1,9 @@
 From: John Kozak <jk@thameslighter.net>
 Date: Wed, 15 Oct 2014 11:19:16 +0100
 Subject: chrjs syntax for transforms
-State: new
+State: resolved
 Message-Id: <b8cb5936e7df0244-0-artemis@renn>
+resolution: fixed
 
 A `transform` is like a `store` but:
  * no `query` statements
