@@ -4,7 +4,15 @@ const    x2j = require('./x2j');
 const  faker = require('faker');
 const moment = require('moment');
 
-const  ROLES = {broker:1,trader:2,developer:256};
+const  ROLES = {broker:1,trader:2,developer:256,auctionMonitor:1024};
+function importRoles(appRoles) {
+    var ans = '';
+    _.keys(ROLES).forEach(function(k) {
+        if (ROLES[k]&appRoles)
+            ans += k[0].toUpperCase();
+    });
+    return ans;
+}
 
 function dateToYYYYMMDD(md) {
     var d = new Date(md).toISOString();
@@ -14,9 +22,9 @@ function dateToYYYYMMDD(md) {
 function mkHeartbeat(d) {
     // want a heartbeat only every two seconds
     if (d.getSeconds()%2===1)
-	return null;
+        return null;
     else
-	return {heartbeat:{timestamp:d.toTimeString().substring(0,9)+d.getDate()+'/'+(d.getMonth()+1)+'/'+(d.getYear()+1900)}};
+        return {heartbeat:{timestamp:d.toTimeString().substring(0,9)+d.getDate()+'/'+(d.getMonth()+1)+'/'+(d.getYear()+1900)}};
 }
 
 // need to handle these messages:
@@ -30,6 +38,7 @@ function mkHeartbeat(d) {
 //  X start
 //  X cookie
 //  X store-cookie
+//  X logon0
 //  X logon
 //    price
 //    trade
@@ -42,38 +51,38 @@ function mkHeartbeat(d) {
 const IDB = store {
     // filter the db data on its way in to remove the more egregious nasties
     // +++ this should be a transform +++
-    rule (-['Permissions',{Password,...rs}],                              // remove trailing pwd spaces
-	  Password && Password.charAt(Password.length-1)===' ',
-	  +['Permissions',{Password:Password.trimRight(),...rs}]);
+    rule (-['Permissions',{Password,AppRole,...rs}],                      // remove trailing pwd spaces;roles
+          Password && Password.charAt(Password.length-1)===' ',
+          +['Permissions',{Password:Password.trimRight(),AppRole,roles:importRoles(AppRole),...rs}]);
     rule (-['Permissions',{ApplicationName:"John Kozak",Password,...rs}], // tweak my pwd
-	  Password!=="JK",
-	  +['Permissions',{ApplicationName:"John Kozak",Password:"JK",...rs}]);
+          Password!=="JK",
+          +['Permissions',{ApplicationName:"John Kozak",Password:"JK",...rs}]);
     rule (-['Permissions',{ApplicationName,Password,...rs}],              // anonymise users and passwords
-	  ApplicationName!=="John Kozak" && !rs.hasOwnProperty('anon'),
-	  aname = faker.name.findName(),
-	  apwd  = faker.internet.password(),
-	  +['Permissions',{ApplicationName:aname,Password:apwd,anon:null,...rs}]);
+          ApplicationName!=="John Kozak" && !rs.hasOwnProperty('anon'),
+          aname = faker.name.findName(),
+          apwd  = faker.internet.password(),
+          +['Permissions',{ApplicationName:aname,Password:apwd,anon:null,...rs}]);
     rule (-['MarketManager',{auctionId,...rs}],                           // set a default start auctionId
-	  _.isUndefined(auctionId),
-	  +['MarketManager',{auctionId:10000,...rs}] );
+          _.isUndefined(auctionId),
+          +['MarketManager',{auctionId:10000,...rs}] );
     rule (-['FEConfig',{CookieData,data,...ps}],                          // remove embedded XML
-	  _.isUndefined(data),
-	  +['FEConfig',{data:x2j.parse(CookieData),...ps}] );
+          _.isUndefined(data),
+          +['FEConfig',{data:x2j.parse(CookieData),...ps}] );
 
     // market control
     rule (['MarketManager',{MarketID}],  -['MarketManager',{MarketID}]);
     rule (-['market-status',{ID,status,...},{port}],
-	  ['Permissions',{port,AppRole,...}],
-	  (AppRole&ROLES.broker)!==0,
-	  -['MarketManager',{MarketID:ID,Status,...rs}],
-	  +['MarketManager',{MarketID:ID,Status:status,...rs}],
-	  +['_output','all',{'market-status':{ID,status}}] );
+          ['Permissions',{port,roles,...}],
+          roles.indexOf('B')!==-1,
+          -['MarketManager',{MarketID:ID,Status,...rs}],
+          +['MarketManager',{MarketID:ID,Status:status,...rs}],
+          +['_output','all',{'market-status':{ID,status}}] );
     rule(-['market-status',...]);
 
     // restart
     rule (['restart',...],
-	  -['Permissions',{LoggedOn:1,...rs}],
-	  +['Permissions',{LoggedOn:0,...rs}] );
+          -['Permissions',{LoggedOn:1,...rs}],
+          +['Permissions',{LoggedOn:0,...rs}] );
     rule (['restart',...], -['_output',...]);
     rule (['restart',...], -['_take-outputs',...]);
     rule (['restart',...], -['tick',...]);
@@ -81,240 +90,243 @@ const IDB = store {
     rule (-['restart',...]);
     
     // logon processing
-    rule (-['logon0',...],	// no pw encryption at the moment
-	  +['_output','self',{'logon0':{}}] );
+    rule (-['logon0',...],      // no pw encryption at the moment
+          +['_output','self',{'logon0':{}}] );
     rule (-['logon',      {user,pw,...},{port,...}],
-	  -['Permissions',{ApplicationName:user,Password:pw,LoggedOn:0,...rs}],
-	  +['Permissions',{ApplicationName:user,Password,LoggedOn:1,port,...rs}],
-	  +['_output','self',{logon:{OK:1,session_key:0}}]
-	 );
+          -['Permissions',{ApplicationName:user,Password:pw,LoggedOn:0,...rs}],
+          +['Permissions',{ApplicationName:user,Password,LoggedOn:1,port,...rs}],
+          +['_output','self',{logon:{OK:1,session_key:0}}]
+         );
     rule (-['logon',      {user,pw,...},...],
-	  ['Permissions',{ApplicationName:user,Password:pw,LoggedOn:1,...}],
-	  +['_output','self',{logon:{OK:0,error_code:16,text:"already logged on"}}] );
+          ['Permissions',{ApplicationName:user,Password:pw,LoggedOn:1,...}],
+          +['_output','self',{logon:{OK:0,error_code:16,text:"already logged on"}}] );
     rule (-['logon',      {user}],
-	  ['Permissions',{ApplicationName:user,...}],
-	  +['_output','self',{logon:{OK:0,error_code:17,text:"bad password"}}] );
+          ['Permissions',{ApplicationName:user,...}],
+          +['_output','self',{logon:{OK:0,error_code:17,text:"bad password"}}] );
     rule (-['logon',...],
-	  +['_output','self',{logon:{OK:0,error_code:18,text:"user unknown"}}] );
+          +['_output','self',{logon:{OK:0,error_code:18,text:"user unknown"}}] );
     rule (-['start',{},{port}],
-	  ['Permissions',{port,ApplicationID,ApplicationName,AppRole,...}],
-	  +['_output','self',{
-	      'static-data':{
-		  _children:
-		  [].concat(
-		      for([];
-			  ['Permissions',{ApplicationID:appId,TeamID:teamId,CompanyID:companyId,...}],
-			  ['Team',{TeamID:teamId,TeamName:team,...}];
-			  a=>a.concat([{counterparty:{app:appId,team:teamId,Name:team}}]) ),
-		      [{self:{ID:ApplicationID,Name:ApplicationName,Role:AppRole}}],
-		      for([];	                     // +++ should be per-user +++
-			  ['Instrument',inst];
-			  a=>a.concat([{instrument:{
-			      ID:               inst.InstID,
-			      Name:             inst.InstName,
-			      SubClass:         inst.InstSubClassID,
-			      Maturity:         dateToYYYYMMDD(inst.MaturityDate),
-			      'new':            0,
-			      Visible:          inst.VisibleFlag,
-			      Description:      inst.InstDesc,
-			      AuctionInstTitle: inst.AuctionInstTitle,
-			      PriceTick:        inst.PriceTick
-			  }}]) ),
-		      for([];
-			  ['FEConfig',{TabID,data,CookieData,ConfigID,...}]^ConfigID;
-			  a=>a.concat([data]) ),
-		      for([];
-			  ['InstrumentClass',sc];
-			  a=>a.concat([{SubClass:{
-			      ID:                sc.InstSubClassID,
-			      Name:              sc.InstSubClassName,
-			      AssociatedTitleID: sc.AssociatedTitle,
-			      Title:             sc.Title,
-			      DefltVol:          sc.DefaultVolume,
-			      PriceTick:         sc.PriceTick,
-			      ShowSign:          sc.Display_ShowPlusMinus,
-			      xBidMinus1:        sc.Match_xBidMinus1,
-			      AuctionVolumes:    sc.AuctionVolumes
-			  }}]) ) ) } }],
-	  +['_output','self',{
-	      contexts:{
-		  _children:for([];
-				['MarketManager',{MarketID:id,Status,...}],
-				['SequenceNumbers',{MarketID,PriceSequenceNo,TradeSequenceNo,...}];
-				m=>m.concat([{"market-status":{
-				    ID:        id,
-				    status:    Status,
-				    priceSeqNo:PriceSequenceNo,
-				    tradeSeqNo:TradeSequenceNo,
-				    _children: [].concat(
-					for([];
-					    ['Price',{Action,Status:pst,MarketID:id,...rs}],
-					    "UC".indexOf(Action)!==-1 && "RATS".indexOf(pst)!==-1;
-					    // +++ above tests not complete +++
-					    p=>p.concat([{price:{ID:        rs.PriceID,
-						  		 seqNo:     rs.PriceSequenceNo,
-						  		 isBuy:     rs.BidOrOffer,
-						  		 instrument:rs.InstID,
-						  		 x:         rs.Rate,
-						  		 volume:    rs.Amount,
-						  		 action:    Action,
-						  		 status:    pst,
-						  		 valueDate: rs.ValuationDate,
-						  		 owner:     rs.OwnerAppID,
-						  		 marketID:  id,
-						  		 minLotSize:rs.MinLotSize}}]) )
-					    // +++ trades +++
-					    ) }}]) ) } }],
-	  +['_output','self',{
-	      BigFigBlock:{
-		  _children:for([];
-				['Instrument',{BidBigFigure:b,OfferBigFigure:o,InstID}];
-				bfs=>bfs.concat(b ? [{BigFig:{stock:InstID,bid:1,figure:b}}] : [],
-						o ? [{BigFig:{stock:InstID,bid:0,figure:o}}] : [] ) ) } }],
-	  +['_output','self',{initialised:{}}]
-	 );
-    rule (-['start',...]);	// might get here if link fails at just the wrong moment
+          ['Permissions',{port,ApplicationID,ApplicationName,roles,AppRole,...}],
+          +['_output','self',{
+              'static-data':{
+                  _children:
+                  [].concat(
+                      for([];
+                          ['Permissions',{ApplicationID:appId,TeamID:teamId,CompanyID:companyId,...}],
+                          ['Team',{TeamID:teamId,TeamName:team,...}];
+                          a=>a.concat([{counterparty:{app:appId,team:teamId,Name:team}}]) ),
+                      [{self:{ID:ApplicationID,Name:ApplicationName,roles,Role:AppRole}}],
+                      for([];                        // +++ should be per-user +++
+                          ['Instrument',inst];
+                          a=>a.concat([{instrument:{
+                              ID:               inst.InstID,
+                              Name:             inst.InstName,
+                              SubClass:         inst.InstSubClassID,
+                              Maturity:         dateToYYYYMMDD(inst.MaturityDate),
+                              'new':            0,
+                              Visible:          inst.VisibleFlag,
+                              Description:      inst.InstDesc,
+                              AuctionInstTitle: inst.AuctionInstTitle,
+                              PriceTick:        inst.PriceTick
+                          }}]) ),
+                      for([];
+                          ['FEConfig',{TabID,data,CookieData,ConfigID,...}]^ConfigID;
+                          a=>a.concat([data]) ),
+                      for([];
+                          ['InstrumentClass',sc];
+                          a=>a.concat([{SubClass:{
+                              ID:                sc.InstSubClassID,
+                              Name:              sc.InstSubClassName,
+                              AssociatedTitleID: sc.AssociatedTitle,
+                              Title:             sc.Title,
+                              DefltVol:          sc.DefaultVolume,
+                              PriceTick:         sc.PriceTick,
+                              ShowSign:          sc.Display_ShowPlusMinus,
+                              xBidMinus1:        sc.Match_xBidMinus1,
+                              AuctionVolumes:    sc.AuctionVolumes
+                          }}]) ) ) } }],
+          +['_output','self',{
+              contexts:{
+                  _children:for([];
+                                ['MarketManager',{MarketID:id,Status,...}],
+                                ['SequenceNumbers',{MarketID,PriceSequenceNo,TradeSequenceNo,...}];
+                                m=>m.concat([{"market-status":{
+                                    ID:        id,
+                                    status:    Status,
+                                    priceSeqNo:PriceSequenceNo,
+                                    tradeSeqNo:TradeSequenceNo,
+                                    _children: [].concat(
+                                        for([];
+                                            ['Price',{Action,Status:pst,MarketID:id,...rs}],
+                                            "UC".indexOf(Action)!==-1 && "RATS".indexOf(pst)!==-1;
+                                            // +++ above tests not complete +++
+                                            p=>p.concat([{price:{ID:        rs.PriceID,
+                                                                 seqNo:     rs.PriceSequenceNo,
+                                                                 isBuy:     rs.BidOrOffer,
+                                                                 instrument:rs.InstID,
+                                                                 x:         rs.Rate,
+                                                                 volume:    rs.Amount,
+                                                                 action:    Action,
+                                                                 status:    pst,
+                                                                 valueDate: rs.ValuationDate,
+                                                                 owner:     rs.OwnerAppID,
+                                                                 marketID:  id,
+                                                                 minLotSize:rs.MinLotSize}}]) )
+                                            // +++ trades +++
+                                            ) }}]) ) } }],
+          +['_output','self',{
+              BigFigBlock:{
+                  _children:for([];
+                                ['Instrument',{BidBigFigure:b,OfferBigFigure:o,InstID}];
+                                bfs=>bfs.concat(b ? [{BigFig:{stock:InstID,bid:1,figure:b}}] : [],
+                                                o ? [{BigFig:{stock:InstID,bid:0,figure:o}}] : [] ) ) } }],
+          +['_output','self',{initialised:{}}]
+         );
+    rule (-['start',...]);      // might get here if link fails at just the wrong moment
     rule (['Permissions',{ApplicationID}],
-	  -['Permissions',{ApplicationID}]);
-    rule (-['logoff',     {appId,...},...],
-	  -['Permissions',{ApplicationID:appId,LoggedOn:1,port,...rs}],
-	  +['Permissions',{ApplicationID:appId,LoggedOn:0,port:null,...rs}] );
+          -['Permissions',{ApplicationID}]);
+    rule (-['logoff',     {appId,...},...], // +++ remove after switch to `Engine` +++
+          -['Permissions',{ApplicationID:appId,LoggedOn:1,port,...rs}],
+          +['Permissions',{ApplicationID:appId,LoggedOn:0,port:null,...rs}] );
+    rule (-['logoff',     {},{port}],
+          -['Permissions',{LoggedOn:1,port,...rs}],
+          +['Permissions',{LoggedOn:0,port:null,...rs}] );
 
     // cookies
     rule (-['cookie',{id},{port}],
-	  ['Permissions',{port,ApplicationID,...}],
-	  ['Cookies',{ApplicationID,CookieID:id,Cookie,...}],
-	  +['_output','self',{'cookie':{id,_children:[Cookie]}}] );
+          ['Permissions',{port,ApplicationID,...}],
+          ['Cookies',{ApplicationID,CookieID:id,Cookie,...}],
+          +['_output','self',{'cookie':{id,_children:[Cookie]}}] );
     rule (-['cookie',{id},{port}],
-	  +['_output','self',{'cookie':{id,_children:[],error:"not found"}}] );
+          +['_output','self',{'cookie':{id,_children:[],error:"not found"}}] );
     rule (-['store-cookie',{id,_children:[cookie]},{port}],
-	  ['Permissions',{port,ApplicationID}],
-	  -['Cookies',{ApplicationID,CookieID:id}],
-	  +['Cookies',{ApplicationID,CookieID:id,Cookie:cookie}] );
+          ['Permissions',{port,ApplicationID}],
+          -['Cookies',{ApplicationID,CookieID:id}],
+          +['Cookies',{ApplicationID,CookieID:id,Cookie:cookie}] );
 
     // prices
     // +++ test prices are acceptable (not worse than existing) +++
     // +++ price update +++
     rule (['restart',...], -['price',{...},{...}]);
     rule (-['price',{action:'C',status:'A',marketID,...ps},{...}],
-	  -['SequenceNumbers',{MarketID:marketID,PriceID,PriceSequenceNo,...ss}],
+          -['SequenceNumbers',{MarketID:marketID,PriceID,PriceSequenceNo,...ss}],
           +['SequenceNumbers',{MarketID:marketID,PriceID:PriceID+1,PriceSequenceNo:PriceSequenceNo+1,...ss}],
-	  valueDate = moment().format('DD/MM/YYYY'),
-	  +['Price',{Action:          'C',
-		     Status:          'A',
-		     PriceID:         PriceID,
-		     PriceSequenceNo: PriceSequenceNo,
-		     ValuationDate:   valueDate,
-		     InstID:          ps.instrument,
-		     Amount:          ps.volume,
-		     Rate:            ps.x,
-		     OwnerAppID:      ps.owner,
-		     MinLotSize:      ps.minLotSize,
-		     MarketID:        marketID,
-		     BidOrOffer:      ps.isBuy}],
-	  +['_output','all',{price:{action:   'C',
-				    status:   'A',
-				    seqNo:    PriceSequenceNo,
-				    valueDate:valueDate,
-				    marketID: marketID,
-				    ID:       PriceID,
-				    ...ps}}] );
+          valueDate = moment().format('DD/MM/YYYY'),
+          +['Price',{Action:          'C',
+                     Status:          'A',
+                     PriceID:         PriceID,
+                     PriceSequenceNo: PriceSequenceNo,
+                     ValuationDate:   valueDate,
+                     InstID:          ps.instrument,
+                     Amount:          ps.volume,
+                     Rate:            ps.x,
+                     OwnerAppID:      ps.owner,
+                     MinLotSize:      ps.minLotSize,
+                     MarketID:        marketID,
+                     BidOrOffer:      ps.isBuy}],
+          +['_output','all',{price:{action:   'C',
+                                    status:   'A',
+                                    seqNo:    PriceSequenceNo,
+                                    valueDate:valueDate,
+                                    marketID: marketID,
+                                    ID:       PriceID,
+                                    ...ps}}] );
     rule (-['price',{ID,action:'U',status:'D',...ps},{...}],
-	  valueDate = (moment().format('DD/MM/YYYY')),
-	  -['Price',{PriceID:ID,...Ps}],
-	  +['Price',{PriceID:ID,Status:'D',...Ps}],
-	  +['_output','all',{price:{action:'D',status:'D',ID:ID,instrument:Ps.InstID,...ps}}] );
+          valueDate = (moment().format('DD/MM/YYYY')),
+          -['Price',{PriceID:ID,...Ps}],
+          +['Price',{PriceID:ID,Status:'D',...Ps}],
+          +['_output','all',{price:{action:'D',status:'D',ID:ID,instrument:Ps.InstID,...ps}}] );
 
     // trades
     //  +++ checks: price tradable +++
     rule (['restart',...], -['trade',{...},{...}]);
     rule (-['trade',{action:'C',state:'R',status:'O',marketID,...ts},{port}],
-	  -['Price',{PriceID:ts.priceID,...Ps}],
-	  Ps.Amount>0,
-	  tradeVolume = Math.min(Ps.Amount,ts.volume),
-	  +['Price',{Action:'U',Status:'T',PriceID:ts.priceID,Amount:Ps.Amount-tradeVolume,...Ps}],
-	  -['SequenceNumbers',{MarketID:marketID,TradeID,TradeSequenceNo,...ss}],
+          -['Price',{PriceID:ts.priceID,...Ps}],
+          Ps.Amount>0,
+          tradeVolume = Math.min(Ps.Amount,ts.volume),
+          +['Price',{Action:'U',Status:'T',PriceID:ts.priceID,Amount:Ps.Amount-tradeVolume,...Ps}],
+          -['SequenceNumbers',{MarketID:marketID,TradeID,TradeSequenceNo,...ss}],
           +['SequenceNumbers',{MarketID:marketID,TradeID:TradeID+1,TradeSequenceNo:TradeSequenceNo+1,...ss}],
-	  ['Permissions',{ApplicationID,port}],
-	  trade = _.extend({},	// +++ use extended objexpr syntax +++
-			   ts,
-			   {ID:         TradeID,
-	  		    seqNo:      TradeSequenceNo,
-			    priceID:    ts.priceID,
-	  		    action:     'C',
-	  		    state:      'R',
-	  		    status:     'C',
-	  		    instrument: Ps.InstID,
-	  		    volume:     tradeVolume,
-	  		    broker:     ApplicationID,
-	  		    update:     ApplicationID,
-	  		    painter:    Ps.OwnerAppID} ),
-	  +['Trade',trade],
-	  +['_output','all',{trade:trade}],
-	  +['_output','all',{price:{ID:        ts.priceID,
-	  			    seqNo:     Ps.PriceSequenceNo,
-	  			    isBuy:     Ps.BidOrOffer,
-	  			    instrument:Ps.InstID,
-	  			    x:         Ps.Rate,
-	  			    volume:    Ps.Amount-tradeVolume,
-	  			    action:    'U',
-	  			    status:    'T',
-	  			    valueDate: Ps.ValuationDate,
-	  			    owner:     Ps.OwnerAppID,
-	  			    marketID:  marketID,
-	  			    minLotSize:Ps.MinLotSize}}]
-	 );
+          ['Permissions',{ApplicationID,port}],
+          trade = _.extend({},  // +++ use extended objexpr syntax +++
+                           ts,
+                           {ID:         TradeID,
+                            seqNo:      TradeSequenceNo,
+                            priceID:    ts.priceID,
+                            action:     'C',
+                            state:      'R',
+                            status:     'C',
+                            instrument: Ps.InstID,
+                            volume:     tradeVolume,
+                            broker:     ApplicationID,
+                            update:     ApplicationID,
+                            painter:    Ps.OwnerAppID} ),
+          +['Trade',trade],
+          +['_output','all',{trade:trade}],
+          +['_output','all',{price:{ID:        ts.priceID,
+                                    seqNo:     Ps.PriceSequenceNo,
+                                    isBuy:     Ps.BidOrOffer,
+                                    instrument:Ps.InstID,
+                                    x:         Ps.Rate,
+                                    volume:    Ps.Amount-tradeVolume,
+                                    action:    'U',
+                                    status:    'T',
+                                    valueDate: Ps.ValuationDate,
+                                    owner:     Ps.OwnerAppID,
+                                    marketID:  marketID,
+                                    minLotSize:Ps.MinLotSize}}]
+         );
     rule (-['trade',{action:'C',state:'Y',status:'O',volume:0,marketID,...ts},{port}],
-	  -['Price',{PriceID:ts.priceID,...Ps}],
-	  +['Price',{Action:'D',Status:'D',PriceID:ts.priceID,...Ps}],
-	  -['Trade',{priceID:ts.priceID,state:'R',...ts1}],
-	  -['SequenceNumbers',{MarketID:marketID,TradeID,TradeSequenceNo,...ss}],
+          -['Price',{PriceID:ts.priceID,...Ps}],
+          +['Price',{Action:'D',Status:'D',PriceID:ts.priceID,...Ps}],
+          -['Trade',{priceID:ts.priceID,state:'R',...ts1}],
+          -['SequenceNumbers',{MarketID:marketID,TradeID,TradeSequenceNo,...ss}],
           +['SequenceNumbers',{MarketID:marketID,TradeID:TradeID+1,TradeSequenceNo:TradeSequenceNo+1,...ss}],
-	  ['Permissions',{ApplicationID,port}],
-	  trade1 = _.extend({},	// +++ use extended objexpr syntax +++
-			    ts1,
-			    {ID:         ts1.ID,
-	  		     seqNo:      ts1.seqNo,
-			     priceID:    ts.priceID,
-	  		     action:     'U',
-	  		     status:     'O',
-	  		     state:      'D',
-	  		     instrument: Ps.InstID,
-	  		     volume:     ts1.volume,
-	  		     broker:     ApplicationID,
-	  		     update:     ApplicationID,
-	  		     painter:    Ps.OwnerAppID} ),
-	  trade2 = _.extend({},	// +++ use extended objexpr syntax +++
-			    ts,
-			    {ID:         TradeID+1,
-	  		     seqNo:      TradeSequenceNo+1,
-			     priceID:    ts.priceID,
-	  		     action:     'C',
-	  		     status:     'O',
-	  		     state:      'Z',
-	  		     instrument: Ps.InstID,
-	  		     volume:     0,
-	  		     broker:     ApplicationID,
-	  		     update:     ApplicationID,
-			     hitter:     Ps.OwnerAppID,
-	  		     painter:    Ps.OwnerAppID} ),
-	  +['Trade',trade1],
-	  +['Trade',trade2],
-	  +['_output','all',{trade:trade1}],
-	  +['_output','all',{trade:trade2}],
-	  +['_output','all',{price:{ID:        ts.priceID,
-	  			    seqNo:     Ps.PriceSequenceNo,
-	  			    isBuy:     Ps.BidOrOffer,
-	  			    instrument:Ps.InstID,
-	  			    x:         Ps.Rate,
-	  			    volume:    Ps.Amount,
-	  			    action:    Ps.Amount===0 ? 'D' : 'U',
-	  			    status:    Ps.Amount===0 ? 'D' : 'A',
-	  			    valueDate: Ps.ValuationDate,
-	  			    owner:     Ps.OwnerAppID,
-	  			    marketID:  marketID,
-	  			    minLotSize:Ps.MinLotSize}}]
-	 );
+          ['Permissions',{ApplicationID,port}],
+          trade1 = _.extend({}, // +++ use extended objexpr syntax +++
+                            ts1,
+                            {ID:         ts1.ID,
+                             seqNo:      ts1.seqNo,
+                             priceID:    ts.priceID,
+                             action:     'U',
+                             status:     'O',
+                             state:      'D',
+                             instrument: Ps.InstID,
+                             volume:     ts1.volume,
+                             broker:     ApplicationID,
+                             update:     ApplicationID,
+                             painter:    Ps.OwnerAppID} ),
+          trade2 = _.extend({}, // +++ use extended objexpr syntax +++
+                            ts,
+                            {ID:         TradeID+1,
+                             seqNo:      TradeSequenceNo+1,
+                             priceID:    ts.priceID,
+                             action:     'C',
+                             status:     'O',
+                             state:      'Z',
+                             instrument: Ps.InstID,
+                             volume:     0,
+                             broker:     ApplicationID,
+                             update:     ApplicationID,
+                             hitter:     Ps.OwnerAppID,
+                             painter:    Ps.OwnerAppID} ),
+          +['Trade',trade1],
+          +['Trade',trade2],
+          +['_output','all',{trade:trade1}],
+          +['_output','all',{trade:trade2}],
+          +['_output','all',{price:{ID:        ts.priceID,
+                                    seqNo:     Ps.PriceSequenceNo,
+                                    isBuy:     Ps.BidOrOffer,
+                                    instrument:Ps.InstID,
+                                    x:         Ps.Rate,
+                                    volume:    Ps.Amount,
+                                    action:    Ps.Amount===0 ? 'D' : 'U',
+                                    status:    Ps.Amount===0 ? 'D' : 'A',
+                                    valueDate: Ps.ValuationDate,
+                                    owner:     Ps.OwnerAppID,
+                                    marketID:  marketID,
+                                    minLotSize:Ps.MinLotSize}}]
+         );
     
     // +++ `BigFigBlock` +++
     // +++ `EndBigFigBlock` +++
@@ -323,70 +335,69 @@ const IDB = store {
     // auction
     rule (['restart',...], -['auction',...]); // !!! TESTING !!!
     rule (-['AuctionTemplateBlock',...],
-	  +['_output','self',{AuctionTemplateBlock:{_children:
-						    for([];
-							['AuctionTemplate',at];
-							a=>a.concat([{AuctionTemplate:{
-							    cls:                  1,
-							    name:                 at.AuctionName,
-							    id:                   at.AuctionTemplateID,
-							    instance:             0,
-							    phases:               at.AuctionPhases,
-							    duration:             at.AuctionDuration,
-							    MatchingDuration:     at.MatchingDuration,
-							    SecondChanceDuration: 0 }}]) ) }}] );
+          +['_output','self',{AuctionTemplateBlock:{_children:
+                                                    for([];
+                                                        ['AuctionTemplate',at];
+                                                        a=>a.concat([{AuctionTemplate:{
+                                                            cls:                  1,
+                                                            name:                 at.AuctionName,
+                                                            id:                   at.AuctionTemplateID,
+                                                            instance:             0,
+                                                            phases:               at.AuctionPhases,
+                                                            duration:             at.AuctionDuration,
+                                                            MatchingDuration:     at.MatchingDuration,
+                                                            SecondChanceDuration: 0 }}]) ) }}] );
     rule (-['AuctionTemplate',{id},{port,...}],
-	  AuctionID = for(0;
-			  ['AuctionInstrumentsTemplate',{AuctionTemplateID:id,
-							 AuctionID,
-							 ...}];
-			  a=>Math.max(a,AuctionID) ),
-	  ['AuctionTemplate',{AuctionTemplateID:id,...at}],
-	  +['_output',port,{AuctionTemplate:{
-	      cls:                  1,
-	      name:                 at.AuctionName,
-	      id:                   id,
-	      instance:             0,
-	      phases:               at.AuctionPhases,
-	      duration:             at.AuctionDuration,
-	      MatchingDuration:     at.MatchingDuration,
-	      SecondChanceDuration: 0,
-	      _children: for([];
-			     ['AuctionInstrumentsTemplate',{AuctionTemplateID:id,
-							    InstID,
-							    AuctionID,
-							    ...ait}],
-			     ['Instrument',{InstID,...inst}];
-			     a=>a.concat([{AInst:{
-				 InstID:       InstID,
-				 Midprice:     inst.MidPrice,
-				 Tolerance:    inst.VolatilityPercent,
-				 AddTolerance: inst.VolatilitySpread }}]) ) }}] ); 
+          AuctionID = for(0;
+                          ['AuctionInstrumentsTemplate',{AuctionTemplateID:id,
+                                                         AuctionID,
+                                                         ...}];
+                          a=>Math.max(a,AuctionID) ),
+          ['AuctionTemplate',{AuctionTemplateID:id,...at}],
+          +['_output',port,{AuctionTemplate:{
+              cls:                  1,
+              name:                 at.AuctionName,
+              id:                   id,
+              instance:             0,
+              phases:               at.AuctionPhases,
+              duration:             at.AuctionDuration,
+              MatchingDuration:     at.MatchingDuration,
+              SecondChanceDuration: 0,
+              _children: for([];
+                             ['AuctionInstrumentsTemplate',{AuctionTemplateID:id,
+                                                            InstID,
+                                                            AuctionID,
+                                                            ...ait}],
+                             ['Instrument',{InstID,...inst}];
+                             a=>a.concat([{AInst:{
+                                 InstID:       InstID,
+                                 Midprice:     inst.MidPrice,
+                                 Tolerance:    inst.VolatilityPercent,
+                                 AddTolerance: inst.VolatilitySpread }}]) ) }}] ); 
     rule (-['PrepareAuction',{id,action:'I',...prs},...],
-	  -['MarketManager',{auctionId,...mrs}],
-	  +['MarketManager',{auctionId:auctionId+1,...mrs}],
-	  +['annotatePrepareAuction',{id:auctionId+1,templateId:id,instruments:[],...prs}] );
+          -['MarketManager',{auctionId,...mrs}],
+          +['MarketManager',{auctionId:auctionId+1,...mrs}],
+          +['annotatePrepareAuction',{id:auctionId+1,templateId:id,instruments:[],...prs}] );
     rule (-['annotatePrepareAuction',{instruments,_children:[child,...irs],...rs}],
-    	  ['Instrument',{InstID:child.AInst.InstID,SubClass}],
-    	  ['InstrumentClass',{InstSubClassID:SubClass,AuctionVolumes:av}],
-    	  +['annotatePrepareAuction',{instruments:instruments.concat([{AInst:_.extend(child.AInst,
-    										      {AuctionVolumes:av} )}]),
-    				      _children:[...irs],
-    				      ...rs}] );
+          ['Instrument',{InstID:child.AInst.InstID,SubClass}],
+          ['InstrumentClass',{InstSubClassID:SubClass,AuctionVolumes:av}],
+          +['annotatePrepareAuction',{instruments:instruments.concat([{AInst:_.extend(child.AInst,
+                                                                                      {AuctionVolumes:av} )}]),
+                                      _children:[...irs],
+                                      ...rs}] );
     rule (-['annotatePrepareAuction',{id,instruments,_children:[],phases,...rs}],
-	  +['auction',{id,instruments,curPhase:phases[0],phases,state:'S',...rs}],
-	  +['_output','all',{PrepareAuction:{AuctionID:id,Class:1,action:'I',_children:instruments,...rs}}] );
+          +['auction',{id,instruments,curPhase:phases[0],phases,state:'S',...rs}],
+          +['_output','all',{PrepareAuction:{AuctionID:id,Class:1,action:'I',_children:instruments,...rs}}] );
     rule (-['StartPreparedAuction',{id},{port}],
-	  -['auction',{id,state:'S',phases,...rs}],
-	  state = {M:'Z',A:'R'}[phases[0]],
-	  +['auction',{id,state:state,phases,port,...rs}] );
+          -['auction',{id,state:'S',phases,...rs}],
+          state = {M:'Z',A:'R'}[phases[0]],
+          +['auction',{id,state:state,phases,port,...rs}] );
     rule(-['auction',{state:undefined,port}],+['_output',port,{error:{msg:"arse"}}]);
     rule (['tick',...],
-	  ['auction',{state,id,curPhase,...rs}],
-	  state!='N',
-	  d = {'M':rs.MatchingDuration,'A':rs.Duration,'S':rs.SecondChanceDuration}[curPhase],
-	  +['_output','all',{AuctionState:{AuctionID:id,Class:1,State:state,Duration:d}}] );
-    // +++ `StartPreparedAuction` +++
+          ['auction',{state,id,curPhase,...rs}],
+          state!='N',
+          d = {'M':rs.MatchingDuration,'A':rs.Duration,'S':rs.SecondChanceDuration}[curPhase],
+          +['_output','all',{AuctionState:{AuctionID:id,Class:1,State:state,Duration:d}}] );
     // +++ `AuctionPriceBlock` +++
     // +++ `AuctionSecondChance` +++
     // +++ `AuctionMatch` +++
@@ -394,10 +405,11 @@ const IDB = store {
 
     // background
     rule (['tick',{date,...},...],
-	  +['_output','all',mkHeartbeat(date)] );
+          +['_output','all',mkHeartbeat(date)] );
     rule (['tick',{...},...],
-	  n = for(0;['Permissions',{LoggedOn:1,...}];a=>a+1),
-	  console.log("%d users logged on",n) );
+          n = for(0;['Permissions',{LoggedOn:1,...}];a=>a+1),
+          n>0,
+          console.log("%d users logged on",n) );
     rule (-['tick',...]);
 
     // output
@@ -406,84 +418,84 @@ const IDB = store {
 };
 
 IDB.oldAdd = IDB.add;
-IDB.add = function(fact) {	// replace some type information lost to XML
+IDB.add = function(fact) {      // replace some type information lost to XML
     switch (fact[0]) {
     case 'market-status':
-	fact[1].ID         = parseInt(fact[1].ID);
-	fact[1].status     = parseInt(fact[1].status);
-	break;
+        fact[1].ID         = parseInt(fact[1].ID);
+        fact[1].status     = parseInt(fact[1].status);
+        break;
     case 'cookie':
     case 'store-cookie':
-	fact[1].id         = parseInt(fact[1].id);
-	break;
+        fact[1].id         = parseInt(fact[1].id);
+        break;
     case 'price':
-	fact[1].ID         = parseInt(fact[1].ID);
-	fact[1].seqNo      = parseInt(fact[1].seqNo);
-	fact[1].instrument = parseInt(fact[1].instrument);
-	fact[1].volume     = parseInt(fact[1].volume);
-	fact[1].owner      = parseInt(fact[1].owner);
-	fact[1].marketID   = parseInt(fact[1].marketID);
-	fact[1].minLotSize = (typeof fact[1].minLotSize)==='string' ? parseInt(fact[1].minLotSize) : 1000;
-	fact[1].isBuy      = !!parseInt(fact[1].isBuy);
-	fact[1].x          = parseFloat(fact[1].x);
-	break;
+        fact[1].ID         = parseInt(fact[1].ID);
+        fact[1].seqNo      = parseInt(fact[1].seqNo);
+        fact[1].instrument = parseInt(fact[1].instrument);
+        fact[1].volume     = parseInt(fact[1].volume);
+        fact[1].owner      = parseInt(fact[1].owner);
+        fact[1].marketID   = parseInt(fact[1].marketID);
+        fact[1].minLotSize = (typeof fact[1].minLotSize)==='string' ? parseInt(fact[1].minLotSize) : 1000;
+        fact[1].isBuy      = !!parseInt(fact[1].isBuy);
+        fact[1].x          = parseFloat(fact[1].x);
+        break;
     case 'trade':
-	fact[1].ID         = parseInt(fact[1].ID);
-	fact[1].seqNo      = parseInt(fact[1].seqNo);
-	fact[1].volume     = parseInt(fact[1].volume);
-	fact[1].priceID    = parseInt(fact[1].priceID);
-	fact[1].priceSeqNo = parseInt(fact[1].priceSeqNo);
-	fact[1].hitter     = parseInt(fact[1].hitter);
-	fact[1].marketID   = parseInt(fact[1].marketID);
-	break;
+        fact[1].ID         = parseInt(fact[1].ID);
+        fact[1].seqNo      = parseInt(fact[1].seqNo);
+        fact[1].volume     = parseInt(fact[1].volume);
+        fact[1].priceID    = parseInt(fact[1].priceID);
+        fact[1].priceSeqNo = parseInt(fact[1].priceSeqNo);
+        fact[1].hitter     = parseInt(fact[1].hitter);
+        fact[1].marketID   = parseInt(fact[1].marketID);
+        break;
     case 'AuctionTemplate':
-	fact[1].id = parseInt(fact[1].id);
-	break;
+        fact[1].id = parseInt(fact[1].id);
+        break;
     case 'PrepareAuction':
-	fact[1].id                   = parseInt(fact[1].id);
-	fact[1].instance             = parseInt(fact[1].instance);
-	fact[1].AuctionDuration      = parseInt(fact[1].AuctionDuration);
-	fact[1].MatchingDuration     = parseInt(fact[1].MatchingDuration);
-	fact[1].SecondChanceDuration = parseInt(fact[1].SecondChanceDuration);
-	fact[1]._children.forEach(function(c) {
-	    c.AInst.InstID       = parseInt(c.AInst.InstID);
-	    c.AInst.Midprice     = parseFloat(c.AInst.Midprice);
-	    c.AInst.Tolerance    = parseFloat(c.AInst.Tolerance);
-	    c.AInst.AddTolerance = parseFloat(c.AInst.Tolerance);
-	});
-	break;
+        fact[1].id                   = parseInt(fact[1].id);
+        fact[1].instance             = parseInt(fact[1].instance);
+        fact[1].AuctionDuration      = parseInt(fact[1].AuctionDuration);
+        fact[1].MatchingDuration     = parseInt(fact[1].MatchingDuration);
+        fact[1].SecondChanceDuration = parseInt(fact[1].SecondChanceDuration);
+        fact[1]._children.forEach(function(c) {
+            c.AInst.InstID       = parseInt(c.AInst.InstID);
+            c.AInst.Midprice     = parseFloat(c.AInst.Midprice);
+            c.AInst.Tolerance    = parseFloat(c.AInst.Tolerance);
+            c.AInst.AddTolerance = parseFloat(c.AInst.Tolerance);
+        });
+        break;
     case 'StartPreparedAuction':
-	fact[1].id = parseInt(fact[1].id);
-	break;
+        fact[1].id = parseInt(fact[1].id);
+        break;
     case 'AuctionPrice':
-	fact[1].value  = parseFloat(fact[1].value);
-	fact[1].volume = parseInt(fact[1].volume);
-	break;
+        fact[1].value  = parseFloat(fact[1].value);
+        fact[1].volume = parseInt(fact[1].volume);
+        break;
     case 'AuctionSecondChance':
     case 'AuctionMatch':
-	fact[1].AuctionID = parseInt(fact[1].AuctionID);
-	fact[1].InstID    = parseInt(fact[1].InstID);
-	fact[1].Volume    = parseFloat(fact[1].Volume);
-	fact[1].IsBuy     = !!parseInt(fact[1].IsBuy);
-	break;
+        fact[1].AuctionID = parseInt(fact[1].AuctionID);
+        fact[1].InstID    = parseInt(fact[1].InstID);
+        fact[1].Volume    = parseFloat(fact[1].Volume);
+        fact[1].IsBuy     = !!parseInt(fact[1].IsBuy);
+        break;
     case 'AuctionPriceBlock':
-	fact[1].auction    = parseInt(fact[1].auction);
-	fact[1].instrument = parseInt(fact[1].instrument);
-	fact[1]._children.forEach(function(c) {
-	    c.AuctionPrice.value  = parseFloat(c.AuctionPrice.value);
-	    c.AuctionPrice.volume = parseInt(c.AuctionPrice.volume);
-	});
-	break;
+        fact[1].auction    = parseInt(fact[1].auction);
+        fact[1].instrument = parseInt(fact[1].instrument);
+        fact[1]._children.forEach(function(c) {
+            c.AuctionPrice.value  = parseFloat(c.AuctionPrice.value);
+            c.AuctionPrice.volume = parseInt(c.AuctionPrice.volume);
+        });
+        break;
     case 'BigFigBlock':
-	fact[1]._children.forEach(function(c) {
-	    c.BigFig.stock = parseInt(c.BigFig.stock);
-	    c.BigFig.bid   = parseInt(c.BigFig.bid);
-	});
-	break;
+        fact[1]._children.forEach(function(c) {
+            c.BigFig.stock = parseInt(c.BigFig.stock);
+            c.BigFig.bid   = parseInt(c.BigFig.bid);
+        });
+        break;
     case 'InstHighlight':
-	fact[1].InstID      = parseInt(fact[1].InstID);
-	fact[1].HighlightOn = !!parseInt(fact[1].HighlightOn);
-	break;
+        fact[1].InstID      = parseInt(fact[1].InstID);
+        fact[1].HighlightOn = !!parseInt(fact[1].HighlightOn);
+        break;
     }
     return IDB.oldAdd(fact);
 };

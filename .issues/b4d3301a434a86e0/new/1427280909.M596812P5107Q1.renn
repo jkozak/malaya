@@ -1,0 +1,28 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Wed, 25 Mar 2015 10:55:09 +0000
+Subject: use command/subcommand style for cmdline
+State: resolved
+Message-Id: <b4d3301a434a86e0-0-artemis@renn>
+resolution: fixed
+
+`npm` module `argparse` is wanted here.
+
+e.g.:
+
+  malaya <opt>... <subcmd> <subopt>... <arg>...
+
+where <opt> is one of:
+ -v        verboser
+ -q        quieter
+
+and <subcmd> &c from:
+ cat       access hashstore
+ tac
+ find      find hash in journal
+ gc        remove unclaimed hashstore entries
+
+ rollback
+ 
+ run       [<code>]
+ slave     <url>
+ transform <code>
