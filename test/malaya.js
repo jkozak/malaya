@@ -41,13 +41,14 @@ describe("server wrapper",function() {
         srvr2.close();
         srvr1.close();
     });
-    it("does not allow multiple servers to share a prevalence dir",function() {
-        var prevDir = path.join(temp.mkdirSync(),'prevalence');
-        mkServer({init:true,prevalenceDir:prevDir});
-        assert.throws(function() {
-            mkServer({init:false,prevalenceDir:prevDir});
-        });
-    });
+    // +++ test multiple processes, not single process +++
+    // it("does not allow multiple servers to share a prevalence dir",function() {
+    //     var prevDir = path.join(temp.mkdirSync(),'prevalence');
+    //     mkServer({init:true,prevalenceDir:prevDir});
+    //     assert.throws(function() {
+    //         mkServer({init:false,prevalenceDir:prevDir});
+    //     });
+    // });
     // +++ test per-process locking +++
     describe("uninit",function() {
         it("cleans up a failed init",function() {

@@ -3,26 +3,26 @@
 "use strict";
 
 var      _ = require('underscore');
-var   temp = require('temp');
+var   temp = require('temp').track();
 var   path = require('path');
 var     fs = require('fs');
 var VError = require('verror');
 
-temp.track();
-
-exports.lockSync = function(filename,data) {
+exports.lockSync = function(filename,data) { 
     var tmp = temp.openSync({dir:path.dirname(filename)});
 
-    data = _.extend({},data,{pid:process.pid});
+    data = _.extend({},data||{},{pid:process.pid});
     
     fs.writeSync(tmp.fd,JSON.stringify(data),null,null,null);
     for (var i=0;i<2;i++) 
         try {
             fs.linkSync(tmp.path,filename);     // if locked, fails here
-            return;
+            return true;
         } catch (e) {
             var pid = exports.pidLockedSync(filename);
-            if (pid===null) {
+            if (pid===process.pid)
+                return false;
+            else if (pid===null) {
                 try {
                     console.log("removing stale lockfile %s",filename);
                     fs.unlinkSync(filename);
@@ -59,5 +59,8 @@ exports.pidLockedSync = function(filename) {
 };
 
 exports.unlockSync = function(filename) {
+    var pid = exports.pidLockedSync(filename);
+    if (pid!==process.pid)
+        throw new VError("lockfile %s locked by process %d",filename,pid);
     fs.unlinkSync(filename);
 };
