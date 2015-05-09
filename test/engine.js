@@ -126,5 +126,56 @@ describe("Engine",function() {
             eng.stop(true);
         });
     });
+    describe("walking utilities",function() {
+        it("traverses the journal file",function(done) {
+            var dir = temp.mkdirSync();
+            var eng = new Engine({dir:dir,chrjs:createTestStore()});
+            var  hs = [];
+            eng.init();
+            eng.start();
+            eng.stop();
+            eng.walkJournalFile(path.join(dir,'.prevalence','state','journal'),
+                                false,
+                                function(err,x,what) {
+                                    assert.strictEqual(err,null);
+                                    if (what==='journal')
+                                        hs.push(x);
+                                },
+                                function() {
+                                    assert.strictEqual(hs.length,1);
+                                    done(); });
+        });
+        it("traverses the journal file and hash store",function(done) {
+            var   dir = temp.mkdirSync();
+            var   eng = new Engine({dir:dir,chrjs:createTestStore()});
+            var    hs = [];
+            var done2 = _.after(2,done);
+            eng.init();
+            eng.start();
+            eng.stop();
+            eng.start();
+            eng.stop();
+            eng.walkJournalFile(path.join(dir,'.prevalence','state','journal'),
+                                false,
+                                function(err,x,what) {
+                                    assert.strictEqual(err,null);
+                                    if (what==='journal') {
+                                        eng.walkHashes(x,
+                                                       false,
+                                                       function(err,h,what) {
+                                                           console.log("*** %j %j",h,what);
+                                                           if (what==='journal')
+                                                               hs.push(h);
+                                                       },
+                                                       function() {
+                                                           console.log("*** %j",hs);
+                                                           done2();
+                                                       });
+                                    }
+                                },
+                                function() {
+                                    done2(); });
+        });
+    });
 });
 

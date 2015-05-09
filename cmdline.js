@@ -147,6 +147,8 @@ subcommands.client.addArgument(
     }
 );
 
+addSubcommand('logs',{addHelp:true});
+
 
 // now dispatch the subcommand
 
@@ -191,8 +193,10 @@ exports.run = function(opts0) {
             process.exit(1);
         });
         process.on('SIGHUP',function() {
-            if (eng && eng.mode!==null)
-                eng.save();
+            if (eng && eng.mode!==null) {
+                eng.stop(false,false);
+                eng.start();
+            }
         });
         process.on('exit',function(code) {
         });
@@ -366,6 +370,20 @@ exports.run = function(opts0) {
     subcommands.client.exec = function() {
         //var client = require('./client.js');
         throw new Error("NYI: subcommand `client`");
+    };
+    
+    subcommands.logs.exec = function() {
+        checkDirectoriesExist();
+        var eng = createEngine({});
+        eng._makeHashes();
+        process.stdout.write('journal\n');
+        eng.journalChain(function(err,hs) {
+            if (err)
+                throw err;
+            hs.forEach(function(h) {
+                process.stdout.write(h+'\n');
+            });
+        });
     };
     
     if (subcommands[args.subcommandName]===undefined)

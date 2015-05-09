@@ -121,7 +121,8 @@ Engine.prototype._saveWorld = function() {
     return syshash;
 };
 
-Engine.prototype.stop = function(quick) {
+Engine.prototype.stop = function(quick,unlock) {
+    unlock = unlock===undefined ? true : unlock;
     var   eng = this;
     var done2 = _.after(2,function(){eng.emit('stopped');});
 
@@ -135,8 +136,9 @@ Engine.prototype.stop = function(quick) {
         eng._saveWorld();
 
     done2();
-    
-    lock.unlockSync(path.join(this.prevalenceDir,'lock'));
+
+    if (unlock)
+        lock.unlockSync(path.join(this.prevalenceDir,'lock'));
 };
 
 Engine.prototype._ensureStateDirectory = function() {
@@ -208,13 +210,6 @@ Engine.prototype._makeHashes = function() {
     this.hashes = hash(util.hashAlgorithm).makeStore(path.join(this.prevalenceDir,'hashes'));
 };
 
-Engine.prototype.save = function() {
-    var     eng = this;
-    var syshash = eng._saveWorld();
-    eng._loadWorld();
-    return syshash;
-};
-
 Engine.prototype.init = function(data) {
     var      eng = this;
     var jrnlFile = path.join(eng.prevalenceDir,'state','journal');
@@ -222,7 +217,7 @@ Engine.prototype.init = function(data) {
     eng._ensureStateDir();
     eng._makeHashes();
     fs.writeFileSync(jrnlFile,util.serialise([timestamp(),'init',eng.options])+'\n');
-    eng.syshash = eng.save();
+    eng.syshash = eng._saveWorld();
 };
 
 Engine.prototype.start = function() { //N.B. does not update the prevalence dir or its contents (except `lock`)
@@ -397,9 +392,8 @@ Engine.prototype.addConnection = function(portName,io) {
     throw new Error("NYI");
 };
 
-Engine.prototype.masterListen = function(done) {
+Engine.prototype.masterListenHttp = function(port,done) {
     var  eng = this;
-    var port = eng.options.ports.http;
     var sock = sockjs.createServer({log:function(severity,text) {
         if (['error','info'].indexOf(severity)!==-1)
             console.log(text);
@@ -459,6 +453,15 @@ Engine.prototype.masterListen = function(done) {
         eng.emit('listen','http',port,sock);
         done();
     });
+};
+
+Engine.prototype.masterListen = function(done) {
+    var  eng = this;
+    var port = eng.options.ports.http;
+    if (port===undefined)
+        done(null);
+    else
+        eng.masterListenHttp(port,done);
 };
 
 Engine.prototype.startComms = function(mode,done) {
@@ -605,7 +608,7 @@ Engine.prototype.walkHashes = function(hash0,deepCheck,cb,done) {
     for (var h=hash0;h;) {
         /* eslint no-loop-func:0 */
         var fn = eng.hashes.makeFilename(h);
-        cb(hash,"journal");
+        cb(null,h,"journal");
         h = null;
         eng.walkJournalFile(fn,deepCheck,function(err,hash1,what) {
             if (err)
@@ -616,7 +619,6 @@ Engine.prototype.walkHashes = function(hash0,deepCheck,cb,done) {
                 else
                     h = hash1;
             }
-            cb(null,hash1,what);
         });
     }
     if (done!==undefined)
@@ -634,6 +636,31 @@ Engine.prototype.checkHashes = function(hash0,cb,done) {
             cb(new VError("can't find %s for %s",what,h));
     },
                   done);
+};
+
+Engine.prototype.journalChain = function(cb) {
+    var eng = this;
+    var  hs = [];
+    eng.walkJournalFile(path.join(eng.prevalenceDir,'state','journal'),
+                        false,
+                        function(err,x,what) {
+                            if (err)
+                                cb(err);
+                            else if (what==='journal') 
+                                eng.walkHashes(x,
+                                               false,
+                                               function(err1,h,what1) {
+                                                   //console.log("*** %j %j",h,what);
+                                                   if (what1==='journal')
+                                                       process.stdout.write(h+'\n');
+                                               },
+                                               function(err1) {
+                                                   if (err1)
+                                                       cb(err1);
+                                                   else
+                                                       cb(null,hs);
+                                               } );
+                        } );
 };
 
 exports.Engine = Engine;
