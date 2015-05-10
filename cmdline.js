@@ -155,11 +155,11 @@ addSubcommand('logs',{addHelp:true});
 process.on('uncaughtException',function(err) {
     /*eslint-disable no-process-exit*/
     if (err instanceof exports.Fail) {
-        console.log(err.message);
+        util.error(err.message);
         process.exit(100);
     } else {
-        console.log(err.message);
-        console.error(err.stack);
+        util.error(err.message);
+        util.error(err.stack);
         process.exit(101);
     }
     /*eslint-enable no-process-exit*/
@@ -242,7 +242,7 @@ exports.run = function(opts0) {
     subcommands.init.exec = function() {
         require('./compiler.js'); // add `chrjs` extension to `require`
         var source = path.resolve(args.source);
-        createEngine({chrjs:require(source)}).init(args.data);
+        createEngine({businessLogic:source}).init(args.data);
     };
     
     subcommands.run.exec = function() {
@@ -250,7 +250,7 @@ exports.run = function(opts0) {
         require('./compiler.js'); // add `chrjs` extension to `require`
         var    auto = true;       // +++ from arg --no-auto
         var  source = path.resolve(args.source);
-        var options = {chrjs:require(source),ports:{http:3000}};
+        var options = {businessLogic:source,ports:{http:3000}};
         var     eng = createEngine(options);
         eng.on('loaded',function(syshash) {
             util.debug("loaded world: %s",syshash);
@@ -289,7 +289,7 @@ exports.run = function(opts0) {
         require('./compiler.js'); // add `chrjs` extension to `require`
         var engine = require('./engine');
         var    eng = createEngine({});
-        var  chrjs = require(path.resolve(args.transform));
+        var  chrjs = engine.compile(path.resolve(args.transform));
         var   fact;
         var      t;
         eng.chrjs = engine.makeInertChrjs();
@@ -300,7 +300,7 @@ exports.run = function(opts0) {
                 throw new VError("bad fact in store to be transformed");
             chrjs.add([fact[0],fact[1],{keep:false}]);
         }
-        eng.chrjs = args.source ? require(path.resolve(args.source)) : eng.makeInertChrjs();
+        eng.chrjs = args.source ? engine.compile(path.resolve(args.source)) : eng.makeInertChrjs();
         for (t=0;t<chrjs.t;t++) {
             fact = chrjs.get(t+'');
             if (fact[2].keep)

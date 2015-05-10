@@ -163,12 +163,10 @@ describe("Engine",function() {
                                         eng.walkHashes(x,
                                                        false,
                                                        function(err,h,what) {
-                                                           console.log("*** %j %j",h,what);
                                                            if (what==='journal')
                                                                hs.push(h);
                                                        },
                                                        function() {
-                                                           console.log("*** %j",hs);
                                                            done2();
                                                        });
                                     }

@@ -8,6 +8,8 @@ var   path = require('path');
 var     fs = require('fs');
 var VError = require('verror');
 
+var   util = require('./util.js');
+
 exports.lockSync = function(filename,data) { 
     var tmp = temp.openSync({dir:path.dirname(filename)});
 
@@ -24,7 +26,7 @@ exports.lockSync = function(filename,data) {
                 return false;
             else if (pid===null) {
                 try {
-                    console.log("removing stale lockfile %s",filename);
+                    util.info("removing stale lockfile %s",filename);
                     fs.unlinkSync(filename);
                     continue;
                 } catch (e1) {

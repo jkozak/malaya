@@ -10,11 +10,14 @@ exports.files   = {};
 
 var        save = null;
 var cExtensions = null;
+var     userFun = null;
+var       stack = [];
 
 exports.register = function(fn) {
     if (save!==null)
         throw new Error("`note-requires` already active");
-    save = {};
+    save    = {};
+    userFun = fn;
     for (var k in require.extensions) {
         /* eslint no-loop-func:0 */
         require.extensions[k] = (function(ext) {
@@ -40,4 +43,26 @@ exports.unregister = function() {
     exports.enabled = false;
     exports.basedir = process.cwd();
     exports.files   = {};
+};
+
+exports.push = function() {
+    if (save===null)
+        stack.push(null);
+    else {
+        stack.push([userFun,exports.enabled,exports.files]);
+        exports.unregister();
+    }
+};
+
+exports.pop = function() {
+    var state = stack.pop();
+    if (state===null) {
+        try {
+            exports.unregister();
+        } catch(e){}
+    } else {
+        exports.register(state[0]);
+        exports.enabled = state[1];
+        exports.files   = state[2];
+    }
 };
