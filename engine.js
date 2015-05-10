@@ -113,7 +113,7 @@ var Engine = exports.Engine = function(options) {
     eng.journalFlush  = function(cb){cb(null);}; // flush journal
 
     eng.chrjs.tag     = options.tag;
-  
+
     return eng;
 };
 
@@ -451,9 +451,18 @@ Engine.prototype.masterListenHttp = function(port,done) {
                 }
             });
             break;
-        case '/replication/journal':
-            eng.addReplicationConnection(conn);
+        case '/replication/journal': {
+            var st = fs.statSync(path.join(eng.prevalenceDir,'state','journal'));
+            eng.replicatees.push(conn);
+            conn.write(util.serialise(['open',{journalSize:st.size}]));
+            conn.on('close',function() {
+                var i = eng.replicatees.indexOf(conn);
+                if (i!==-1)
+                    eng.replicatees.splice(i,1);
+                eng.forgetConnection(portName);
+            });
             break;
+        }
         case '/admin':
             eng.addAdminConnection(conn);
             break;
@@ -500,29 +509,31 @@ Engine.prototype.journaliseBusinessLogicSources = function(cb) {
 
 Engine.prototype.become = function(mode) {
     var eng = this;
+    eng.chrjs.on('error',function(err){eng.emit(new VError(err,"chrjs error: "));});
     switch (mode) {
     case 'master': {
         if (!eng.journal)
             throw new VError("can't become master, journal not started");
+        eng.journaliseBusinessLogicSources(function(err) {
+            eng.startComms(mode,function(){
+                eng.mode = mode;
+                eng.emit('mode',mode);
+            });
+        });
         break;
     }
     case 'slave': {
-        // +++ replicate world, hashes from master +++
-        // +++ eng._loadWorld when done +++
-        // +++ subscribe to journal stream +++
+        eng.on('ready',function() {
+        eng.mode = mode;
+        eng.emit('mode',mode);
+        });
+        eng.replicateFrom(eng.options.masterUrl);
         break;
     }
     default:
         this.emit('error',new VError("bad engine mode: %j",mode));
         return;
     }
-    eng.chrjs.on('error',function(err){eng.emit(new VError(err,"chrjs error: "));});
-    eng.journaliseBusinessLogicSources(function(err) {
-        eng.startComms(mode,function(){
-            eng.emit('mode',mode);
-            eng.mode = mode;
-        });
-    });
 };
 
 Engine.prototype.createJournalReadStream = function(options) {
@@ -654,7 +665,7 @@ Engine.prototype.walkHashes = function(hash0,deepCheck,cb,done) {
         done();
 };
 
-Engine.prototype.checkHashes = function(hash0,cb,done) {
+Engine.prototype.checkHashes = function(hash0,cb) {
     var       eng = this;
     var deepCheck = true;
     eng.hashes.sanityCheck(cb);
@@ -664,7 +675,7 @@ Engine.prototype.checkHashes = function(hash0,cb,done) {
         else if (!eng.hashes.contains(h))
             cb(new VError("can't find %s for %s",what,h));
     },
-                  done);
+                   cb);
 };
 
 Engine.prototype.journalChain = function(cb) {
@@ -690,5 +701,172 @@ Engine.prototype.journalChain = function(cb) {
                                                } );
                         } );
 };
+
+Engine.prototype.replicateFile = function(filename,url,opts,callback) {
+    var wstream = fs.createWriteStream(filename);
+    http.get(url,function(response) { // +++ opts +++
+        response.pipe(wstream);
+        wstream.on('finish', function() {
+            wstream.close(callback);
+        });
+    });
+};
+
+Engine.prototype.initReplication = function(url,init,callback) {
+    var     eng = this;
+    var     err = null;
+    var gotFile = _.after(2,function() {
+        callback(err);
+    });
+    eng.replicateFile(path.join(eng.prevalenceDir,'state','world'),url+'replication/state/world',{},function(e) {
+        err = err || e;
+        gotFile();
+    });
+    eng.replicateFile(path.join(eng.prevalenceDir,'state','journal'),url+'replication/state/journal',
+            {headers:{range:util.format("bytes=0-%d",init.journalSize)},statusCode:[200,206]},
+            function(e) {
+                err = err || e;
+                gotFile();
+            });
+};
+
+Engine.prototype.replicateHashes = function(url,callback) {
+    var               eng = this;
+    var          jrnlhash;       // hash of the active journal
+    var           syshash;       // `previous` hash of active journal
+    var     businessLogic;       // from active journal
+    var     hashSourceMap = {};  // `code` of active journal
+    var            hashes = {};  // <hash> -> <what>
+    var fetchHashIfAbsent = function(hash0,what,cb) {
+        var filename = eng.hashes.makeFilename(hash0);
+        try {
+            fs.statSync(filename);
+            cb(null);
+        } catch(e) {
+            if (e.code==='ENOENT') {
+                eng.replicateFile(filename,url+'replication/hash/'+hash0,{},cb);
+            } else
+                cb(e);
+        }
+    };
+    var              next;
+    var     doJournalFile = function(hash0) {
+        eng.walkJournalFile(eng.hashes.makeFilename(hash0),
+                        true,
+                        function(err,h,what,x) {
+                            if (h!==null)
+                                hashes[h] = what;
+                            if (hash===jrnlhash) {
+                                if (what==='journal')
+                                    syshash = h;
+                                else if (what==='source code')
+                                    hashSourceMap[x] = h;
+                                else if (what==='bl')
+                                    businessLogic = x;
+                            }
+                        },
+                        next);
+    };
+    next = function() {
+        var ks = _.keys(hashes);
+        if (ks.length===0) {
+            eng.checkHashes(jrnlhash,
+                            function(err) {
+                                if (err)
+                                    callback(err);
+                                else
+                                    callback(null,syshash,{bl:businessLogic,map:hashSourceMap});
+                            });
+        } else {
+            var    h = ks[0];
+            var what = hashes[h];
+            fetchHashIfAbsent(h,what,function(e) {
+                if (e)
+                    callback(e);
+                else {
+                    eng.emit('fetch-hash',h,what);
+                    delete hashes[h];
+                    if (what==='journal')
+                        doJournalFile(h);
+                    else
+                        next(); // +++ make this less recursive +++
+                }
+            });
+        }
+    };
+    jrnlhash = eng.hashes.putFileSync(path.join(eng.prevalenceDir,'state','journal'));
+    hashes[jrnlhash] = 'journal';
+    next();
+};
+
+Engine.prototype.replicateFrom = function(url) { // `url` is base e.g. http://localhost:3000/
+    var     eng = this;
+    var  SockJS = require('node-sockjs-client');
+    var    sock = new SockJS(url+'replication/journal');
+    var started = false;
+    var pending = [];
+    var    tidy = false;
+    var  update = function(js,cb) {
+        var  str = util.serialise(js)+'\n';
+        eng.journal.write(str,'utf8',cb);
+        eng.chrjs.update(js[2]);
+    };
+
+    rmRF.sync(path.join(eng.prevalenceDir,'state'));   // clear out state directory
+    fs.mkdirSync(path.join(eng.prevalenceDir,'state'));
+
+    sock.onmessage = function(e) {
+        var js = util.deserialise(e.data);
+        if (!started) {
+            eng.initReplication(url,js[1],function(err) {
+                if (err)
+                    eng.emit('error',new VError(err,"initReplication failed: "));
+                else {
+                    eng.emit('replicated','state');
+                    eng.replicateHashes(url,function(err1,syshash,hsm) {
+                        if (err1)
+                            eng.emit('error',new VError(err1,"failed to replicate hash store:"));
+                        else {
+                            eng.emit('replicated','hashes');
+                            eng.emit('loaded','code');
+                            eng.start();
+                            eng.emit('loaded','state');
+                            var doPending = function() {
+                                if (pending.length!==0) {
+                                    update(pending.pop());
+                                    doPending();
+                                }
+                            };
+                            doPending();
+                            pending = null;
+                            eng.emit('ready',syshash);
+                        }
+                    });
+                }
+            });
+            started = true;
+        } else if (pending!==null)
+            pending.push(js);
+        else if (js[1]!=='update')
+            sock.close();
+        else
+            update(js);
+    };
+
+    sock.onerror = function(err) {
+        util.error("!!! ws socket failed: %s",err);
+    };
+    
+    sock.onclose = function(err) {
+        if (err)
+            eng.emit('error',new VError("replication socket failed: %s",err.reason));
+        else {
+            var syshash = eng.hashes.putFileSync(path.join(eng.prevalenceDir,'state','journal'));
+            util.debug("*** ws socket closed %s: %s",(tidy?"nicely":"roughly"),syshash);
+            eng.emit('closed',tidy,syshash);
+        }
+    };
+};
+
 
 exports.Engine = Engine;
