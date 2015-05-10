@@ -35,6 +35,7 @@ var  compiler = require('./compiler.js');
 var   whiskey = require('./whiskey.js');
 var      hash = require('./hash.js');
 var      lock = require('./lock.js');
+var  noteReqs = require('./note-requires.js');
 
 exports.makeInertChrjs = function(opts) {
     opts = opts || {tag:null};
@@ -72,6 +73,21 @@ exports.makeInertChrjs = function(opts) {
     };
 };
 
+noteReqs.register();
+var compile = exports.compile = function(source) {
+    if (source) {
+        var chrjs;
+        noteReqs.enabled = true;
+        try {
+            chrjs = require(path.resolve(source));
+        } finally {
+            noteReqs.enabled = false;
+        }
+        return chrjs;
+    } else
+        return null;
+};
+
 var Engine = exports.Engine = function(options) {
     events.EventEmitter.call(this);
 
@@ -85,7 +101,7 @@ var Engine = exports.Engine = function(options) {
     
     eng.prevalenceDir = options.prevalenceDir || path.join(options.dir,'.prevalence');
     eng.syshash       = null;
-    eng.chrjs         = options.chrjs || exports.makeInertChrjs();
+    eng.chrjs         = options.chrjs || compile(options.businessLogic) || exports.makeInertChrjs();
     eng.hashes        = null;                    // hash store
     eng.options       = _.omit(options,'chrjs'); // avoid persisting chrjs object later
     eng.mode          = null;                    // 'master' | 'slave' 
@@ -396,7 +412,7 @@ Engine.prototype.masterListenHttp = function(port,done) {
     var  eng = this;
     var sock = sockjs.createServer({log:function(severity,text) {
         if (['error','info'].indexOf(severity)!==-1)
-            console.log(text);
+            util.error(text);
     }});
 
     eng.http = http.Server(eng.createExpressApp());
@@ -471,6 +487,17 @@ Engine.prototype.startComms = function(mode,done) {
         throw new VError("NYI");
 };
 
+Engine.prototype.journaliseBusinessLogicSources = function(cb) {
+    var files = noteReqs.files;
+    if (_.keys(files).length>0) {
+        noteReqs.files = {};
+        for (var fn in files) 
+            files[fn] = this.hashes.putFileSync(fn);
+        this.journalise('code',[util.sourceVersion,this.options.businessLogic,files],cb);
+    } else
+        cb(null);
+};
+
 Engine.prototype.become = function(mode) {
     var eng = this;
     switch (mode) {
@@ -490,9 +517,11 @@ Engine.prototype.become = function(mode) {
         return;
     }
     eng.chrjs.on('error',function(err){eng.emit(new VError(err,"chrjs error: "));});
-    eng.startComms(mode,function(){
-        eng.emit('mode',mode);
-        eng.mode = mode;
+    eng.journaliseBusinessLogicSources(function(err) {
+        eng.startComms(mode,function(){
+            eng.emit('mode',mode);
+            eng.mode = mode;
+        });
     });
 };
 
@@ -650,7 +679,6 @@ Engine.prototype.journalChain = function(cb) {
                                 eng.walkHashes(x,
                                                false,
                                                function(err1,h,what1) {
-                                                   //console.log("*** %j %j",h,what);
                                                    if (what1==='journal')
                                                        process.stdout.write(h+'\n');
                                                },

@@ -4,4 +4,7 @@
 
 module.exports = store {
     rule (-['tick']);
+    rule (['_take-outputs'],
+          -['_output']);
+    rule (-['_take-outputs']);
 };

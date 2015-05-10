@@ -11,12 +11,11 @@ var assert = require('assert');
 describe("note-require",function() {
     var saveExtensions;
     before(function() {
+        noteRequires.push();
         saveExtensions = require.extensions;
     });
     after(function() {
-        try {
-            noteRequires.unregister();
-        } catch (e) {};
+        noteRequires.pop();
     });
     afterEach(function() {
         require.extensions = saveExtensions;
