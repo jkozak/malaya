@@ -115,6 +115,22 @@ subcommands.run.addArgument(
 addSubcommand('save',{addHelp:true});
 
 addSubcommand('slave',{addHelp:true});
+subcommands.slave.addArgument(
+    ['masterUrl'],
+    {
+        action:       'store',
+        help:         "URL from which to replicate"
+    }
+);
+subcommands.slave.addArgument(
+    ['source'],
+    {
+        action:       'store',
+        nargs:        '?',
+        help:         "business logic source file",
+        defaultValue: 'bl.chrjs'
+    }
+);
 
 addSubcommand('transform',{addHelp:true});
 subcommands.transform.addArgument(
@@ -211,9 +227,15 @@ exports.run = function(opts0) {
         return recast.print(compiler.compile(parse(fs.readFileSync(source),options))).code;
     };
 
-    var createEngine = opts.createEngine || function(options) {
-        var Engine = require('./engine.js').Engine;
-        return new Engine(options);
+    var _createEngine = opts.createEngine || function(options) {
+        var engine = require('./engine.js');
+        return new engine.Engine(options);
+    };
+    
+    var createEngine = function(options) {
+        options               = options || {};
+        options.prevalenceDir = prevalenceDir;
+        return _createEngine(options);
     };
 
     subcommands.cat.exec = function() {
@@ -247,7 +269,6 @@ exports.run = function(opts0) {
     
     subcommands.run.exec = function() {
         checkDirectoriesExist();
-        require('./compiler.js'); // add `chrjs` extension to `require`
         var    auto = true;       // +++ from arg --no-auto
         var  source = path.resolve(args.source);
         var options = {businessLogic:source,ports:{http:3000}};
@@ -278,9 +299,13 @@ exports.run = function(opts0) {
     };
     
     subcommands.slave.exec = function() {
-        checkDirectoriesExist();
-        var eng = createEngine({});
-        eng.start();
+        if (!fs.existsSync(prevalenceDir))
+            fs.mkdirSync(prevalenceDir);
+        var eng = createEngine({businessLogic:path.resolve(args.source),masterUrl:args.masterUrl});
+        eng._makeHashes();
+        eng.once('ready',function() {
+            util.info("synced to %s",args.masterUrl);
+        });
         eng.become('slave');
     };
     
