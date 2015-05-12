@@ -68,7 +68,7 @@ describe("Engine",function() {
             assert.strictEqual(eng.hashes.getSync(h,{encoding:'utf8'}),x);
         });
     });
-    describe("update",function() {
+    describe("#update",function() {
         it("writes items to store",function(done) {
             var dir = temp.mkdirSync();
             var eng = new Engine({dir:dir,chrjs:createTestStore()});
@@ -100,7 +100,7 @@ describe("Engine",function() {
             });
         });
     });
-    describe("stop",function() {
+    describe("#stop",function() {
         it("saves the world slowly",function() {
             var dir = temp.mkdirSync();
             var eng = new Engine({dir:dir,chrjs:createTestStore()});
@@ -173,6 +173,40 @@ describe("Engine",function() {
                                 },
                                 function() {
                                     done2(); });
+        });
+    });
+    describe("#loadData",function() {
+        it("loads single item from a json file",function(done) {
+            var   dir = temp.mkdirSync();
+            var chrjs = createTestStore();
+            var   eng = new Engine({dir:dir,chrjs:chrjs});
+            var  data = [['abc',{a:1}]];
+            var   dfn = path.join(dir,'data.json');
+            fs.writeFileSync(dfn,JSON.stringify(data));
+            eng.init();
+            eng.start();
+            assert.deepEqual(_.values(chrjs._private.facts),[]);
+            eng.loadData(dfn,function(err) {
+                assert(!err);
+                assert.deepEqual(_.values(chrjs._private.facts),data);
+                done();
+            });
+        });
+        it("loads two items from a json file",function(done) {
+            var   dir = temp.mkdirSync();
+            var chrjs = createTestStore();
+            var   eng = new Engine({dir:dir,chrjs:chrjs});
+            var  data = [['abc',{a:1}],['def',{d:4}]];
+            var   dfn = path.join(dir,'data.json');
+            fs.writeFileSync(dfn,JSON.stringify(data));
+            eng.init();
+            eng.start();
+            assert.deepEqual(_.values(chrjs._private.facts),[]);
+            eng.loadData(dfn,function(err) {
+                assert(!err);
+                assert.deepEqual(_.values(chrjs._private.facts),data);
+                done();
+            });
         });
     });
 });

@@ -133,7 +133,6 @@ function TEMPLATE_store() {
         if (process.env.NODE_ENV==='test')
             obj._private = {
                 get facts()   {return facts;},
-                get size()    {return Object.keys(facts).length;},
                 get orderedFacts() {
                     var keys = _.keys(facts).map(function(t){return parseInt(t);});
                     return keys.sort(function(p,q){return p-q;}).map(function(t){return facts[t];});
@@ -237,7 +236,10 @@ if (util.env==='test')
                              {
                                  // general testing stuff
                                  console: {ext:true,mutable:false,type:'function'},
+                                 process: {ext:true,mutable:false,type:'function'},
                                  // the `mocha` globals
+                                 before:  {ext:true,mutable:false,type:'function'},
+                                 after:   {ext:true,mutable:false,type:'function'},
                                  describe:{ext:true,mutable:false,type:'function'},
                                  it:      {ext:true,mutable:false,type:'function'},
                              });

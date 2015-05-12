@@ -106,7 +106,7 @@ function IDBEngine(options) {
 util.inherits(IDBEngine,Engine);
 
 IDBEngine.prototype.masterListen = function(done) {
-    var engine = this;
+    var    eng = this;
     var  done2 = _.after(2,done);
     Engine.prototype.masterListen.call(engine,done2);
     if (engine.options.ports.fe3) {
@@ -142,9 +142,21 @@ IDBEngine.prototype.masterListen = function(done) {
     done2();
 };
 
+IDBEngine.prototype.broadcast = function(js,prefix) {
+    prefix = prefix || '/data';
+    var engine = this;
+    _.keys(engine.conns).forEach(function(port) {
+        if (util.endsWith(port,prefix) || (prefix==='/data' && util.startsWith(port,'fe3:')))
+            engine.conns[port][1].write(js);
+    });
+};
+
+
+
 cmdline.run({createEngine:function(opts) {
-    opts.tag       = 'idb';
-    opts.ports.fe3 = 5110;
+    opts.tag = 'idb';
+    if (opt.ports)
+        opts.ports.fe3 = 5110;
     var engine = new IDBEngine(opts);
     return engine;
 }});
