@@ -16,30 +16,32 @@
 "use strict";
 
 //var    assert = require('assert');
-var         _ = require('underscore');
-var    events = require('events');
-var    VError = require('verror');
-var      util = require('./util.js');
-var      path = require('path');
-var        fs = require('fs');
-var      rmRF = require('rimraf');
-var timestamp = require('monotonic-timestamp');
-var   express = require('express');
-var    morgan = require('morgan');
-var    recast = require('recast');
-var      http = require('http');
-var    sockjs = require('sockjs');
+var           _ = require('underscore');
+var      events = require('events');
+var      VError = require('verror');
+var        util = require('./util.js');
+var        path = require('path');
+var          fs = require('fs');
+var        rmRF = require('rimraf');
+var    through2 = require('through2');
+var multistream = require('multistream');
+var   timestamp = require('monotonic-timestamp');
+var     express = require('express');
+var      morgan = require('morgan');
+var      recast = require('recast');
+var        http = require('http');
+var      sockjs = require('sockjs');
 
-var    parser = require('./parser.js');
-var  compiler = require('./compiler.js');
-var   whiskey = require('./whiskey.js');
-var      hash = require('./hash.js');
-var      lock = require('./lock.js');
-var  noteReqs = require('./note-requires.js');
+var      parser = require('./parser.js');
+var    compiler = require('./compiler.js');
+var     whiskey = require('./whiskey.js');
+var        hash = require('./hash.js');
+var        lock = require('./lock.js');
+var    noteReqs = require('./note-requires.js');
 
 exports.makeInertChrjs = function(opts) {
     opts = opts || {tag:null};
-    return {              // behaves like `store {}`;
+    var obj = {              // behaves like `store {}`;
         t:        1,
         facts:    {},
         get: function(t) {
@@ -71,6 +73,15 @@ exports.makeInertChrjs = function(opts) {
         },
         get size()    {return Object.keys(this.facts).length;}
     };
+    if (util.env==='test')
+        obj._private = {
+            get facts() {return obj.facts;},   // be compatible with real chrjs
+            get orderedFacts() {
+                var keys = _.keys(obj.facts).map(function(t){return parseInt(t);});
+                return keys.sort(function(p,q){return p-q;}).map(function(t){return obj.facts[t];});
+            }
+        };
+    return obj;
 };
 
 noteReqs.register();
@@ -80,6 +91,7 @@ var compile = exports.compile = function(source) {
         noteReqs.enabled = true;
         try {
             chrjs = require(path.resolve(source));
+            chrjs.reset();      // because `require` caches values
         } finally {
             noteReqs.enabled = false;
         }
@@ -137,10 +149,13 @@ Engine.prototype._saveWorld = function() {
     return syshash;
 };
 
-Engine.prototype.stop = function(quick,unlock) {
+Engine.prototype.stop = function(quick,unlock,cb) {
     unlock = unlock===undefined ? true : unlock;
     var   eng = this;
-    var done2 = _.after(2,function(){eng.emit('stopped');});
+    var done2 = _.after(2,function() {
+        eng.emit('stopped');
+        if (cb) cb(null);
+    });
 
     eng.journal.on('finish',function() {
         done2();
@@ -151,10 +166,10 @@ Engine.prototype.stop = function(quick,unlock) {
     if (!quick) 
         eng._saveWorld();
 
-    done2();
-
     if (unlock)
         lock.unlockSync(path.join(this.prevalenceDir,'lock'));
+
+    done2();
 };
 
 Engine.prototype._ensureStateDirectory = function() {
@@ -176,7 +191,31 @@ Engine.prototype._ensureStateDirectory = function() {
     return false;
 };
 
-Engine.prototype._init = function(data) {
+Engine.prototype.loadData = function(data,cb) {
+    var eng = this;
+    if (data==='-') {                      // stdin, stream of [<type>,{<field>:value>,...}]
+        process.stdin
+            .pipe(whiskey.JSONParseStream())
+            .on('end',cb)
+            .pipe(eng.createUpdateStream());
+    } else if (/.json$/.test(data)) {      // single json array-of-arrays
+        var  arr = JSON.parse(fs.readFileSync(data));
+        var take = function() {
+            if (arr.length===0) 
+                cb(null); 
+            else 
+                eng.update(arr.shift(),take);
+        };
+        if (!(arr instanceof Array))
+            cb(new VError("bad format, expected an Array"));
+        else
+            take();
+    }
+    else
+        cb(new VError("can't handle data: %s",data));
+};
+
+Engine.prototype._init = function() {
     var eng = this;
     try {
         fs.statSync(eng.prevalenceDir);
@@ -229,7 +268,7 @@ Engine.prototype._makeHashes = function() {
 Engine.prototype.init = function(data) {
     var      eng = this;
     var jrnlFile = path.join(eng.prevalenceDir,'state','journal');
-    eng._init(data);
+    eng._init();
     eng._ensureStateDir();
     eng._makeHashes();
     fs.writeFileSync(jrnlFile,util.serialise([timestamp(),'init',eng.options])+'\n');
@@ -496,15 +535,15 @@ Engine.prototype.startComms = function(mode,done) {
         throw new VError("NYI");
 };
 
-Engine.prototype.journaliseBusinessLogicSources = function(cb) {
+Engine.prototype.journaliseCodeSources = function(type,item2,cb) {
     var files = noteReqs.files;
     if (_.keys(files).length>0) {
         noteReqs.files = {};
         for (var fn in files) 
             files[fn] = this.hashes.putFileSync(fn);
-        this.journalise('code',[util.sourceVersion,this.options.businessLogic,files],cb);
+        this.journalise(type,[util.sourceVersion,item2,files],cb);
     } else
-        cb(null);
+        if (cb) cb(null);
 };
 
 Engine.prototype.become = function(mode) {
@@ -514,7 +553,7 @@ Engine.prototype.become = function(mode) {
     case 'master': {
         if (!eng.journal)
             throw new VError("can't become master, journal not started");
-        eng.journaliseBusinessLogicSources(function(err) {
+        eng.journaliseCodeSources('code',this.options.businessLogic,function(err) {
             eng.startComms(mode,function(){
                 eng.mode = mode;
                 eng.emit('mode',mode);
@@ -534,11 +573,6 @@ Engine.prototype.become = function(mode) {
         this.emit('error',new VError("bad engine mode: %j",mode));
         return;
     }
-};
-
-Engine.prototype.createJournalReadStream = function(options) {
-    return fs.createReadStream(path.join(this.prevalenceDir,'state','journal'))
-        .pipe(new whiskey.JSONParseStream());
 };
 
 Engine.prototype.journalise = function(type,data,cb) {
@@ -561,7 +595,7 @@ Engine.prototype.journalise = function(type,data,cb) {
     });
 };
 
-Engine.prototype.broadcast = function(js,prefix) {
+Engine.prototype.broadcast = function(js,prefix) { // this prefix thing doesn't work for fe3 [d09a8d183c21b2bd]
     prefix = prefix || '/data';
     var engine = this;
     _.keys(engine.conns).forEach(function(port) {
@@ -596,10 +630,24 @@ Engine.prototype.update = function(data,cb) {
     done2();
 };
 
-Engine.prototype.createFullJournalReadStream = function() {
-    //var engine = this;
-    // +++ build map
-    throw new VError('NYI');
+Engine.prototype.createUpdateStream = function() {
+    var eng = this;
+    return through2({objectMode:true},function(js,encoding,cb) {
+        eng.update(js,cb);
+    });
+};
+
+Engine.prototype.buildHistoryStream = function(cb) {
+    var eng = this;
+    eng.journalChain(function(err,hs) {
+        if (err) throw cb(err);
+        cb(null,multistream(hs.map(function(h) {
+            if (h==='journal')
+                return fs.createReadStream(path.join(eng.prevalenceDir,'state','journal'));
+            else
+                return function(h1){return fs.createReadStream(eng.hashes.makeFilename(h1));}(h);
+        })));
+    });
 };
 
 Engine.prototype.createWorldReadStream = function() {
@@ -622,11 +670,18 @@ Engine.prototype.walkJournalFile = function(filename,deepCheck,cb,done) {
                 cb(new VError("bad log file hash: %s",hash));
             }
         } else if (deepCheck) {
+            var k;
             switch (js[1]) {
             case 'code':
                 if (js[2][2][js[2][1]]) // hash from the bl src code filename
                     cb(null,js[2][2][js[2][1]],'bl',js[2][1]);
-                for (var k in js[2][2]) 
+                for (k in js[2][2]) 
+                    cb(null,js[2][2][k],"source code",k);
+                break;
+            case 'transform':
+                if (js[2][2][js[2][1]]) // hash from the transform src code filename
+                    cb(null,js[2][2][js[2][1]],'transform',js[2][1]);
+                for (k in js[2][2]) 
                     cb(null,js[2][2][k],"source code",k);
                 break;
             case 'http':
@@ -678,7 +733,7 @@ Engine.prototype.checkHashes = function(hash0,cb) {
                    cb);
 };
 
-Engine.prototype.journalChain = function(cb) {
+Engine.prototype.journalChain = function(cb) { // delivers list of journal files in chronological order
     var eng = this;
     var  hs = [];
     eng.walkJournalFile(path.join(eng.prevalenceDir,'state','journal'),
@@ -691,14 +746,16 @@ Engine.prototype.journalChain = function(cb) {
                                                false,
                                                function(err1,h,what1) {
                                                    if (what1==='journal')
-                                                       process.stdout.write(h+'\n');
+                                                       hs.push(h);
                                                },
                                                function(err1) {
                                                    if (err1)
                                                        cb(err1);
-                                                   else
+                                                   else {
+                                                       hs.reverse();
+                                                       hs.push('journal');
                                                        cb(null,hs);
-                                               } );
+                                                   } } );
                         } );
 };
 

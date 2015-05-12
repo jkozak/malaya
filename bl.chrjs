@@ -3,8 +3,8 @@
 // Die Welt ist alles, was der Fall ist.
 
 module.exports = store {
-    rule (-['tick']);
-    rule (['_take-outputs'],
-          -['_output']);
-    rule (-['_take-outputs']);
+    rule (-['tick',...]);
+    rule (['_take-outputs',...],
+          -['_output',...]);
+    rule (-['_take-outputs',...]);
 };

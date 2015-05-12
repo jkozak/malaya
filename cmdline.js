@@ -56,8 +56,6 @@ subcommands.cat.addArgument(
         help:         "'journal', 'world', 'history' or <hash>"
     }
 );
-subcommands.cat.exec = function(args) {
-};
 
 addSubcommand('compile',{addHelp:true});
 subcommands.compile.addArgument(
@@ -71,7 +69,7 @@ subcommands.compile.addArgument(
 
 addSubcommand('init',{addHelp:true});
 subcommands.init.addArgument(
-    ['--data'],
+    ['-d','--data'],
     {
         action:       'store',
         help:         "database to pilfer"
@@ -152,6 +150,13 @@ subcommands.transform.addArgument(
 addSubcommand('status',{addHelp:true});
 
 addSubcommand('dump',{addHelp:true});
+subcommands.transform.addArgument(
+    ['-s','--serialise'],
+    {
+        action:       'store',
+        help:         "use malaya extended JSON serialisation format"
+    }
+);
 
 addSubcommand('client',{addHelp:true});
 subcommands.client.addArgument(
@@ -188,6 +193,16 @@ exports.run = function(opts0) {
     var hashAlgorithm = opts.hashAlgorithm || util.hashAlgorithm;
 
     exports.verbosity = args.verbose-args.quiet;
+
+    var findCallback = function() { // extract the callback for single-shot use.
+        var cb;
+        if (opts.callback) {
+            cb = opts.callback;
+            delete opts.callback;
+        } else
+            cb = function(){};
+        return cb;
+    };
 
     var checkDirectoriesExist = function() {
         if (!fs.existsSync(prevalenceDir))
@@ -245,9 +260,15 @@ exports.run = function(opts0) {
         case 'world':
             fs.createReadStream(path.join(args.prevalence_directory,'state',args.what)).pipe(process.stdout);
             break;
-        case 'history': 
-            createEngine({}).createFullJournalReadStream().pipe(process.stdout);
+        case 'history': {
+            var eng = createEngine({});
+            eng._makeHashes();
+            eng.buildHistoryStream(function(err,history) {
+                if (err) throw err;
+                history.pipe(process.stdout);
+            });
             break;
+        }
         default: {
             var   hash = require('./hash.js')(hashAlgorithm);
             var hstore = hash.makeStore(path.join(prevalenceDir,'hashes'));
@@ -262,9 +283,20 @@ exports.run = function(opts0) {
     };
 
     subcommands.init.exec = function() {
-        require('./compiler.js'); // add `chrjs` extension to `require`
-        var source = path.resolve(args.source);
-        createEngine({businessLogic:source}).init(args.data);
+        var eng = createEngine({businessLogic:path.resolve(args.source)});
+        var  cb = findCallback();
+        eng.init();
+        if (args.data) {
+            eng.start();
+            eng.loadData(args.data,function(err) {
+                if (err) 
+                    cb(err);
+                else
+                    eng.stop(false,true,function(err1) {
+                        cb(err1);
+                    });
+            });
+        }
     };
     
     subcommands.run.exec = function() {
@@ -299,19 +331,21 @@ exports.run = function(opts0) {
     };
     
     subcommands.slave.exec = function() {
+        var  cb = findCallback();
         if (!fs.existsSync(prevalenceDir))
             fs.mkdirSync(prevalenceDir);
         var eng = createEngine({businessLogic:path.resolve(args.source),masterUrl:args.masterUrl});
         eng._makeHashes();
         eng.once('ready',function() {
             util.info("synced to %s",args.masterUrl);
+            cb(null);
         });
         eng.become('slave');
     };
     
     subcommands.transform.exec = function() {
         checkDirectoriesExist();
-        require('./compiler.js'); // add `chrjs` extension to `require`
+        var     cb = findCallback();
         var engine = require('./engine');
         var    eng = createEngine({});
         var  chrjs = engine.compile(path.resolve(args.transform));
@@ -319,20 +353,32 @@ exports.run = function(opts0) {
         var      t;
         eng.chrjs = engine.makeInertChrjs();
         eng.start();
-        for (t=0;t<eng.chrjs.t;t++) {
+        for (t=1;t<eng.chrjs.t;t++) {
             fact = eng.chrjs.get(t+'');
-            if (!(fact instanceof Array && fact.length===2))
-                throw new VError("bad fact in store to be transformed");
-            chrjs.add([fact[0],fact[1],{keep:false}]);
+            if (fact) {
+                if (!(fact instanceof Array && fact.length===2))
+                    throw new VError("bad fact in store to be transformed: %j",fact);
+                chrjs.add([fact[0],fact[1],{keep:false}]);
+            }
         }
-        eng.chrjs = args.source ? engine.compile(path.resolve(args.source)) : eng.makeInertChrjs();
-        for (t=0;t<chrjs.t;t++) {
-            fact = chrjs.get(t+'');
-            if (fact[2].keep)
-                eng.chrjs.add([fact[0],fact[1]]);
-        }
-        eng.journalise('transform',[args.transform,args.source]);
-        eng.stop();
+        chrjs.add(['_transform',{},{keep:false}]);
+        eng.journaliseCodeSources('transform',args.transform,function(err) {
+            if (err)
+                cb(err);
+            else {
+                eng.chrjs = args.source ? engine.compile(path.resolve(args.source)) : engine.makeInertChrjs();
+                for (t=1;t<chrjs.t;t++) {
+                    fact = chrjs.get(t+'');
+                    if (fact && (fact.length===2 || fact[2].keep)) 
+                        eng.chrjs.add([fact[0],fact[1]]);
+                }
+                if (args.source)
+                    eng.journaliseCodeSources('code',args.source);
+                eng.stop(false,true,function(err1) {
+                    cb(err1);
+                });
+            }
+        });
     };
 
     subcommands.save.exec = function() {
@@ -385,11 +431,15 @@ exports.run = function(opts0) {
         for (t=1;t<eng.chrjs.t;t++) {
             fact = eng.chrjs.get(t+'');
             if (fact) {
-                process.stdout.write(util.serialise(fact));
+                var text = args.serialise ? util.serialise(fact) : JSON.stringify(fact);
+                process.stdout.write(text);
                 process.stdout.write('\n');
             }
         }
-        eng.stop();
+        eng.stop(false,true,function(err1) {
+            var cb = findCallback();
+            cb(err1);
+        });
     };
 
     subcommands.client.exec = function() {
@@ -401,7 +451,6 @@ exports.run = function(opts0) {
         checkDirectoriesExist();
         var eng = createEngine({});
         eng._makeHashes();
-        process.stdout.write('journal\n');
         eng.journalChain(function(err,hs) {
             if (err)
                 throw err;
@@ -417,4 +466,6 @@ exports.run = function(opts0) {
         throw new VError("NYI: subcommand `%s`",args.subcommandName);
     
     subcommands[args.subcommandName].exec(args);
+    
+    findCallback()(null);
 };

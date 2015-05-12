@@ -61,8 +61,10 @@ exports.pidLockedSync = function(filename) {
 };
 
 exports.unlockSync = function(filename) {
-    var pid = exports.pidLockedSync(filename);
-    if (pid!==process.pid)
-        throw new VError("lockfile %s locked by process %d",filename,pid);
+    var data = exports.lockDataSync(filename);
+    if (data===null)
+        throw new VError("lockfile %s does not exist",filename);
+    if (data.pid!==process.pid) 
+        throw new VError("lockfile %s locked by process %d",filename,data.pid);
     fs.unlinkSync(filename);
 };

@@ -18,6 +18,53 @@ var through2 = function(options,transform) {
 };
 exports.through2 = through2;
 
+// Stream of lines, maybe transformed 
+exports.LineStream = function(fn) {
+    var send = function(out,x) {
+        try {
+            if (fn)
+                x = fn(x);
+        } catch (err) {
+            return err;
+        }
+        if (x===null) 
+            return new Error("null can't be sent to a node stream");
+        else {
+            out.push(x);
+            return null;
+        }
+    };
+    var  ans = through2({readableObjectMode:true},
+                        function(chunk,encoding,cb) {
+                            this._buffer += this._decoder.write(chunk);
+                            var lines = this._buffer.split(/\r?\n/); // split on newlines
+                            this._buffer = lines.pop();              // keep the last partial line buffered
+                            for (var l=0;l<lines.length;l++) {
+                                var err = send(this,lines[l]);
+                                if (err) {
+                                    cb(err);
+                                    return;
+                                }
+                            }
+                            cb(null);
+                        },
+                        function(cb) {                               // flush at end
+                            var b = this._buffer;
+                            this._buffer = '';
+                            if (b!=='') {
+                                var err = send(this,b);
+                                if (err) {
+                                    cb(err);
+                                    return;
+                                }
+                            }
+                            cb(null);
+                        } );
+    ans._buffer  = '';
+    ans._decoder = new StringDecoder('utf8');
+    return ans;
+};
+
 // JSONParseStream gets \n-delimited JSON string data, and emits the parsed objects
 exports.JSONParseStream = function() {
     var ans = through2({readableObjectMode:true},function(chunk,encoding,cb) {
@@ -30,12 +77,13 @@ exports.JSONParseStream = function() {
             try {
                 obj = JSON.parse(line);
             } catch (err) {
-                this.emit('error',err);
+                cb(err);
                 return;
             }
-            if (obj===null)
-                this.emit('error',"null can't be sent to a node stream");
-            else
+            if (obj===null) {
+                cb(new Error("null can't be sent to a node stream"));
+                return;
+            } else
                 this.push(obj);                  // push the parsed object out to the readable consumer
         }
         cb();
@@ -184,3 +232,4 @@ exports.createBackFillStream = function(stream1,stream2,options) {
     });
     return output;
 };
+

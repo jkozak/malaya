@@ -7,6 +7,45 @@ var  assert = require("assert");
 var resumer = require('resumer');
 var  VError = require('verror');
 
+describe("LineStream",function() {
+    it("turns '\\n' delimited stream into object stream of strings",function(done) {
+        var strs = [];
+        var   ls = whiskey.LineStream();
+        resumer().queue("1\n2\n3\n").end().pipe(ls);
+        ls.on('data',function(s) {
+            strs.push(s);
+        });
+        ls.on('end',function() {
+            assert.deepEqual(strs,['1','2','3']);
+            done();
+        });
+    });
+    it("keeps last line even if no final '\\n'",function(done) {
+        var strs = [];
+        var   ls = whiskey.LineStream();
+        resumer().queue("1\n2\n3").end().pipe(ls);
+        ls.on('data',function(s) {
+            strs.push(s);
+        });
+        ls.on('end',function() {
+            assert.deepEqual(strs,['1','2','3']);
+            done();
+        });
+    });
+    it("transforms on-the-fly",function(done) {
+        var strs = [];
+        var   ls = whiskey.LineStream(function(s){return parseInt(s)+1});
+        resumer().queue("1\n2\n3\n").end().pipe(ls);
+        ls.on('data',function(s) {
+            strs.push(s);
+        });
+        ls.on('end',function() {
+            assert.deepEqual(strs,[2,3,4]);
+            done();
+        });
+    });
+});
+
 describe("JSON object streams",function() {
     describe("string -> json",function() {
         var convert = function(js,done) {

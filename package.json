@@ -11,6 +11,7 @@
     "moment": "^2.9.0",
     "monotonic-timestamp": "0.0.9",
     "morgan": "^1.2.2",
+    "multistream": "^1.4.3",
     "node-sockjs-client": "^1.0.7",
     "recast": "^0.7.2",
     "rimraf": "~2.2.6",

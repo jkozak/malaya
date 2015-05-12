@@ -79,14 +79,14 @@ describe("match example",function() {
 
         for (var i=0;i<10;i++)
             match.add(['match-price',{user:"John Kozak", instrument:"IL21",volume:10000000,isBuy:true, t:1}]);
-        assert.strictEqual(match._private.size,13);
+        assert.strictEqual(match.size,13);
 
         match.reset();
-        assert.strictEqual(match._private.size,3);
+        assert.strictEqual(match.size,3);
         
         for (var i=0;i<10;i++)
             match.add(['match-price',{user:"John Kozak", instrument:"IL21",volume:10000000,isBuy:true, t:1}]);
-        assert.strictEqual(match._private.size,13);
+        assert.strictEqual(match.size,13);
 
     });
 });
@@ -141,9 +141,9 @@ describe("store generic operations",function() {
         };
         st.add(['one']);
         st.add(['two']);
-        assert.equal(st._private.size,2);
+        assert.equal(st.size,2);
         st.reset();
-        assert.equal(st._private.size,0);
+        assert.equal(st.size,0);
     });
 });
 
@@ -156,7 +156,7 @@ describe("ellipsis bindings",function() {
                  );
         };
         st.add(['a',{p:99}]);
-        assert.equal(st._private.size,2);
+        assert.equal(st.size,2);
         assert.deepEqual(st._private.facts["2"],['b',{p:99,b:1}]);
         assert.deepEqual(st._private.facts["3"],['c',{p:99,c:2}]);
     });
@@ -164,19 +164,19 @@ describe("ellipsis bindings",function() {
         var st = store {
             rule (-['a',...]);
         };
-        assert.equal(st._private.size,0);
+        assert.equal(st.size,0);
         st.add(['a',{p:99}]);
-        assert.equal(st._private.size,0);
+        assert.equal(st.size,0);
         st.add(['a']);
-        assert.equal(st._private.size,0);
+        assert.equal(st.size,0);
     });
     it("should support anonymous ellipsis in object matchers",function() {
         var st = store {
             rule (-['a',{p,...}]);
         };
-        assert.equal(st._private.size,0);
+        assert.equal(st.size,0);
         st.add(['a',{p:99}]);
-        assert.equal(st._private.size,0);
+        assert.equal(st.size,0);
     });
 });
 
@@ -185,19 +185,19 @@ describe("matching",function() {
         var st = store {
             rule (-['a']);
         };
-        assert.equal(st._private.size,0);
+        assert.equal(st.size,0);
         st.add(['a',{b:88}]);
-        assert.equal(st._private.size,1); // not matched, not deleted
+        assert.equal(st.size,1); // not matched, not deleted
     });
     it("should match unequal length arrays given ellipsis",function() {
         var st = store {
             rule (-['a',...]);
         };
-        assert.equal(st._private.size,0);
+        assert.equal(st.size,0);
         st.add(['a',{b:88}]);
-        assert.equal(st._private.size,0); // matched and deleted
+        assert.equal(st.size,0); // matched and deleted
         st.add(['a']);
-        assert.equal(st._private.size,0); // matched and deleted
+        assert.equal(st.size,0); // matched and deleted
     });
     it("should match member pattern (test moved from test/compiler.js)",function() {
         var st = store {
@@ -205,9 +205,9 @@ describe("matching",function() {
                  -['a',{p:a.b}] );
         };
         st.add(['a',{p:30}]);
-        assert.equal(st._private.size,0); // matched and deleted
+        assert.equal(st.size,0); // matched and deleted
         st.add(['a',{p:29}]);
-        assert.equal(st._private.size,1); // not matched, retained
+        assert.equal(st.size,1); // not matched, retained
     });
     it("should match correctly given of t_fact deletion during iteration",function() {
         var st = store {
@@ -315,7 +315,7 @@ describe("regression tests",function() {
         };
         IDB.add(['auction',{state:'P',id:1,curPhase:'A'}]);
         IDB.add(['tick']);
-        assert.equal(IDB._private.size,3); // check rule fired
+        assert.equal(IDB.size,3); // check rule fired
     });
     it("should have fixed [c50b9588e7f6632b] (array match should check size)",function() {
         var st = store {
@@ -323,7 +323,7 @@ describe("regression tests",function() {
                   +['a',cdr]);
         };
         st.add(['a',[]]);
-        assert.equal(st._private.size,1);
+        assert.equal(st.size,1);
         assert.deepEqual(_.values(st._private.facts),[['a',[]]]);
     });
     it("should have fixed [9e15c3b9134c259c] (['a',{b}] should not match ['a'])",function() {
@@ -348,7 +348,7 @@ describe("regression tests",function() {
         };
         IDB.add(['Instrument',{InstID:999,SubClass:777}]);
         IDB.add(['InstrumentClass',{InstSubClassID:777,AuctionVolumes:"10 20 30"}]);
-        assert.equal(IDB._private.size,2);
+        assert.equal(IDB.size,2);
         IDB.add(['annotatePrepareAuction',{instruments:[],_children:[{AInst:{InstID:999}}],phases:'A',id:8}]);
         assert.deepEqual(_.values(IDB._private.facts).map(function(f){return f[0];}).sort(),
                          ["Instrument","InstrumentClass","_o","auction"] );
@@ -365,11 +365,11 @@ describe("regression tests",function() {
                   x = 0,
                   -['b',{}] );
         };
-        assert.equal(st._private.size,0);
+        assert.equal(st.size,0);
         st.add(['a',{}]);
-        assert.equal(st._private.size,1);
+        assert.equal(st.size,1);
         st.add(['b',{}]);
-        assert.equal(st._private.size,0);
+        assert.equal(st.size,0);
     });
     it("should not try to delete matched terms multiple times [c7a6a7bda0c0b517]",function() {
         var st = store {

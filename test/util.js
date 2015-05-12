@@ -1,11 +1,9 @@
 var util    = require("../util.js");
 
 var fs      = require("fs");
-var temp    = require("temp");
+var temp    = require("temp").track();
 var path    = require("path");
 var assert  = require("assert");
-
-temp.track();
 
 describe('constants',function() {
     it("`env` will always be 'test' when testing",function() {
