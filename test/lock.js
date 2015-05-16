@@ -50,68 +50,68 @@ describe("basic locking",function() {
 });
 
 describe("multiprocess locking",function() {
-    var  savePid = process.pid;
-    var saveKill = process.kill;
-    var   killer = function(pid,sig) {
+    var killer = function(pid,sig) {
         assert.strictEqual(sig,0);              // only one handled
         if ([1234,5678].indexOf(pid)===-1)      // 1234 and 5678 are mocked to appear to be running
             throw new Error("no such bogus process");
     };
-    try {
-        it("does not allow a lock to be shared by multiple processes",function() {
-            var lk = path.join(temp.mkdirSync(),'lock');
-            process.kill = killer;
-            process.pid  = 1234;
+    var   proc = {
+        pid:  null,
+        kill: killer
+    };
+        
+    before(function() {
+        lock._private.setProcess(proc);
+    });
+    after(function() {
+        lock._private.resetProcess();
+    });
+    it("does not allow a lock to be shared by multiple processes",function() {
+        var lk = path.join(temp.mkdirSync(),'lock');
+        proc.pid  = 1234;
+        lock.lockSync(lk);
+        proc.pid = 5678;
+        assert.throws(function() {
             lock.lockSync(lk);
-            process.pid = 5678;
-            assert.throws(function() {
-                lock.lockSync(lk);
-            });
-            assert.strictEqual(lock.pidLockedSync(lk),1234);
         });
-        it("requires an unlock to be from the issuing process",function() {
-            var lk = path.join(temp.mkdirSync(),'lock');
-            process.kill = killer;
-            process.pid  = 1234;
-            lock.lockSync(lk);
-            process.pid = 5678;
-            assert.throws(function() {
-                lock.unlockSync(lk);
-            });
-            assert.strictEqual(lock.pidLockedSync(lk),1234);
-            process.pid  = 1234;
+        assert.strictEqual(lock.pidLockedSync(lk),1234);
+    });
+    it("requires an unlock to be from the issuing process",function() {
+        var lk = path.join(temp.mkdirSync(),'lock');
+        proc.pid  = 1234;
+        lock.lockSync(lk);
+        proc.pid = 5678;
+        assert.throws(function() {
             lock.unlockSync(lk);
         });
-        it("cleans up stale lockfiles",function() {
-            var lk = path.join(temp.mkdirSync(),'lock');
-            process.kill = killer;
-            process.pid  = 9;
+        assert.strictEqual(lock.pidLockedSync(lk),1234);
+        proc.pid  = 1234;
+        lock.unlockSync(lk);
+    });
+    it("cleans up stale lockfiles",function() {
+        var lk = path.join(temp.mkdirSync(),'lock');
+        proc.pid  = 9;
+        lock.lockSync(lk);
+        assert.strictEqual(lock.lockDataSync(lk),null);
+        proc.pid  = 1234;
+        assert.strictEqual(lock.lockSync(lk),true);
+        assert.strictEqual(lock.pidLockedSync(lk),1234);
+    });
+    it("allows a lock to be serially acquired by multiple processes",function() {
+        var lk = path.join(temp.mkdirSync(),'lock');
+        proc.pid = 1234;
+        lock.lockSync(lk);
+        proc.pid = 5678;
+        assert.throws(function() {
             lock.lockSync(lk);
-            assert.strictEqual(lock.lockDataSync(lk),null);
-            process.pid  = 1234;
-            assert.strictEqual(lock.lockSync(lk),true);
-            assert.strictEqual(lock.pidLockedSync(lk),1234);
         });
-        it("allows a lock to be serially acquired by multiple processes",function() {
-            var lk = path.join(temp.mkdirSync(),'lock');
-            process.kill = killer;
-            process.pid = 1234;
+        proc.pid = 1234;
+        lock.unlockSync(lk);
+        proc.pid = 5678;
+        lock.lockSync(lk);
+        proc.pid = 1234;
+        assert.throws(function() {
             lock.lockSync(lk);
-            process.pid = 5678;
-            assert.throws(function() {
-                lock.lockSync(lk);
-            });
-            process.pid = 1234;
-            lock.unlockSync(lk);
-            process.pid = 5678;
-            lock.lockSync(lk);
-            process.pid = 1234;
-            assert.throws(function() {
-                lock.lockSync(lk);
-            });
         });
-    } finally {
-        process.pid  = savePid
-        process.kill = saveKill;
-    }
+    });
 });

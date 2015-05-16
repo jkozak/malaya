@@ -1,0 +1,42 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Thu, 14 May 2015 21:12:55 +0100
+State: new
+Subject: compiled code should not require underscore
+Message-Id: <a031fc359a216d01-0-artemis@renn>
+
+replace `_.indexOf` and `_.contains` with `indexOf`
+replace `_.keys` with `Object.keys`
+rewrite `_.extend` `_.omit` and `_.isEqual`
+
+var isEqual = function(p,q) {
+    if (p===q)
+        return true;
+    else if ((typeof p)!==(typeof q))
+        return false;
+    else if (Array.isArray(p) && Array.isArray(q)) {
+        if (p.length!==q.length)
+            return false
+        for (var i=0;i<p.length;i++) 
+            if (!isEqual(p[i],q[i]))
+                return false;
+        return true;
+    }
+    else if (Array.isArray(p) || Array.isArray(q))
+        return false;
+    else if ((typeof p)==='object') {
+        var kp = Object.keys(p);
+        var kq = Object.keys(q);
+        if (kp.length!==kq.length)
+            return false;
+        kp.forEach(function(pk) {
+            if (kp[pk]!==undefined && kq[pk]===undefined)
+                return false;
+            if (!isEqual(kp[pk],kq[pk]))
+                return false;
+        });
+        return true;
+    } else
+        return false;           // can we ever get here?
+}
+
+

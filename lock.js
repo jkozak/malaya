@@ -10,10 +10,12 @@ var VError = require('verror');
 
 var   util = require('./util.js');
 
+var process_ = process;
+
 exports.lockSync = function(filename,data) { 
     var tmp = temp.openSync({dir:path.dirname(filename)});
 
-    data = _.extend({},data||{},{pid:process.pid});
+    data = _.extend({},data||{},{pid:process_.pid});
     
     fs.writeSync(tmp.fd,JSON.stringify(data),null,null,null);
     for (var i=0;i<2;i++) 
@@ -22,7 +24,7 @@ exports.lockSync = function(filename,data) {
             return true;
         } catch (e) {
             var pid = exports.pidLockedSync(filename);
-            if (pid===process.pid)
+            if (pid===process_.pid)
                 return false;
             else if (pid===null) {
                 try {
@@ -48,7 +50,7 @@ exports.lockDataSync = function(filename) {
         return null;
     }
     try {
-        process.kill(data.pid,0);
+        process_.kill(data.pid,0);
         return data;
     } catch (e) {
         return null;
@@ -64,7 +66,13 @@ exports.unlockSync = function(filename) {
     var data = exports.lockDataSync(filename);
     if (data===null)
         throw new VError("lockfile %s does not exist",filename);
-    if (data.pid!==process.pid) 
+    if (data.pid!==process_.pid) 
         throw new VError("lockfile %s locked by process %d",filename,data.pid);
     fs.unlinkSync(filename);
 };
+
+if (util.env==='test')
+    exports._private = {
+        setProcess:   function(p) {process_=p;},
+        resetProcess: function(p) {process_=process;}
+    };

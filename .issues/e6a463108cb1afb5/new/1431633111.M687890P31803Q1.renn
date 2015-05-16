@@ -1,0 +1,14 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Thu, 14 May 2015 20:44:04 +0100
+State: new
+Subject: on `nvm` versions, require of a temp file with dependencies fails
+Message-Id: <e6a463108cb1afb5-0-artemis@renn>
+
+see for example `test/cmdline.js`
+
+Fails on `nvm use v0.10.29`
+Works on `nvm use system`
+
+Can't I not just use `compiler.compile` instead of `require` in
+engine.js's exports.compile? 
+

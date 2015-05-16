@@ -12,36 +12,43 @@ describe("fs stream",function() {
     it("written data should be immediately available",function(done) {
         var     data = "line 1\n";
         var      dir = temp.mkdirSync();
+        var      err = null;
         var filename = path.join(dir,'xxx');
         fs.writeFileSync(filename,data);
         var readable = fs.createReadStream(filename);
         readable.setEncoding('utf8');
         readable.on('readable',function() {
-            assert.strictEqual(readable.read(),data);
+            try {
+                assert.strictEqual(readable.read(),data);
+            } catch (e) {err=e;}
         });
-        readable.on('end',done);
+        readable.on('end',function(){done(err);});
     });
     it("writes and reads interleave",function(done) {
         var    data1 = "line 1\n";
-        var    data2 = "line 1\n";
+        var    data2 = "line 2\n";
         var      dir = temp.mkdirSync();
+        var      err = null;
         var filename = path.join(dir,'xxx');
         var        i = 0;
         fs.writeFileSync(filename,data1);
         var readable = fs.createReadStream(filename);
         readable.setEncoding('utf8');
         readable.on('readable',function() {
-            switch (i++) {
-            case 0:
-                assert.strictEqual(readable.read(),data1);
-                fs.writeFile(filename,data2);
-                break;
-            case 1:
-                assert.strictEqual(readable.read(),data2);
-                break;
-            default:
-                throw new VError('NYI: %j',i);
-            }});
-        readable.on('end',done);
+            try {
+                switch (i++) {
+                case 0:
+                    assert.strictEqual(readable.read(),data1);
+                    fs.writeFile(filename,data2);
+                    break;
+                case 1:
+                    assert.strictEqual(readable.read(),data2);
+                    break;
+                default:
+                    throw new VError('NYI: %j',i);
+                }
+            } catch (e) {err=e;}
+        });
+        readable.on('end',function(){done(err);});
     });
 });

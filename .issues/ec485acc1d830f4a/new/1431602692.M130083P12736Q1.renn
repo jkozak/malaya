@@ -1,0 +1,10 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Thu, 14 May 2015 12:23:59 +0100
+State: resolved
+Subject: replace note-requires with something less intrusive
+Message-Id: <ec485acc1d830f4a-0-artemis@renn>
+resolution: fixed
+
+Should be able to do this by comparing `module.children` before and
+after requiring the relevant module.
+

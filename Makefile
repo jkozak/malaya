@@ -23,5 +23,6 @@ benchmarks:	init
 	-@rm $(patsubst %.chrjs,%.chrjs.js,$(CHRJSS))
 
 clean:
-	rm -rf {bower_components,node_modules}/* examples/*/{bower_components,node_modules}/*
+	rm -rf bower_components/* examples/*/bower_components/*
+	rm -rf node_modules/*     examples/*/node_modules/*
 
