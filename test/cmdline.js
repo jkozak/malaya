@@ -66,7 +66,7 @@ describe("cmdline",function() {
     describe("slave",function() {
     });
     describe("transform",function() {
-        var transform = function(data,source,check) {
+        var transform = function(data,source,check) { // a test driver for `transform`
             var dir = temp.mkdirSync();
             fillDirWithSomeData(dir,data,function(err) {
                 var tfm = path.join(dir,'tfm.chrjs');
@@ -83,7 +83,7 @@ describe("cmdline",function() {
                 }});
             });
         };
-        it("removes all facts by default XXX",function(done) {
+        it("removes all facts by default",function(done) {
             transform([['a',{}]],
                       "module.exports = store{};",
                       function(eng) {

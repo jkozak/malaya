@@ -1,0 +1,18 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Thu, 14 May 2015 09:55:41 +0100
+State: new
+Subject: new runtime stuff fails under streams3
+Message-Id: <931cc8ae786d5f13-0-artemis@renn>
+
+`make tests` fails on node version other than v0.10 or early v0.11
+
+This is probably streams3-related: OK at v0.11.4 not at v0.11.6,
+streams3 comes in at v0.11.5
+
+Pulling the offending code in test/node.js out and running it on its
+own works, so it's something in my environment...  `through2` requires
+`readable-stream` - does this patch anything?
+
+Or is it mocha? `graceful-fs`?
+
+There was a problem with `make clean` not making clean, but it's not that...

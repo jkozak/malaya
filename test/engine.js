@@ -9,11 +9,6 @@ var    path = require('path');
 var    util = require('../util.js');
 var  VError = require('verror');
 var    rmRF = require('rimraf');
-var noteReq = require('./note-requires.js');
-
-function createTestStore() {
-    return engine.makeInertChrjs();
-}
 
 describe("makeInertChrjs",function() {
     it("behaves somewhat like a chrjs store with no rules",function() {
@@ -30,7 +25,7 @@ describe("Engine",function() {
     describe("initialisation",function() {
         it("initialises various good things",function() {
             var dir = temp.mkdirSync();
-            var eng = new Engine({dir:dir,chrjs:createTestStore()});
+            var eng = new Engine({dir:dir});
             eng.init();
             fs.statSync(dir);
             fs.statSync(path.join(dir,'.prevalence'));
@@ -42,14 +37,14 @@ describe("Engine",function() {
         it("won't initialise over existing dir",function() {
             var  dir = temp.mkdirSync();
             var pdir = fs.mkdirSync(path.join(dir,'.prevalence'));
-            var  eng = new Engine({dir:dir,chrjs:createTestStore()});
+            var  eng = new Engine({dir:dir});
             assert.throws(function() {
                 eng.init();
             });
         });    
         it("won't start without initialising",function() {
             var dir = temp.mkdirSync();
-            var eng = new Engine({dir:dir,chrjs:createTestStore()});
+            var eng = new Engine({dir:dir});
             assert.throws(function() {
                 eng.start();
             });
@@ -58,7 +53,7 @@ describe("Engine",function() {
     describe("hashes",function() {
         it("creates a hash store at init time",function() {
             var dir = temp.mkdirSync();
-            var eng = new Engine({dir:dir,chrjs:createTestStore()});
+            var eng = new Engine({dir:dir});
             eng.init();
             eng.start();
             var cHashes = eng.hashes.getHashes().length;
@@ -71,7 +66,7 @@ describe("Engine",function() {
     describe("#update",function() {
         it("writes items to store",function(done) {
             var dir = temp.mkdirSync();
-            var eng = new Engine({dir:dir,chrjs:createTestStore()});
+            var eng = new Engine({dir:dir});
             eng.init();
             eng.start();
             assert.strictEqual(eng.chrjs.size,0);
@@ -103,7 +98,7 @@ describe("Engine",function() {
     describe("#stop",function() {
         it("saves the world slowly",function() {
             var dir = temp.mkdirSync();
-            var eng = new Engine({dir:dir,chrjs:createTestStore()});
+            var eng = new Engine({dir:dir});
             eng.init();
             eng.start();
             rmRF.sync(path.join(eng.prevalenceDir,'state-OLD'));
@@ -115,7 +110,7 @@ describe("Engine",function() {
         });
         it("saves the world quickly",function() {
             var dir = temp.mkdirSync();
-            var eng = new Engine({dir:dir,chrjs:createTestStore()});
+            var eng = new Engine({dir:dir});
             eng.init();
             eng.start();
             rmRF.sync(path.join(eng.prevalenceDir,'state-OLD'));
@@ -129,7 +124,7 @@ describe("Engine",function() {
     describe("walking utilities",function() {
         it("traverses the journal file",function(done) {
             var dir = temp.mkdirSync();
-            var eng = new Engine({dir:dir,chrjs:createTestStore()});
+            var eng = new Engine({dir:dir});
             var  hs = [];
             eng.init();
             eng.start();
@@ -147,7 +142,7 @@ describe("Engine",function() {
         });
         it("traverses the journal file and hash store",function(done) {
             var   dir = temp.mkdirSync();
-            var   eng = new Engine({dir:dir,chrjs:createTestStore()});
+            var   eng = new Engine({dir:dir});
             var    hs = [];
             var done2 = _.after(2,done);
             eng.init();
@@ -178,33 +173,31 @@ describe("Engine",function() {
     describe("#loadData",function() {
         it("loads single item from a json file",function(done) {
             var   dir = temp.mkdirSync();
-            var chrjs = createTestStore();
-            var   eng = new Engine({dir:dir,chrjs:chrjs});
+            var   eng = new Engine({dir:dir});
             var  data = [['abc',{a:1}]];
             var   dfn = path.join(dir,'data.json');
             fs.writeFileSync(dfn,JSON.stringify(data));
             eng.init();
             eng.start();
-            assert.deepEqual(_.values(chrjs._private.facts),[]);
+            assert.deepEqual(_.values(eng.chrjs._private.orderedFacts),[]);
             eng.loadData(dfn,function(err) {
                 assert(!err);
-                assert.deepEqual(_.values(chrjs._private.facts),data);
+                assert.deepEqual(_.values(eng.chrjs._private.orderedFacts),data);
                 done();
             });
         });
         it("loads two items from a json file",function(done) {
             var   dir = temp.mkdirSync();
-            var chrjs = createTestStore();
-            var   eng = new Engine({dir:dir,chrjs:chrjs});
+            var   eng = new Engine({dir:dir});
             var  data = [['abc',{a:1}],['def',{d:4}]];
             var   dfn = path.join(dir,'data.json');
             fs.writeFileSync(dfn,JSON.stringify(data));
             eng.init();
             eng.start();
-            assert.deepEqual(_.values(chrjs._private.facts),[]);
+            assert.deepEqual(_.values(eng.chrjs._private.orderedFacts),[]);
             eng.loadData(dfn,function(err) {
                 assert(!err);
-                assert.deepEqual(_.values(chrjs._private.facts),data);
+                assert.deepEqual(_.values(eng.chrjs._private.orderedFacts),data);
                 done();
             });
         });

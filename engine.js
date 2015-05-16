@@ -37,7 +37,6 @@ var    compiler = require('./compiler.js');
 var     whiskey = require('./whiskey.js');
 var        hash = require('./hash.js');
 var        lock = require('./lock.js');
-var    noteReqs = require('./note-requires.js');
 
 exports.makeInertChrjs = function(opts) {
     opts = opts || {tag:null};
@@ -84,17 +83,17 @@ exports.makeInertChrjs = function(opts) {
     return obj;
 };
 
-noteReqs.register();
+var sources = {};
 var compile = exports.compile = function(source) {
     if (source) {
-        var chrjs;
-        noteReqs.enabled = true;
-        try {
-            chrjs = require(path.resolve(source));
-            chrjs.reset();      // because `require` caches values
-        } finally {
-            noteReqs.enabled = false;
-        }
+        var children = module.children.slice(0);
+        var    chrjs = require(path.resolve(source));
+        var    loads = _.difference(module.children,children);
+        if (loads.length>1)
+            throw new VError("compiling %s added %s modules",source,loads.length);
+        for (var i in loads) 
+            sources[loads[i].filename] = null;
+        chrjs.reset();          // because `require` caches values
         return chrjs;
     } else
         return null;
@@ -113,14 +112,14 @@ var Engine = exports.Engine = function(options) {
     
     eng.prevalenceDir = options.prevalenceDir || path.join(options.dir,'.prevalence');
     eng.syshash       = null;
-    eng.chrjs         = options.chrjs || compile(options.businessLogic) || exports.makeInertChrjs();
+    eng.chrjs         = compile(options.businessLogic) || exports.makeInertChrjs();
     eng.hashes        = null;                    // hash store
-    eng.options       = _.omit(options,'chrjs'); // avoid persisting chrjs object later
+    eng.options       = options;
     eng.mode          = null;                    // 'master' | 'slave' 
-    eng.conns         = {};                      // <port> -> {i:<in-stream>,o:<out-stream>}
+    eng.conns         = {};                      // <port> -> {i:<in-stream>,o:<out-stream>,type:<type>}
+    eng.connIndex     = {};                      // <type> -> [<port>,...]    
     eng.http          = null;                    // express http server
     eng.journal       = null;                    // journal write stream
-    eng.replicatees   = [];                      // portNames to replicate to
 
     eng.journalFlush  = function(cb){cb(null);}; // flush journal
 
@@ -428,23 +427,51 @@ Engine.prototype.createExpressApp = function() {
 Engine.prototype.closeConnection = function(portName) {
     var eng = this;
     var  io = eng.conns[portName];
-    io[1].end(function() {
-        eng.forgetConnection(portName);
-    });
+    if (io && !io.closing) { // can be called more than once, allow for that
+        io.closing = true;
+        io.o.end(function() {
+            eng.forgetConnection(portName);
+        });
+    }
 };
 
 Engine.prototype.forgetConnection = function(portName) {
+    var io = this.conns[portName];
+    this.connIndex[io.type] = _.without(this.connIndex[io.type],portName);
     delete this.conns[portName];
-    this.emit('connectionClose',portName);
+    this.emit('connectionClose',portName,io.type);
 };
 
 Engine.prototype.addConnection = function(portName,io) {
     var eng = this;
     if (eng.conns[portName]!==undefined)
         throw new VError("already have connection for %j",portName);
+    if (!this.connIndex[io.type])
+        this.connIndex[io.type] = [];
     eng.conns[portName] = io;
-    // +++ move code from below to here +++
-    throw new Error("NYI");
+    this.connIndex[io.type].push(portName);
+    io.i.on('readable',function() {
+        for (;;) {
+            var js = io.i.read();
+            if (js!==null) {
+                switch (io.type) {
+                case 'data':
+                    if (js instanceof Array && js.length===2) {
+                        js.push({port:portName});
+                        eng.update(js);
+                    } else
+                        eng.closeConnection(portName);
+                    break;
+                case 'replication':
+                case 'admin':
+                default:
+                    eng.closeConnection(portName);
+                }
+                break;
+            }
+        }
+    });
+    eng.emit('connection',portName);
 };
 
 Engine.prototype.masterListenHttp = function(port,done) {
@@ -462,51 +489,38 @@ Engine.prototype.masterListenHttp = function(port,done) {
         var  ostream = new whiskey.StringifyJSONStream();
         conn.pipe(istream);
         ostream.pipe(conn);
-        var io = [istream,ostream];
-        eng.conns[portName] = io;
-        io[0].on('error',function() {
+        var io = {i:istream,o:ostream,type:null};
+        io.i.on('error',function() {        // +++ this should be in addConnection
+            io.i.end();
+        });
+        io.i.on('end',function() {
             eng.closeConnection(portName);
         });
-        io[0].on('end',function() {
-            eng.closeConnection(portName);
-        });
-        io[1].on('error',function() {
+        io.o.on('error',function() {
+            io.o.end();
+        });                                 // +++ to here 
+        conn.on('close',function() {
             eng.closeConnection(portName);
         });
         switch (conn.prefix) {
         case '/data':
-            io[0].on('readable',function() {
-                for (;;) {
-                    var js = io[0].read();
-                    if (js!==null) {
-                        if (js instanceof Array && js.length===2) {
-                            js.push({port:portName});
-                            eng.update(js);
-                        } else {
-                            eng.closeConnection(portName);
-                        }
-                    } else
-                        break;
-                }
-            });
+            io.type = 'data';
             break;
         case '/replication/journal': {
+            io.type = 'replication';
             var st = fs.statSync(path.join(eng.prevalenceDir,'state','journal'));
-            eng.replicatees.push(conn);
             conn.write(util.serialise(['open',{journalSize:st.size}]));
             conn.on('close',function() {
-                var i = eng.replicatees.indexOf(conn);
-                if (i!==-1)
-                    eng.replicatees.splice(i,1);
                 eng.forgetConnection(portName);
             });
             break;
         }
         case '/admin':
+            io.type = 'admin';
             eng.addAdminConnection(conn);
             break;
         }
-        eng.emit('connection',portName);
+        eng.addConnection(portName,io);
     });
     
     sock.installHandlers(eng.http,{prefix:'/data'});
@@ -536,12 +550,12 @@ Engine.prototype.startComms = function(mode,done) {
 };
 
 Engine.prototype.journaliseCodeSources = function(type,item2,cb) {
-    var files = noteReqs.files;
-    if (_.keys(files).length>0) {
-        noteReqs.files = {};
-        for (var fn in files) 
-            files[fn] = this.hashes.putFileSync(fn);
-        this.journalise(type,[util.sourceVersion,item2,files],cb);
+    var srcs = sources;
+    if (_.keys(sources).length>0) {
+        sources = {};
+        for (var fn in srcs) 
+            srcs[fn] = this.hashes.putFileSync(fn);
+        this.journalise(type,[util.sourceVersion,item2,srcs],cb);
     } else
         if (cb) cb(null);
 };
@@ -578,11 +592,11 @@ Engine.prototype.become = function(mode) {
 Engine.prototype.journalise = function(type,data,cb) {
     var  eng = this;
     var  err = null;
-    var done = _.after(1+eng.replicatees.length,function() {
+    var done = _.after(2,function() {
         if (cb) cb(err);
     });
-    var  str = util.serialise([timestamp(),type,data])+'\n';
-    cb = cb || function(){};
+    var  jit = [timestamp(),type,data];
+    var  str = util.serialise(jit)+'\n';
     eng.journal.write(str,'utf8',function(e) {
         err = err || e;
         if (err)
@@ -590,18 +604,18 @@ Engine.prototype.journalise = function(type,data,cb) {
         else 
             eng.journalFlush(done);
     });
-    eng.replicatees.forEach(function(r) {
-        r.write(str,done);
-    });
+    eng.broadcast(jit,'replication',done);
 };
 
-Engine.prototype.broadcast = function(js,prefix) { // this prefix thing doesn't work for fe3 [d09a8d183c21b2bd]
-    prefix = prefix || '/data';
-    var engine = this;
-    _.keys(engine.conns).forEach(function(port) {
-        if (util.endsWith(port,prefix))
-            engine.conns[port][1].write(js);
+Engine.prototype.broadcast = function(js,type,cb) {
+    type = type || 'data';
+    var   eng = this;
+    var ports = eng.connIndex[type] || [];
+    var  done = _.after(1+ports.length,cb);
+    ports.forEach(function(port) {
+        eng.conns[port].o.write(js,done);
     });
+    done();                     // for when ports.length===0 as _.after won't callback then
 };
 
 Engine.prototype.update = function(data,cb) {
@@ -616,11 +630,11 @@ Engine.prototype.update = function(data,cb) {
                 else if (add[2]===null)
                     ;           // discard
                 else if (add[1]==='all')
-                    eng.broadcast(add[2]);
+                    eng.broadcast(add[2],'data');
                 else if (add[1]==='self')
-                    eng.conns[data[2].port][1].write(add[2]);
+                    eng.conns[data[2].port].o.write(add[2]);
                 else
-                    eng.conns[add[1]][1].write(add[2]);
+                    eng.conns[add[1]].o.write(add[2]);
             }
         });
         if (cb) cb(null,res);
