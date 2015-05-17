@@ -609,6 +609,7 @@ Engine.prototype.journalise = function(type,data,cb) {
 
 Engine.prototype.broadcast = function(js,type,cb) {
     type = type || 'data';
+    cb   = cb || function(){};
     var   eng = this;
     var ports = eng.connIndex[type] || [];
     var  done = _.after(1+ports.length,cb);
@@ -633,8 +634,11 @@ Engine.prototype.update = function(data,cb) {
                     eng.broadcast(add[2],'data');
                 else if (add[1]==='self')
                     eng.conns[data[2].port].o.write(add[2]);
-                else
-                    eng.conns[add[1]].o.write(add[2]);
+                else {
+                    var dest = eng.conns[add[1]];
+                    if (dest)
+                        dest.o.write(add[2]);
+                }
             }
         });
         if (cb) cb(null,res);

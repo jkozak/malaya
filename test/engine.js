@@ -202,5 +202,12 @@ describe("Engine",function() {
             });
         });
     });
+    describe("#addConnection",function() {
+        it("adds a connection",function(done) {
+            var eng = new Engine({dir:temp.mkdirSync()});
+            // +++
+            done();
+        });
+    });
 });
 

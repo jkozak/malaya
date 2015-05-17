@@ -1,7 +1,8 @@
 From: John Kozak <jk@thameslighter.net>
 Date: Wed, 13 May 2015 21:50:08 +0100
-State: new
+State: resolved
 Subject: typing engine conns by prefix fails for fe3
 Message-Id: <9c857e2f80cd94a4-0-artemis@renn>
+resolution: fixed
 
 which is a bit basic.

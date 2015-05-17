@@ -1,6 +1,7 @@
 From: John Kozak <jk@thameslighter.net>
 Date: Wed, 13 May 2015 07:24:56 +0100
 Subject: replace conn 2-tuple with object
-State: new
+State: resolved
 Message-Id: <d09a8d183c21b2bd-0-artemis@renn>
+resolution: fixed
 
