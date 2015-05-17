@@ -321,9 +321,9 @@ exports.run = function(opts0) {
             util.debug("saved world:  %s",syshash);
         });
         if (auto) {
-            eng.update(['restart',{},{port:'system://'}]); // +++ s/restart/_restart/ +++
+            eng.update(['_restart',{},{port:'system://'}]);
             setInterval(function() {
-                eng.update(['tick',{date:new Date()},{port:'server:'}]); // +++ s/tick/_tick/ +++
+                eng.update(['_tick',{date:new Date()},{port:'server:'}]);
                 eng.update(['_take-outputs',{},{port:'server:'}]);
             },1000);
         }
@@ -443,8 +443,11 @@ exports.run = function(opts0) {
     };
 
     subcommands.client.exec = function() {
-        //var client = require('./client.js');
-        throw new Error("NYI: subcommand `client`");
+        var client = require('./client.js');
+        var url = args.url || client.findURL();
+        if (!url)
+            throw new VError("can't find a server to connect to");
+        client.run(url);
     };
     
     subcommands.logs.exec = function() {

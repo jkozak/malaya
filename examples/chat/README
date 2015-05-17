@@ -1,0 +1,23 @@
+Malaya chat example
+===================
+
+To initialise (assume `make tests` has run clean):
+
+ $ cd ~/malaya/examples/chat
+ ~/malaya/examples/chat$ ../../malaya init 
+ ~/malaya/examples/chat$ ../../malaya run
+
+Ctrl-C to stop and save.
+
+You can then logon with the "client" subcommand:
+
+ ~/malaya/examples/chat$ ../../malaya client
+ > ['logon',{user:'JK'}]
+ > ['say',{msg:'hi'}]
+ > 
+ < {"msg":"hi","from":"JK"}
+ >
+
+You can run multiple simultaneous sessions, messages entered as above
+will broadcast to all.
+

@@ -1,0 +1,26 @@
+module.exports =  store {
+    rule(-['logon',{user},{port}],
+         +['user',{user,port}] );
+    rule(-['logoff',{user},{...}],
+         -['user',{user,...}] );
+    rule(-['logoff',{...},{port}],
+         -['user',{port,...}] );
+    
+    rule(-['say',{msg},{port}],
+          ['user',{user,port}],
+         +['_output','all',{msg,from:user}] );
+    rule(-['say',...]);
+
+    rule(-['whisper',{msg,to},{port}],
+          ['user',{user,port}],
+         +['whisper',{msg,to,from:user}] );
+    rule(-['whisper',{msg,to,from}],
+          ['user',{user:to,port}],
+         +['_output',port,{msg,from}] );
+    
+    rule( ['_restart',...],
+         -['user',...] );
+    rule(-['_restart',...]);
+    rule(-['_tick',...]);
+    rule(-['_take-outputs',...]);
+};

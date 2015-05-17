@@ -80,14 +80,14 @@ const IDB = store {
     rule(-['market-status',...]);
 
     // restart
-    rule (['restart',...],
+    rule (['_restart',...],
           -['Permissions',{LoggedOn:1,...rs}],
           +['Permissions',{LoggedOn:0,...rs}] );
-    rule (['restart',...], -['_output',...]);
-    rule (['restart',...], -['_take-outputs',...]);
-    rule (['restart',...], -['tick',...]);
-    rule (['restart',...], -['market-status',...]);
-    rule (-['restart',...]);
+    rule (['_restart',...], -['_output',...]);
+    rule (['_restart',...], -['_take-outputs',...]);
+    rule (['_restart',...], -['_tick',...]);
+    rule (['_restart',...], -['market-status',...]);
+    rule (-['_restart',...]);
     
     // logon processing
     rule (-['logon0',...],      // no pw encryption at the moment
@@ -207,7 +207,7 @@ const IDB = store {
     // prices
     // +++ test prices are acceptable (not worse than existing) +++
     // +++ price update +++
-    rule (['restart',...], -['price',{...},{...}]);
+    rule (['_restart',...], -['price',{...},{...}]);
     rule (-['price',{action:'C',status:'A',marketID,...ps},{...}],
           -['SequenceNumbers',{MarketID:marketID,PriceID,PriceSequenceNo,...ss}],
           +['SequenceNumbers',{MarketID:marketID,PriceID:PriceID+1,PriceSequenceNo:PriceSequenceNo+1,...ss}],
@@ -239,7 +239,7 @@ const IDB = store {
 
     // trades
     //  +++ checks: price tradable +++
-    rule (['restart',...], -['trade',{...},{...}]);
+    rule (['_restart',...], -['trade',{...},{...}]);
     rule (-['trade',{action:'C',state:'R',status:'O',marketID,...ts},{port}],
           -['Price',{PriceID:ts.priceID,...Ps}],
           Ps.Amount>0,
@@ -333,7 +333,7 @@ const IDB = store {
     // +++ `InstHighlight` +++
 
     // auction
-    rule (['restart',...], -['auction',...]); // !!! TESTING !!!
+    rule (['_restart',...], -['auction',...]); // !!! TESTING !!!
     rule (-['AuctionTemplateBlock',...],
           +['_output','self',{AuctionTemplateBlock:{_children:
                                                     for([];
@@ -393,7 +393,7 @@ const IDB = store {
           state = {M:'Z',A:'R'}[phases[0]],
           +['auction',{id,state:state,phases,port,...rs}] );
     rule(-['auction',{state:undefined,port}],+['_output',port,{error:{msg:"arse"}}]);
-    rule (['tick',...],
+    rule (['_tick',...],
           ['auction',{state,id,curPhase,...rs}],
           state!='N',
           d = {'M':rs.MatchingDuration,'A':rs.Duration,'S':rs.SecondChanceDuration}[curPhase],
@@ -404,13 +404,13 @@ const IDB = store {
     // +++ `AuctionDelAll` +++
 
     // background
-    rule (['tick',{date,...},...],
+    rule (['_tick',{date,...},...],
           +['_output','all',mkHeartbeat(date)] );
-    rule (['tick',{...},...],
+    rule (['_tick',{...},...],
           n = for(0;['Permissions',{LoggedOn:1,...}];a=>a+1),
           n>0,
           console.log("%d users logged on",n) );
-    rule (-['tick',...]);
+    rule (-['_tick',...]);
 
     // output
     rule (['_take-outputs',...], -['_output',...]);
