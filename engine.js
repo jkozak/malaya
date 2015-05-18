@@ -125,6 +125,8 @@ var Engine = exports.Engine = function(options) {
 
     eng.chrjs.tag     = options.tag;
 
+    eng.setupNonDataConns();
+
     return eng;
 };
 
@@ -443,6 +445,7 @@ Engine.prototype.forgetConnection = function(portName) {
 };
 
 Engine.prototype.addConnection = function(portName,io) {
+    // +++ probably shouldn't be allowed to add data connections unless master +++
     var eng = this;
     if (eng.conns[portName]!==undefined)
         throw new VError("already have connection for %j",portName);
@@ -474,7 +477,7 @@ Engine.prototype.addConnection = function(portName,io) {
     eng.emit('connection',portName);
 };
 
-Engine.prototype.masterListenHttp = function(port,done) {
+Engine.prototype.listenHttp = function(mode,port,done) {
     var  eng = this;
     var sock = sockjs.createServer({log:function(severity,text) {
         if (['error','info'].indexOf(severity)!==-1)
@@ -485,46 +488,55 @@ Engine.prototype.masterListenHttp = function(port,done) {
 
     sock.on('connection',function(conn) {
         var portName = util.format("ws://%s:%s%s",conn.remoteAddress,conn.remotePort,conn.prefix);
-        var  istream = new whiskey.JSONParseStream();
-        var  ostream = new whiskey.StringifyJSONStream();
-        conn.pipe(istream);
-        ostream.pipe(conn);
-        var io = {i:istream,o:ostream,type:null};
-        io.i.on('error',function() {        // +++ this should be in addConnection
-            io.i.end();
-        });
-        io.i.on('end',function() {
-            eng.closeConnection(portName);
-        });
-        io.o.on('error',function() {
-            io.o.end();
-        });                                 // +++ to here 
-        conn.on('close',function() {
-            eng.closeConnection(portName);
-        });
+        var       io = {i:null,o:null,type:null};
         switch (conn.prefix) {
         case '/data':
             io.type = 'data';
+            io.i    = new whiskey.JSONParseStream();
+            io.o    = new whiskey.StringifyJSONStream();
             break;
-        case '/replication/journal': {
+        case '/replication/journal': 
             io.type = 'replication';
-            var st = fs.statSync(path.join(eng.prevalenceDir,'state','journal'));
-            conn.write(util.serialise(['open',{journalSize:st.size}]));
-            conn.on('close',function() {
-                eng.forgetConnection(portName);
-            });
+            io.i    = new whiskey.LineStream(util.deserialise);
+            io.o    = new whiskey.StringifyObjectStream(util.serialise);
             break;
-        }
         case '/admin':
-            io.type = 'admin';
-            eng.addAdminConnection(conn);
+            if (conn.remoteAddress==='127.0.0.1') {
+                io.type = 'admin';
+                io.i    = new whiskey.JSONParseStream();
+                io.o    = new whiskey.StringifyJSONStream();
+            }
+            else {
+                io = null;
+                conn.end();
+            }
             break;
+        default:
+            // +++ jump around breaking things +++
         }
-        eng.addConnection(portName,io);
+        if (io) {
+            conn.pipe(io.i);
+            io.o.pipe(conn);
+            io.i.on('error',function() {        // +++ this should be in addConnection
+                io.i.end();
+            });
+            io.i.on('end',function() {
+                eng.closeConnection(portName);
+            });
+            io.o.on('error',function() {
+                io.o.end();
+            });                                 // +++ to here 
+            conn.on('close',function() {
+                eng.closeConnection(portName);
+            });
+            eng.addConnection(portName,io);
+        }
     });
-    
-    sock.installHandlers(eng.http,{prefix:'/data'});
-    sock.installHandlers(eng.http,{prefix:'/replication/journal'});
+
+    if (mode==='master') {
+        sock.installHandlers(eng.http,{prefix:'/data'});
+        sock.installHandlers(eng.http,{prefix:'/replication/journal'});
+    }
     sock.installHandlers(eng.http,{prefix:'/admin'});
 
     eng.http.listen(port,function() {
@@ -533,25 +545,18 @@ Engine.prototype.masterListenHttp = function(port,done) {
     });
 };
 
-Engine.prototype.masterListen = function(done) {
+Engine.prototype.listen = function(mode,done) {
     var  eng = this;
     var port = eng.options.ports.http;
     if (port===undefined)
         done(null);
     else
-        eng.masterListenHttp(port,done);
+        eng.listenHttp(mode,port,done);
 };
 
-Engine.prototype.startComms = function(mode,done) {
-    if (mode==='master')
-        this.masterListen(done);
-    else
-        throw new VError("NYI");
-};
-
-Engine.prototype.journaliseCodeSources = function(type,item2,cb) {
+Engine.prototype.journaliseCodeSources = function(type,item2,always,cb) {
     var srcs = sources;
-    if (_.keys(sources).length>0) {
+    if (always || _.keys(sources).length>0) {
         sources = {};
         for (var fn in srcs) 
             srcs[fn] = this.hashes.putFileSync(fn);
@@ -567,8 +572,8 @@ Engine.prototype.become = function(mode) {
     case 'master': {
         if (!eng.journal)
             throw new VError("can't become master, journal not started");
-        eng.journaliseCodeSources('code',this.options.businessLogic,function(err) {
-            eng.startComms(mode,function(){
+        eng.journaliseCodeSources('code',this.options.businessLogic,false,function(err) {
+            eng.listen(mode,function(){
                 eng.mode = mode;
                 eng.emit('mode',mode);
             });
@@ -577,8 +582,10 @@ Engine.prototype.become = function(mode) {
     }
     case 'slave': {
         eng.on('ready',function() {
-        eng.mode = mode;
-        eng.emit('mode',mode);
+            eng.listen(mode,function(){
+                eng.mode = mode;
+                eng.emit('mode',mode);
+            });
         });
         eng.replicateFrom(eng.options.masterUrl);
         break;
@@ -913,7 +920,8 @@ Engine.prototype.replicateFrom = function(url) { // `url` is base e.g. http://lo
                                 }
                             };
                             doPending();
-                            pending = null;
+                            pending     = null;
+                            eng.syshash = syshash;
                             eng.emit('ready',syshash);
                         }
                     });
@@ -941,6 +949,49 @@ Engine.prototype.replicateFrom = function(url) { // `url` is base e.g. http://lo
             eng.emit('closed',tidy,syshash);
         }
     };
+};
+
+Engine.prototype.setupNonDataConns = function() {
+    var eng = this;
+    eng.on('connection',function(port) {
+        switch (eng.conns[port].type) {
+        case 'admin':
+            eng.administer(port);
+            break;
+        case 'replication': {
+            var io = eng.conns[port];
+            var st = fs.statSync(path.join(eng.prevalenceDir,'state','journal'));
+            io.o.write(['open',{journalSize:st.size}]);
+        }
+        case 'data':
+            break;
+        }
+    });
+    eng.on('mode',function(mode) {
+        eng.broadcast(['mode',mode],'admin');
+    });
+    // +++
+};
+
+Engine.prototype.administer = function(port) {
+    var eng = this;
+    var  io = eng.conns[port];
+    io.o.write(['engine',{syshash:eng.syshash,mode:eng.mode,tag:eng.tag}]);
+    io.i.on('readable',function() {
+        var js;
+        while ((js=io.i.read())!==null) {
+            try {
+                switch (js[0]){
+                case 'mode':
+                    eng.become(js[1]);
+                    break;
+                }
+            } catch (e) {
+                console.log("!!! %j",e);
+                eng.closeConnection(port);
+            }
+        }
+    });
 };
 
 

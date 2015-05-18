@@ -1,0 +1,3 @@
+module.exports = store{
+    rule (-['_transform',...],+['theLot',{}]);
+};
