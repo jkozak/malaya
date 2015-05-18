@@ -16,11 +16,9 @@ tests:	init
 	eslint -c test/eslint.conf -f test/eslint-formatter-comment.js --env node $(filter-out %.chrjs.js,$(wildcard *.js examples/*/*.js))
 	NODE_ENV=test mocha -R min --compilers chrjs:compiler -C test examples/*/test #--grep "XXX"
 
-# NODE_PATH is set above to fix cmdline transform tests: do this better
-
 benchmarks: CHRJSS = $(wildcard benchmark/*.chrjs examples/*/benchmark/*.chrjs)
 benchmarks:	init
-	NODE_ENV=benchmark bin/chrjsc $(CHRJSS)
+	$(foreach chrjs,$(CHRJSS),NODE_ENV=benchmark ./malaya compile $(chrjs);)
 	NODE_ENV=benchmark matcha -R plain $(sort $(wildcard benchmark/*.js examples/*/benchmark/*.js) $(patsubst %.chrjs,%.chrjs.js,$(CHRJSS)))
 	-@rm $(patsubst %.chrjs,%.chrjs.js,$(CHRJSS))
 

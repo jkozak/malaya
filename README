@@ -20,8 +20,7 @@ compiler installed you should be able to do this:
  $ cd ~/malaya
  $ make tests
 
-all 280+ tests should pass.  In some configurations, the tests in
-`test/cmdline.js` fail, can just remove this file as a hack.
+All 250+ tests should pass.
 
 
 What else can I do with it?
@@ -53,7 +52,7 @@ nothing else from malaya should be needed (does need `underscore`).
 Hollywood interface
 -------------------
 
-Broken at the moment, waiting for `nwjs` 0.13 to fix it.
+Broken at the moment, waiting until `nwjs` 0.13 ships to fix it.
 
 
 Does it run on windows?

@@ -4,7 +4,7 @@ Malaya IDB example
 To initialise (assume `make tests` has run clean):
 
  $ cd ~/malaya/examples/idb
- $ ./malaya init data/idb.json
+ $ ./malaya init -d data/idb.json
 
 Where `idb.json` is a JSON dump of an IDB db. This builds the
 prevalent store.
@@ -16,6 +16,6 @@ To run thereafter:
 Ctrl-C to stop and save.
 
 You should then be able to log FE3 clients into it.  The demo just
-does log{on,off} so far, no price/trade/auction yet.
+does log{on,off}, price (approx), trade (approx), no auction yet.
 
 (This will not be part of the free software release)
