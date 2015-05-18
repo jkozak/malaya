@@ -4,7 +4,7 @@
 
 //  var eng = new Engine(<dir>,<chrjs>,<opts>)
 //  eng.start()
-//  eng.become('master'|'slave')
+//  eng.become('master'|'slave'|'idle')
 //     ... happy server time
 //  eng.stop()
 
@@ -70,6 +70,7 @@ exports.makeInertChrjs = function(opts) {
             ans.refs[this.t-1] = f;
             return ans;
         },
+        on: function(w,h) {},   // it's inert
         get size()    {return Object.keys(this.facts).length;}
     };
     if (util.env==='test')
@@ -115,7 +116,7 @@ var Engine = exports.Engine = function(options) {
     eng.chrjs         = compile(options.businessLogic) || exports.makeInertChrjs();
     eng.hashes        = null;                    // hash store
     eng.options       = options;
-    eng.mode          = null;                    // 'master' | 'slave' 
+    eng.mode          = 'idle';                  // 'master' | 'slave' | 'idle'
     eng.conns         = {};                      // <port> -> {i:<in-stream>,o:<out-stream>,type:<type>}
     eng.connIndex     = {};                      // <type> -> [<port>,...]    
     eng.http          = null;                    // express http server
@@ -125,7 +126,12 @@ var Engine = exports.Engine = function(options) {
 
     eng.chrjs.tag     = options.tag;
 
-    eng.setupNonDataConns();
+    eng.replicateSock = null;  
+
+    eng.chrjs.on('error',function(err){eng.emit(new VError(err,"chrjs error: "));});
+    eng.on('mode',function(mode) {
+        eng.broadcast(['mode',mode],'admin');
+    });
 
     return eng;
 };
@@ -444,36 +450,58 @@ Engine.prototype.forgetConnection = function(portName) {
     this.emit('connectionClose',portName,io.type);
 };
 
+Engine.prototype.closeAllConnections = function(type,cb) {
+    var   eng = this;
+    var ports = eng.connIndex[type] || [];
+    var     n = ports.length;
+    if (n===0)
+        cb();
+    else {
+        eng.on('connectionClose',function(port,type1) {
+            if (type===type1)
+                n--;
+            if (n===0)
+                cb();
+        });
+        ports.forEach(function(port) {
+            eng.closeConnection(port);
+        });
+    }
+};
+
 Engine.prototype.addConnection = function(portName,io) {
-    // +++ probably shouldn't be allowed to add data connections unless master +++
     var eng = this;
     if (eng.conns[portName]!==undefined)
         throw new VError("already have connection for %j",portName);
     if (!this.connIndex[io.type])
         this.connIndex[io.type] = [];
     eng.conns[portName] = io;
-    this.connIndex[io.type].push(portName);
-    io.i.on('readable',function() {
-        for (;;) {
-            var js = io.i.read();
-            if (js!==null) {
-                switch (io.type) {
-                case 'data':
-                    if (js instanceof Array && js.length===2) {
-                        js.push({port:portName});
-                        eng.update(js);
-                    } else
-                        eng.closeConnection(portName);
-                    break;
-                case 'replication':
-                case 'admin':
-                default:
+    eng.connIndex[io.type].push(portName);
+    switch (io.type) {
+    case 'admin':
+        eng.administer(portName);
+        break;
+    case 'replication': {
+        var st = fs.statSync(path.join(eng.prevalenceDir,'state','journal'));
+        io = eng.conns[portName];
+        io.o.write(['open',{journalSize:st.size}]);
+        break;
+    }
+    case 'data': {
+        io = eng.conns[portName];
+        io.i.on('readable',function() {
+            var js;
+            while ((js=io.i.read())!==null) {
+                if (js instanceof Array && js.length===2) {
+                    js.push({port:portName});
+                    eng.update(js);
+                } else
                     eng.closeConnection(portName);
-                }
                 break;
             }
-        }
-    });
+        });
+    }
+    }
     eng.emit('connection',portName);
 };
 
@@ -514,6 +542,8 @@ Engine.prototype.listenHttp = function(mode,port,done) {
         default:
             // +++ jump around breaking things +++
         }
+        if (eng.mode!=='master' && io && io.type!=='admin')
+            io = null;
         if (io) {
             conn.pipe(io.i);
             io.o.pipe(conn);
@@ -565,35 +595,65 @@ Engine.prototype.journaliseCodeSources = function(type,item2,always,cb) {
         if (cb) cb(null);
 };
 
+Engine.prototype._become = function(mode,cb) {
+    var eng = this;
+    if (mode===eng.mode)
+        cb();
+    else switch (mode) {
+        case 'master': {
+            if (!eng.journal)
+                throw new VError("can't become master, journal not started");
+            eng.journaliseCodeSources('code',this.options.businessLogic,false,function(err) {
+                eng.listen(mode,function(){
+                    cb();
+                });
+            });
+            break;
+        }
+        case 'slave': {
+            eng.on('ready',function() {
+                eng.listen(mode,function(){
+                    cb();
+                });
+            });
+            eng.replicateFrom(eng.options.masterUrl);
+            break;
+        }
+        case 'idle':
+            switch (eng.mode) {
+            case 'master': {
+                var done = _.after(2,cb);
+                eng.http.close();
+                eng.closeAllConnections('data',done);
+                eng.closeAllConnections('replication',done);
+                break;
+            }
+            case 'slave':
+                eng.replicateSock.close();
+                eng.replicateSock = null;
+                cb();
+                break;
+            }
+            break;
+        default:
+            eng.emit('error',new VError("bad engine mode: %j",mode));
+            return;
+        }
+};
+
 Engine.prototype.become = function(mode) {
     var eng = this;
-    eng.chrjs.on('error',function(err){eng.emit(new VError(err,"chrjs error: "));});
-    switch (mode) {
-    case 'master': {
-        if (!eng.journal)
-            throw new VError("can't become master, journal not started");
-        eng.journaliseCodeSources('code',this.options.businessLogic,false,function(err) {
-            eng.listen(mode,function(){
-                eng.mode = mode;
-                eng.emit('mode',mode);
-            });
+    if (mode!=='idle' && eng.mode!=='idle') { // change mode via intervening 'idle'
+        eng._become('idle',function() {
+            eng.mode = 'idle';
+            eng.become(mode);
         });
-        break;
     }
-    case 'slave': {
-        eng.on('ready',function() {
-            eng.listen(mode,function(){
-                eng.mode = mode;
-                eng.emit('mode',mode);
-            });
+    else
+        eng._become(mode,function() {
+            eng.mode = mode;
+            eng.emit('mode',mode);
         });
-        eng.replicateFrom(eng.options.masterUrl);
-        break;
-    }
-    default:
-        this.emit('error',new VError("bad engine mode: %j",mode));
-        return;
-    }
 };
 
 Engine.prototype.journalise = function(type,data,cb) {
@@ -894,6 +954,8 @@ Engine.prototype.replicateFrom = function(url) { // `url` is base e.g. http://lo
         eng.chrjs.update(js[2]);
     };
 
+    eng.replicateSock = sock;
+
     rmRF.sync(path.join(eng.prevalenceDir,'state'));   // clear out state directory
     fs.mkdirSync(path.join(eng.prevalenceDir,'state'));
 
@@ -949,28 +1011,7 @@ Engine.prototype.replicateFrom = function(url) { // `url` is base e.g. http://lo
             eng.emit('closed',tidy,syshash);
         }
     };
-};
 
-Engine.prototype.setupNonDataConns = function() {
-    var eng = this;
-    eng.on('connection',function(port) {
-        switch (eng.conns[port].type) {
-        case 'admin':
-            eng.administer(port);
-            break;
-        case 'replication': {
-            var io = eng.conns[port];
-            var st = fs.statSync(path.join(eng.prevalenceDir,'state','journal'));
-            io.o.write(['open',{journalSize:st.size}]);
-        }
-        case 'data':
-            break;
-        }
-    });
-    eng.on('mode',function(mode) {
-        eng.broadcast(['mode',mode],'admin');
-    });
-    // +++
 };
 
 Engine.prototype.administer = function(port) {
@@ -987,8 +1028,8 @@ Engine.prototype.administer = function(port) {
                     break;
                 }
             } catch (e) {
-                console.log("!!! %j",e);
                 eng.closeConnection(port);
+                throw e;
             }
         }
     });

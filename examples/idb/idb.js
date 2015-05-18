@@ -69,14 +69,13 @@ FE3.prototype._write = function(chunk,encoding,cb) {
 };
 
 var createFE3Server = function(eng) {
-    var server = net.createServer(function(sock) {
+    return net.createServer(function(sock) {
         var  fe3 = new FE3(sock,eng,{});
         var name = util.format("fe3://%s:%d/",sock.remoteAddress,sock.remotePort);
         eng.addConnection(name,{i:fe3,o:fe3,type:'data'});
         sock.on('error',function(){sock.end();});
         sock.on('close',function(){eng.forgetConnection(name);});
     });
-    return server;
 };
 
 function IDBEngine(options) {
@@ -85,24 +84,30 @@ function IDBEngine(options) {
     eng.on('connectionClose',function(port) {
         eng.update(['logoff',{},{port:port}]);
     });
+    eng.fe3Server = null;
     return eng;
 }
 
 util.inherits(IDBEngine,Engine);
 
-IDBEngine.prototype.listen = function(mode,done) {
-    var    eng = this;
-    var  done2 = _.after(2,done);
-    Engine.prototype.listen.call(eng,mode,done2);
-    if (eng.options.ports.fe3) {
-        var fe3Server = createFE3Server(this);
-        fe3Server.on('listening',function() {
-            eng.emit('listen','fe3',eng.options.ports.fe3);
-            done2(null);
+IDBEngine.prototype._become = function(mode,cb) {
+    var  eng = this;
+    var done = _.after(2,function(){cb();});
+    Engine.prototype._become.call(eng,mode,done);
+    if (eng.fe3Server && eng.mode==='master' && mode==='idle') {
+        eng.fe3Server.close(function(err){
+            eng.fe3Server = null;
+            done(err);
         });
-        fe3Server.listen(eng.options.ports.fe3);
+    } else if (eng.options.ports.fe3 && eng.mode==='idle' && mode==='master') {
+        eng.fe3Server = createFE3Server(eng);
+        eng.fe3Server.on('listening',function() {
+            eng.emit('listen','fe3',eng.options.ports.fe3);
+            done();
+        });
+        eng.fe3Server.listen(eng.options.ports.fe3);
     } else
-        done2(null);
+        done();
 };
 
 exports.Engine = IDBEngine;
