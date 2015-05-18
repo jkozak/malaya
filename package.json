@@ -1,6 +1,6 @@
 {
   "name": "malaya",
-  "version": "0.3.3",
+  "version": "0.4.0",
   "description": "tiny vegetarian mosquito",
   "dependencies": {
     "argparse": "^1.0.2",
@@ -43,7 +43,7 @@
   },
   "scripts": {
     "test": "NODE_ENV=test mocha -R min --compilers chrjs:compiler -C test examples/*/test",
-    "start": "node malaya.js"
+    "start": "./malaya run"
   },
-  "main": "malaya.js"
+  "main": "malaya"
 }
