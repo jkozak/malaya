@@ -297,7 +297,7 @@ describe("Engine",function() {
                     assert.strictEqual(io.rcved.length,1);
                     assert.strictEqual(io.rcved[0][0],'engine');
                     assert.strictEqual((typeof io.rcved[0][1].syshash),'string');
-                    assert.strictEqual(io.rcved[0][1].mode,null);
+                    assert.strictEqual(io.rcved[0][1].mode,'idle');
                     done();
                 } catch (e) {done(e);}
             });
