@@ -1,8 +1,9 @@
 From: John Kozak <jk@thameslighter.net>
 Date: Thu, 14 May 2015 09:55:41 +0100
-State: new
+State: resolved
 Subject: new runtime stuff fails under streams3
 Message-Id: <931cc8ae786d5f13-0-artemis@renn>
+resolution: fixed
 
 `make tests` fails on node version other than v0.10 or early v0.11
 

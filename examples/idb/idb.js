@@ -90,10 +90,10 @@ function IDBEngine(options) {
 
 util.inherits(IDBEngine,Engine);
 
-IDBEngine.prototype.masterListen = function(done) {
+IDBEngine.prototype.listen = function(mode,done) {
     var    eng = this;
     var  done2 = _.after(2,done);
-    Engine.prototype.masterListen.call(eng,done2);
+    Engine.prototype.listen.call(eng,mode,done2);
     if (eng.options.ports.fe3) {
         var fe3Server = createFE3Server(this);
         fe3Server.on('listening',function() {

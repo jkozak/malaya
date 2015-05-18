@@ -1,0 +1,4 @@
+module.exports = store{
+    rule (-['_transform',...]);
+    rule (['b',f,{keep:false}],+['b',f,{keep:true}]);
+};

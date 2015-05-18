@@ -65,6 +65,22 @@ exports.LineStream = function(fn) {
     return ans;
 };
 
+// StringifyObjectStreamStream is the inverse of LineStream
+exports.StringifyObjectStream = function(fn) {
+    var ans = through2({writableObjectMode:true},function(chunk,encoding,cb) {
+        var s;
+        try {
+            s = fn(chunk);
+        } catch (err) {
+            this.emit('error',err);
+        }
+        this.push(s+'\n','utf8');
+        cb();
+    });
+    ans.setEncoding('utf8');
+    return ans;
+};
+
 // JSONParseStream gets \n-delimited JSON string data, and emits the parsed objects
 exports.JSONParseStream = function() {
     var ans = through2({readableObjectMode:true},function(chunk,encoding,cb) {

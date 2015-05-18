@@ -1,8 +1,9 @@
 From: John Kozak <jk@thameslighter.net>
 Date: Thu, 14 May 2015 20:44:04 +0100
-State: new
+State: resolved
 Subject: on `nvm` versions, require of a temp file with dependencies fails
 Message-Id: <e6a463108cb1afb5-0-artemis@renn>
+resolution: fixed
 
 see for example `test/cmdline.js`
 

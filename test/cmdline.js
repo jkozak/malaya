@@ -66,15 +66,13 @@ describe("cmdline",function() {
     describe("slave",function() {
     });
     describe("transform",function() {
-        var transform = function(data,source,check) { // a test driver for `transform`
+        var transform = function(data,sourcefn,check) { // a test driver for `transform`
             var dir = temp.mkdirSync();
             fillDirWithSomeData(dir,data,function(err) {
-                var tfm = path.join(dir,'tfm.chrjs');
-                fs.writeFileSync(tfm,source);
                 process.argv = [null,null,
                                 "-p",path.join(dir,'.prevalence'),
                                 "transform",
-                                tfm];
+                                path.join(__dirname,'tfm',sourcefn) ];
                 cmdline.run({callback:function(err) {
                     if (err) throw err;
                     var eng = new engine.Engine({dir:dir});
@@ -85,7 +83,7 @@ describe("cmdline",function() {
         };
         it("removes all facts by default",function(done) {
             transform([['a',{}]],
-                      "module.exports = store{};",
+                      "null.chrjs",
                       function(eng) {
                           var err = null;
                           try {
@@ -96,10 +94,7 @@ describe("cmdline",function() {
         });
         it("keeps explicitly requested facts",function(done) {
             transform([['b',{}],['c',{}]],
-                      "module.exports = store{"+
-                      " rule (-['_transform',...]);"+
-                      " rule (['b',f,{keep:false}],+['b',f,{keep:true}]);"+
-                      "};",
+                      "keep_b.chrjs",
                       function(eng) {
                           var err = null;
                           try {
@@ -111,9 +106,7 @@ describe("cmdline",function() {
         });
         it("has `_transform` for global operations",function(done) {
             transform([['b',{}],['c',{}]],
-                      "module.exports = store{"+
-                      " rule (-['_transform',...],+['theLot',{}]);"+
-                      "};",
+                      "global.chrjs",
                       function(eng) {
                           var err = null;
                           try {
@@ -125,7 +118,7 @@ describe("cmdline",function() {
         });
         it("makes entry in journal",function(done) {
             transform([['b',{}],['c',{}]],
-                      "module.exports = store{};",
+                      "null.chrjs",
                       function(eng) {
                           eng.buildHistoryStream(function(err,history) {
                               if (err)

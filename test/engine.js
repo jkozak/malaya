@@ -3,6 +3,8 @@ var  Engine = engine.Engine;
 
 var       _ = require("underscore");
 var  assert = require("assert");
+var  events = require("events");
+var  stream = require("stream");
 var    temp = require('temp').track();
 var      fs = require('fs');
 var    path = require('path');
@@ -202,11 +204,104 @@ describe("Engine",function() {
             });
         });
     });
+    var createIO = function(type) { // make a "terminal" which can be connected to an Engine
+        var ee = new events.EventEmitter();
+        var io = {
+            i:     new stream.PassThrough({objectMode:true}),
+            o:     new stream.PassThrough({objectMode:true}),
+            type:  type || 'data',
+            rcved: [],
+            on:    function(w,h){return ee.on(w,h);}
+        };
+        io.o.on('data',function(js) {
+            io.rcved.push(js);
+            ee.emit("rcved");
+        });
+        return io;
+    }
     describe("#addConnection",function() {
-        it("adds a connection",function(done) {
-            var eng = new Engine({dir:temp.mkdirSync()});
-            // +++
-            done();
+        it("sends input, receives output",function(done) {
+            var eng = new Engine({dir:           temp.mkdirSync(),
+                                  businessLogic: path.join(__dirname,'bl','output.chrjs') });
+            var  io = createIO();
+            eng.init();
+            eng.start();
+            eng.addConnection('test://1',io);
+            io.on('rcved',function() {
+                try {
+                    assert.deepEqual(io.rcved,[{msg:"will this do?"}]);
+                    done();
+                } catch (e) {done(e);}
+            });
+            io.i.write(['do_summat',{}]);
+        });
+        it("multiplexes",function(done) {
+            var eng = new Engine({dir:           temp.mkdirSync(),
+                                  businessLogic: path.join(__dirname,'bl','output.chrjs') });
+            var io1 = createIO();
+            var io2 = createIO();
+            var io3 = createIO();
+            var err = null;
+            var dun = _.after(3,function() {done(err);});
+            eng.init();
+            eng.start();
+            eng.addConnection('test://1',io1);
+            eng.addConnection('test://2',io2);
+            eng.addConnection('test://3',io3);
+            [io1,io2,io3].forEach(function(io) {
+                io.on('rcved',function() {
+                    try {
+                        assert.deepEqual(io.rcved,[{msg:"that's yer lot"}]);
+                        dun();
+                    } catch (e) {err=e;dun();}
+                });
+            });
+            io1.i.write(['do_em_all',{}]);
+        });
+    });
+    describe("replication",function() {
+        it("streams out the journal",function(done) {
+            var eng = new Engine({dir:           temp.mkdirSync(),
+                                  businessLogic: path.join(__dirname,'bl','null.chrjs') });
+            var io = createIO('replication');
+            eng.init();
+            eng.start();
+            eng.addConnection('test://replication/1',io);
+            eng.update(['something',{},{port:'test://'}]);
+            eng.update(['else',{},{port:'test://'}],function() {
+                try {
+                    assert.strictEqual(io.rcved.length,3);
+                    assert.strictEqual(        io.rcved[0][0],'open');
+                    assert.strictEqual((typeof io.rcved[0][1].journalSize),'number');
+                    assert.strictEqual((typeof io.rcved[1][0]),'number');
+                    assert.strictEqual(        io.rcved[1][1], 'update');
+                    assert.deepEqual  (        io.rcved[1][2], ['something',{},{port:'test://'}]);
+                    assert.strictEqual((typeof io.rcved[2][0]),'number');
+                    assert.strictEqual(        io.rcved[2][1], 'update');
+                    assert.deepEqual  (        io.rcved[2][2], ['else',{},{port:'test://'}]);
+                    assert(io.rcved[1][0]<io.rcved[2][0]); // timestamps are monotonic increasing, distinct
+                    done();
+                } catch (e) {done(e);}
+            });
+        });
+    });
+    describe("administration",function() {
+        it("supplies handy info on connect",function(done) {
+            var eng = new Engine({dir:           temp.mkdirSync(),
+                                  businessLogic: path.join(__dirname,'bl','null.chrjs') });
+            var io = createIO('admin');
+            eng.init();
+            eng.start();
+            io.on('rcved',function() {
+                try {
+                    assert.strictEqual(io.rcved.length,1);
+                    assert.strictEqual(io.rcved[0][0],'engine');
+                    assert.strictEqual((typeof io.rcved[0][1].syshash),'string');
+                    assert.strictEqual(io.rcved[0][1].mode,null);
+                    done();
+                } catch (e) {done(e);}
+            });
+            eng.addConnection('test://admin',io);
         });
     });
 });

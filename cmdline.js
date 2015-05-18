@@ -18,7 +18,8 @@ argparse.addArgument(['-p','--prevalence-directory'],
                      {
                          action:       'store',
                          defaultValue: '.prevalence',
-                         help:         "prevalence directory"
+                         help:         "prevalence directory",
+                         metavar:      'dir'
                      });
 argparse.addArgument(['-q','--quiet'],
                      {
@@ -89,14 +90,14 @@ addSubcommand('run',{addHelp:true});
 subcommands.run.addArgument(
     ['--no-auto'],
     {
-        action:       'store',
+        action:       'storeTrue',
         help:         "don't special-case _tick,_output,_restart"
     }
 );
 subcommands.run.addArgument(
     ['--no-tag-check'],
     {
-        action:       'store',
+        action:       'storeTrue',
         help:         "don't check tag"
     }
 );
@@ -153,12 +154,38 @@ addSubcommand('dump',{addHelp:true});
 subcommands.transform.addArgument(
     ['-s','--serialise'],
     {
-        action:       'store',
+        action:       'storeTrue',
         help:         "use malaya extended JSON serialisation format"
     }
 );
 
 addSubcommand('client',{addHelp:true});
+subcommands.client.addArgument(
+    ['-r','--replication'],
+    {
+        action:       'storeConst',
+        constant:     'replication/journal',
+        dest:         'urlPath',
+        help:         "connect to a replication stream"
+    }
+);
+subcommands.client.addArgument(
+    ['-a','--admin'],
+    {
+        action:       'storeConst',
+        constant:     'admin',
+        dest:         'urlPath',
+        help:         "connect to an admin stream"
+    }
+);
+subcommands.client.addArgument(
+    ['-n','--noninteractive'],
+    {
+        action:       'store',
+        nargs:        0,
+        help:         "just stream the output, ignore input"
+    }
+);
 subcommands.client.addArgument(
     ['url'],
     {
@@ -362,7 +389,7 @@ exports.run = function(opts0) {
             }
         }
         chrjs.add(['_transform',{},{keep:false}]);
-        eng.journaliseCodeSources('transform',args.transform,function(err) {
+        eng.journaliseCodeSources('transform',args.transform,true,function(err) {
             if (err)
                 cb(err);
             else {
@@ -373,7 +400,7 @@ exports.run = function(opts0) {
                         eng.chrjs.add([fact[0],fact[1]]);
                 }
                 if (args.source)
-                    eng.journaliseCodeSources('code',args.source);
+                    eng.journaliseCodeSources('code',args.source,false);
                 eng.stop(false,true,function(err1) {
                     cb(err1);
                 });
@@ -444,10 +471,17 @@ exports.run = function(opts0) {
 
     subcommands.client.exec = function() {
         var client = require('./client.js');
-        var url = args.url || client.findURL();
+        var    url = args.url || client.findURL(args.urlPath);
+        if (args.urlPath && args.url)
+            throw new VError("can't specify URL and connection type");
         if (!url)
             throw new VError("can't find a server to connect to");
-        client.run(url);
+        if (util.startsWith(url,'ws')) // allow as alternate protocol part
+            url = 'http'+url.slice(2);
+        if (args.noninteractive)
+            client.nonInteractive(url);
+        else
+            client.repl(url);
     };
     
     subcommands.logs.exec = function() {

@@ -11,7 +11,7 @@ var     path = require('path');
 var     util = require('./util.js');
 var     lock = require('./lock.js');
 
-exports.run = function(url) {
+exports.repl = function(url) {
     var sock = new SockJS(url);
 
     var write = function(js) {
@@ -54,12 +54,21 @@ exports.run = function(url) {
     };
 };
 
-exports.findURL = function() {
+exports.nonInteractive = function(url) {
+    var sock = new SockJS(url);
+
+    sock.onmessage = function(e) {
+        process.stdout.write(e.data);
+    };
+};
+
+exports.findURL = function(p) {
+    p = p || 'data';
     var data = lock.lockDataSync(path.join(process.cwd(),'.prevalence','lock'));
     if (data===null)
         return null;
     else
-        return util.format("http://localhost:%d/data",data.ports.http);
+        return util.format("http://localhost:%d/%s",data.ports.http,p);
 };
 
 if (require.main===module) {
@@ -70,7 +79,7 @@ if (require.main===module) {
     } else
         url1 = argv._[0];
     if (url1)
-        exports.run(url1);
+        exports.repl(url1);
     else 
         console.log("connection URL you want is something like `http://localhost:3000/data`");
 }

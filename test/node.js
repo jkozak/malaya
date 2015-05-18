@@ -19,7 +19,9 @@ describe("fs stream",function() {
         readable.setEncoding('utf8');
         readable.on('readable',function() {
             try {
-                assert.strictEqual(readable.read(),data);
+                var js = readable.read();
+                if (js!==null)
+                    assert.strictEqual(js,data);
             } catch (e) {err=e;}
         });
         readable.on('end',function(){done(err);});
@@ -36,17 +38,19 @@ describe("fs stream",function() {
         readable.setEncoding('utf8');
         readable.on('readable',function() {
             try {
-                switch (i++) {
-                case 0:
-                    assert.strictEqual(readable.read(),data1);
-                    fs.writeFile(filename,data2);
+                var js = readable.read();
+                if (js!==null)
+                    switch (i++) {
+                    case 0:
+                        assert.strictEqual(js,data1);
+                        fs.writeFile(filename,data2);
+                        break;
+                    case 1:
+                        assert.strictEqual(js,data2);
                     break;
-                case 1:
-                    assert.strictEqual(readable.read(),data2);
-                    break;
-                default:
-                    throw new VError('NYI: %j',i);
-                }
+                    default:
+                        throw new VError('NYI: %j',i);
+                    }
             } catch (e) {err=e;}
         });
         readable.on('end',function(){done(err);});

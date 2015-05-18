@@ -20,47 +20,43 @@ compiler installed you should be able to do this:
  $ cd ~/malaya
  $ make tests
 
-all 150+ tests should pass.
+all 280+ tests should pass.  In some configurations, the tests in
+`test/cmdline.js` fail, can just remove this file as a hack.
 
 
 What else can I do with it?
 ---------------------------
 
-See ~/malaya/examples/idb/README
+See ~/malaya/examples/idb/README and ~/malaya/examples/chat/README
+for examples.
 
-Can compile `chrjs` files with ~/malaya/bin/chrjsc`: resulting
-`.chrjs.js` files can be `require`d and used elsewhere, nothing else
-from malaya should be needed (does need `underscore`).
+Basically, create a directory, create the chrjs file there as
+`bl.chrjs` then do:
+
+ $ ~/malaya/malaya init
+ $ ~/malaya/malaya run
+
+This will start a websocket server on port 3000.  You can connect to
+it from another terminal, in the same directory:
+
+ $ ~/malaya/malaya client
+
+You can then hurl pieces of json at your server.  You can have
+multiple client  running for extra excitement.
+
+
+Also, can compile `chrjs` files with `~/malaya/malaya compile`:
+resulting `.chrjs.js` files can be `require`d and used elsewhere,
+nothing else from malaya should be needed (does need `underscore`).
 
 
 Hollywood interface
 -------------------
 
-Requires `node-webkit`.  Instructions to come, but, if you have it
-installed and have initialised the IDB example prevalent store above:
-
- $ cd ~/malaya/examples/gui
- $ nw .
-
-will bring up the gui.  It's pretty picky about `node-webkit`
-versions at the moment: I'm using v0.10.4
+Broken at the moment, waiting for `nwjs` 0.13 to fix it.
 
 
 Does it run on windows?
 -----------------------
 
-Mostly.
-
-The `Makefile` needs `make.exe` to run.  These are found in the
-c:\Utils directory which should be on the PATH.
-
-`MinGW` is needed to run the tests, and the clean-up code run after
-the tests crashes, but all the tests bar one (more file clean-up
-problems) run clean at the time of writing.
-
-It should of course be possible to use the MinGW version of `make`,
-but that fails for reasons as yet unknown.
-
-The idb example can be started with `node run`.  Python is required to
-import a DB from an `init_db.py` file.
-
+New runtime not tested yet.
