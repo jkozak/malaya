@@ -126,9 +126,10 @@ var Engine = exports.Engine = function(options) {
 
     eng.chrjs.tag     = options.tag;
 
+    eng.masterUrl     = eng.options.masterUrl;
     eng.replicateSock = null;  
 
-    eng.chrjs.on('error',function(err){eng.emit(new VError(err,"chrjs error: "));});
+    eng.chrjs.on('error',function(err){eng.emit(new VError(err,"chrjs: "));});
     eng.on('mode',function(mode) {
         eng.broadcast(['mode',mode],'admin');
     });
@@ -542,7 +543,7 @@ Engine.prototype.listenHttp = function(mode,port,done) {
         default:
             // +++ jump around breaking things +++
         }
-        if (eng.mode!=='master' && io && io.type!=='admin')
+        if (eng.mode!=='master' && io && io.type!=='admin') 
             io = null;
         if (io) {
             conn.pipe(io.i);
@@ -560,28 +561,18 @@ Engine.prototype.listenHttp = function(mode,port,done) {
                 eng.closeConnection(portName);
             });
             eng.addConnection(portName,io);
-        }
+        } else
+            conn.end();
     });
 
-    if (mode==='master') {
-        sock.installHandlers(eng.http,{prefix:'/data'});
-        sock.installHandlers(eng.http,{prefix:'/replication/journal'});
-    }
+    sock.installHandlers(eng.http,{prefix:'/data'});
+    sock.installHandlers(eng.http,{prefix:'/replication/journal'});
     sock.installHandlers(eng.http,{prefix:'/admin'});
 
     eng.http.listen(port,function() {
         eng.emit('listen','http',port,sock);
         done();
     });
-};
-
-Engine.prototype.listen = function(mode,done) {
-    var  eng = this;
-    var port = eng.options.ports.http;
-    if (port===undefined)
-        done(null);
-    else
-        eng.listenHttp(mode,port,done);
 };
 
 Engine.prototype.journaliseCodeSources = function(type,item2,always,cb) {
@@ -604,35 +595,38 @@ Engine.prototype._become = function(mode,cb) {
             if (!eng.journal)
                 throw new VError("can't become master, journal not started");
             eng.journaliseCodeSources('code',this.options.businessLogic,false,function(err) {
-                eng.listen(mode,function(){
-                    cb();
-                });
+                cb(err);
             });
             break;
         }
         case 'slave': {
-            eng.on('ready',function() {
-                eng.listen(mode,function(){
-                    cb();
+            if (eng.masterUrl) {
+                eng.on('ready',function(err) {
+                    cb(err);
                 });
-            });
-            eng.replicateFrom(eng.options.masterUrl);
+                eng.replicateFrom(eng.masterUrl);
+            } else
+                cb(new VError("no replication URL specified"));
             break;
         }
         case 'idle':
             switch (eng.mode) {
             case 'master': {
                 var done = _.after(2,cb);
-                eng.http.close();
                 eng.closeAllConnections('data',done);
                 eng.closeAllConnections('replication',done);
                 break;
             }
             case 'slave':
-                eng.replicateSock.close();
-                eng.replicateSock = null;
+                if (eng.replicateSock) {
+                    eng.replicateSock.close();
+                    eng.replicateSock = null;
+                }
                 cb();
                 break;
+            case 'init':
+                // +++ do http listen here (and only here +++
+                throw new Error('NYI');
             }
             break;
         default:
@@ -642,18 +636,35 @@ Engine.prototype._become = function(mode,cb) {
 };
 
 Engine.prototype.become = function(mode) {
-    var eng = this;
-    if (mode!=='idle' && eng.mode!=='idle') { // change mode via intervening 'idle'
-        eng._become('idle',function() {
-            eng.mode = 'idle';
-            eng.become(mode);
+    var  eng = this;
+    var port = eng.options.ports.http;
+    var main = function() {
+        if (mode!=='idle' && eng.mode!=='idle') { // change mode via intervening 'idle'
+            eng._become('idle',function(err) {
+                if (err)
+                    eng.emit('error',err);
+                else {
+                    eng.mode = 'idle';
+                    eng.become(mode);
+                }
+            });
+        }
+        else
+            eng._become(mode,function(err) {
+                if (err)
+                    eng.emit('error',err);
+                else {
+                    eng.mode = mode;
+                    eng.emit('mode',mode);
+                }
+            });
+    };
+    if (eng.http===null && (port || port===0)) {
+        eng.listenHttp(mode,port,function(err) {
+            main();
         });
-    }
-    else
-        eng._become(mode,function() {
-            eng.mode = mode;
-            eng.emit('mode',mode);
-        });
+    } else
+        main();
 };
 
 Engine.prototype.journalise = function(type,data,cb) {
@@ -956,8 +967,15 @@ Engine.prototype.replicateFrom = function(url) { // `url` is base e.g. http://lo
 
     eng.replicateSock = sock;
 
-    rmRF.sync(path.join(eng.prevalenceDir,'state'));   // clear out state directory
-    fs.mkdirSync(path.join(eng.prevalenceDir,'state'));
+    sock.onopen = function() {
+        var journalFile = path.join(eng.prevalenceDir,'state','journal');
+        if (fs.existsSync(journalFile)) {
+            var syshash = eng.hashes.putFileSync(journalFile);
+            console.log("saving old journal as: %s",syshash);
+        }
+        rmRF.sync(path.join(eng.prevalenceDir,'state'));
+        fs.mkdirSync(path.join(eng.prevalenceDir,'state'));
+    };
 
     sock.onmessage = function(e) {
         var js = util.deserialise(e.data);
@@ -1003,21 +1021,22 @@ Engine.prototype.replicateFrom = function(url) { // `url` is base e.g. http://lo
     };
     
     sock.onclose = function(err) {
-        if (err)
-            eng.emit('error',new VError("replication socket failed: %s",err.reason));
-        else {
-            var syshash = eng.hashes.putFileSync(path.join(eng.prevalenceDir,'state','journal'));
-            util.debug("*** ws socket closed %s: %s",(tidy?"nicely":"roughly"),syshash);
+        var syshash = eng.hashes.putFileSync(path.join(eng.prevalenceDir,'state','journal'));
+        util.debug("replication socket closed %s: %s",(tidy?"nicely":"roughly"),syshash);
+        eng.replicateSock = null;
+        eng.become('idle',function() {
             eng.emit('closed',tidy,syshash);
-        }
+        });
     };
-
 };
 
 Engine.prototype.administer = function(port) {
     var eng = this;
     var  io = eng.conns[port];
-    io.o.write(['engine',{syshash:eng.syshash,mode:eng.mode,tag:eng.tag}]);
+    io.o.write(['engine',{syshash:   eng.syshash,
+                          mode:      eng.mode,
+                          masterUrl: eng.masterUrl,
+                          tag:       eng.tag}]);
     io.i.on('readable',function() {
         var js;
         while ((js=io.i.read())!==null) {
@@ -1026,10 +1045,21 @@ Engine.prototype.administer = function(port) {
                 case 'mode':
                     eng.become(js[1]);
                     break;
+                case 'engine':
+                    for (var k in js[1]) {
+                        switch (k) {
+                        case 'mode':
+                            eng.become(js[1][k]);
+                            break;
+                        case 'masterUrl':
+                            eng.masterUrl = js[1][k];
+                            break;
+                        }
+                    }
                 }
             } catch (e) {
+                console.log(e);
                 eng.closeConnection(port);
-                throw e;
             }
         }
     });

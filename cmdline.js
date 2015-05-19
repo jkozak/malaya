@@ -41,13 +41,22 @@ var subparsers = argparse.addSubparsers({
     title: 'subcommands',
     dest:  'subcommandName'
 });
-var subcommands = {};
+var subcommands = exports.subcommands = {};
 
 var addSubcommand = exports.addSubcommand = function(name,opts) {
     subcommands[name] = subparsers.addParser(name,opts);
     assert.strictEqual(subcommands[name].exec,undefined); // we'll be using this later
     return subcommands[name];
 };
+
+addSubcommand('browse',{addHelp:true});
+subcommands.browse.addArgument(
+    ['what'],
+    {
+        action:       'store',
+        help:         "path of URL"
+    }
+);
 
 addSubcommand('cat',{addHelp:true});
 subcommands.cat.addArgument(
@@ -90,15 +99,47 @@ addSubcommand('run',{addHelp:true});
 subcommands.run.addArgument(
     ['--no-auto'],
     {
-        action:       'storeTrue',
-        help:         "don't special-case _tick,_output,_restart"
+        action:       'storeFalse',
+        defaultValue: true,
+        help:         "no _tick &c magic",
+        dest:         'auto'
     }
 );
 subcommands.run.addArgument(
     ['--no-tag-check'],
     {
-        action:       'storeTrue',
-        help:         "don't check tag"
+        action:       'storeFalse',
+        defaultValue: true,
+        help:         "don't check tag",
+        dest:         'tagCheck'
+    }
+);
+subcommands.run.addArgument(
+    ['-m','--mode'],
+    {
+        action:       'store',
+        choices:      ['idle','master','slave'],
+        defaultValue: 'master',
+        help:         "mode in which to start"
+    }
+);
+subcommands.run.addArgument(
+    ['-w','--web-port'],
+    {
+        action:       'store',
+        defaultValue: 3000,
+        type:         parseInt,
+        dest:         'webPort',
+        help:         "http port to listen on",
+        metavar:      "port"
+    });
+subcommands.run.addArgument(
+    ['-u','--master-url'],
+    {
+        action:       'store',
+        help:         "URL from which to replicate",
+        dest:         'masterUrl',
+        metavar:      'url'
     }
 );
 subcommands.run.addArgument(
@@ -112,24 +153,6 @@ subcommands.run.addArgument(
 );
 
 addSubcommand('save',{addHelp:true});
-
-addSubcommand('slave',{addHelp:true});
-subcommands.slave.addArgument(
-    ['masterUrl'],
-    {
-        action:       'store',
-        help:         "URL from which to replicate"
-    }
-);
-subcommands.slave.addArgument(
-    ['source'],
-    {
-        action:       'store',
-        nargs:        '?',
-        help:         "business logic source file",
-        defaultValue: 'bl.chrjs'
-    }
-);
 
 addSubcommand('transform',{addHelp:true});
 subcommands.transform.addArgument(
@@ -161,15 +184,6 @@ subcommands.transform.addArgument(
 
 addSubcommand('client',{addHelp:true});
 subcommands.client.addArgument(
-    ['-r','--replication'],
-    {
-        action:       'storeConst',
-        constant:     'replication/journal',
-        dest:         'urlPath',
-        help:         "connect to a replication stream"
-    }
-);
-subcommands.client.addArgument(
     ['-a','--admin'],
     {
         action:       'storeConst',
@@ -184,6 +198,15 @@ subcommands.client.addArgument(
         action:       'store',
         nargs:        0,
         help:         "just stream the output, ignore input"
+    }
+);
+subcommands.client.addArgument(
+    ['-r','--replication'],
+    {
+        action:       'storeConst',
+        constant:     'replication/journal',
+        dest:         'urlPath',
+        help:         "connect to a replication stream"
     }
 );
 subcommands.client.addArgument(
@@ -220,6 +243,7 @@ exports.run = function(opts0) {
     var hashAlgorithm = opts.hashAlgorithm || util.hashAlgorithm;
 
     exports.verbosity = args.verbose-args.quiet;
+    exports.args      = args;
 
     var findCallback = function() { // extract the callback for single-shot use.
         var cb;
@@ -251,7 +275,7 @@ exports.run = function(opts0) {
             process.exit(1);
         });
         process.on('SIGHUP',function() {
-            if (eng && eng.mode!==null) {
+            if (eng && eng.mode==='master') {
                 eng.stop(false,false);
                 eng.start();
             }
@@ -271,7 +295,11 @@ exports.run = function(opts0) {
 
     var _createEngine = opts.createEngine || function(options) {
         var engine = require('./engine.js');
-        return new engine.Engine(options);
+        var    eng = new engine.Engine(options);
+        eng.on('mode',function(mode) {
+            console.log("mode now: %s",mode);
+        });
+        return eng;
     };
     
     var createEngine = function(options) {
@@ -325,49 +353,42 @@ exports.run = function(opts0) {
             });
         }
     };
-    
+
+    var tickInterval = null;
     subcommands.run.exec = function() {
         checkDirectoriesExist();
-        var    auto = true;       // +++ from arg --no-auto
+        var    auto = args.auto;
         var  source = path.resolve(args.source);
-        var options = {businessLogic:source,ports:{http:3000}};
+        var options = {businessLogic: source,
+                       ports:         {http:args.webPort},
+                       masterUrl:     args.masterUrl};
         var     eng = createEngine(options);
-        eng.on('loaded',function(syshash) {
-            util.debug("loaded world: %s",syshash);
-        });
-        eng.start();
-        eng.on('mode',function(mode) {
-            if (mode==='master')
-                installSignalHandlers(eng);
-            // +++
-        });
         eng.on('listen',function(protocol,port) {
             util.debug("%s listening on *:%s",protocol,port);
         });
         eng.on('saved',function(syshash) {
             util.debug("saved world:  %s",syshash);
         });
-        if (auto) {
-            eng.update(['_restart',{},{port:'system://'}]);
-            setInterval(function() {
-                eng.update(['_tick',{date:new Date()},{port:'server:'}]);
-                eng.update(['_take-outputs',{},{port:'server:'}]);
-            },1000);
-        }
-        eng.become('master');
-    };
-    
-    subcommands.slave.exec = function() {
-        var  cb = findCallback();
-        if (!fs.existsSync(prevalenceDir))
-            fs.mkdirSync(prevalenceDir);
-        var eng = createEngine({businessLogic:path.resolve(args.source),masterUrl:args.masterUrl});
-        eng._makeHashes();
-        eng.once('ready',function() {
-            util.info("synced to %s",args.masterUrl);
-            cb(null);
+        eng.on('loaded',function(syshash) {
+            util.debug("loaded: %s",syshash);
         });
-        eng.become('slave');
+        eng.start();
+        eng.on('mode',function(mode) {
+            if (auto && mode==='master') {
+                eng.update(['_restart',{},{port:'system://'}]);
+                tickInterval = setInterval(function() {
+                    eng.update(['_tick',{date:new Date()},{port:'server:'}]);
+                    eng.update(['_take-outputs',{},{port:'server:'}]);
+                },1000);
+            } else {
+                if (tickInterval) 
+                    clearInterval(tickInterval);
+                tickInterval = null;            
+            }
+            // +++
+        });
+        installSignalHandlers(eng);
+        eng.become(args.mode);
     };
     
     subcommands.transform.exec = function() {

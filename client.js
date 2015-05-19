@@ -34,7 +34,7 @@ exports.repl = function(url) {
                     if (js)
                         write(js);
                 } catch (e) {
-                    console.log("!!! %j >> %s",answer,e.message);
+                    console.log("! %s",answer,e.message);
                 }
             var msgs = messages;
             messages = [];
@@ -45,12 +45,29 @@ exports.repl = function(url) {
         });
     }
 
+    rl.on('SIGINT',function() {
+        process.stdout.write(" interrupt\n");
+        rl.close();
+    });
+    rl.on('SIGCONT', function() {
+        rl.prompt();
+    });
+    rl.on('close',function() {
+        sock.close();
+    });
+
     sock.onmessage = function(e) {
         messages.push(e.data);
     };
 
     sock.onopen = function() {
         repl();
+    };
+    sock.onerror = function() {
+        sock.close();
+    };
+    sock.onclose = function() {
+        rl.close();
     };
 };
 
@@ -75,7 +92,6 @@ if (require.main===module) {
     var url1;
     if (argv._.length!==1) {
         url1 = exports.findURL();
-        // connection URL you want is probably `http://localhost:3000/data`
     } else
         url1 = argv._[0];
     if (url1)

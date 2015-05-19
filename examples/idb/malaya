@@ -5,10 +5,21 @@
 var cmdline = require('../../cmdline.js');
 var     idb = require('./idb.js');
 
+cmdline.subcommands.run.addArgument(
+    ['-f','--fe3'],
+    {
+        action:       'store',
+        type:         parseInt,
+        defaultValue: 5110,
+        help:         "FE3 port",
+        dest:         'fe3',
+        metavar:      'port'
+    }
+);
 cmdline.run({createEngine:function(opts) {
     opts.tag = 'idb';
     if (opts.ports)
-        opts.ports.fe3 = 5110;
+        opts.ports.fe3 = cmdline.args.fe3;
     return new idb.Engine(opts);
 }});
 
