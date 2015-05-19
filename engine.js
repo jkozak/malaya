@@ -133,6 +133,10 @@ var Engine = exports.Engine = function(options) {
     eng.on('mode',function(mode) {
         eng.broadcast(['mode',mode],'admin');
     });
+    eng.on('connectionClose',function(port,type) {
+        if (type==='replication')
+            eng.emit('slave',null);
+    });
 
     return eng;
 };
@@ -486,6 +490,21 @@ Engine.prototype.addConnection = function(portName,io) {
         var st = fs.statSync(path.join(eng.prevalenceDir,'state','journal'));
         io = eng.conns[portName];
         io.o.write(['open',{journalSize:st.size}]);
+        io.i.on('readable',function() {
+            var js;
+            while ((js=io.i.read())!==null) {
+                if (js instanceof Array && js.length===2) {
+                    if (js[0]==='sync') {
+                        var src = js[1];
+                        if (!src.host)
+                            src.host = io.host;
+                        eng.emit('slave',src);
+                    }
+                } else
+                    eng.closeConnection(portName);
+                break;
+            }
+        });
         break;
     }
     case 'data': {
@@ -528,6 +547,7 @@ Engine.prototype.listenHttp = function(mode,port,done) {
             io.type = 'replication';
             io.i    = new whiskey.LineStream(util.deserialise);
             io.o    = new whiskey.StringifyObjectStream(util.serialise);
+            io.host = conn.remoteAddress;
             break;
         case '/admin':
             if (conn.remoteAddress==='127.0.0.1') {
@@ -952,6 +972,10 @@ Engine.prototype.replicateHashes = function(url,callback) {
     next();
 };
 
+Engine.prototype._replicationSource = function() {
+    return {ports:{http:this.options.ports.http}};
+};
+
 Engine.prototype.replicateFrom = function(url) { // `url` is base e.g. http://localhost:3000/
     var     eng = this;
     var  SockJS = require('node-sockjs-client');
@@ -1002,6 +1026,7 @@ Engine.prototype.replicateFrom = function(url) { // `url` is base e.g. http://lo
                             doPending();
                             pending     = null;
                             eng.syshash = syshash;
+                            sock.send(util.serialise(['sync',eng._replicationSource()])+'\n');
                             eng.emit('ready',syshash);
                         }
                     });
