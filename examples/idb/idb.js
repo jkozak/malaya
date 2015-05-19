@@ -101,6 +101,12 @@ IDBEngine.prototype._become = function(mode,cb) {
         });
     } else if (eng.options.ports.fe3 && eng.mode==='idle' && mode==='master') {
         eng.fe3Server = createFE3Server(eng);
+        eng.on('slave',function(where) {
+            var sp = where===null ? {} : {port:where.ports.fe3,server:where.host};
+            for (var port in eng.conns) 
+                if (util.startsWith(port,'fe3:')) 
+                    eng.conns[port].o.write({spare:sp});
+        });
         eng.fe3Server.on('listening',function() {
             eng.emit('listen','fe3',eng.options.ports.fe3);
             done();
@@ -108,6 +114,14 @@ IDBEngine.prototype._become = function(mode,cb) {
         eng.fe3Server.listen(eng.options.ports.fe3);
     } else
         done();
+};
+
+IDBEngine.prototype._replicationSource = function() {
+    var eng = this;
+    var ans = Engine.prototype._replicationSource.call(eng);
+    if (eng.options.ports.fe3)
+        ans.ports.fe3 = eng.options.ports.fe3;
+    return ans;
 };
 
 exports.Engine = IDBEngine;

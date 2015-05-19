@@ -296,16 +296,23 @@ exports.run = function(opts0) {
     var _createEngine = opts.createEngine || function(options) {
         var engine = require('./engine.js');
         var    eng = new engine.Engine(options);
-        eng.on('mode',function(mode) {
-            console.log("mode now: %s",mode);
-        });
         return eng;
     };
     
     var createEngine = function(options) {
         options               = options || {};
         options.prevalenceDir = prevalenceDir;
-        return _createEngine(options);
+        var eng = _createEngine(options);
+        eng.on('mode',function(mode) {
+            console.log("mode now: %s",mode);
+        });
+        eng.on('slave',function(where) {
+            if (where)
+                console.log("slave online at: %j",where);
+            else
+                console.log("slave offline");
+        });
+        return eng;
     };
 
     subcommands.cat.exec = function() {
