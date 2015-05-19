@@ -18,12 +18,12 @@ exports.debug = function (msg) {
 
 exports.info = function (msg) {
     if (exports.verbosity>1)
-        _util.print(_util.format.apply(null,arguments)+'\n');
+        console.log(_util.format.apply(null,arguments)+'\n');
 };
 
 exports.error  = function (msg) {
     if (exports.verbosity>0)
-        _util.error(_util.format.apply(null,arguments));
+        console.error(_util.format.apply(null,arguments));
 };
 
 exports.printf  = function (msg) {
