@@ -209,6 +209,47 @@ describe("Engine",function() {
                 }
             }); 
         });
+        it("saves and reloads updates",function(done){
+            runInCountEngine(function(eng) {
+                assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:1}]]);
+                eng.stopPrevalence(false,function(err) {
+                    assert(!err);
+                    eng.startPrevalence(function(err) {
+                        assert(!err);
+                        assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:1}]]);
+                    });
+                });
+                done();
+            },{
+                init: function(eng) {
+                    fs.writeFileSync(path.join(eng.prevalenceDir,'state','journal'),
+                                     util.serialise([timestamp(),'update',['x',{}]])+'\n',
+                                     {flag:'a'} );
+                }
+            }); 
+        });
+        it("saves and reloads updates including journal",function(done){
+            runInCountEngine(function(eng) {
+                assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:1}]]);
+                eng.stopPrevalence(false,function(err) {
+                    assert(!err);
+                    fs.writeFileSync(path.join(eng.prevalenceDir,'state','journal'),
+                                     util.serialise([timestamp(),'update',['x',{}]])+'\n',
+                                     {flag:'a'} );
+                    eng.startPrevalence(function(err) {
+                        assert(!err);
+                        assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:2}]]);
+                    });
+                });
+                done();
+            },{
+                init: function(eng) {
+                    fs.writeFileSync(path.join(eng.prevalenceDir,'state','journal'),
+                                     util.serialise([timestamp(),'update',['x',{}]])+'\n',
+                                     {flag:'a'} );
+                }
+            }); 
+        });
         // +++ 
     });
     describe("walking utilities",function() {
