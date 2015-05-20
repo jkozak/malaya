@@ -1,16 +1,17 @@
-var  engine = require('../engine.js');
-var  Engine = engine.Engine;
+var    engine = require('../engine.js');
+var    Engine = engine.Engine;
 
-var       _ = require("underscore");
-var  assert = require("assert");
-var  events = require("events");
-var  stream = require("stream");
-var    temp = require('temp').track();
-var      fs = require('fs');
-var    path = require('path');
-var    util = require('../util.js');
-var  VError = require('verror');
-var    rmRF = require('rimraf');
+var         _ = require("underscore");
+var    assert = require("assert");
+var    events = require("events");
+var    stream = require("stream");
+var      temp = require('temp').track();
+var        fs = require('fs');
+var      path = require('path');
+var      util = require('../util.js');
+var    VError = require('verror');
+var      rmRF = require('rimraf');
+var timestamp = require('monotonic-timestamp');
 
 describe("makeInertChrjs",function() {
     it("behaves somewhat like a chrjs store with no rules",function() {
@@ -24,6 +25,46 @@ describe("makeInertChrjs",function() {
 });
 
 describe("Engine",function() {
+    var runInCountEngine = function(fn,opts) {
+        opts = opts || {};
+        var dir = temp.mkdirSync();
+        var eng = new Engine({dir:dir,businessLogic:'test/bl/count.chrjs'});
+        eng.init();
+        eng.start();
+        if (opts.init)
+            opts.init(eng);
+        eng.startPrevalence(function(e) {
+            assert(!e);
+            fn(eng);
+        });
+        };
+    var createIO = function(type) { // make a "terminal" which can be connected to an Engine
+        var ee = new events.EventEmitter();
+        var io = {
+            i:     new stream.PassThrough({objectMode:true}),
+            o:     new stream.PassThrough({objectMode:true}),
+            type:  type || 'data',
+            rcved: [],
+            on:    function(w,h){return ee.on(w,h);}
+        };
+        io.o.on('data',function(js) {
+            io.rcved.push(js);
+            ee.emit("rcved");
+        });
+        return io;
+    }
+    it("runInCountEngine is sane",function(done) {
+        runInCountEngine(function(eng) {
+            var io = createIO();
+            eng.addConnection('test://',io);
+            eng.chrjs.once('fire',function() {
+                assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:1}]]);
+                done();
+            });
+            assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:0}]]);
+            io.i.write(['x',{}]);
+        });
+    });
     describe("initialisation",function() {
         it("initialises various good things",function() {
             var dir = temp.mkdirSync();
@@ -65,63 +106,110 @@ describe("Engine",function() {
             assert.strictEqual(eng.hashes.getSync(h,{encoding:'utf8'}),x);
         });
     });
-    describe("#update",function() {
+    describe("#update",function(done) {
         it("writes items to store",function(done) {
             var dir = temp.mkdirSync();
             var eng = new Engine({dir:dir});
             eng.init();
             eng.start();
             assert.strictEqual(eng.chrjs.size,0);
-            eng.update(['test',{},{}],function() {
-                assert.strictEqual(eng.chrjs.size,1);
-                eng.on('stopped',function() {
-                    var i = 1;
-                    util.readFileLinesSync(path.join(eng.prevalenceDir,'state','journal'),function(l) {
-                        var js = util.deserialise(l);
-                        switch (i++) {
-                        case 1:
-                            assert.strictEqual(js[1],'previous');
-                            break;
-                        case 2:
-                            assert.strictEqual(js[1],'update');
-                            assert.deepEqual(js[2],['test',{},{}]);
-                            break;
-                        default:
-                            throw new VError("unexpected line %d %j",i,l);
-                        }
-                        return true;
+            eng.startPrevalence(function(err) {
+                if (err)
+                    done(err);
+                else
+                    eng.update(['test',{},{}],function() {
+                        assert.strictEqual(eng.chrjs.size,1);
+                        eng.stop(true,function(err1) {
+                            if (err1)
+                                done(err1);
+                            else {
+                                var i = 1;
+                                util.readFileLinesSync(path.join(eng.prevalenceDir,'state','journal'),function(l) {
+                                    var js = util.deserialise(l);
+                                    switch (i++) {
+                                    case 1:
+                                        assert.strictEqual(js[1],'previous');
+                                        break;
+                                    case 2:
+                                        assert.strictEqual(js[1],'update');
+                                        assert.deepEqual(js[2],['test',{},{}]);
+                                        break;
+                                    default:
+                                        throw new VError("unexpected line %d %j",i,l);
+                                    }
+                                    return true;
+                                });
+                                done();
+                            }
+                        });
                     });
-                    done();
-                });
-                eng.stop(true);
             });
         });
     });
-    describe("#stop",function() {
+    describe("#stop",function(done) {
         it("saves the world slowly",function() {
             var dir = temp.mkdirSync();
             var eng = new Engine({dir:dir});
             eng.init();
             eng.start();
-            rmRF.sync(path.join(eng.prevalenceDir,'state-OLD'));
-            eng.on('stopped',function() {
-                assert(fs.existsSync(path.join(eng.prevalenceDir,'state')));
-                assert(fs.existsSync(path.join(eng.prevalenceDir,'state-OLD')));
+            eng.startPrevalence(function(err1) {
+                if (err1)
+                    done(err1);
+                else {
+                    rmRF.sync(path.join(eng.prevalenceDir,'state-OLD'));
+                    eng.stopPrevalence(false,function(err2) {
+                        if (err2)
+                            cb(err2);
+                        else {
+                            assert(fs.existsSync(path.join(eng.prevalenceDir,'state')));
+                            assert(fs.existsSync(path.join(eng.prevalenceDir,'state-OLD')));
+                        }
+                    });
+                }
             });
-            eng.stop();
         });
         it("saves the world quickly",function() {
             var dir = temp.mkdirSync();
             var eng = new Engine({dir:dir});
             eng.init();
             eng.start();
-            rmRF.sync(path.join(eng.prevalenceDir,'state-OLD'));
-            eng.on('stopped',function() {
-                assert( fs.existsSync(path.join(eng.prevalenceDir,'state')));
-                assert(!fs.existsSync(path.join(eng.prevalenceDir,'state-OLD')));
+            eng.startPrevalence(function(err1) {
+                if (err1)
+                    done(err1);
+                else {
+                    rmRF.sync(path.join(eng.prevalenceDir,'state-OLD'));
+                    eng.stopPrevalence(true,function(err2) {
+                        if (err2)
+                            cb(err2);
+                        else {
+                            assert( fs.existsSync(path.join(eng.prevalenceDir,'state')));
+                            assert(!fs.existsSync(path.join(eng.prevalenceDir,'state-OLD')));
+                        }
+                    });
+                }
             });
-            eng.stop(true);
         });
+    });
+    describe("prevalence",function() {
+        it("loads from newly initted state directory",function(done) {
+            runInCountEngine(function(eng) {
+                assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:0}]]);
+                done();
+            });
+        });
+        it("replays updates",function(done){
+            runInCountEngine(function(eng) {
+                assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:1}]]);
+                done();
+            },{
+                init: function(eng) {
+                    fs.writeFileSync(path.join(eng.prevalenceDir,'state','journal'),
+                                     util.serialise([timestamp(),'update',['x',{}]])+'\n',
+                                     {flag:'a'} );
+                }
+            }); 
+        });
+        // +++ 
     });
     describe("walking utilities",function() {
         it("traverses the journal file",function(done) {
@@ -149,27 +237,30 @@ describe("Engine",function() {
             var done2 = _.after(2,done);
             eng.init();
             eng.start();
-            eng.stop();
-            eng.start();
-            eng.stop();
-            eng.walkJournalFile(path.join(dir,'.prevalence','state','journal'),
-                                false,
-                                function(err,x,what) {
-                                    assert.strictEqual(err,null);
-                                    if (what==='journal') {
-                                        eng.walkHashes(x,
-                                                       false,
-                                                       function(err,h,what) {
-                                                           if (what==='journal')
-                                                               hs.push(h);
-                                                       },
-                                                       function() {
-                                                           done2();
-                                                       });
-                                    }
-                                },
-                                function() {
-                                    done2(); });
+            eng.startPrevalence(function(e1) {
+                assert(!e1);
+                eng.stopPrevalence(false,function(e2) {
+                    assert(!e2);
+                    eng.walkJournalFile(path.join(dir,'.prevalence','state','journal'),
+                                        false,
+                                        function(err,x,what) {
+                                            assert.strictEqual(err,null);
+                                            if (what==='journal') {
+                                                eng.walkHashes(x,
+                                                               false,
+                                                               function(err,h,what) {
+                                                                   if (what==='journal')
+                                                                       hs.push(h);
+                                                               },
+                                                               function() {
+                                                                   done2();
+                                                               });
+                                            }
+                                        },
+                                        function() {
+                                            done2(); });
+                });
+            });
         });
     });
     describe("#loadData",function() {
@@ -181,11 +272,14 @@ describe("Engine",function() {
             fs.writeFileSync(dfn,JSON.stringify(data));
             eng.init();
             eng.start();
-            assert.deepEqual(_.values(eng.chrjs._private.orderedFacts),[]);
-            eng.loadData(dfn,function(err) {
+            eng.startPrevalence(function(err) {
                 assert(!err);
-                assert.deepEqual(_.values(eng.chrjs._private.orderedFacts),data);
-                done();
+                assert.deepEqual(_.values(eng.chrjs._private.orderedFacts),[]);
+                eng.loadData(dfn,function(err) {
+                    assert(!err);
+                    assert.deepEqual(_.values(eng.chrjs._private.orderedFacts),data);
+                    done();
+                });
             });
         });
         it("loads two items from a json file",function(done) {
@@ -196,29 +290,17 @@ describe("Engine",function() {
             fs.writeFileSync(dfn,JSON.stringify(data));
             eng.init();
             eng.start();
-            assert.deepEqual(_.values(eng.chrjs._private.orderedFacts),[]);
-            eng.loadData(dfn,function(err) {
+            eng.startPrevalence(function(err) {
                 assert(!err);
-                assert.deepEqual(_.values(eng.chrjs._private.orderedFacts),data);
-                done();
+                assert.deepEqual(_.values(eng.chrjs._private.orderedFacts),[]);
+                eng.loadData(dfn,function(err) {
+                    assert(!err);
+                    assert.deepEqual(_.values(eng.chrjs._private.orderedFacts),data);
+                    done();
+                });
             });
         });
     });
-    var createIO = function(type) { // make a "terminal" which can be connected to an Engine
-        var ee = new events.EventEmitter();
-        var io = {
-            i:     new stream.PassThrough({objectMode:true}),
-            o:     new stream.PassThrough({objectMode:true}),
-            type:  type || 'data',
-            rcved: [],
-            on:    function(w,h){return ee.on(w,h);}
-        };
-        io.o.on('data',function(js) {
-            io.rcved.push(js);
-            ee.emit("rcved");
-        });
-        return io;
-    }
     describe("#addConnection",function() {
         it("sends input, receives output",function(done) {
             var eng = new Engine({dir:           temp.mkdirSync(),
@@ -226,14 +308,17 @@ describe("Engine",function() {
             var  io = createIO();
             eng.init();
             eng.start();
-            eng.addConnection('test://1',io);
-            io.on('rcved',function() {
-                try {
-                    assert.deepEqual(io.rcved,[{msg:"will this do?"}]);
-                    done();
-                } catch (e) {done(e);}
+            eng.startPrevalence(function(err) {
+                assert(!err);
+                eng.addConnection('test://1',io);
+                io.on('rcved',function() {
+                    try {
+                        assert.deepEqual(io.rcved,[{msg:"will this do?"}]);
+                        done();
+                    } catch (e) {done(e);}
+                });
+                io.i.write(['do_summat',{}]);
             });
-            io.i.write(['do_summat',{}]);
         });
         it("multiplexes",function(done) {
             var eng = new Engine({dir:           temp.mkdirSync(),
@@ -245,18 +330,21 @@ describe("Engine",function() {
             var dun = _.after(3,function() {done(err);});
             eng.init();
             eng.start();
-            eng.addConnection('test://1',io1);
-            eng.addConnection('test://2',io2);
-            eng.addConnection('test://3',io3);
-            [io1,io2,io3].forEach(function(io) {
-                io.on('rcved',function() {
-                    try {
-                        assert.deepEqual(io.rcved,[{msg:"that's yer lot"}]);
-                        dun();
-                    } catch (e) {err=e;dun();}
+            eng.startPrevalence(function(err) {
+                assert(!err);
+                eng.addConnection('test://1',io1);
+                eng.addConnection('test://2',io2);
+                eng.addConnection('test://3',io3);
+                [io1,io2,io3].forEach(function(io) {
+                    io.on('rcved',function() {
+                        try {
+                            assert.deepEqual(io.rcved,[{msg:"that's yer lot"}]);
+                            dun();
+                        } catch (e) {err=e;dun();}
+                    });
                 });
+                io1.i.write(['do_em_all',{}]);
             });
-            io1.i.write(['do_em_all',{}]);
         });
     });
     describe("replication",function() {
@@ -266,22 +354,25 @@ describe("Engine",function() {
             var io = createIO('replication');
             eng.init();
             eng.start();
-            eng.addConnection('test://replication/1',io);
-            eng.update(['something',{},{port:'test://'}]);
-            eng.update(['else',{},{port:'test://'}],function() {
-                try {
-                    assert.strictEqual(io.rcved.length,3);
-                    assert.strictEqual(        io.rcved[0][0],'open');
-                    assert.strictEqual((typeof io.rcved[0][1].journalSize),'number');
-                    assert.strictEqual((typeof io.rcved[1][0]),'number');
-                    assert.strictEqual(        io.rcved[1][1], 'update');
-                    assert.deepEqual  (        io.rcved[1][2], ['something',{},{port:'test://'}]);
-                    assert.strictEqual((typeof io.rcved[2][0]),'number');
-                    assert.strictEqual(        io.rcved[2][1], 'update');
-                    assert.deepEqual  (        io.rcved[2][2], ['else',{},{port:'test://'}]);
-                    assert(io.rcved[1][0]<io.rcved[2][0]); // timestamps are monotonic increasing, distinct
-                    done();
-                } catch (e) {done(e);}
+            eng.startPrevalence(function(err) {
+                assert(!err);
+                eng.addConnection('test://replication/1',io);
+                eng.update(['something',{},{port:'test://'}]);
+                eng.update(['else',{},{port:'test://'}],function() {
+                    try {
+                        assert.strictEqual(io.rcved.length,3);
+                        assert.strictEqual(        io.rcved[0][0],'open');
+                        assert.strictEqual((typeof io.rcved[0][1].journalSize),'number');
+                        assert.strictEqual((typeof io.rcved[1][0]),'number');
+                        assert.strictEqual(        io.rcved[1][1], 'update');
+                        assert.deepEqual  (        io.rcved[1][2], ['something',{},{port:'test://'}]);
+                        assert.strictEqual((typeof io.rcved[2][0]),'number');
+                        assert.strictEqual(        io.rcved[2][1], 'update');
+                        assert.deepEqual  (        io.rcved[2][2], ['else',{},{port:'test://'}]);
+                        assert(io.rcved[1][0]<io.rcved[2][0]); // timestamps are monotonic increasing, distinct
+                        done();
+                    } catch (e) {done(e);}
+                });
             });
         });
     });

@@ -30,10 +30,13 @@ describe("utility functions for this test file",function() {
                 var eng = new engine.Engine({dir:dir});
                 var err = null
                 eng.start();
-                try {
-                    assert.strictEqual(eng.chrjs.size,2);
-                } catch (e) {err=e;}
-                done(err);
+                eng.startPrevalence(function(err) {
+                    assert(!err);
+                    try {
+                        assert.strictEqual(eng.chrjs.size,2);
+                    } catch (e) {err=e;}
+                    done(err);
+                });
             });
         });
     });
@@ -77,7 +80,10 @@ describe("cmdline",function() {
                     if (err) throw err;
                     var eng = new engine.Engine({dir:dir});
                     eng.start();
-                    check(eng);
+                    eng.startPrevalence(function(err) {
+                        assert(!err);
+                        check(eng);
+                    });
                 }});
             });
         };

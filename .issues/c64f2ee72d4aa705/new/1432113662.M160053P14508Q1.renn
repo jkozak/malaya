@@ -1,0 +1,8 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Wed, 20 May 2015 10:21:02 +0100
+Subject: slave doesn't see updates entered after master start but before slave connect
+State: resolved
+Message-Id: <c64f2ee72d4aa705-0-artemis@renn>
+resolution: duplicate
+original: d1dd9c046b935862
+

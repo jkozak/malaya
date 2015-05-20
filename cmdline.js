@@ -267,7 +267,7 @@ exports.run = function(opts0) {
         process.on('SIGINT',function() {
             process.stderr.write(' interrupt\n');
             if (eng)
-                eng.stop();
+                eng.stopPrevalence(false,function(){eng.stop();});
             process.exit(1);
         });
         process.on('SIGQUIT',function() {
@@ -276,8 +276,9 @@ exports.run = function(opts0) {
         });
         process.on('SIGHUP',function() {
             if (eng && eng.mode==='master') {
-                eng.stop(false,false);
-                eng.start();
+                eng.stopPrevalence(false,function(err) {
+                    eng.startPrevalence();
+                });
             }
         });
         process.on('exit',function(code) {
@@ -348,14 +349,19 @@ exports.run = function(opts0) {
         var eng = createEngine({businessLogic:path.resolve(args.source)});
         var  cb = findCallback();
         eng.init();
+        eng.start();
         if (args.data) {
-            eng.start();
-            eng.loadData(args.data,function(err) {
-                if (err) 
-                    cb(err);
+            eng.startPrevalence(function(err1) {
+                if (err1)
+                    cb(err1);
                 else
-                    eng.stop(false,true,function(err1) {
-                        cb(err1);
+                    eng.loadData(args.data,function(err2) {
+                        if (err2) 
+                            cb(err2);
+                        else
+                            eng.stopPrevalence(false,function(err3) {
+                                cb(err3);
+                            });
                     });
             });
         }
@@ -408,31 +414,31 @@ exports.run = function(opts0) {
         var      t;
         eng.chrjs = engine.makeInertChrjs();
         eng.start();
-        for (t=1;t<eng.chrjs.t;t++) {
-            fact = eng.chrjs.get(t+'');
-            if (fact) {
-                if (!(fact instanceof Array && fact.length===2))
-                    throw new VError("bad fact in store to be transformed: %j",fact);
-                chrjs.add([fact[0],fact[1],{keep:false}]);
-            }
-        }
-        chrjs.add(['_transform',{},{keep:false}]);
-        eng.journaliseCodeSources('transform',args.transform,true,function(err) {
-            if (err)
-                cb(err);
-            else {
-                eng.chrjs = args.source ? engine.compile(path.resolve(args.source)) : engine.makeInertChrjs();
-                for (t=1;t<chrjs.t;t++) {
-                    fact = chrjs.get(t+'');
-                    if (fact && (fact.length===2 || fact[2].keep)) 
-                        eng.chrjs.add([fact[0],fact[1]]);
+        eng.startPrevalence(function(err) {
+            for (t=1;t<eng.chrjs.t;t++) {
+                fact = eng.chrjs.get(t+'');
+                if (fact) {
+                    if (!(fact instanceof Array && fact.length===2))
+                        throw new VError("bad fact in store to be transformed: %j",fact);
+                    chrjs.add([fact[0],fact[1],{keep:false}]);
                 }
-                if (args.source)
-                    eng.journaliseCodeSources('code',args.source,false);
-                eng.stop(false,true,function(err1) {
-                    cb(err1);
-                });
             }
+            chrjs.add(['_transform',{},{keep:false}]);
+            eng.journaliseCodeSources('transform',args.transform,true,function(err1) {
+                if (err1)
+                    cb(err1);
+                else {
+                    eng.chrjs = args.source ? engine.compile(path.resolve(args.source)) : engine.makeInertChrjs();
+                    for (t=1;t<chrjs.t;t++) {
+                        fact = chrjs.get(t+'');
+                        if (fact && (fact.length===2 || fact[2].keep)) 
+                            eng.chrjs.add([fact[0],fact[1]]);
+                    }
+                    if (args.source)
+                        eng.journaliseCodeSources('code',args.source,false);
+                    eng.stopPrevalence(false,cb);
+                }
+            });
         });
     };
 
@@ -477,6 +483,7 @@ exports.run = function(opts0) {
     };
 
     subcommands.dump.exec = function() {
+        checkDirectoriesExist();
         var engine = require('./engine.js');
         var    eng = createEngine({});
         var   fact;
@@ -491,10 +498,6 @@ exports.run = function(opts0) {
                 process.stdout.write('\n');
             }
         }
-        eng.stop(false,true,function(err1) {
-            var cb = findCallback();
-            cb(err1);
-        });
     };
 
     subcommands.client.exec = function() {
