@@ -161,27 +161,23 @@ Engine.prototype._saveWorld = function() {
     return syshash;
 };
 
-Engine.prototype.stop = function(quick,unlock,cb) {
-    unlock = unlock===undefined ? true : unlock;
-    var   eng = this;
-    var done2 = _.after(2,function() {
-        eng.emit('stopped');
-        if (cb) cb(null);
-    });
-
+Engine.prototype.stopPrevalence = function(quick,cb) {
+    var eng = this;
     eng.journal.on('finish',function() {
-        done2();
+        if (!quick) 
+            eng._saveWorld();
+        if (cb) cb();
     });
-    
     eng.journal.end();
     eng.journal = null;
-    if (!quick) 
-        eng._saveWorld();
+};
 
+Engine.prototype.stop = function(unlock,cb) {
+    unlock = unlock===undefined ? true : unlock;
+    var eng = this;
     if (unlock)
-        lock.unlockSync(path.join(this.prevalenceDir,'lock'));
-
-    done2();
+        lock.unlockSync(path.join(eng.prevalenceDir,'lock'));
+    if (cb) cb();
 };
 
 Engine.prototype._ensureStateDirectory = function() {
@@ -287,26 +283,33 @@ Engine.prototype.init = function(data) {
     eng.syshash = eng._saveWorld();
 };
 
-Engine.prototype.start = function() { //N.B. does not update the prevalence dir or its contents (except `lock`)
-    var      eng = this;
-    var jrnlFile = path.join(eng.prevalenceDir,'state','journal');
+Engine.prototype.start = function(cb) {
+    var eng = this;
     lock.lockSync(path.join(eng.prevalenceDir,'lock'),eng.options);
-    eng._ensureStateDir();
     eng._makeHashes();
+    if (cb) cb();
+};
+
+Engine.prototype.startPrevalence = function(cb) {
+    var eng = this;
+    eng._ensureStateDir();
+    var jrnlFile = path.join(eng.prevalenceDir,'state','journal');
     eng._loadWorld();
     util.readFileLinesSync(jrnlFile,function(l) { // replay 
         var js = util.deserialise(l);
         switch (js[1]) {
         case 'update':
-            eng.chrjs.update(js);
+            eng.chrjs.update(js[2]);
             break;
         case 'previous':
             if (js[2]!==eng.syshash)
                 throw new VError("syshash  wanted: %s  got: %s",eng.syshash,js[2]);
             break;
         }
+        return true;
     });
     eng.journal = fs.createWriteStream(jrnlFile,{flags:'a'});
+    if (cb) cb();
 };
 
 Engine.prototype.cacheFile = function(fn,cb) {
@@ -612,10 +615,11 @@ Engine.prototype._become = function(mode,cb) {
         cb();
     else switch (mode) {
         case 'master': {
-            if (!eng.journal)
-                throw new VError("can't become master, journal not started");
-            eng.journaliseCodeSources('code',this.options.businessLogic,false,function(err) {
-                cb(err);
+            eng.startPrevalence(function(err) {
+                if (err)
+                    cb(err);
+                else
+                    eng.journaliseCodeSources('code',eng.options.businessLogic,false,cb);
             });
             break;
         }
@@ -624,29 +628,33 @@ Engine.prototype._become = function(mode,cb) {
                 eng.on('ready',function(err) {
                     cb(err);
                 });
-                eng.replicateFrom(eng.masterUrl);
+                eng.replicateFrom(eng.masterUrl); // `startPrevalence` done in here
             } else
                 cb(new VError("no replication URL specified"));
             break;
         }
         case 'idle':
             switch (eng.mode) {
-            case 'master': {
-                var done = _.after(2,cb);
-                eng.closeAllConnections('data',done);
-                eng.closeAllConnections('replication',done);
+            case 'master':
+                // +++ no more `update`s should be done +++
+                eng.stopPrevalence(true,function(err) {
+                    if (err)
+                        cb(err);
+                    else {
+                        var done = _.after(2,cb);
+                        eng.closeAllConnections('data',done);
+                        eng.closeAllConnections('replication',done);
+                    }
+                });
                 break;
-            }
             case 'slave':
+                // `stopPrevalence` is done in replication code
                 if (eng.replicateSock) {
                     eng.replicateSock.close();
                     eng.replicateSock = null;
                 }
                 cb();
                 break;
-            case 'init':
-                // +++ do http listen here (and only here +++
-                throw new Error('NYI');
             }
             break;
         default:
@@ -879,9 +887,7 @@ Engine.prototype.replicateFile = function(filename,url,opts,callback) {
     var wstream = fs.createWriteStream(filename);
     http.get(url,function(response) { // +++ opts +++
         response.pipe(wstream);
-        wstream.on('finish', function() {
-            wstream.close(callback);
-        });
+        wstream.on('finish',callback);
     });
 };
 
@@ -997,7 +1003,8 @@ Engine.prototype.replicateFrom = function(url) { // `url` is base e.g. http://lo
             var syshash = eng.hashes.putFileSync(journalFile);
             console.log("saving old journal as: %s",syshash);
         }
-        rmRF.sync(path.join(eng.prevalenceDir,'state'));
+        if (fs.existsSync(path.join(eng.prevalenceDir,'state')))
+            rmRF.sync(path.join(eng.prevalenceDir,'state'));
         fs.mkdirSync(path.join(eng.prevalenceDir,'state'));
     };
 
@@ -1016,18 +1023,24 @@ Engine.prototype.replicateFrom = function(url) { // `url` is base e.g. http://lo
                             eng.emit('replicated','hashes');
                             eng.emit('loaded','code');
                             eng.start();
-                            eng.emit('loaded','state');
-                            var doPending = function() {
-                                if (pending.length!==0) {
-                                    update(pending.pop());
+                            eng.startPrevalence(function(err2) {
+                                if (err2)
+                                    eng.emit('error',err2);
+                                else {
+                                    eng.emit('loaded','state');
+                                    var doPending = function() {
+                                        if (pending.length!==0) {
+                                            update(pending.pop());
+                                            doPending();
+                                        }
+                                    };
                                     doPending();
+                                    pending     = null;
+                                    eng.syshash = syshash;
+                                    sock.send(util.serialise(['sync',eng._replicationSource()])+'\n');
+                                    eng.emit('ready',syshash);
                                 }
-                            };
-                            doPending();
-                            pending     = null;
-                            eng.syshash = syshash;
-                            sock.send(util.serialise(['sync',eng._replicationSource()])+'\n');
-                            eng.emit('ready',syshash);
+                            });
                         }
                     });
                 }
@@ -1046,11 +1059,17 @@ Engine.prototype.replicateFrom = function(url) { // `url` is base e.g. http://lo
     };
     
     sock.onclose = function(err) {
-        var syshash = eng.hashes.putFileSync(path.join(eng.prevalenceDir,'state','journal'));
-        util.debug("replication socket closed %s: %s",(tidy?"nicely":"roughly"),syshash);
-        eng.replicateSock = null;
-        eng.become('idle',function() {
-            eng.emit('closed',tidy,syshash);
+        eng.stopPrevalence(false,function(err1) {
+            if (err1)
+                eng.emit('error',err1);
+            else {
+                var syshash = eng.hashes.putFileSync(path.join(eng.prevalenceDir,'state','journal'));
+                util.debug("replication socket closed %s: %s",(tidy?"nicely":"roughly"),syshash);
+                eng.replicateSock = null;
+                eng.become('idle',function() {
+                    eng.emit('closed',tidy,syshash);
+                });
+            }
         });
     };
 };
