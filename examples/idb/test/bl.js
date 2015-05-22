@@ -461,13 +461,13 @@ describe("json-for-xml interactions",function() {
     describe("cookie",function() {
         it("should return cookie appropriately",function() {
             var users = USERS_JK_LOGGED_IN;
-            var   out = mkIDB(users).addReturningOneOutput(['cookie',{id:'2'},{port:users[0][1].port}]);
+            var   out = mkIDB(users).addReturningOneOutput(['cookie',{id:2},{port:users[0][1].port}]);
             assert.deepEqual(out[2].cookie._children,['eikooC']);
             assert.deepEqual(users,USERS_JK_LOGGED_IN);
         });
         it("should return error for non-existent cookie",function() {
             var users = USERS_JK_LOGGED_IN;
-            var   out = mkIDB(users).addReturningOneOutput(['cookie',{id:'0'},{port:users[0][1].port}]);
+            var   out = mkIDB(users).addReturningOneOutput(['cookie',{id:0},{port:users[0][1].port}]);
             assert.equal(out[2].cookie._children.length,0);
             assert.equal(out[2].cookie.error,"not found");
             assert.deepEqual(users,USERS_JK_LOGGED_IN);
@@ -475,8 +475,8 @@ describe("json-for-xml interactions",function() {
         it("should update cookies",function() {
             var users = USERS_JK_LOGGED_IN;
             var   idb = mkIDB(users);
-            idb.addReturningNoOutput(['store-cookie',{id:'2',_children:["cOOKIE"]},{port:users[0][1].port}]);
-            var out = idb.addReturningOneOutput(['cookie',{id:'2'},{port:users[0][1].port}]);
+            idb.addReturningNoOutput(['store-cookie',{id:2,_children:["cOOKIE"]},{port:users[0][1].port}]);
+            var out = idb.addReturningOneOutput(['cookie',{id:2},{port:users[0][1].port}]);
             assert.deepEqual(out[2].cookie._children,['cOOKIE']);
         });
     });

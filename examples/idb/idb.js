@@ -16,6 +16,88 @@ var NUL            = new Buffer('\x00');
 
 util.inherits(FE3,stream.Duplex);
 
+function fixXmlTypes(fact) {                // replace some type information lost to XML
+    switch (fact[0]) {
+    case 'market-status':
+        fact[1].ID         = parseInt(fact[1].ID);
+        fact[1].status     = parseInt(fact[1].status);
+        break;
+    case 'cookie':
+    case 'store-cookie':
+        fact[1].id         = parseInt(fact[1].id);
+        break;
+    case 'price':
+        fact[1].ID         = parseInt(fact[1].ID);
+        fact[1].seqNo      = parseInt(fact[1].seqNo);
+        fact[1].instrument = parseInt(fact[1].instrument);
+        fact[1].volume     = parseInt(fact[1].volume);
+        fact[1].owner      = parseInt(fact[1].owner);
+        fact[1].marketID   = parseInt(fact[1].marketID);
+        fact[1].minLotSize = (typeof fact[1].minLotSize)==='string' ? parseInt(fact[1].minLotSize) : 1000;
+        fact[1].isBuy      = !!parseInt(fact[1].isBuy);
+        fact[1].x          = parseFloat(fact[1].x);
+        break;
+    case 'trade':
+        fact[1].ID         = parseInt(fact[1].ID);
+        fact[1].seqNo      = parseInt(fact[1].seqNo);
+        fact[1].volume     = parseInt(fact[1].volume);
+        fact[1].priceID    = parseInt(fact[1].priceID);
+        fact[1].priceSeqNo = parseInt(fact[1].priceSeqNo);
+        fact[1].hitter     = parseInt(fact[1].hitter);
+        fact[1].marketID   = parseInt(fact[1].marketID);
+        break;
+    case 'AuctionTemplate':
+        fact[1].id = parseInt(fact[1].id);
+        break;
+    case 'PrepareAuction':
+        fact[1].id                   = parseInt(fact[1].id);
+        fact[1].instance             = parseInt(fact[1].instance);
+        fact[1].AuctionDuration      = parseInt(fact[1].AuctionDuration);
+        fact[1].MatchingDuration     = parseInt(fact[1].MatchingDuration);
+        fact[1].SecondChanceDuration = parseInt(fact[1].SecondChanceDuration);
+        fact[1]._children.forEach(function(c) {
+            c.AInst.InstID       = parseInt(c.AInst.InstID);
+            c.AInst.Midprice     = parseFloat(c.AInst.Midprice);
+            c.AInst.Tolerance    = parseFloat(c.AInst.Tolerance);
+            c.AInst.AddTolerance = parseFloat(c.AInst.Tolerance);
+        });
+        break;
+    case 'StartPreparedAuction':
+        fact[1].id = parseInt(fact[1].id);
+        break;
+    case 'AuctionPrice':
+        fact[1].value  = parseFloat(fact[1].value);
+        fact[1].volume = parseInt(fact[1].volume);
+        break;
+    case 'AuctionSecondChance':
+    case 'AuctionMatch':
+        fact[1].AuctionID = parseInt(fact[1].AuctionID);
+        fact[1].InstID    = parseInt(fact[1].InstID);
+        fact[1].Volume    = parseFloat(fact[1].Volume);
+        fact[1].IsBuy     = !!parseInt(fact[1].IsBuy);
+        break;
+    case 'AuctionPriceBlock':
+        fact[1].auction    = parseInt(fact[1].auction);
+        fact[1].instrument = parseInt(fact[1].instrument);
+        fact[1]._children.forEach(function(c) {
+            c.AuctionPrice.value  = parseFloat(c.AuctionPrice.value);
+            c.AuctionPrice.volume = parseInt(c.AuctionPrice.volume);
+        });
+        break;
+    case 'BigFigBlock':
+        fact[1]._children.forEach(function(c) {
+            c.BigFig.stock = parseInt(c.BigFig.stock);
+            c.BigFig.bid   = parseInt(c.BigFig.bid);
+        });
+        break;
+    case 'InstHighlight':
+        fact[1].InstID      = parseInt(fact[1].InstID);
+        fact[1].HighlightOn = !!parseInt(fact[1].HighlightOn);
+        break;
+    }
+    return fact;
+}
+
 function FE3(sock,eng) {
     var recved = new Buffer(0);
     var    fe3 = this;
@@ -34,7 +116,7 @@ function FE3(sock,eng) {
                     var jsx = x2j.parse(xml);
                     assert.equal(Object.keys(jsx).length,1);
                     var tag = Object.keys(jsx)[0];
-                    fe3.push([tag,jsx[tag]]);
+                    fe3.push(fixXmlTypes([tag,jsx[tag]]));
                     break;
                 }
                 case AP_HEARTBEAT:
