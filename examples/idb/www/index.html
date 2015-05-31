@@ -1,7 +1,95 @@
 <html>
   <head>
+    <style>
+     tr:nth-child(even) {
+       background-color: white;
+     }
+     tr:nth-child(odd) {
+       background-color: lightyellow;
+     }
+     td,th {
+       padding-right: 1em;
+     }
+    .watermark {
+       margin: 30px;
+       background: transparent;
+       width: 100px;
+       height: 30px;
+       line-height: 30px;
+       text-align: center;
+       color: #888;
+       font-weight: bold;
+       font-size: 30px;
+       -moz-transform:    rotate(-45deg);
+       -o-transform:      rotate(-45deg);
+       -webkit-transform: rotate(-45deg);
+       transform:         rotate(-45deg);
+       opacity: 0.2;
+      }
+    .ui-tabs .ui-tabs-nav li a {
+       padding: 0 1em;
+     } 
+    </style>
+    <link rel="stylesheet" href="http://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
+    <script src="http://code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script src="http://code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+    <script>
+     function ticker() {
+       $("#tabs").tabs();
+       $("#innerAllTabs").tabs();
+       setInterval(function() {
+	 var fg = $('#test').css('color');
+	 var bg = $('#test').css('backgroundColor');
+	 $('#test').css('backgroundColor',fg);
+	 $('#test').css('color',          bg);
+       },100);
+       }
+    </script>
   </head>
-  <body>
+  <body onload="ticker();">
     <h1>testing...
+      <p></p>
+      <div id="tabs" style="font-family:Verdana;font-size:12px;font-weight:bold;display:inline-block;padding:0">
+	<ul>
+	  <li><a href="#all">all</a></li>
+	  <li><a href="#custom1">custom 1</a></li>
+	  <li><a href="#custom2">custom 2</a></li>
+	  <li><a href="#custom3">custom 3</a></li>
+	</ul>
+	<div id="all" style="padding:0">
+	  <div id="innerAllTabs"  style="padding:0">
+	    <div id="innerAll" style="padding:0">
+	      <table style="font-family:Verdana;font-size:12px;font-weight:bold;border-collapse:collapse">
+		<thead>
+		  <tr style="background-color:black;color:white"><th>stock</th><th>bid</th><th>offer</th><th colspan=3>vols</th></tr>
+		</thead>
+		<tbody>
+		  <tr><td style="background-color:lightgrey;color:blue;font-size:70%" colspan=6>IL Fly</td></tr>
+		  <tr><td id='test'>OAT2/OAT3/TSP2</td><td>111.11</td><td></td><td style="text-align:right;padding:0">5</td><td style="text-align:center;color:grey;padding:0">X</td><td></td></tr>
+		  <tr><td>OAT3/OAT4/TSP2</td><td></td><td>222.22</td><td></td><td style="text-align:center;color:grey;padding:0">X</td><td style="padding:0">5</td></tr>
+		  <tr><td style="background-color:lightgrey;color:blue;font-size:70%" colspan=6>IL Outright - SPGBei (Spain)</td></tr>
+		  <tr><td>TESTSP1</td><td></td><td></td><td style="text-align:right;padding:0"></td><td style="text-align:center;color:grey;padding:0">X</td><td></td></tr>
+		  <tr><td>TESTSP2</td><td></td><td></td><td style="text-align:right;padding:0"></td><td style="text-align:center;color:grey;padding:0">X</td><td></td></tr>
+		  <tr><td>TESTSP3</td><td></td><td></td><td style="text-align:right;padding:0"></td><td style="text-align:center;color:grey;padding:0">X</td><td></td></tr>
+		  <tr><td>TESTSP4</td><td></td><td></td><td style="text-align:right;padding:0"></td><td style="text-align:center;color:grey;padding:0">X</td><td></td></tr>
+		  <tr><td>TESTSP5</td><td></td><td></td><td style="text-align:right;padding:0"></td><td style="text-align:center;color:grey;padding:0">X</td><td></td></tr>
+		  <tr><td>TESTSP6</td><td></td><td></td><td style="text-align:right;padding:0"></td><td style="text-align:center;color:grey;padding:0">X</td><td></td></tr>
+		  <tr><td>TESTSP7</td><td></td><td></td><td style="text-align:right;padding:0"></td><td style="text-align:center;color:grey;padding:0">X</td><td></td></tr>
+		  <tr><td>TESTSP8</td><td></td><td></td><td style="text-align:right;padding:0"></td><td style="text-align:center;color:grey;padding:0">X</td><td></td></tr>
+		  <tr><td>TESTSP9</td><td></td><td></td><td style="text-align:right;padding:0"></td><td style="text-align:center;color:grey;padding:0">X</td><td></td></tr>
+		</tbody>
+	      </table>
+	    </div>
+	    <ul>
+	      <li><a href="#innerAll">all</a></li>
+	      <li><a href="#innerLinkers">linkers</a></li>
+	      <li><a href="#innerISwaps">I-Swaps</a></li>
+	      <li><a href="#innerIOptions">I-Options</a></li>
+	    </ul>
+	  </div>
+	</div>
+	<div id="custom1">
+	</div>
+      </div>
   </body>
 </html>
