@@ -421,9 +421,6 @@ Engine.prototype.createExpressApp = function() {
         res.redirect('/index.html');
     });
     
-    if (eng.options.bowerDir)
-        app.use('/bower',express.static(eng.options.bowerDir));
-
     app.get('/*.chrjs',function(req,res) { // +++ eventually use disk cache +++
         var filename = path.join(webDir,req.path.substr(1));
         try {
