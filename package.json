@@ -5,6 +5,7 @@
   "dependencies": {
     "argparse": "^1.0.2",
     "basic-auth": "^1.0.1",
+    "browserify": "^10.2.3",
     "eslint": "^0.17.0",
     "esprima": "=1.2.2",
     "express": "^4.6.1",
@@ -14,6 +15,7 @@
     "morgan": "^1.2.2",
     "multistream": "^1.4.3",
     "node-sockjs-client": "^1.0.7",
+    "reactify": "^1.1.1",
     "recast": "^0.7.2",
     "rimraf": "~2.2.6",
     "sax": "^0.6.1",

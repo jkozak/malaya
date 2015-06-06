@@ -162,6 +162,10 @@ var createFE3Server = function(eng) {
 
 function IDBEngine(options) {
     var eng = this;
+    options.bundles = options.bundles || {};
+    options.bundles = {
+        "/bundle.js":['www/1.js']
+    };
     Engine.call(eng,options);
     eng.on('connectionClose',function(port) {
         eng.update(['logoff',{},{port:port}]);

@@ -38,6 +38,8 @@ var    through2 = require('through2');
 var multistream = require('multistream');
 var   basicAuth = require('basic-auth');
 var     express = require('express');
+var  browserify = require('browserify');
+var    reactify = require('reactify');
 var      morgan = require('morgan');
 var      recast = require('recast');
 var        http = require('http');
@@ -121,6 +123,7 @@ var Engine = exports.Engine = function(options) {
     options.webDir    = options.webDir || path.join(options.dir,'www');
     options.tag       = options.tag;
     options.ports     = options.ports || {http:3000};
+    options.bundles   = options.bundles || {};
     
     eng.prevalenceDir = options.prevalenceDir || path.join(options.dir,'.prevalence');
     eng.syshash       = null;
@@ -420,6 +423,20 @@ Engine.prototype.createExpressApp = function() {
     app.get('/',function(req,res) {
         res.redirect('/index.html');
     });
+
+    for (var k in eng.options.bundles) {
+        app.get(k,function(req,res) {
+            var files = eng.options.bundles[k];
+            files = Array.isArray(files) ? files : [files];
+            var b = browserify(files,{
+                extensions:['.jsx','.chrjs','.malaya'],
+                transform: [reactify]
+            });
+            res.setHeader("Content-Type","application/javascript");
+            b.bundle().pipe(res);
+            return;
+        });
+    }
     
     app.get('/*.chrjs',function(req,res) { // +++ eventually use disk cache +++
         var filename = path.join(webDir,req.path.substr(1));
