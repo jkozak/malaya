@@ -2,8 +2,8 @@
 // -*- mode:javascript -*-
 "use strict";
 
-var cmdline = require('../../cmdline.js');
-var     idb = require('./idb.js');
+var   cmdline = require('../../cmdline.js');
+var       idb = require('./idb.js');
 
 cmdline.subcommands.run.addArgument(
     ['-f','--fe3'],
@@ -16,10 +16,12 @@ cmdline.subcommands.run.addArgument(
         metavar:      'port'
     }
 );
+
 cmdline.run({createEngine:function(opts) {
+    var eng;
     opts.tag = 'idb';
     if (opts.ports)
         opts.ports.fe3 = cmdline.args.fe3;
-    return new idb.Engine(opts);
+    return eng = new idb.Engine(opts);
 }});
 

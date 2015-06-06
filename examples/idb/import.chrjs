@@ -2,25 +2,42 @@ const      _ = require('underscore');
 const    x2j = require('./x2j');
 const  faker = require('faker');
 
-const transform = store {
-    // filter the db data on its way in to remove the more egregious nasties
+// filter the db data on its way in to remove the more egregious nasties
+
+const  ROLES = {broker:1,trader:2,developer:256,auctionMonitor:1024};
+function importRoles(appRoles) {
+    var ans = '';
+    _.keys(ROLES).forEach(function(k) {
+        if (ROLES[k]&appRoles)
+            ans += k[0].toUpperCase();
+    });
+    return ans;
+}
+
+module.exports = store {
     rule (-['Permissions',{Password,AppRole,...rs},{keep:false}],                      // trailing pwd spaces;roles
           Password && Password.charAt(Password.length-1)===' ',
           +['Permissions',{Password:Password.trimRight(),AppRole,roles:importRoles(AppRole),...rs},{keep:true}]);
-    rule (-['Permissions',{ApplicationName:"John Kozak",Password,...rs},{keep:false}], // tweak my pwd
-          Password!=="JK",
+    
+    rule (-['Permissions',{ApplicationName:"John Kozak",...rs},{keep:false}],
           +['Permissions',{ApplicationName:"John Kozak",Password:"JK",...rs},{keep:true}]);
+    
+    rule (-['Permissions',{ApplicationID:52,...rs},{keep:false}],
+          +['Permissions',{ApplicationName:"Val Wardlaw",Password:"VW",...rs},{keep:true}]);
+    
     rule (-['Permissions',{ApplicationName,Password,...rs},{keep:false}],              // anonymise users and pwds
-          ApplicationName!=="John Kozak" && !rs.hasOwnProperty('anon'),
-          aname = faker.name.findName(),
-          apwd  = faker.internet.password(),
-          +['Permissions',{ApplicationName:aname,Password:apwd,anon:null,...rs},{keep:true}]);
+          +['Permissions',{ApplicationName:faker.name.findName(),
+                           Password:       faker.internet.password(),
+                           ...rs},{keep:true}]);
+    
     rule (-['MarketManager',{auctionId,...rs},{keep:false}],                           // default start auctionId
           _.isUndefined(auctionId),
           +['MarketManager',{auctionId:10000,...rs},{keep:true}] );
+    
     rule (-['FEConfig',{CookieData,data,...ps},{keep:false}],                          // remove embedded XML
-          _.isUndefined(data),
+          CookieData!==undefined,
           +['FEConfig',{data:x2j.parse(CookieData),...ps},{keep:true}] );
-    rule (-[tag,fields,{keep:false}],                                                  // copy everything else 
-          +[tag,fields,{keep:true}] );
+    
+    //rule (-[tag,fields,{keep:false}],                                                  // copy everything else 
+    //      +[tag,fields,{keep:true}] );
 }

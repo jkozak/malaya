@@ -27,7 +27,7 @@ function mkHeartbeat(d) {
         return {heartbeat:{timestamp:d.toTimeString().substring(0,9)+d.getDate()+'/'+(d.getMonth()+1)+'/'+(d.getYear()+1900)}};
 }
 
-// need to handle these messages:
+// need to handle these messages (X: done, .:partially done):
 //  X AuctionTemplateBlock
 //    AuctionTemplate
 //    AuctionDelAll
@@ -40,12 +40,12 @@ function mkHeartbeat(d) {
 //  X store-cookie
 //  X logon0
 //  X logon
-//    price
-//    trade
+//  . price
+//  . trade
 //  X market-status
 //    InstHightlight
-//    BigFigBlock
-//    EndBigFigBlock
+//  . BigFigBlock
+//  . EndBigFigBlock
 //    AuctionPriceBlock
 
 const IDB = store {

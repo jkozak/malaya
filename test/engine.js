@@ -9,9 +9,9 @@ var      temp = require('temp').track();
 var        fs = require('fs');
 var      path = require('path');
 var      util = require('../util.js');
+var  testutil = require('../testutil.js');
 var    VError = require('verror');
 var      rmRF = require('rimraf');
-var timestamp = require('monotonic-timestamp');
 
 describe("makeInertChrjs",function() {
     it("behaves somewhat like a chrjs store with no rules",function() {
@@ -24,47 +24,12 @@ describe("makeInertChrjs",function() {
     });
 });
 
+runInCountEngine = testutil.runInCountEngine;
+createIO         = testutil.createIO;
+makeTimestamp    = testutil.makeTimestamp;
+appendToJournal  = testutil.appendToJournal;
+
 describe("Engine",function() {
-    var runInCountEngine = function(fn,opts) {
-        opts = opts || {};
-        var dir = temp.mkdirSync();
-        var eng = new Engine({dir:dir,businessLogic:'test/bl/count.chrjs'});
-        eng.init();
-        eng.start();
-        if (opts.init)
-            opts.init(eng);
-        eng.startPrevalence(function(e) {
-            assert(!e);
-            fn(eng);
-        });
-        };
-    var createIO = function(type) { // make a "terminal" which can be connected to an Engine
-        var ee = new events.EventEmitter();
-        var io = {
-            i:     new stream.PassThrough({objectMode:true}),
-            o:     new stream.PassThrough({objectMode:true}),
-            type:  type || 'data',
-            rcved: [],
-            on:    function(w,h){return ee.on(w,h);}
-        };
-        io.o.on('data',function(js) {
-            io.rcved.push(js);
-            ee.emit("rcved");
-        });
-        return io;
-    }
-    it("runInCountEngine is sane",function(done) {
-        runInCountEngine(function(eng) {
-            var io = createIO();
-            eng.addConnection('test://',io);
-            eng.chrjs.once('fire',function() {
-                assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:1}]]);
-                done();
-            });
-            assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:0}]]);
-            io.i.write(['x',{}]);
-        });
-    });
     describe("initialisation",function() {
         it("initialises various good things",function() {
             var dir = temp.mkdirSync();
@@ -198,55 +163,44 @@ describe("Engine",function() {
             });
         });
         it("replays updates",function(done){
-            runInCountEngine(function(eng) {
-                assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:1}]]);
-                done();
-            },{
-                init: function(eng) {
-                    fs.writeFileSync(path.join(eng.prevalenceDir,'state','journal'),
-                                     util.serialise([timestamp(),'update',['x',{}]])+'\n',
-                                     {flag:'a'} );
+            runInCountEngine({
+                init: function(eng) {appendToJournal(eng,'update',['x',{}]);},
+                main: function(eng) {
+                    assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:1}]]);
+                    done();
                 }
             }); 
         });
         it("saves and reloads updates",function(done){
-            runInCountEngine(function(eng) {
-                assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:1}]]);
-                eng.stopPrevalence(false,function(err) {
-                    assert(!err);
-                    eng.startPrevalence(function(err) {
+            runInCountEngine({
+                init: function(eng) {appendToJournal(eng,'update',['x',{}]);},
+                main: function(eng) {
+                    assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:1}]]);
+                    eng.stopPrevalence(false,function(err) {
                         assert(!err);
-                        assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:1}]]);
+                        eng.startPrevalence(function(err) {
+                            assert(!err);
+                            assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:1}]]);
+                        });
                     });
-                });
-                done();
-            },{
-                init: function(eng) {
-                    fs.writeFileSync(path.join(eng.prevalenceDir,'state','journal'),
-                                     util.serialise([timestamp(),'update',['x',{}]])+'\n',
-                                     {flag:'a'} );
+                    done();
                 }
             }); 
         });
         it("saves and reloads updates including journal",function(done){
-            runInCountEngine(function(eng) {
-                assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:1}]]);
-                eng.stopPrevalence(false,function(err) {
-                    assert(!err);
-                    fs.writeFileSync(path.join(eng.prevalenceDir,'state','journal'),
-                                     util.serialise([timestamp(),'update',['x',{}]])+'\n',
-                                     {flag:'a'} );
-                    eng.startPrevalence(function(err) {
+            runInCountEngine({
+                init: function(eng) {appendToJournal(eng,'update',['x',{}]);},
+                main: function(eng) {
+                    assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:1}]]);
+                    eng.stopPrevalence(false,function(err) {
                         assert(!err);
-                        assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:2}]]);
+                        appendToJournal(eng,'update',['x',{}]);
+                        eng.startPrevalence(function(err) {
+                            assert(!err);
+                            assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:2}]]);
+                        });
                     });
-                });
-                done();
-            },{
-                init: function(eng) {
-                    fs.writeFileSync(path.join(eng.prevalenceDir,'state','journal'),
-                                     util.serialise([timestamp(),'update',['x',{}]])+'\n',
-                                     {flag:'a'} );
+                    done();
                 }
             }); 
         });

@@ -1,0 +1,6 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Sat, 30 May 2015 09:17:15 +0100
+Subject: plugin to catch LDAP or AD update events and run them as updates
+State: new
+Message-Id: <87c406d5efa8b8e8-0-artemis@renn>
+

@@ -206,4 +206,30 @@ IDBEngine.prototype._replicationSource = function() {
     return ans;
 };
 
+IDBEngine.prototype._logon = function(creds,port,cb) {
+    var eng = this;
+    console.log("*** _logon: %j %j",creds,port);
+    eng.conns[port] = {type:'data',
+                       i:   null,
+                       o:   new stream.PassThrough({objectMode:true})
+                      };
+    eng.conns[port].o
+        .on('data',
+            function(js) {
+                console.log("*** js: %j",js);
+                if (js.logon) {
+                    cb(null,!!js.logon.OK);
+                    eng.conns[port].o.end();                                 
+                }
+            })
+        .on('finish',function() {
+            //delete eng.conns[port];
+        });
+    eng.update(['logon',{user:creds.name,pw:creds.pass},{port:port}],
+               function(err) {
+                   if (err)
+                       cb(err);
+               });
+};
+
 exports.Engine = IDBEngine;

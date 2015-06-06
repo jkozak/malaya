@@ -4,6 +4,7 @@
   "description": "tiny vegetarian mosquito",
   "dependencies": {
     "argparse": "^1.0.2",
+    "basic-auth": "^1.0.1",
     "eslint": "^0.17.0",
     "esprima": "=1.2.2",
     "express": "^4.6.1",
