@@ -156,18 +156,18 @@ addSubcommand('save',{addHelp:true});
 
 addSubcommand('transform',{addHelp:true});
 subcommands.transform.addArgument(
+    ['--stdout'],
+    {
+        action:       'storeTrue',
+        defaultValue: false,
+        help:         "print transformed facts to stdout"
+    }
+);
+subcommands.transform.addArgument(
     ['transform'],
     {
         action:       'store',
         help:         "chrjs source file for transform"
-    }
-);
-subcommands.transform.addArgument(
-    ['source'],
-    {
-        action:       'store',
-        nargs:        '?',
-        help:         "chrjs source file for new business logic"
     }
 );
 
@@ -217,6 +217,7 @@ subcommands.client.addArgument(
         help:         "URL to connect to: `ws://<host>:<port>/<path>`"
     }
 );
+
 
 addSubcommand('logs',{addHelp:true});
 
@@ -403,13 +404,15 @@ exports.run = function(opts0) {
         installSignalHandlers(eng);
         eng.become(args.mode);
     };
-    
+
     subcommands.transform.exec = function() {
         checkDirectoriesExist();
+        require('./compiler.js'); // for .chrjs extension
         var     cb = findCallback();
-        var engine = require('./engine');
+        var engine = require('./engine.js');
         var    eng = createEngine({});
-        var  chrjs = engine.compile(path.resolve(args.transform));
+        var  chrjs = require(path.resolve(process.cwd(),args.transform));
+        var  print = args.stdout;
         var   fact;
         var      t;
         eng.chrjs = engine.makeInertChrjs();
@@ -418,27 +421,45 @@ exports.run = function(opts0) {
             for (t=1;t<eng.chrjs.t;t++) {
                 fact = eng.chrjs.get(t+'');
                 if (fact) {
-                    if (!(fact instanceof Array && fact.length===2))
-                        throw new VError("bad fact in store to be transformed: %j",fact);
-                    chrjs.add([fact[0],fact[1],{keep:false}]);
+                    if (!(fact instanceof Array && fact.length===2)) {
+                        console.log("bad fact in store to be transformed: %j",fact);
+                    }
+                    else  {
+                        chrjs.add([fact[0],fact[1],{keep:false}]);
+                    }
                 }
             }
-            chrjs.add(['_transform',{},{keep:false}]);
-            eng.journaliseCodeSources('transform',args.transform,true,function(err1) {
-                if (err1)
-                    cb(err1);
-                else {
-                    eng.chrjs = args.source ? engine.compile(path.resolve(args.source)) : engine.makeInertChrjs();
-                    for (t=1;t<chrjs.t;t++) {
-                        fact = chrjs.get(t+'');
-                        if (fact && (fact.length===2 || fact[2].keep)) 
-                            eng.chrjs.add([fact[0],fact[1]]);
+            chrjs.add(['_transform',{},{keep:false}]); // for global operations
+            if (print) {
+                for (t=1;t<chrjs.t;t++) {
+                    fact = chrjs.get(t+'');
+                    if (fact) {
+                        if (!(fact instanceof Array && [2,3].indexOf(fact.length)!==-1))
+                            return cb(new VError("bad fact from transform: %j",fact));
+                        if (fact.length===2 || fact[2].keep)
+                            process.stdout.write(JSON.stringify(fact)+'\n');
                     }
-                    if (args.source)
-                        eng.journaliseCodeSources('code',args.source,false);
-                    eng.stopPrevalence(false,cb);
                 }
-            });
+            } else {
+                // +++ create a `state-NEW` directory to put this in until it's known to be good +++
+                eng.journaliseCodeSources('transform',args.transform,true,function(err1) {
+                    if (err1)
+                        cb(err1);
+                    else {
+                        eng.chrjs = engine.makeInertChrjs();
+                        for (t=1;t<chrjs.t;t++) {
+                            fact = chrjs.get(t+'');
+                            if (fact) {
+                                if (!(fact instanceof Array && [2,3].indexOf(fact.length)!==-1))
+                                    return cb(new VError("bad fact from transform: %j",fact));
+                                if (fact.length===2 || fact[2].keep)
+                                    eng.chrjs.add([fact[0],fact[1]]);
+                            }
+                        }
+                    }
+                });
+            }
+            eng.stopPrevalence(false,cb);
         });
     };
 

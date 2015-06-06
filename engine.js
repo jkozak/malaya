@@ -5,6 +5,7 @@
 //  var eng = new Engine(<dir>,<chrjs>,<opts>)
 //  eng.start()
 //  eng.become('master'|'slave'|'idle')
+//     ... 'mode' event fires with new mode when done
 //     ... happy server time
 //  eng.stop()
 
@@ -13,9 +14,19 @@
 //       ports: {<protocol>:<int>,...}    (for master)
 //   masterUrl: <url>                     (for slave)
 
+// modes control whether:
+//  * the prevalence layer is running (master,slave)
+//  * the standard (http) listener is taking data and replication connections (master)
+//  * the replication component is listening to a master (slave)
+//  * the standard (http) listener is taking admin connections (all)
+//
+// if the prevalence layer is running (`startPrevalence` has
+// successfully run) connections of any type can be added "manually"
+// with `addConnection` in any mode.  This is only used for testing at
+// the moment.
+
 "use strict";
 
-//var    assert = require('assert');
 var           _ = require('underscore');
 var      events = require('events');
 var      VError = require('verror');
@@ -25,7 +36,7 @@ var          fs = require('fs');
 var        rmRF = require('rimraf');
 var    through2 = require('through2');
 var multistream = require('multistream');
-var   timestamp = require('monotonic-timestamp');
+var   basicAuth = require('basic-auth');
 var     express = require('express');
 var      morgan = require('morgan');
 var      recast = require('recast');
@@ -121,6 +132,7 @@ var Engine = exports.Engine = function(options) {
     eng.connIndex     = {};                      // <type> -> [<port>,...]    
     eng.http          = null;                    // express http server
     eng.journal       = null;                    // journal write stream
+    eng.timestamp     = options.timestamp || require('monotonic-timestamp');
 
     eng.journalFlush  = function(cb){cb(null);}; // flush journal
 
@@ -133,10 +145,6 @@ var Engine = exports.Engine = function(options) {
     eng.on('mode',function(mode) {
         eng.broadcast(['mode',mode],'admin');
     });
-    eng.on('connectionClose',function(port,type) {
-        if (type==='replication')
-            eng.emit('slave',null);
-    });
 
     return eng;
 };
@@ -144,6 +152,7 @@ var Engine = exports.Engine = function(options) {
 util.inherits(Engine,events.EventEmitter);
 
 Engine.prototype._saveWorld = function() {
+    // +++ prevalence.batch (i.e. we are currently using `state-NEW`) +++
     var dirCur = path.join(this.prevalenceDir,"state");
     var dirNew = path.join(this.prevalenceDir,"state-NEW");
     var dirOld = path.join(this.prevalenceDir,"state-OLD");
@@ -153,7 +162,7 @@ Engine.prototype._saveWorld = function() {
     fs.mkdirSync(dirNew);
     fs.writeFileSync( path.join(dirNew,"world"),  util.serialise(syshash)+'\n');
     fs.appendFileSync(path.join(dirNew,"world"),  util.serialise(this.chrjs.getRoot())+'\n');
-    fs.writeFileSync( path.join(dirNew,"journal"),util.serialise([timestamp(),'previous',syshash])+'\n');
+    fs.writeFileSync( path.join(dirNew,"journal"),util.serialise([this.timestamp(),'previous',syshash])+'\n');
     rmRF.sync(dirOld);
     fs.renameSync(dirCur,dirOld);
     fs.renameSync(dirNew,dirCur);
@@ -163,13 +172,15 @@ Engine.prototype._saveWorld = function() {
 
 Engine.prototype.stopPrevalence = function(quick,cb) {
     var eng = this;
-    eng.journal.on('finish',function() {
-        if (!quick) 
-            eng._saveWorld();
-        if (cb) cb();
-    });
-    eng.journal.end();
-    eng.journal = null;
+    if (eng.journal) {          // not true if opts.readonly set
+        eng.journal.on('finish',function() {
+            if (!quick) 
+                eng._saveWorld();
+            if (cb) cb();
+        });
+        eng.journal.end();
+        eng.journal = null;
+    }
 };
 
 Engine.prototype.stop = function(unlock,cb) {
@@ -279,7 +290,7 @@ Engine.prototype.init = function(data) {
     eng._init();
     eng._ensureStateDir();
     eng._makeHashes();
-    fs.writeFileSync(jrnlFile,util.serialise([timestamp(),'init',eng.options])+'\n');
+    fs.writeFileSync(jrnlFile,util.serialise([eng.timestamp(),'init',eng.options])+'\n');
     eng.syshash = eng._saveWorld();
 };
 
@@ -290,12 +301,16 @@ Engine.prototype.start = function(cb) {
     if (cb) cb();
 };
 
-Engine.prototype.startPrevalence = function(cb) {
+Engine.prototype.startPrevalence = function(opts,cb) {
+    if ((typeof opts)==='function' && cb===undefined) {
+        cb   = opts;
+        opts = {};
+    }
     var eng = this;
     eng._ensureStateDir();
     var jrnlFile = path.join(eng.prevalenceDir,'state','journal');
     eng._loadWorld();
-    util.readFileLinesSync(jrnlFile,function(l) { // replay 
+    util.readFileLinesSync(jrnlFile,function(l) { // replay
         var js = util.deserialise(l);
         switch (js[1]) {
         case 'update':
@@ -308,7 +323,7 @@ Engine.prototype.startPrevalence = function(cb) {
         }
         return true;
     });
-    eng.journal = fs.createWriteStream(jrnlFile,{flags:'a'});
+    eng.journal = opts.readonly ? null : fs.createWriteStream(jrnlFile,{flags:'a'});
     if (cb) cb();
 };
 
@@ -333,8 +348,6 @@ Engine.prototype.cacheFile = function(fn,cb) {
             encache(fn,fn,en);
     } else
         encache(fn,fn,en);
-    sn = seen[fn];
-    return [sn.hash,eng.hashes.makeFilename(sn.hash)];
 };
 
 Engine.prototype._loadWorld = function() {
@@ -354,6 +367,8 @@ Engine.prototype._loadWorld = function() {
     });
     eng.emit('loaded',eng.syshash);
 };
+
+Engine.prototype._logon = null;
 
 Engine.prototype.createExpressApp = function() {
     var     eng = this;
@@ -377,6 +392,30 @@ Engine.prototype.createExpressApp = function() {
     });
     app.use('/replication/hash', express.static(path.join(eng.prevalenceDir,'/hashes')));
     app.use('/replication/state',express.static(path.join(eng.prevalenceDir,'/state')));
+
+    if (eng._logon)
+        app.use('/data',function(req,res,next) {
+            var creds = basicAuth(req);
+            var  port = eng.makeHttpPortName(req.connection,'/data');
+            var  conn = eng.conns[port];
+            if (!creds) {
+                res.writeHead(401,{'WWW-Authenticate':'Basic realm="example"'});
+                res.end();
+            } else if (!conn || !conn.logon)
+                eng._logon(creds,port,function(err,ok) {
+                    if (err) {
+                        res.writeHead(500); // !!! check this !!!
+                        res.end();
+                    } else if (ok) {
+                        eng.conns[port].logon = true;
+                        next();
+                    }
+                    else {
+                        res.writeHead(401,{'WWW-Authenticate':'Basic realm="example"'});
+                        res.end();
+                    }
+                });
+        });
     
     app.get('/',function(req,res) {
         res.redirect('/index.html');
@@ -528,6 +567,11 @@ Engine.prototype.addConnection = function(portName,io) {
     eng.emit('connection',portName);
 };
 
+Engine.prototype.makeHttpPortName = function(conn,prefix) { // nodejs http connection here
+    prefix = prefix || conn.prefix;
+    return util.format("ws://%s:%s%s",conn.remoteAddress,conn.remotePort,prefix);
+};
+
 Engine.prototype.listenHttp = function(mode,port,done) {
     var  eng = this;
     var sock = sockjs.createServer({log:function(severity,text) {
@@ -538,7 +582,7 @@ Engine.prototype.listenHttp = function(mode,port,done) {
     eng.http = http.Server(eng.createExpressApp());
 
     sock.on('connection',function(conn) {
-        var portName = util.format("ws://%s:%s%s",conn.remoteAddress,conn.remotePort,conn.prefix);
+        var portName = eng.makeHttpPortName(conn);
         var       io = {i:null,o:null,type:null};
         switch (conn.prefix) {
         case '/data':
@@ -701,7 +745,7 @@ Engine.prototype.journalise = function(type,data,cb) {
     var done = _.after(2,function() {
         if (cb) cb(err);
     });
-    var  jit = [timestamp(),type,data];
+    var  jit = [eng.timestamp(),type,data];
     var  str = util.serialise(jit)+'\n';
     eng.journal.write(str,'utf8',function(e) {
         err = err || e;

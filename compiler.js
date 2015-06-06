@@ -54,7 +54,7 @@ function TEMPLATE_store() {
                 INSERT_INDEXED_MATCHES;
                 return t_fact;
             } else
-                ee.emit('error',"unloved fact format: "+JSON.stringify(fact));
+                ee.emit('error',new Error("unloved fact format: "+JSON.stringify(fact)));
         };
         var   _del = function(t) {
             var   ti = parseInt(t);  // use this in indices

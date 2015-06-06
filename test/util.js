@@ -14,6 +14,12 @@ describe('constants',function() {
     });
 });
 
+describe('deserialise',function() {
+    it("should handle http journal entries",function() {
+        util.deserialise('[1433080456517,":http",[":/home/jk/malaya/examples/idb/www/index.html",":31bdc7b5c80ff5e8e2daa218faf40e567143121e"]]');
+    });
+});
+
 describe('serialise',function() {
     var date = new Date(0);
     it("should encode bare dates nicely",function() {
