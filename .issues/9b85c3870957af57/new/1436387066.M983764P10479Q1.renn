@@ -1,0 +1,11 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Wed, 08 Jul 2015 21:22:43 +0100
+State: new
+Subject: check crash consistency
+Message-Id: <9b85c3870957af57-0-artemis@renn>
+
+See this article:
+
+ http://queue.acm.org/detail.cfm?id=2801719
+
+`Engine._saveWorld` will need `fsync`ing, at least.
