@@ -51,6 +51,7 @@ var     whiskey = require('./whiskey.js');
 var        hash = require('./hash.js');
 var        lock = require('./lock.js');
 
+
 exports.makeInertChrjs = function(opts) {
     opts = opts || {tag:null};
     var obj = {              // behaves like `store {}`;
@@ -379,8 +380,10 @@ Engine.prototype.createExpressApp = function() {
     var jscache = {};   // req.path -> [compiled,stat]
     var  webDir = eng.options.webDir;
 
-    if (eng.options.logging)
-        app.use(morgan(":remote-addr - :remote-user [:date] \":method :url HTTP/:http-version\" :status :res[content-length] \":referrer\" \":user-agent\" :res[etag]"));
+    if (eng.options.logging) {
+        //app.use(morgan(":remote-addr - :remote-user [:date] \":method :url HTTP/:http-version\" :status :res[content-length] \":referrer\" \":user-agent\" :res[etag]"));
+        app.use(morgan('dev'));
+    }
     
     app.get('/replication/hashes',function(req,res) {
         fs.readdir(eng.prevalenceDir+'/hashes',function(err,files) {
@@ -396,7 +399,7 @@ Engine.prototype.createExpressApp = function() {
     app.use('/replication/hash', express.static(path.join(eng.prevalenceDir,'/hashes')));
     app.use('/replication/state',express.static(path.join(eng.prevalenceDir,'/state')));
 
-    if (eng._logon)
+    if (eng._logon)             // ??? does this work? ???
         app.use('/data',function(req,res,next) {
             var creds = basicAuth(req);
             var  port = eng.makeHttpPortName(req.connection,'/data');
@@ -433,7 +436,11 @@ Engine.prototype.createExpressApp = function() {
                 transform: [reactify]
             });
             res.setHeader("Content-Type","application/javascript");
-            b.bundle().pipe(res);
+            b.bundle()
+                .on('error',function(err) {
+                    console.log("!!! browserify error: %j"+err);
+                })
+                .pipe(res);
             return;
         });
     }
@@ -447,7 +454,6 @@ Engine.prototype.createExpressApp = function() {
                 if (stat.size===entry[1].size ||
                     stat.mtime.getTime()===entry[1].mtime.getTime() ) {
                     res.setHeader("Content-Type","application/javascript");
-                    res.status(200).send(entry[0]);
                     return;
                 }
             }
@@ -466,6 +472,21 @@ Engine.prototype.createExpressApp = function() {
             } else
                 eng.emit('error',new VError(e,"compile of %s failed",filename));
         }
+    });
+
+    // +++ caching  +++
+    app.get('/*.jsx',function(req,res) {
+        var file = path.join(webDir,req.path.substr(1));
+        var    b = browserify([file],{
+            extensions:['.jsx','.chrjs','.malaya'],
+            transform: [reactify]
+        });
+        res.setHeader("Content-Type","application/javascript");
+        b.bundle()
+            .on('error',function(err) {
+                console.log("!!! browserify error: "+err);
+            })
+            .pipe(res);
     });
     
     app.use(function(req,res,next) {

@@ -2,6 +2,7 @@
 
 var       _ = require('underscore');
 var     net = require('net');
+var    path = require('path');
 var  stream = require('stream');
 var  assert = require('assert');
 var     x2j = require('./x2j.js');
@@ -162,10 +163,10 @@ var createFE3Server = function(eng) {
 
 function IDBEngine(options) {
     var eng = this;
-    options.bundles = options.bundles || {};
     options.bundles = {
-        "/bundle.js":['www/1.js']
+        "/bundle.js":[path.join(process.cwd(),'www/index.jsx')]
     };
+    options.logging = true;
     Engine.call(eng,options);
     eng.on('connectionClose',function(port) {
         eng.update(['logoff',{},{port:port}]);
@@ -212,7 +213,6 @@ IDBEngine.prototype._replicationSource = function() {
 
 IDBEngine.prototype._logon = function(creds,port,cb) {
     var eng = this;
-    console.log("*** _logon: %j %j",creds,port);
     eng.conns[port] = {type:'data',
                        i:   null,
                        o:   new stream.PassThrough({objectMode:true})
@@ -220,7 +220,6 @@ IDBEngine.prototype._logon = function(creds,port,cb) {
     eng.conns[port].o
         .on('data',
             function(js) {
-                console.log("*** js: %j",js);
                 if (js.logon) {
                     cb(null,!!js.logon.OK);
                     eng.conns[port].o.end();                                 
@@ -235,5 +234,6 @@ IDBEngine.prototype._logon = function(creds,port,cb) {
                        cb(err);
                });
 };
+IDBEngine.prototype._logon = null; // !!! disable pro tem
 
 exports.Engine = IDBEngine;

@@ -1,0 +1,71 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML3.0//EN">
+<!--- by: john kozak --->
+<HTML>
+<head>
+<title>Gilt King - B r o k e r&nbsp;&nbsp;S c r e e n</title>
+
+<style>
+BODY
+{
+   background-color: #CFCFCF;
+}
+</style>
+
+</head>
+
+<body>
+
+<table id="the_lot">
+ <tr>
+  <td colspan=5>
+  <table width="100%" style='table-layout:fixed;'>
+   <tr><td>client</td><td>stock</td><td colspan=3 align=center>price</td><td>volume</td><td>aggro</td></tr>
+   <tr>
+    <td><input type="textbox" id="owner"     size=2></td>
+    <td><input type="textbox" id="stock"     size=8></td>
+    <td colspan=3 align=center><input type="textbox" id="rateBig" size=3 tabindex=-1><b>.</b><input type="textbox" id="rateSmall" size=3></td>
+    <td><input type="textbox" id="volume"    size=4></td>
+    <td align=right><input type="textbox" id="hitter"    size=2></td>
+   </tr>
+   <tr>
+    <td id="owner_note"  colspan=1 style="visibility:hidden;font-size:x-small;">ABCDEFGHIJ</td>
+    <td id="stock_note"  colspan=4 style="visibility:hidden">1234567890123456</td>
+    <td id="hitter_note" colspan=2 style="visibility:hidden;font-size:x-small;" align="right">ABCDEFGHIJ</td>
+   </tr>
+  </table>
+  </td>
+ </tr>
+ <tr>
+  <td>                       <button id="Bid"  style="width:80"> Bid </button></td>
+  <td colspan=3 align=center><button id="Clear"style="width:80">Clear</button></td>
+  <td align=right>                       <button id="Offer"style="width:80">Offer</button></td>
+ </tr>
+ <tr>
+  <td><button id="DelBid" style="width:80">Delete<br>Bid</buttton></td>
+  <td colspan=3 align=center><input type="checkbox" id="All" value="A>ll"><u>A</u>ll</input></td>
+  <td align=right><button id="DelOffer" style="width:80">Delete<br>Offer</buttton></td>
+ </tr>
+ <tr>
+  <td><button id="Buy"     style="width:80">     Hit      </button></td>
+  <td colspan=3 align=center><button id="Traded"  style="width:80">End Trade</button></td>
+  <td align=right><button id="Sell"    style="width:80">    Take     </button></td>
+ </tr>
+ <tr><td colspan=5 style="visibility:hidden">stig has been dead for ages, really</td></tr>
+ <tr>
+  <td colspan=5 align=center><button id="OhDear" style="width:120">ERROR</button></td>
+ </tr>
+</table>
+  <button id="Trading" style="width:80;display:none">   Build    </button>
+
+<script src="Broker.javascript"></script>
+<script>
+var windowBroker = window;
+</script>
+<script src="RoboBroker.javascript"></script>
+
+</body>
+</HTML>
+
+
+
+
