@@ -406,10 +406,6 @@ const IDB = store {
     // background
     rule (['_tick',{date,...},...],
           +['_output','all',mkHeartbeat(date)] );
-    rule (['_tick',{...},...],
-          n = for(0;['Permissions',{LoggedOn:1,...}];a=>a+1),
-          n>0,
-          console.log("%d users logged on",n) );
     rule (-['_tick',...]);
 
     // output
