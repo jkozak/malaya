@@ -15,6 +15,10 @@ To run thereafter:
 
 Ctrl-C to stop and save.
 
+You can connect to this with a modern web browser.  I have tested with
+chromium, conkeror, edge, and a couple of versions of android chrome.
+Needs websockets so non-recent IEs probably won't work.
+
 You should then be able to log FE3 clients into it.  The demo just
 does log{on,off}, price (approx), trade (approx), no auction yet.
 
