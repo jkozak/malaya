@@ -52680,7 +52680,7 @@
       "MatchingVolEntry": "B",
       "UpdateUserID": -1,
       "SessionID": 37482,
-      "Enabled": 0,
+      "Enabled": 1,
       "AppRole": 255,
       "CurrFailCount": 0,
       "LoggedOn": 0,
@@ -52690,8 +52690,8 @@
       "TelAreaCode": "20    ",
       "TelCountryCode": "44",
       "CSPID": 1,
-      "ApplicationName": "Sydni Jast Sr.",
-      "Password": "Epmr36OdLGSK1sP",
+      "ApplicationName": "John Glanville",
+      "Password": "JG",
       "anon": true
     }
   ],
