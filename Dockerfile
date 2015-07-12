@@ -1,12 +1,12 @@
-FROM santalucia/nodejs
+FROM gliderlabs/alpine:3.2
+
 MAINTAINER John Kozak <jk@thameslighter.net>
 
-RUN apt-get update && apt-get dist-upgrade -y
+RUN apk --update add nodejs make
 
-RUN apt-get install -y make
+# get malaya code somehow into /var/lib/malaya
 
-ADD . /var/lib/malaya
+RUN cd /var/lib/malaya;make tests
 
-RUN cd /var/lib/malaya;npm install;make tests
-
+CMD cd /var/lib/malaya;./malaya run
 
