@@ -340,7 +340,8 @@ Engine.prototype.cacheFile = function(fn,cb) {
         ws.on('stored',function(h) {
             eng.journalise('http',[url,h]);
             seen[url] = entry;
-            cb(h);
+            if (cb)
+                cb(h);
         });
         fs.createReadStream(filename).pipe(ws);
     };
@@ -379,6 +380,78 @@ Engine.prototype.createExpressApp = function() {
     var     app = express();
     var jscache = {};   // req.path -> [compiled,stat]
     var  webDir = eng.options.webDir;
+
+    var   viaJSCache = function(build) {
+        return function(req,res) { // +++ eventually use disk cache +++
+            var filename = path.join(webDir,req.path.substr(1));
+            try {
+                var entry = jscache[req.path];
+                if (entry) {
+                    var clean = true;
+                    for (var fn in entry[1]) {
+                        var stat1 = fs.statSync(fn);
+                        var stat2 = entry[1][fn];
+                        if (stat1.size!==stat2.size || stat1.mtime.getTime()!==stat2.mtime.getTime() ) {
+                            clean = false;
+                            break;
+                        }
+                    }
+                    if (clean) {
+                        res.setHeader("Content-Type","application/javascript");
+                        res.status(200).send(entry[0]);
+                        return;
+                    }
+                }
+            } catch (e) {
+                if (e.code==='ENOENT') {
+                    delete jscache[req.path];
+                    res.status(404).send();
+                } else
+                    eng.emit('error',new VError(e,"compile of %s failed",filename));
+                return;
+            }
+            build(filename,function(err,en) {
+                if (err)
+                    res.status(500).send(err);
+                else {
+                    jscache[req.path] = en;
+                    res.setHeader("Content-Type","application/javascript");
+                    res.status(200).send(en[0]);
+                }
+            });
+        };
+    };
+    
+    var doBrowserify = function(files) {
+        files = Array.isArray(files) ? files : [files];
+        return viaJSCache(function(_fn,cb) {
+            var        js = '';
+            var filesRead = [];
+            var         b = browserify(files,{
+                extensions:['.jsx','.chrjs','.malaya'],
+                transform: [reactify]
+            });
+            b.on('file',function(f,id,parent){
+                if (!/node_modules/.test(f)) // presume node_module contents are stable
+                    filesRead.push(f);
+            });
+            b.bundle()
+                .on('error',function(err) {
+                    cb(err);
+                })
+                .on('data',function(chunk) {
+                    js += chunk.toString();
+                })
+                .on('end',function() {
+                    var deps = {};
+                    filesRead.forEach(function(f) {
+                        deps[f] = fs.statSync(f);
+                        eng.cacheFile(f); 
+                    });
+                    cb(null,[js,deps]);
+                });
+        });
+    };
 
     if (eng.options.logging) {
         //app.use(morgan(":remote-addr - :remote-user [:date] \":method :url HTTP/:http-version\" :status :res[content-length] \":referrer\" \":user-agent\" :res[etag]"));
@@ -427,66 +500,24 @@ Engine.prototype.createExpressApp = function() {
         res.redirect('/index.html');
     });
 
-    for (var k in eng.options.bundles) {
-        app.get(k,function(req,res) {
-            var files = eng.options.bundles[k];
-            files = Array.isArray(files) ? files : [files];
-            var b = browserify(files,{
-                extensions:['.jsx','.chrjs','.malaya'],
-                transform: [reactify]
-            });
-            res.setHeader("Content-Type","application/javascript");
-            b.bundle()
-                .on('error',function(err) {
-                    console.log("!!! browserify error: %j"+err);
-                })
-                .pipe(res);
-            return;
-        });
-    }
+    for (var k in eng.options.bundles) 
+        app.get(k,doBrowserify(eng.options.bundles[k]));
     
-    app.get('/*.chrjs',function(req,res) { // +++ eventually use disk cache +++
-        var filename = path.join(webDir,req.path.substr(1));
+    app.get('/*.chrjs',viaJSCache(true,function(filename,cb) {
         try {
-            var  stat = fs.statSync(filename);
-            var entry = jscache[req.path];
-            if (entry) {
-                if (stat.size===entry[1].size ||
-                    stat.mtime.getTime()===entry[1].mtime.getTime() ) {
-                    res.setHeader("Content-Type","application/javascript");
-                    return;
-                }
-            }
             var chrjs = fs.readFileSync(filename);
             var    js = recast.print(compiler.compile(parser.parse(chrjs,{attrs:true}))).code;
-            jscache[req.path] = [js,stat];
-            res.setHeader("Content-Type","application/javascript");
-            res.status(200).send(js);
-            eng.cacheFile(filename); // ensure chrjs source gets journalised+cached
-            return;
-        } catch (e) {
-            if (e.code==='ENOENT') {
-                delete jscache[req.path];
-                res.status(404).send();
-                return;
-            } else
-                eng.emit('error',new VError(e,"compile of %s failed",filename));
+            var  deps = {};
+            deps[filename] = fs.statSync(filename);
+            eng.cacheFile(filename);
+            cb(null,[js,deps]);
+        } catch(e) {
+            cb(e);
         }
-    });
+    }));
 
-    // +++ caching  +++
     app.get('/*.jsx',function(req,res) {
-        var file = path.join(webDir,req.path.substr(1));
-        var    b = browserify([file],{
-            extensions:['.jsx','.chrjs','.malaya'],
-            transform: [reactify]
-        });
-        res.setHeader("Content-Type","application/javascript");
-        b.bundle()
-            .on('error',function(err) {
-                console.log("!!! browserify error: "+err);
-            })
-            .pipe(res);
+        return doBrowserify(path.join(webDir,req.path.substr(1)))(req,res);
     });
     
     app.use(function(req,res,next) {
