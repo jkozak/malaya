@@ -1,0 +1,12 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Sun, 12 Jul 2015 18:48:49 +0100
+State: new
+Subject: How to integrity check the world file?
+Message-Id: <e4d7c2d50484b4fb-0-artemis@renn>
+
+Nothing to stop an enemy from changing data in a world file, bypassing
+all the hash-chain log security unless we rebuild each time which
+defeats the point of having a world file.
+
+Encryption?
+

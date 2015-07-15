@@ -1,0 +1,23 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Wed, 15 Jul 2015 09:13:59 +0100
+State: new
+Subject: `_output` is clunky
+Message-Id: <da7cd772d9215ad5-0-artemis@renn>
+
+How about changing input from:
+
+  ['name',{...},{port}]
+
+to:
+
+  ['name',{...},{src}]
+
+then replacing e.g.:
+
+  ['_output','all',{trade:trade1}],
+
+with:
+
+  ['trade',trade,{dest:'all'}]
+
+?
