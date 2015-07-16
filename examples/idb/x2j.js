@@ -24,6 +24,7 @@ exports.parse = function(xml) {
         insertHere._children.push(ch);
     };
     parser.onerror = function(e) {
+        console.log("!!! offending XML: %j",xml);
         throw new Error(e);
     };
     parser.ontext = function (t) {
@@ -66,9 +67,9 @@ exports.build = function(obj,cb) {
                             console.log("*** undef obj: %j  k: %j  a: %j",obj,k,a);
                         else {
                             var s = obj[k][a]===null  ? "" :
-				obj[k][a]===true      ? "1" :
-				obj[k][a]===false     ? "0" :
-				obj[k][a].toString();
+                                obj[k][a]===true      ? "1" :
+                                obj[k][a]===false     ? "0" :
+                                obj[k][a].toString();
                             assert.equal(s.indexOf('"'),-1);
                             cb(" ");cb(a);cb('="');cb(s);cb('"');
                         }

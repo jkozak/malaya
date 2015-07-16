@@ -94,7 +94,7 @@ const IDB = store {
           +['_output','self',{'logon0':{}}] );
     rule (-['logon',      {user,pw,...},{port,...}],
           -['Permissions',{ApplicationName:user,Password:pw,LoggedOn:0,...rs}],
-          +['Permissions',{ApplicationName:user,Password,LoggedOn:1,port,...rs}],
+          +['Permissions',{ApplicationName:user,Password:pw,LoggedOn:1,port,...rs}],
           +['_output','self',{logon:{OK:1,session_key:0}}]
          );
     rule (-['logon',      {user,pw,...},...],

@@ -31,19 +31,36 @@ var fmtPrice = function(p) {
 };
 
 var Instrument = React.createClass({
+    shouldComponentUpdate: function(nextProps,nextState) {
+	// +++ also check for deletion +++
+	return !!nextProps.market.prices[nextProps.instrument.id];
+    },
     render: function() {
-	var    bid = this.props.instrument.name==='DAVE TEST2' ? 111.11 : null;
-	var  offer = this.props.instrument.name==='DAVE TEST2' ? 222.22 : null;
+	var    bid = null;
+	var  offer = null;
 	var   bidC = 'black';
 	var offerC = 'black';
+	var   bidV = '';
+	var offerV = '';
 
 	var  price = this.props.market.prices[this.props.instrument.id];
 
 	if (price) {
 	    var trade = this.props.market.trades[this.props.instrument.id];
 	    // price = {rate,bids:[{id,counterparty,volume},...],offers}
+	    if (price.bids.length>0) {
+		bid  = price.rate;;
+		bidV = 0;
+		price.bids.forEach(function(v){bidV+=v.volume;});
+		bidV /= 1000000;
+	    }
+	    if (price.offers.length>0) {
+		offer  = price.rate;;
+		offerV = 0;
+		price.offers.forEach(function(v){offerV+=v.volume;});
+		offerV /= 1000000;
+	    }
 	}
-
 
 	if (bid===null) {
 	    var bf = this.props.market.bigFigs[this.props.instrument.id];
@@ -62,6 +79,7 @@ var Instrument = React.createClass({
 	
 	var   bidS = fmtPrice(bid);
 	var offerS = fmtPrice(offer);
+	console.log("*** bidV ",bidV);
 	return (
 	    <tr>
 	     <td>{this.props.instrument.name}</td>
@@ -69,9 +87,9 @@ var Instrument = React.createClass({
 	     <td style={{minWidth:'3em'}}>{bidS[1]}</td>
 	     <td style={{textAlign:'right',padding:0,color:offerC,minWidth:'3em'}}>{offerS[0]}</td>
 	     <td style={{minWidth:'3em'}}>{offerS[1]}</td>
-	     <td style={{textAlign:'right',padding:0}}>{this.props.bidVolume}</td>
+	     <td style={{textAlign:'right',padding:0}}>{bidV}</td>
 	     <td style={{textAlign:'center',color:'grey',padding:0}}>X</td>
-	     <td>{this.props.offerVolume}</td>
+	     <td>{offerV}</td>
 	    </tr>
 	);
     }
@@ -95,7 +113,8 @@ var Blotter = exports.Blotter = React.createClass({
 	    o.offer       = '';
 	    o.bidVolume   = '';
 	    o.offerVolume = '';
-	    orderedInstruments.push(o);
+	    if (inst.visible)
+		orderedInstruments.push(o);
 	}
 	var sortKey = function(inst) {
 	    return inst.subClass*1000*1000*1000+inst.maturity;
@@ -105,7 +124,7 @@ var Blotter = exports.Blotter = React.createClass({
 	});
 	orderedInstruments.forEach(function(inst) {
 	    if (lastSC!==inst.subClass) {
-		rows.push(<SubClassSectionHeading key={'S'+inst.subClass} name={subClasses[inst.subClass].name}/>);
+		rows.push(<SubClassSectionHeading key={'S'+inst.subClass} name={subClasses[inst.subClass].title}/>);
 		lastSC = inst.subClass;
 		}
 	    rows.push(<Instrument key={'I'+inst.id} instrument={inst} market={market}/>);

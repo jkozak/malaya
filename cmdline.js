@@ -7,6 +7,7 @@ var   path = require('path');
 var VError = require('verror');
 var assert = require('assert');
 var   util = require('./util.js');
+var execCP = require('child_process').exec;
 
 // configure main arg parser
 
@@ -112,6 +113,15 @@ subcommands.run.addArgument(
         defaultValue: true,
         help:         "don't check tag",
         dest:         'tagCheck'
+    }
+);
+subcommands.run.addArgument(
+    ['-A','--admin-ui'],
+    {
+        action:       'storeTrue',
+        defaultValue: false,
+        help:         "start an admin UI browser session",
+        dest:         'adminUI'
     }
 );
 subcommands.run.addArgument(
@@ -283,6 +293,8 @@ exports.run = function(opts0) {
             }
         });
         process.on('exit',function(code) {
+            if (eng)
+                eng.broadcast(['close',code],'admin');
         });
     };
 
@@ -379,6 +391,17 @@ exports.run = function(opts0) {
         var     eng = createEngine(options);
         eng.on('listen',function(protocol,port) {
             util.debug("%s listening on *:%s",protocol,port);
+            if (args.adminUI && protocol==='http') {
+                execCP(util.format("chromium -disk-cache-dir=/dev/null -app='http://%s:%d/%s'",
+                                   'localhost',
+                                   options.ports.http,
+                                   "admin.html"),
+                       function(err,stdout,stderr) {
+                           if (err) {
+                               console.log("can't start admin browser: %s",err);
+                           }
+                       });
+            }
         });
         eng.on('saved',function(syshash) {
             util.debug("saved world:  %s",syshash);
