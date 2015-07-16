@@ -808,19 +808,23 @@ Engine.prototype.become = function(mode) {
 Engine.prototype.journalise = function(type,data,cb) {
     var  eng = this;
     var  err = null;
-    var done = _.after(2,function() {
-        if (cb) cb(err);
-    });
-    var  jit = [eng.timestamp(),type,data];
-    var  str = util.serialise(jit)+'\n';
-    eng.journal.write(str,'utf8',function(e) {
-        err = err || e;
-        if (err)
-            done();
-        else 
-            eng.journalFlush(done);
-    });
-    eng.broadcast(jit,'replication',done);
+    if (eng.mode==='idle' && eng.journal===null)
+        console.log("discarded idle log item: %j",data);
+    else {
+        var done = _.after(2,function() {
+            if (cb) cb(err);
+        });
+        var  jit = [eng.timestamp(),type,data];
+        var  str = util.serialise(jit)+'\n';
+        eng.journal.write(str,'utf8',function(e) {
+            err = err || e;
+            if (err)
+                done();
+            else 
+                eng.journalFlush(done);
+        });
+        eng.broadcast(jit,'replication',done);
+    }
 };
 
 Engine.prototype.broadcast = function(js,type,cb) {
