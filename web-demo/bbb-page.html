@@ -1,0 +1,25 @@
+<html>
+	<body>
+		<h2>Malaya server interface</h2>
+		<div id="buttons">
+			<input type="button" value="start" onclick="startKernel();">
+			<input type="button" value="stop" onclick="stopKernel();">
+			<input type="button" value="add fact" onclick="sendMessage();">
+			<input type="text" id="message">
+		</div>
+		<div id="stats">
+			<table width="480px" height="12pt">
+				<tr>
+					<td id="numclients">X</td>
+					<td id="hashid">XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX</td>
+				</tr>
+			</table>
+		</div>
+		<h3>Recent facts</h3>
+		<div id="factlog">
+			<p>
+		</div>
+		
+	<script src="bbb-logic.js"></script>
+	</body>
+</html>
