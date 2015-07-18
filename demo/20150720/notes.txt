@@ -1,0 +1,26 @@
+One data format from end to end, because with each conversion
+constraints are imposed, and these add up as data flows through the
+system in ways that are not obvious when looking at each individual
+stage. Example: the front-end expects things to be structured around
+instruments, and expects to have a complete list of these.
+Integrating the SIS system has meant that this is no longer true, but
+it's quite a deep seated assumption; worked round it by bending the
+definition of instruments - but this can have knock-on effects elsewhere.
+
+Data format is JSON: this is now generally preferred to it predecessor,
+XML.  XML was written for word processing originally and primarily is
+designed to handle text; JSON also handles numbers, list of things and
+other things one actually needs.
+
+The original part of Malaya is the logic/relational/persistence
+engine at its heart.  Bits of data (JSON) go into it, rattle about,
+and chuck out new bits of data.  
+
+
+Gold standard: Don Syme at Standard Chartered: team meeting first
+thing, code changes in morning, deployed to customers in afternoon.
+I am not promising this; but I do think it's a goal that could
+for which we could plausibly strive with this technology.
+
+"Vernacular style"
+

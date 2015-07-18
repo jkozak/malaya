@@ -1,7 +1,9 @@
-var sock = new WebSocket('ws://localhost:3000/admin/websocket');
-
+var      ws = {'http:':'ws:','https:':'wss:'}[window.location.protocol];
+var    sock = new WebSocket(ws+'//'+window.location.host+'/admin/websocket');
 var cUsers  = 0;
 var cSlaves = 0;
+
+var masterUrl = null;
 
 function showConnection(type,exists) {
     switch (type) {
@@ -25,10 +27,20 @@ document.getElementById('bIdle').onclick = function() {
     send(['mode','idle']);
 };
 
+document.getElementById('bMaster').onclick = function() {
+    document.getElementById('mode').innerHTML   = "<s>"+document.getElementById('mode').innerText+"</s>";
+    send(['mode','master']);
+};
+
+document.getElementById('bSlave').onclick = function() {
+    document.getElementById('mode').innerHTML   = "<s>"+document.getElementById('mode').innerText+"</s>";
+    send(['mode','slave']);
+};
+
 function showMode(mode) {
     document.getElementById('mode').innerText   = mode;
     document.getElementById('bIdle').disabled   = mode==='idle';
-    document.getElementById('bSlave').disabled  = mode==='slave';
+    document.getElementById('bSlave').disabled  = mode==='slave' || masterUrl===null;
     document.getElementById('bMaster').disabled = mode==='master';
 }
 
@@ -42,6 +54,7 @@ sock.onmessage = function(e) {
             for (var i=0;i<js[1].connects[type];i++)
                 showConnection(type,1);
         });
+        masterUrl = js[1].masterUrl;
         document.getElementById('syshash').innerText = js[1].syshash;
         showMode(js[1].mode);
         break;

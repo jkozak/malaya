@@ -18,10 +18,14 @@ var SideBar = React.createClass({
 document.body.onload = function() {
     var      sock = null;
     var connected = false;
+    var     hosts = [window.location.host];
+    var     iHost = 0;
     var buildSock = function() {
-	var        ws = {'http:':'ws:','https:':'wss:'}[window.location.protocol];
+	var ws = {'http:':'ws:','https:':'wss:'}[window.location.protocol];
 
-	sock =  new WebSocket(ws+'//'+window.location.host+'/data/websocket');
+	iHost = (iHost+1)%hosts.length;
+	
+	sock =  new WebSocket(ws+'//'+hosts[iHost]+'/data/websocket');
 
 	sock.onopen = function() {
 	    console.log('*** open');
@@ -122,6 +126,13 @@ document.body.onload = function() {
 		break;
 	    case 'initialised':
 		renderAll();
+		break;
+	    case '_spare':
+		if (js[1].server) {
+		    hosts = [hosts[0],js[1].server+':'+js[1].port];
+		} else
+		    hosts = [hosts[0]];
+		console.log("*** spare ",js,hosts);
 		break;
 	    case 'price':
 		insertPrice(js[1]);

@@ -168,21 +168,32 @@ function IDBEngine(options) {
     };
     options.logging = true;
     Engine.call(eng,options);
-    eng.on('connectionClose',function(port) {
-        eng.update(['logoff',{},{port:port}]);
-    });
     eng.fe3Server = null;
     return eng;
 }
 
 util.inherits(IDBEngine,Engine);
 
+IDBEngine.prototype.closeConnection = function(portName) {
+    var eng = this;
+    var  io = eng.conns[portName];
+    if (io && !io.closing) { // can be called more than once, allow for that
+        eng.update(['logoff',{},{port:portName}],function() {
+            Engine.prototype.closeConnection.call(eng,portName);
+        });
+    }
+};
+
 IDBEngine.prototype._become = function(mode,cb) {
     var  eng = this;
-    var done = _.after(2,function(){cb();});
-    Engine.prototype._become.call(eng,mode,done);
+    var done = function(e) {
+        if (e)
+            cb(e);
+        else
+            Engine.prototype._become.call(eng,mode,cb)
+    }
     if (eng.fe3Server && eng.mode==='master' && mode==='idle') {
-        eng.fe3Server.close(function(err){
+        eng.fe3Server.close(function(err) {
             eng.fe3Server = null;
             done(err);
         });
@@ -192,7 +203,7 @@ IDBEngine.prototype._become = function(mode,cb) {
             var sp = where===null ? {} : {port:where.ports.fe3,server:where.host};
             for (var port in eng.conns) 
                 if (util.startsWith(port,'fe3:')) 
-                    eng.conns[port].o.write({spare:sp});
+                    eng.conns[port].o.write({_spareFE3:sp});
         });
         eng.fe3Server.on('listening',function() {
             eng.emit('listen','fe3',eng.options.ports.fe3);

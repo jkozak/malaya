@@ -1,0 +1,12 @@
+start MASTER
+
+logon all clients
+
+start SLAVE
+
+stop MASTER
+
+SLAVE -> MASTER
+
+N.B. clients must be logged on to get slave status notifications
+
