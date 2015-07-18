@@ -540,8 +540,6 @@ Engine.prototype.createExpressApp = function() {
         next();
     });
         
-    app.use(express.static(webDir));
-
     return app;
 };
 
@@ -612,6 +610,9 @@ Engine.prototype.addConnection = function(portName,io) {
                     eng.closeConnection(portName);
                 break;
             }
+        });
+        io.o.on('finish',function() {
+            eng.emit('slave',null);
         });
         break;
     }
@@ -1097,16 +1098,17 @@ Engine.prototype._replicationSource = function() {
 };
 
 Engine.prototype.replicateFrom = function(url) { // `url` is base e.g. http://localhost:3000/
-    var     eng = this;
-    var  SockJS = require('node-sockjs-client');
-    var    sock = new SockJS(url+'replication/journal');
-    var started = false;
-    var pending = [];
-    var    tidy = false;
-    var  update = function(js,cb) {
+    var       eng = this;
+    var    SockJS = require('node-sockjs-client');
+    var      sock = new SockJS(url+'replication/journal');
+    var   started = false;
+    var   pending = [];
+    var      tidy = false;
+    var doJournal = function(js,cb) {
         var  str = util.serialise(js)+'\n';
         eng.journal.write(str,'utf8',cb);
-        eng.chrjs.update(js[2]);
+        if (js[1]==='update')
+            eng.chrjs.update(js[2]);
     };
 
     eng.replicateSock = sock;
@@ -1144,7 +1146,7 @@ Engine.prototype.replicateFrom = function(url) { // `url` is base e.g. http://lo
                                     eng.emit('loaded','state');
                                     var doPending = function() {
                                         if (pending.length!==0) {
-                                            update(pending.pop());
+                                            doJournal(pending.pop());
                                             doPending();
                                         }
                                     };
@@ -1162,10 +1164,8 @@ Engine.prototype.replicateFrom = function(url) { // `url` is base e.g. http://lo
             started = true;
         } else if (pending!==null)
             pending.push(js);
-        else if (js[1]!=='update')
-            sock.close();
         else
-            update(js);
+            doJournal(js);
     };
 
     sock.onerror = function(err) {
