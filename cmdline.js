@@ -325,6 +325,10 @@ exports.run = function(opts0) {
                 console.log("slave online at: %j",where);
             else
                 console.log("slave offline");
+            if (args.auto) {
+                var sp = where===null ? {} : {port:where.ports.http,server:where.host};
+                eng.broadcast({'_spare':sp});
+            }
         });
         return eng;
     };
@@ -410,19 +414,20 @@ exports.run = function(opts0) {
             util.debug("loaded: %s",syshash);
         });
         eng.start();
-        eng.on('mode',function(mode) {
+        eng.on('become',function(mode) {
+            if (tickInterval) 
+                clearInterval(tickInterval);
             if (auto && mode==='master') {
-                eng.update(['_restart',{},{port:'system://'}]);
                 tickInterval = setInterval(function() {
                     eng.update(['_tick',{date:new Date()},{port:'server:'}]);
                     eng.update(['_take-outputs',{},{port:'server:'}]);
                 },1000);
-            } else {
-                if (tickInterval) 
-                    clearInterval(tickInterval);
-                tickInterval = null;            
-            }
-            // +++
+            } else 
+                tickInterval = null;
+        });
+        eng.on('mode',function(mode) {
+            if (auto && mode==='master')
+                eng.update(['_restart',{},{port:'system://'}]);
         });
         installSignalHandlers(eng);
         eng.become(args.mode);

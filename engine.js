@@ -766,18 +766,17 @@ Engine.prototype._become = function(mode,cb) {
         }
         case 'idle':
             switch (eng.mode) {
-            case 'master':
-                // +++ no more `update`s should be done +++
-                eng.stopPrevalence(true,function(err) {
+            case 'master': {
+                var done = _.after(2,function(err) {
                     if (err)
                         cb(err);
-                    else {
-                        var done = _.after(2,cb);
-                        eng.closeAllConnections('data',done);
-                        eng.closeAllConnections('replication',done);
-                    }
+                    else
+                        eng.stopPrevalence(true,cb);
                 });
+                eng.closeAllConnections('data',done);
+                eng.closeAllConnections('replication',done);
                 break;
+            }
             case 'slave':
                 // `stopPrevalence` is done in replication code
                 if (eng.replicateSock) {
@@ -818,6 +817,7 @@ Engine.prototype.become = function(mode) {
                 }
             });
     };
+    eng.emit('become',mode);
     if (eng.http===null && (port || port===0)) {
         eng.listenHttp(mode,port,function(err) {
             main();
