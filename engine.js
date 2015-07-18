@@ -146,8 +146,15 @@ var Engine = exports.Engine = function(options) {
     eng.replicateSock = null;  
 
     eng.chrjs.on('error',function(err){eng.emit(new VError(err,"chrjs: "));});
+    
     eng.on('mode',function(mode) {
         eng.broadcast(['mode',mode],'admin');
+    });
+    eng.on('connection',function(portName,type) {
+        eng.broadcast(['connection',portName,type,true],'admin');
+    });
+    eng.on('connectionClose',function(portName,type) {
+        eng.broadcast(['connection',portName,type,false],'admin');
     });
 
     return eng;
@@ -580,6 +587,19 @@ Engine.prototype.closeAllConnections = function(type,cb) {
     }
 };
 
+Engine.prototype.connectionSummary = function() {
+    var eng = this;
+    var ans = {data:0,replication:0};
+    for (var k in eng.conns) {
+        var type = eng.conns[k].type;
+        if (ans[type])
+            ans[type]++;
+        else
+            ans[type] = 1;
+    }
+    return ans;
+};
+
 Engine.prototype.addConnection = function(portName,io) {
     var eng = this;
     if (eng.conns[portName]!==undefined)
@@ -631,7 +651,7 @@ Engine.prototype.addConnection = function(portName,io) {
         });
     }
     }
-    eng.emit('connection',portName);
+    eng.emit('connection',portName,io.type);
 };
 
 Engine.prototype.makeHttpPortName = function(conn,prefix) { // nodejs http connection here
@@ -1194,10 +1214,12 @@ Engine.prototype.administer = function(port) {
     io.o.write(['engine',{syshash:   eng.syshash,
                           mode:      eng.mode,
                           masterUrl: eng.masterUrl,
+                          connects:  eng.connectionSummary(),
                           tag:       eng.tag}]);
     io.i.on('readable',function() {
         var js;
         while ((js=io.i.read())!==null) {
+            console.log("*** admin: %j",js);
             try {
                 switch (js[0]){
                 case 'mode':

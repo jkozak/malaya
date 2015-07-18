@@ -1,9 +1,19 @@
 <html>
   <body style="margin:0;padding:0;font-family:Verdana;position:relative">
-    <div style="font-size:60pt;text-align:center;text-transform:uppercase" id="mode">?????</div>
+    <div style="font-size:60pt;text-align:center;text-transform:uppercase" id="mode">init</div>
+    <div style="position:absolute;bottom:100;width:100%">
+      <table width="100%" height="12pt">
+	<tr>
+	  <td align="center"><button type="button" id="bSlave" disabled="1"> slave </button></td>
+	  <td align="center"><button type="button" id="bIdle" disabled="1">  idle  </button></td>
+	  <td align="center"><button type="button" id="bMaster" disabled="1">master</button></td>
+	</tr>
+      </table>
+    </div>
     <div style="position:absolute;bottom:0">
       <table width="480px" height="12pt">
-	<tr><td>#clients</td><td id="numclients">?</td></tr>
+	<tr><td>#clients</td><td id="cUsers">0</td></tr>
+	<tr><td>#slaves</td><td id="cSlaves">0</td></tr>
 	<tr><td>syshash</td><td id="syshash">????????????????????????????????</td></tr>
 	</tr>
       </table>
