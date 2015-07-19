@@ -873,8 +873,13 @@ Engine.prototype.update = function(data,cb) {
                     ;           // discard
                 else if (add[1]==='all')
                     eng.broadcast(add[2],'data');
-                else if (add[1]==='self')
-                    eng.conns[data[2].port].o.write(add[2]);
+                else if (add[1]==='self') {
+                    var io = eng.conns[data[2].port];
+                    if (io)
+                        io.o.write(add[2]);
+                    else
+                        console.log("*** self gone away: %j",data);
+                }
                 else {
                     var dest = eng.conns[add[1]];
                     if (dest)
