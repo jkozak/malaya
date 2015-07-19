@@ -14,7 +14,7 @@ function showConnection(type,exists) {
         cSlaves += (exists ? +1 : -1)
         break;
     }
-    document.getElementById('connCounts').innerText = cUsers+" users, "+cSlaves+" slaves";
+    document.getElementById('connCounts').innerText = cUsers+" users, "+cSlaves+" spares";
 };
 
 function send(js) {
@@ -46,7 +46,7 @@ document.getElementById('bSlave').onclick = function() {
 };
 
 function showMode(mode) {
-    document.getElementById('mode').innerText   = mode;
+    document.getElementById('mode').innerText   = {idle:'idle',master:'live',slave:'spare'}[mode];
     document.getElementById('bIdle').disabled   = mode==='idle';
     document.getElementById('bSlave').disabled  = mode==='slave' || masterUrl===null;
     document.getElementById('bMaster').disabled = mode==='master';
@@ -63,7 +63,7 @@ sock.onmessage = function(e) {
                 showConnection(type,1);
         });
         masterUrl = js[1].masterUrl;
-        document.getElementById('ipAddr').innerText = js[1].ip;
+        document.getElementById('ipAddr').innerText  = js[1].ip;
         document.getElementById('syshash').innerText = js[1].syshash;
         showMode(js[1].mode);
         break;

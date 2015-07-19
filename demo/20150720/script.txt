@@ -1,12 +1,14 @@
-start MASTER
+start both BBBs as IDLE
+
+bb-1 -> MASTER
 
 logon all clients
 
-start SLAVE
+bb-2 -> SLAVE
 
-stop MASTER
+stop bb-1
 
-SLAVE -> MASTER
+bb-1 -> MASTER
 
 N.B. clients must be logged on to get slave status notifications
 

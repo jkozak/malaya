@@ -242,7 +242,12 @@ document.body.onload = function() {
 	}
 	console.log("**** market.prices: ",market.prices);
     };
-    var insertTrade = function(price) {
+    var insertTrade = function(trade) {
+	console.log("*** insertTrade: ",trade);
+	var instId = trade.instrument;
+	var trades = market.trades[instId];
+	if (!trades)
+	    trades = market.trades[instId] = {hits:[],takes:[]};
 	// +++
     };
 

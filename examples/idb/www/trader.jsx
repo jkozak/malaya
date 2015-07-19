@@ -35,13 +35,29 @@ var Instrument = React.createClass({
 	// +++ also check for deletion +++
 	return !!nextProps.market.prices[nextProps.instrument.id];
     },
+    getInitialState: function() {
+	var prices = this.props.market.prices[this.props.instrument.id]; // !!! bad !!!
+	return {fresh:false,nPrices:prices?prices.length:0};
+    },
+    componentWillReceiveProps: function(props) {
+	var       inst = this;
+	var nextPrices = props.market.prices[props.instrument.id];
+	if (nextPrices && nextPrices.length!==this.state.nPrices) {
+	    inst.setState({fresh:true,nPrices:nextPrices.length});
+	    setTimeout(function() {	// new instrument wait
+		inst.setState({fresh:false});
+	    },15000);
+	}
+    },
     render: function() {
-	var    bid = null;
-	var  offer = null;
-	var   bidC = 'black';
-	var offerC = 'black';
-	var   bidV = '';
-	var offerV = '';
+	var     bid = null;
+	var   offer = null;
+	var    bidC = 'black';
+	var  offerC = 'black';
+	var   bidBG = 'transparent';
+	var offerBG = 'transparent';
+	var    bidV = '';
+	var  offerV = '';
 
 	var  price = this.props.market.prices[this.props.instrument.id];
 
@@ -53,12 +69,22 @@ var Instrument = React.createClass({
 		bidV = 0;
 		price.bids.forEach(function(v){bidV+=v.volume;});
 		bidV /= 1000000;
+		if (this.state.fresh) {
+		    var x = bidBG;
+		    bidBG = bidC;
+		    bidC  = 'white';
+		}
 	    }
 	    if (price.offers.length>0) {
 		offer  = price.rate;;
 		offerV = 0;
 		price.offers.forEach(function(v){offerV+=v.volume;});
 		offerV /= 1000000;
+		if (this.state.fresh) {
+		    var x = offerBG;
+		    offerBG = offerC;
+		    offerC  = 'white';
+		}
 	    }
 	}
 
@@ -83,10 +109,10 @@ var Instrument = React.createClass({
 	return (
 	    <tr>
 	     <td>{this.props.instrument.name}</td>
-	     <td style={{textAlign:'right',padding:0,color:bidC,minWidth:'3em'}}>{bidS[0]}</td>
-	     <td style={{minWidth:'3em'}}>{bidS[1]}</td>
-	     <td style={{textAlign:'right',padding:0,color:offerC,minWidth:'3em'}}>{offerS[0]}</td>
-	     <td style={{minWidth:'3em'}}>{offerS[1]}</td>
+	     <td style={{textAlign:'right',padding:0,color:bidC,backgroundColor:bidBG,minWidth:'3em'}}>{bidS[0]}</td>
+	     <td style={{color:bidC,backgroundColor:bidBG,minWidth:'3em'}}>{bidS[1]}</td>
+	     <td style={{textAlign:'right',padding:0,color:offerC,backgroundColor:offerBG,minWidth:'3em'}}>{offerS[0]}</td>
+	     <td style={{color:offerC,backgroundColor:offerBG,minWidth:'3em'}}>{offerS[1]}</td>
 	     <td style={{textAlign:'right',padding:0}}>{bidV}</td>
 	     <td style={{textAlign:'center',color:'grey',padding:0}}>X</td>
 	     <td>{offerV}</td>
