@@ -44,6 +44,7 @@ var      morgan = require('morgan');
 var      recast = require('recast');
 var        http = require('http');
 var      sockjs = require('sockjs');
+var          ip = require('ip');
 
 var      parser = require('./parser.js');
 var    compiler = require('./compiler.js');
@@ -1220,6 +1221,7 @@ Engine.prototype.administer = function(port) {
                           mode:      eng.mode,
                           masterUrl: eng.masterUrl,
                           connects:  eng.connectionSummary(),
+                          ip:        ip.address(),
                           tag:       eng.tag}]);
     io.i.on('readable',function() {
         var js;
