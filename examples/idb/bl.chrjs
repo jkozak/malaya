@@ -171,8 +171,22 @@ const IDB = store {
                                                                  valueDate: rs.ValuationDate,
                                                                  owner:     rs.OwnerAppID,
                                                                  marketID:  id,
-                                                                 minLotSize:rs.MinLotSize}}]) )
-                                            // +++ trades +++
+                                                                 minLotSize:rs.MinLotSize}}]) ),
+                                        for([];
+                                            ['Trade',{action,status:tst,...rs}],
+                                            "UC".indexOf(action)!==-1 && "CRATS".indexOf(tst)!==-1;
+                                            t=>t.concat([{trade:{ID:        rs.ID,
+                                                                 seqNo:     rs.seqNo,
+                                                                 priceID:   rs.priceID,
+                                                                 action:    action,
+                                                                 status:    tst,
+                                                                 state:     rs.state,
+                                                                 instrument:rs.instrument,
+                                                                 volume:    rs.volume,
+                                                                 broker:    rs.broker,
+                                                                 update:    rs.update,
+                                                                 hitter:    rs.hitter,
+                                                                 painter:   rs.painter}}]) )
                                             ) }}]) ) } }],
           +['_output','self',{
               BigFigBlock:{
