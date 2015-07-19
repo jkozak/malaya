@@ -9,6 +9,7 @@
     "eslint": "^0.17.0",
     "esprima": "=1.2.2",
     "express": "^4.6.1",
+    "ip": "^0.3.3",
     "minimist": "^1.1.1",
     "moment": "^2.9.0",
     "monotonic-timestamp": "0.0.9",

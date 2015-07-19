@@ -9,31 +9,39 @@ function showConnection(type,exists) {
     switch (type) {
     case 'data':
         cUsers += (exists ? +1 : -1)
-        document.getElementById('cUsers').innerText  = cUsers;
         break;
     case 'replication':
         cSlaves += (exists ? +1 : -1)
-        document.getElementById('cSlaves').innerText = cSlaves;
         break;
     }
+    document.getElementById('connCounts').innerText = cUsers+" users, "+cSlaves+" slaves";
 };
 
 function send(js) {
     sock.send(JSON.stringify(js)+'\n');
 }
 
+function disableAllModeButtons() {
+    document.getElementById('bIdle').disabled   = true;
+    document.getElementById('bSlave').disabled  = true;
+    document.getElementById('bMaster').disabled = true;
+}
+
 document.getElementById('bIdle').onclick = function() {
     document.getElementById('mode').innerHTML   = "<s>"+document.getElementById('mode').innerText+"</s>";
+    disableAllModeButtons();
     send(['mode','idle']);
 };
 
 document.getElementById('bMaster').onclick = function() {
     document.getElementById('mode').innerHTML   = "<s>"+document.getElementById('mode').innerText+"</s>";
+    disableAllModeButtons();
     send(['mode','master']);
 };
 
 document.getElementById('bSlave').onclick = function() {
     document.getElementById('mode').innerHTML   = "<s>"+document.getElementById('mode').innerText+"</s>";
+    disableAllModeButtons();
     send(['mode','slave']);
 };
 
@@ -55,6 +63,7 @@ sock.onmessage = function(e) {
                 showConnection(type,1);
         });
         masterUrl = js[1].masterUrl;
+        document.getElementById('ipAddr').innerText = js[1].ip;
         document.getElementById('syshash').innerText = js[1].syshash;
         showMode(js[1].mode);
         break;
