@@ -1,0 +1,9 @@
+From: John Kozak <jk@irvineandkozak.com>
+Date: Mon, 20 Jul 2015 14:21:55 +0100
+State: new
+Subject: lockfile handling doesn't detect wrong process
+Message-Id: <efee76a5a5eaf3d3-0-artemis@jkik2>
+
+If a lockfile is left after exit, and the pid in it corresponds to a
+process that is running at the time malaya tries to restart, malaya
+won't restart.  Need a better check for the pid.
