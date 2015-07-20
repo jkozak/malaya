@@ -1,6 +1,5 @@
 "use strict";
 
-var       _ = require('underscore');
 var     net = require('net');
 var    path = require('path');
 var  stream = require('stream');
@@ -190,8 +189,8 @@ IDBEngine.prototype._become = function(mode,cb) {
         if (e)
             cb(e);
         else
-            Engine.prototype._become.call(eng,mode,cb)
-    }
+            Engine.prototype._become.call(eng,mode,cb);
+    };
     if (eng.fe3Server && eng.mode==='master' && mode==='idle') {
         eng.fe3Server.close(function(err) {
             eng.fe3Server = null;

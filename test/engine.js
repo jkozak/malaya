@@ -375,16 +375,19 @@ describe("Engine",function() {
         it("supplies handy info on connect",function(done) {
             var eng = new Engine({dir:           temp.mkdirSync(),
                                   businessLogic: path.join(__dirname,'bl','null.chrjs') });
-            var io = createIO('admin');
+            var  io = createIO('admin');
+            var  ok = false;
             eng.init();
             eng.start();
             io.on('rcved',function() {
                 try {
-                    assert.strictEqual(io.rcved.length,1);
-                    assert.strictEqual(io.rcved[0][0],'engine');
-                    assert.strictEqual((typeof io.rcved[0][1].syshash),'string');
-                    assert.strictEqual(io.rcved[0][1].mode,'idle');
-                    done();
+                    if (!ok) {
+                        assert.strictEqual(io.rcved[0][0],'engine');
+                        assert.strictEqual((typeof io.rcved[0][1].syshash),'string');
+                        assert.strictEqual(io.rcved[0][1].mode,'idle');
+                        done();
+                        ok = true;
+                    }
                 } catch (e) {done(e);}
             });
             eng.addConnection('test://admin',io);

@@ -44,9 +44,6 @@
 	  <section>
 	    <h2>Background</h2>
 	    <h3>The last 20 years</h3>
-	    <p>
-	      So much improvement that things formerly impractical are now trivial.
-	    </p>
 	  </section>
 	  <section>
 	    <h2>2015 vs 1995</h2>
@@ -67,6 +64,12 @@
 	      <li>Free Software</li>
 	    </ul>
 	  </section>
+	  <section>
+	    <h2>2015 vs 1995</h2>
+	    <p>
+	      So much improvement that some things formerly impractical are now trivial.
+	    </p>
+	  </section>
 	</section>
 
 	<section>
@@ -85,31 +88,75 @@
 	  </section>
 	  <section>
 	    <h2>Message Streaming</h2>
-	    <p>all any system like this does is pass messages around, generate new ones, and record this activity</p>
+	    <p>all any system like this does is pass messages around, generate new ones, and log this activity</p>
 	  </section>
 	  <section>
 	    <h2>Ultra High Level Language</h2>
 	    <p>specification language - logic/relational hybrid</p>
 	    <p>makes sense to domain experts (hopefully)</p>
-	    <p>operates on JSON natively</p>
+	    <p>operates on "data representation" directly</p>
 	  </section>
 	</section>
 
 	<section>
-	  <h2>Goals - uncontroversial</h2>
-	  <ul>
-	    <li>fast</li>
-	    <li>small</li>
-	    <li>easy to modify</li>
-	    <li>secure</li>
-	    <li>robust</li>
-	    <li>fault tolerant</li>
-	  </ul>
+	  <section>
+	    <h2>Goals - uncontroversial</h2>
+	    <ul>
+	      <li>fast</li>
+	      <li>small</li>
+	      <li>easy to modify</li>
+	      <li>secure</li>
+	      <li>robust</li>
+	      <li>fault tolerant</li>
+	      <li>high capacity</li>
+	    </ul>
+	  </section>
+	  <section>
+	    <h2>fast</h2>
+	    <p>Quite pleased with performance.</p>
+	    <p>Some optimisations made, more to come.  </p>
+	    <p>We run benchmarks routinely to see if something has gone awry with performance.</p>
+	  </section>
+	  <section>
+	    <h2>small</h2>
+	    <p>It is.
+	  </section>
+	  <section>
+	    <h2>easy to modify</h2>
+	    <p>Yes, but learning curve is quite steep at the moment.</p>
+	  </section>
+	  <section>
+	    <h2>secure</h2>
+	    <ul>
+	      <li>Any storage can be encrypted.</li>
+	      <li>Secure protocols will be offered (<code>https</code>,<code>wss</code>).</li>
+	      <li>Will use certificates where practical.</li>
+	    </ul>
+	  </section>
+	  <section>
+	    <h2>robust</h2>
+	    <ul>
+	      <li>Automatic testing...</li>
+	      <li>... different kinds...</li>
+	      <li>... lots of it.</li>
+	      <li>Will run automatically on various platforms.</li>
+	    </ul>
+	  </section>
+	  <section>
+	    <h2>fault tolerant</h2>
+	    <p>How to recover from a server hardware failure?</p>
+	    <p>Update streaming gives multiple hot standby systems.</p>
+	  </section>
+	  <section>
+	    <h2>high capacity</h2>
+	    <p>We can connect a respectable numbers of clients at the moment.</p>
+	    <p>We will offer connection clustering.</p>
+	  </section>
 	</section>
 
 	<section>
 	  <section>
-	    <h2>Goals - substantive</h2>
+	    <h2>Goals - controversial</h2>
 	    <ul>
 	      <li>use existing protocols</li>
 	      <li>use existing data formats</li>
@@ -137,7 +184,7 @@
 	    <h2>frameworks</h2>
 	    <h3>nodejs</h3>
 	    <p>Malaya is layered on top of this.  Same language as used
-	    in web browser - javascript.  Widely endorsed, even by Microsoft.</p>
+	    in web browser - javascript - running on server.  Widely endorsed, even by Microsoft.</p>
 	    <h3>react</h3>
 	    <p>Web browser UI toolkit from Facebook</p>
 	  </section>
@@ -156,49 +203,87 @@
 	</section>
 
 	<section>
+	  <h2>A Malaya system</h2>
+	  <ul>
+	    <li>has a container into which JSON items can be put</li>
+	    <li>these items cover <u>all</u> data, static, market, whatever</li>
+	    <li>has 'rules' in its language which act on these items...</li>
+	    <ul>
+	      <li>... deleting</li>
+	      <li>... adding</li>
+	    </ul>
+	    <li>has a  runtime which...</li>
+	    <ul>
+	      <li>... inserts items from clients into the container</li>
+	      <li>... sends new items from container to client(s)</li>
+	    </ul>
+	  </ul>
+	</section>
+	
+	<section>
 	  <section>
-	    <h2>Some Malaya code</h2>
+	    <h2>Malaya rules</h2>
 	    <pre>
 rule (-['price', {volume:0, ...}]);
 	      
-rule (-['price', {user:uB, instrument, volume:vB, isBuy:true,  ...rB}],
-      -['price', {user:uS, instrument, volume:vS, isBuy:false, ...rS}],
+rule (-['price', {user:uB, stock, rate, volume:vB, buy:true,  ...rB}],
+      -['price', {user:uS, stock, rate, volume:vS, buy:false, ...rS}],
        vT = Math.min(vB,vS),
-      +['trade', {buyer:uB, seller:uS, instrument, volume:vT}],
-      +['price', {user:uB, instrument, volume:vB-vT, isBuy:true,  ...rB}],
-      +['price', {user:uS, instrument, volume:vS-vT, isBuy:false, ...rS}] );
+      +['trade', {buyer:uB, seller:uS, stock, rate, volume:vT}],
+      +['price', {user:uB, stock, rate, volume:vB-vT, buy:true,  ...rB}],
+      +['price', {user:uS, stock, rate, volume:vS-vT, buy:false, ...rS}] );
 	    </pre>
 	  </section>
 	  <section>
-	    <h2>More Malaya code</h2>
+	    <h2>More Malaya rules</h2>
 	    <pre>
 rule (-['price', {volume:0, ...}]);
 
-rule (-['price', {user:uB, instrument, volume:vB, isBuy:true,  ...rB}],
-      -['price', {user:uS, instrument, volume:vS, isBuy:false, ...rS}],
+rule (-['price', {user:uB, stock, rate, volume:vB, buy:true,  ...rB}],
+      -['price', {user:uS, stock, rate, volume:vS, buy:false, ...rS}],
+       uB!==uS,	      
+       vT = Math.min(vB,vS),
+      +['trade', {buyer:uB, seller:uS, stock, rate,volume:vT}],
+      +['price', {user:uB, stock, rate, volume:vB-vT, buy:true,  ...rB}],
+      +['price', {user:uS, stock, rate, volume:vS-vT, buy:false, ...rS}] );
+	    </pre>
+	  </section>
+	  <section>
+	    <h2>Even more Malaya rules</h2>
+	    <pre>
+rule (-['price', {volume:0, ...}]);
+
+rule (-['price', {user:uB, stock, rate, volume:vB, buy:true,  ...rB}],
+      -['price', {user:uS, stock, rate, volume:vS, buy:false, ...rS}],
        ['user', {name:uB, company:cB, ...}],
        ['user', {name:uS, company:cS, ...}],
        cB!==cS,
        vT = Math.min(vB,vS),
-      +['trade', {buyer:uB, seller:uS, instrument, volume:vT}],
-      +['price', {user:uB, instrument, volume:vB-vT, isBuy:true,  ...rB}],
-      +['price', {user:uS, instrument, volume:vS-vT, isBuy:false, ...rS}] );
+      +['trade', {buyer:uB, seller:uS, stock, rate,volume:vT}],
+      +['price', {user:uB, stock, rate, volume:vB-vT, buy:true,  ...rB}],
+      +['price', {user:uS, stock, rate, volume:vS-vT, buy:false, ...rS}] );
 	    </pre>
 	  </section>
 	</section>
 
 	<section>
 	  <h2>Message streams - plumbing</h2>
-	  <p>Messages stream into and out of Malaya systems.</p>
-	  <p>They are recorded to disk, giving both an audit log and a means of recovery in case of crashes.</p>
-	  <p>They can be streamed to another Malaya process, locally or remotely, giving hot standby and resilience.</p>
+	  <p>JSON messages stream into and out of Malaya systems.</p>
+	  <p>They are logged to disk, giving both an audit log and a means of recovery in case of crashes.</p>
+	  <p>They can be streamed to other Malaya processes, locally or remotely, giving hot standby and resilience.</p>
 	</section>
 
 	<section>
-	  <h2>Integrity and Auditability</h2>
+	  <h2>Auditability</h2>
 	  <p>Log files are hash-chained;  tampering can always be detected.</p>
 	  <p>Can play back log files to see what happened at any point in a system's history.</p>
 	  <p>Every file acted on or shipped is logged: can always establish exactly what was sent when to whom.</p>
+	</section>
+
+	<section>
+	  <h2>Data Integrity</h2>
+	  <p>Sometimes, changes need to the system's data model (a "schema change" in SQL terms).</p>
+	  <p>In Malaya, this is done by specialised sets of rules which run within the auditing framework - the activity is completely captured and can be undone.</p>
 	</section>
 
 	<section>
@@ -208,7 +293,32 @@ rule (-['price', {user:uB, instrument, volume:vB, isBuy:true,  ...rB}],
 	</section>
 
 	<section>
-	  <h2>Demo!</h2>
+	  <section>
+	    <h2>Demo!</h2>
+	  </section>
+	  <section>
+	    <h2>URL</h2>
+	    <p><code>http://10.1.1.40:3000/</code>
+	    <h2>Logon</h2>
+	    <p>Password <code>123</code> - user one of:
+	    <small>
+	      <ul style="list-style-type:none">
+		<li><code>Colin Mclauchlan</code></li>
+		<li><code>David Irvine</code></li>
+		<li><code>David Wileman</code></li>
+		<li><code>Deepu James</code></li>
+		<li><code>Gavin Martin</code></li>
+		<li><code>Harsha Prabhala</code></li>
+		<li><code>Jared Inxster</code></li>
+		<li><code>Lee Bettridge</code></li>
+		<li><code>Mark Dodds</code></li>
+		<li><code>Martin Carey</code></li>
+		<li><code>Sean Tamm</code></li>
+		<li><code>Vishal Barot</code></li>
+	      </ul>
+	    </small>
+	    </p>
+	  </section>
 	</section>
 
 	<section>
