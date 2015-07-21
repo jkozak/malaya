@@ -1,0 +1,10 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Mon, 20 Jul 2015 21:28:21 +0100
+Subject: Re: power loss corrupts log file and causes slave attempt to fail
+Message-Id: <b4611708df9197a7-ee686c8c68d0260a-artemis@renn>
+References: <b4611708df9197a7-0-artemis@renn>
+In-Reply-To: <b4611708df9197a7-0-artemis@renn>
+
+If in crash recovery (lock file exists) check logfile is OK (i.e. each
+line is valid JSON).
+

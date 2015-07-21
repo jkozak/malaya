@@ -1,0 +1,12 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Mon, 20 Jul 2015 21:59:23 +0100
+State: new
+Subject: `lock` handling code can mis-attribute pid
+Message-Id: <c28d7d9c7820ecd7-0-artemis@renn>
+
+Especially at startup when all pids are similar.  If there's a
+`lock` and the pid in it is owned by an extant process, malaya won't
+start.
+
+Fix this by adding process-start-time to lock file and checking it.
+
