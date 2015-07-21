@@ -1,0 +1,4 @@
+#!/bin/sh
+
+rm -rf .prevalence
+./malaya init --data data/init.json

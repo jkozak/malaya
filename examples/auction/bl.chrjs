@@ -1,0 +1,89 @@
+var _ = require('underscore');
+
+module.exports =  store {
+
+    rule (-['logon',{user:name,pw},{port}],
+          -['user',{name,pw,enabled:true,port:null,...}],
+          +['user',{name,pw,enabled:true,port}],
+          +['_output','self',['logon',{ok:true}]] );
+    rule (-['logon',{user:name,pw},...],
+           ['user',{name,pw,enabled:false,port:null,...}],
+          +['_output','self',['logon',{ok:false,msg:"logon disabled"}]] );
+    rule (-['logon',{user:name,pw},...],
+           ['user',{name,pw,enabled:true,port,...}],
+           port!==null,
+          +['_output','self',['logon',{ok:false,msg:"already logged on"}]] );
+    rule (-['logon',{user:name,pw},...],
+           ['user',{name,...}],
+          +['_output','self',['logon',{ok:false,msg:"bad pw"}]] );
+    rule (-['logon',{user,pw},...],
+          +['_output','self',['logon',{ok:false,msg:"unknown user"}]] );
+    rule (-['logoff',{...},{port}],
+          -['user',{port,...rs}],
+          +['user',{port:null,...rs}] );
+
+    rule (-['init',{...},...],
+          +['_output','self',['auctions',for ([];
+                                              ['auction',a];
+                                              x=>x.concat(a) )]] );
+    
+    rule (-['auction',{id,state:'run',...rs1},{port}], // start auction, set start time
+          -['auction',{id,state:'ready',...rs0}],
+           ['user',{port,name,...}],
+          +['auction',_.extend({owner:name},rs0,rs1,{id:id,state:'run',start:Date.now()})] );
+    rule (-['auction',{id,...rs1},{port}],             // update
+          -['auction',{id,...rs0}],
+           ['user',{port,name,...}],
+          +['auction',_.extend({owner:name},rs0,rs1,{id:id})] );
+    rule (-['auction',{id,...},{port}],                // ensure sane
+           console.log("no user found for %j",port) );
+
+    rule ( ['_tick',{date,...},...],
+           ['auction',{id,state:'run',start,duration,...rs}],
+           rem = start+duration*1000-date,
+           rem>0,
+          +['_output','all',['tick',{id,remaining:rem/1000}]] );
+    rule ( ['_tick',{date,...},...],
+          -['auction',{state:'run',start,duration,...rs}],
+           remaining = start+duration*1000-date,
+           remaining<=0,
+          +['auction',{state:'ended',start,duration,...rs}] );
+
+    rule (-['price',{volume:0,...},...]);
+    rule (-['price',{auction,stock,rate,volume:vB,user:uB,buy:true, ...brs},...],
+          -['price',{auction,stock,rate,volume:vS,user:uS,buy:false,...srs},...],
+           ['auction',{id:auction,type:'match'}],
+           uB!==uS,
+           vT=Math.min(vB,vS),
+          +['price',{auction,stock,rate,volume:vB-vT,user:uB,buy:true, ...brs}],
+          +['price',{auction,stock,rate,volume:vS-vT,user:uS,buy:false,...srs}],
+          +['trade',{auction,stock,rate,volume:vT,buyer:uB,seller:uS}] );
+          
+    // +++ type-specific end of auction processing if required goes here +++
+
+    rule (-['auction',{state:'ended',...rs}],
+          +['auction',{state:'done',...rs}] );
+
+    rule ( ['auction',rs],      // send all auction updates out
+          +['_output','all',['auction',rs]] );
+    rule ( ['price',rs,...],    // send all price updates out
+          +['_output','all',['price',rs]] );
+    rule ( ['trade',rs],        // send all price updates out
+          +['_output','all',['trade',rs]] );
+    
+    rule ( ['_take-outputs',...], -['_output',...]);
+    rule (-['_take-outputs',...]);
+
+    rule ( ['_restart',...],
+          -['user',{loggedOn:true,...rs}],
+          +['user',{loggedOn:false,...rs}] );
+    rule ( ['_restart',...],
+          -['_output',...] );
+    rule (-['_restart',...]);
+    rule (-['_tick',...]);
+};
+
+// ['auction',{id,type,state:'ready'|'run'|'pause'|'ended'|'done',start,duration,stocks,prices,trades}]
+// may be extra states for wacky auctions
+// can chain auctions together with `next:<id>` (e.g. stage1->secondChance)
+// `type` will correspond to a block of rules

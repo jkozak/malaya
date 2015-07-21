@@ -1,0 +1,13 @@
+#!/usr/bin/env node
+// -*- mode:javascript -*-
+"use strict";
+
+var cmdline = require('../../cmdline.js');
+var auction = require('./auction.js');
+
+cmdline.run({createEngine:function(opts) {
+    var eng;
+    opts.tag = 'auction';
+    return eng = new auction.Engine(opts);
+}});
+

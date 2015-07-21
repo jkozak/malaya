@@ -1,0 +1,43 @@
+[
+    ["user",{"user":"John Kozak",    "pw":"JK","enabled":true,"port":null}],
+    ["user",{"user":"Sid Strong",    "pw":"SS","enabled":true,"port":null}],
+    ["user",{"user":"David Wileman", "pw":"DW","enabled":true,"port":null}],
+    ["user",{"user":"Miranda Telfer","pw":"MT","enabled":true,"port":null}],
+
+    ["stock",{"id":"spangles"}],
+    ["stock",{"id":"marathon"}],
+
+    ["stock",{"id":"halibut"}],
+    ["stock",{"id":"mackerel"}],
+    ["stock",{"id":"cod"}],
+
+    ["stock",{"id":"prawns"}],
+    ["stock",{"id":"scallops"}],
+    
+    ["auction",{"id":"sweets1",
+                "type":"match",
+                "stocks":["spangles","marathon"],
+                "state":"done",
+                "owner":"John Kozak",
+                "start":1437491862766,
+                "duration":30
+               }],
+
+    ["auction",{"id":"fish1",
+                "type":"match",
+                "stocks":["cod","halibut","mackerel"],
+                "state":"ready",
+                "owner":"John Kozak",
+                "start":1437494842958,
+                "duration":30
+               }],
+    
+    ["auction",{"id":"invertebrates",
+                "type":"match",
+                "stocks":["prawns","scallops"],
+                "state":"ready",
+                "owner":"John Kozak",
+                "start":1437497206089,
+                "duration":30
+               }]
+]

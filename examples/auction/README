@@ -1,0 +1,20 @@
+URLs
+
+/index.html
+ * shows all auctions
+ * launches new auctions
+
+/new-auction
+ * redirects to /auction/<next-id>
+
+/auction/<id>
+ * controls individual auction
+ * launches new players
+
+/new-player/<id>
+ * redirects to /auction/<id>/<next-player>
+
+/auction/<id>/<player>
+ * participates in auction
+
+Browser dissects `window.location`, sends it to websocket.  Logon as per IDB.
