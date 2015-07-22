@@ -1,6 +1,5 @@
 "use strict";
 
-var  assert = require('assert');
 var    path = require('path');
 var    util = require('../../util.js');
 var  Engine = require('../../engine.js').Engine;
@@ -50,24 +49,24 @@ AuctionEngine.prototype.createExpressApp = function() {
     var app = Engine.prototype.createExpressApp.call(eng);
 
     app.get('/new-auction',function(req,res) {
-        res.redirect('/auction/'+nextAuctionId());
+        res.redirect('/auction/'+this.nextAuctionId());
     });
     
     app.get('/new-player/*',function(req,res) {
-        var     parts = req.path.split('/').slice(2)
+        var     parts = req.path.split('/').slice(2);
         var auctionId = parts[0];
-        res.redirect('/auction/'+auctionId+'/'+nextPlayerId(auctionId));
+        res.redirect('/auction/'+auctionId+'/'+this.nextPlayerId(auctionId));
     });
 
     app.get('/auction/*',function(req,res) {
-        var     parts = req.path.split('/').slice(2)
-        var auctionId = parts[0];
+        var  parts = req.path.split('/').slice(2);
+        //var auctionId = parts[0];
         switch (parts.len) {
         case 1:
             // +++ auction control
             break;
         case 2: {
-            var playerId = parts[1];
+            //var playerId = parts[1];
             // +++ auction itself
             break;
         }
