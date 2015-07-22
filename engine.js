@@ -445,6 +445,7 @@ Engine.prototype.createExpressApp = function() {
             });
             b.bundle()
                 .on('error',function(err) {
+                    console.log("!!! bundle fail: %s",err);
                     cb(err);
                 })
                 .on('data',function(chunk) {
@@ -491,7 +492,7 @@ Engine.prototype.createExpressApp = function() {
             } else if (!conn || !conn.logon)
                 eng._logon(creds,port,function(err,ok) {
                     if (err) {
-                        res.writeHead(500); // !!! check this !!!
+                        res.status(500); // !!! check this !!!
                         res.end();
                     } else if (ok) {
                         eng.conns[port].logon = true;
