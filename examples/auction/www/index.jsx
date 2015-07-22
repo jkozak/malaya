@@ -91,12 +91,20 @@ document.body.onload = function() {
 		break;
 	    case 'auctions':	// send in response to ['init',{...}]
 		auctions = js[1];
+		auctions.forEach(function(a) {
+		    a.prices = [];
+		    a.trades = [];
+		});
 		render();
 		break;
 	    case 'auction':	// send in response to ['start',{path:['auction',id]}]
+		previous = findAuction(js[1].id);
 		auctions = auctions.filter(function(a){return a.id!==js[1].id;});
-		if (js[1].state==='run' && js[1].remaining===undefined)
+		if (js[1].state==='run' && js[1].remaining===undefined) {
 		    js[1].remaining = js[1].duration;
+		    js[1].prices    = previous.prices;
+		    js[1].trades    = previous.trades;
+		}
 		auctions.push(js[1]);
 		render();
 		break;
@@ -108,10 +116,22 @@ document.body.onload = function() {
 		render();
 		break;
 	    }
-	    case 'price':	// async, optional
+	    case 'price': {
+		var auction = findAuction(js[1].auction);
+		if (auction) {
+		    auction.prices.push(js[1]);
+		    render();
+		}
 		break;
-	    case 'trade':	// async, optional
+	    }
+	    case 'trade': {
+		var auction = findAuction(js[1].auction);
+		if (auction) {
+		    auction.trades.push(js[1]);
+		    render();
+		}
 		break;
+	    }
 	    case 'activity':	// async, optional
 		// ['activity',{stock,type:['price'|'trade'|...,...]}]
 		break;
@@ -130,6 +150,16 @@ document.body.onload = function() {
 	    },1000);
 	    render();
 	};
+    }
+
+    var findAuction = function(id) {
+	var aucts = auctions.filter(function(a){return a.id===id;});
+	if (aucts.length===1)
+	    return aucts[0];
+	else {
+	    console.log("*** bad aucts: ",id,aucts);
+	    return null;
+	}
     };
     
     var onLogon = function(data) {
@@ -193,10 +223,10 @@ document.body.onload = function() {
 		if (aucts.length===1) {
 		    switch (show[0]) {
 		    case 'ready':
-			main = (<Prepare onStart={function(){onStart(aucts[0])}} auction={aucts[0]}/>);
+			main = (<Prepare user={user} onStart={function(){onStart(aucts[0])}} auction={aucts[0]}/>);
 			break;
 		    case 'run':
-			main = (<Auction onPriceChange={onPriceChange} auction={aucts[0]}/>);
+			main = (<Auction user={user} onPriceChange={onPriceChange} auction={aucts[0]}/>);
 			break;
 		    }
 		} else
