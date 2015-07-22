@@ -49,7 +49,8 @@ module.exports =  store {
            remaining<=0,
           +['auction',{state:'ended',start,duration,...rs}] );
 
-    rule (-['price',{volume:0,...},...]);
+    rule (-['price',{volume:0,...rs},...],
+          +['_output','all',['price',_.extend({volume:0},rs)]] );
     rule (-['price',{auction,stock,rate,volume:vB,user:uB,buy:true, ...brs},...],
           -['price',{auction,stock,rate,volume:vS,user:uS,buy:false,...srs},...],
            ['auction',{id:auction,type:'match'}],
