@@ -10,3 +10,5 @@ start.
 
 Fix this by adding process-start-time to lock file and checking it.
 
+[49433e7799b4] mitigates this by checking that the pid started after
+the last reboot.
