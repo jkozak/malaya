@@ -37,13 +37,14 @@ describe("readFileLinesSync",function() {
     var  tdir = temp.mkdirSync();
     var lines = ["line 1","line 2","line 3","line 4"];
     var    fn = path.join(tdir,"1.txt");
-        fs.writeFileSync(fn,lines.join('\n'));
+    fs.writeFileSync(fn,lines.join('\n')+'\n');
     it("should read a file linewise",function() {
         var i = 0;
         util.readFileLinesSync(fn,function(l) {
             assert.equal(l,lines[i++]);
             return true;
         });
+        assert.equal(i,lines.length);
     });
     it("should give up if asked",function() {
         var i = 0;
@@ -52,6 +53,27 @@ describe("readFileLinesSync",function() {
             return i!=2;
         });
         assert.equal(i,2);
+    });
+    it("should return '' for well-formatted file",function() {
+        assert.equal(0,util.readFileLinesSync(fn,function(l) {return true;}));
+    });
+    it("should return fragment after last '\n' for ill-formed file",function() {
+        var  fn2 = path.join(tdir,"2.txt");
+        var junk = "this is some junk left over at the end";
+        var    n = 0;
+        fs.writeFileSync(fn2,lines.join('\n')+'\n');
+        fs.appendFileSync(fn2,junk);
+        assert.equal(junk,util.readFileLinesSync(fn2,function(l) {n++;return true;}));
+        assert.equal(n,lines.length);
+    });
+    it("should return lots after last '\n' for ill-formed file",function() {
+        var  fn2 = path.join(tdir,"2.txt");
+        var junk = (new Array(16*1024)).join("x"); //N.B. should be bigger than readFileLinesSync's buffer
+        var    n = 0;
+        fs.writeFileSync(fn2,lines.join('\n')+'\n');
+        fs.appendFileSync(fn2,junk);
+        assert.equal(junk,util.readFileLinesSync(fn2,function(l) {n++;return true;}));
+        assert.equal(n,lines.length);
     });
 });
 

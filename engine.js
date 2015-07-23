@@ -322,7 +322,7 @@ Engine.prototype.startPrevalence = function(opts,cb) {
     eng._ensureStateDir();
     var jrnlFile = path.join(eng.prevalenceDir,'state','journal');
     eng._loadWorld();
-    util.readFileLinesSync(jrnlFile,function(l) { // replay
+    var residue = util.readFileLinesSync(jrnlFile,function(l) { // replay
         var js = util.deserialise(l);
         switch (js[1]) {
         case 'update':
@@ -335,6 +335,11 @@ Engine.prototype.startPrevalence = function(opts,cb) {
         }
         return true;
     });
+    if (residue) {
+        var jrnlSize = fs.statSync(jrnlFile).size;
+        console.log("truncating journal file to lose junk: %j",residue);
+        fs.truncateSync(jrnlFile,jrnlSize-residue.length);
+    }
     eng.journal = opts.readonly ? null : fs.createWriteStream(jrnlFile,{flags:'a'});
     if (cb) cb();
 };

@@ -41,7 +41,7 @@ exports.readFdLinesSync = function(fd,fn) {
     while (!done && (read=fs.readSync(fd,buffer,0,bufferSize,null))!==0) {
         leftOver += buffer.toString('utf8',0,read);
         idxStart  = 0;
-        while ((idx=leftOver.indexOf("\n",idxStart))!==-1) {
+        while ((idx=leftOver.indexOf('\n',idxStart))!==-1) {
             line = leftOver.substring(idxStart,idx);
             if (!fn(line)) {
                 done = true;
@@ -51,12 +51,13 @@ exports.readFdLinesSync = function(fd,fn) {
         }
         leftOver = leftOver.substring(idxStart);
     }
+    return leftOver;            // return everything after the last newline
 };
 
 exports.readFileLinesSync = function(path0,fn) {
     var fd = fs.openSync(path0,"r+");
     try {
-        exports.readFdLinesSync(fd,fn);
+        return exports.readFdLinesSync(fd,fn);
     } finally {
         fs.closeSync(fd);
     }
