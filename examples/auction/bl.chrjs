@@ -49,10 +49,16 @@ module.exports =  store {
            remaining<=0,
           +['auction',{state:'ended',start,duration,...rs}] );
 
+    rule (-['price',{auction,stock,rate,buy,...rs},{port}], // set user name from port
+           ['user',{name,port,...}],
+          +['price',{auction,stock,rate,buy,user:name,...rs}] );
+    
     rule (-['price',{volume:0,...rs},...],
           +['_output','all',['price',_.extend({volume:0},rs)]] );
-    rule (-['price',{auction,stock,rate,volume:vB,user:uB,buy:true, ...brs},...],
-          -['price',{auction,stock,rate,volume:vS,user:uS,buy:false,...srs},...],
+    rule ( ['price',{auction,stock,rate,buy,user,...}],     // new prices replace old
+          -['price',{auction,stock,rate,buy,user,...}] );
+    rule (-['price',{auction,stock,rate,volume:vB,user:uB,buy:true, ...brs}],
+          -['price',{auction,stock,rate,volume:vS,user:uS,buy:false,...srs}],
            ['auction',{id:auction,type:'match'}],
            uB!==uS,
            vT=Math.min(vB,vS),

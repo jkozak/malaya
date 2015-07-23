@@ -18,7 +18,7 @@ exports.debug = function (msg) {
 
 exports.info = function (msg) {
     if (exports.verbosity>1)
-        console.log(_util.format.apply(null,arguments)+'\n');
+        console.log(_util.format.apply(null,arguments));
 };
 
 exports.error  = function (msg) {
