@@ -24,10 +24,11 @@ describe("makeInertChrjs",function() {
     });
 });
 
-runInCountEngine = testutil.runInCountEngine;
-createIO         = testutil.createIO;
-makeTimestamp    = testutil.makeTimestamp;
-appendToJournal  = testutil.appendToJournal;
+runInCountEngine      = testutil.runInCountEngine;
+createIO              = testutil.createIO;
+makeTimestamp         = testutil.makeTimestamp;
+appendToJournal       = testutil.appendToJournal;
+appendStringToJournal = testutil.appendStringToJournal;
 
 describe("Engine",function() {
     describe("initialisation",function() {
@@ -171,7 +172,7 @@ describe("Engine",function() {
                 }
             }); 
         });
-        it("saves and reloads updates",function(done){
+        it("saves and reloads",function(done){
             runInCountEngine({
                 init: function(eng) {appendToJournal(eng,'update',['x',{}]);},
                 main: function(eng) {
@@ -187,12 +188,49 @@ describe("Engine",function() {
                 }
             }); 
         });
-        it("saves and reloads updates including journal",function(done){
+        it("saves and reloads journal",function(done){
             runInCountEngine({
                 init: function(eng) {appendToJournal(eng,'update',['x',{}]);},
                 main: function(eng) {
                     assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:1}]]);
                     eng.stopPrevalence(false,function(err) {
+                        assert(!err);
+                        appendToJournal(eng,'update',['x',{}]);
+                        eng.startPrevalence(function(err) {
+                            assert(!err);
+                            assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:2}]]);
+                        });
+                    });
+                    done();
+                }
+            }); 
+        });
+        it("closes and reloads journal",function(done){
+            runInCountEngine({
+                init: function(eng) {appendToJournal(eng,'update',['x',{}]);},
+                main: function(eng) {
+                    assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:1}]]);
+                    eng.stopPrevalence(true,function(err) {
+                        assert(!err);
+                        appendToJournal(eng,'update',['x',{}]);
+                        eng.startPrevalence(function(err) {
+                            assert(!err);
+                            assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:2}]]);
+                        });
+                    });
+                    done();
+                }
+            }); 
+        });
+        it("copes with crash-damaged journal",function(done){ // bug in 2015-07-20 demo
+            runInCountEngine({
+                init: function(eng) {
+                    appendToJournal(eng,'update',['x',{}]);
+                    appendStringToJournal(eng,"[1437635839892,\":upd"); // possible crash behaviour
+                },
+                main: function(eng) {
+                    assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:1}]]);
+                    eng.stopPrevalence(true,function(err) {
                         assert(!err);
                         appendToJournal(eng,'update',['x',{}]);
                         eng.startPrevalence(function(err) {

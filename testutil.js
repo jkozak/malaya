@@ -57,11 +57,13 @@ if (util.env==='test')  {
     };
 
     exports.appendToJournal = function(eng,type,entry) {
-        fs.writeFileSync(path.join(eng.prevalenceDir,'state','journal'),
-                         util.serialise([eng.timestamp(),type,entry])+'\n',
-                         {flag:'a'} );
+        exports.appendStringToJournal(eng,util.serialise([eng.timestamp(),type,entry])+'\n');
     };
 
+    exports.appendStringToJournal = function(eng,s) {
+        fs.writeFileSync(path.join(eng.prevalenceDir,'state','journal'),s,{flag:'a'});
+    };
+    
     exports.dumpFile = function(filename) {
         console.log("========================== begin %s ==========================",filename);
         util.readFileLinesSync(filename,function(l) {
