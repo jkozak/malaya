@@ -7,10 +7,10 @@ var assert  = require("assert");
 
 describe('constants',function() {
     it("`env` will always be 'test' when testing",function() {
-        assert.equal(util.env,"test");
+        assert.strictEqual(util.env,"test");
     });
     it("`source_version` will be a string",function() {
-        assert.equal(typeof util.sourceVersion,'string');
+        assert.strictEqual(typeof util.sourceVersion,'string');
     });
 });
 
@@ -41,10 +41,10 @@ describe("readFileLinesSync",function() {
     it("should read a file linewise",function() {
         var i = 0;
         util.readFileLinesSync(fn,function(l) {
-            assert.equal(l,lines[i++]);
+            assert.strictEqual(l,lines[i++]);
             return true;
         });
-        assert.equal(i,lines.length);
+        assert.strictEqual(i,lines.length);
     });
     it("should give up if asked",function() {
         var i = 0;
@@ -52,10 +52,10 @@ describe("readFileLinesSync",function() {
             i++;
             return i!=2;
         });
-        assert.equal(i,2);
+        assert.strictEqual(i,2);
     });
     it("should return '' for well-formatted file",function() {
-        assert.equal(0,util.readFileLinesSync(fn,function(l) {return true;}));
+        assert.strictEqual('',util.readFileLinesSync(fn,function(l) {return true;}));
     });
     it("should return fragment after last '\n' for ill-formed file",function() {
         var  fn2 = path.join(tdir,"2.txt");
@@ -63,8 +63,8 @@ describe("readFileLinesSync",function() {
         var    n = 0;
         fs.writeFileSync(fn2,lines.join('\n')+'\n');
         fs.appendFileSync(fn2,junk);
-        assert.equal(junk,util.readFileLinesSync(fn2,function(l) {n++;return true;}));
-        assert.equal(n,lines.length);
+        assert.strictEqual(junk,util.readFileLinesSync(fn2,function(l) {n++;return true;}));
+        assert.strictEqual(n,lines.length);
     });
     it("should return lots after last '\n' for ill-formed file",function() {
         var  fn2 = path.join(tdir,"2.txt");
@@ -72,8 +72,8 @@ describe("readFileLinesSync",function() {
         var    n = 0;
         fs.writeFileSync(fn2,lines.join('\n')+'\n');
         fs.appendFileSync(fn2,junk);
-        assert.equal(junk,util.readFileLinesSync(fn2,function(l) {n++;return true;}));
-        assert.equal(n,lines.length);
+        assert.strictEqual(junk,util.readFileLinesSync(fn2,function(l) {n++;return true;}));
+        assert.strictEqual(n,lines.length);
     });
 });
 
