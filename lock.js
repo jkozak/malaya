@@ -6,16 +6,19 @@ var      _ = require('underscore');
 var   temp = require('temp').track();
 var   path = require('path');
 var     fs = require('fs');
+var     os = require('os');
 var VError = require('verror');
 
 var   util = require('./util.js');
 
 var process_ = process;
+var      os_ = os;
 
 exports.lockSync = function(filename,data) { 
     var tmp = temp.openSync({dir:path.dirname(filename)});
 
-    data = _.extend({},data||{},{pid:process_.pid});
+    data = _.extend({},data||{},{pid:      process_.pid,
+                                 startTime:Date.now()-process.uptime()*1000 });
     
     fs.writeSync(tmp.fd,JSON.stringify(data),null,null,null);
     for (var i=0;i<2;i++) 
@@ -49,6 +52,9 @@ exports.lockDataSync = function(filename) {
             throw new VError(e,"can't read or parse lockfile %s",filename);
         return null;
     }
+    var systemStartTime = Date.now()-os_.uptime()*1000;
+    if (data.startTime<systemStartTime) // process can't be older than the system
+        return null;
     try {
         process_.kill(data.pid,0);
         return data;
@@ -74,5 +80,7 @@ exports.unlockSync = function(filename) {
 if (util.env==='test')
     exports._private = {
         setProcess:   function(p) {process_=p;},
-        resetProcess: function(p) {process_=process;}
+        resetProcess: function(p) {process_=process;},
+        setOs:        function(o) {os_=o;},
+        resetOs:      function(o) {os_=os;}
     };

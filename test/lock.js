@@ -27,7 +27,7 @@ describe("basic locking",function() {
         lock.lockSync(lk);
         lock.unlockSync(lk);
     });
-    it("lets a process can acquire a lock twice",function() {
+    it("lets a process acquire a lock twice",function() {
         var lk = path.join(temp.mkdirSync(),'lock');
         lock.lockSync(lk);
         lock.lockSync(lk);
@@ -114,4 +114,20 @@ describe("multiprocess locking",function() {
             lock.lockSync(lk);
         });
     });
+    it("detects pid misattribution a bit",function() {
+        try {
+            var osFake = {
+                uptime: function(){return -1;} // one second in the future
+            };
+            var     lk = path.join(temp.mkdirSync(),'lock');
+            proc.pid = 1234;
+            lock.lockSync(lk);
+            lock._private.setOs(osFake);       // pretend os is from the future
+            proc.pid = 5678;
+            lock.lockSync(lk);                 // 1234 in lockfile cannot be the same one
+        } finally {
+            lock._private.resetOs();
+        }
+    });
 });
+
