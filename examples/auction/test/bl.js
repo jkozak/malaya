@@ -49,53 +49,53 @@ describe("logon",function() {
     it("checks passwords",function() {
         var  bl = mkAuction([jk]);
         assert.deepEqual(bl.addReturningOneOutputTo('self',
-                                                    ['logon',{user:"John Kozak",pw:"KJ"},{port:'test://'}]),
+                                                    ['logon',{name:"John Kozak",pw:"KJ"},{port:'test://'}]),
                          ['logon',{ok:false,msg:"bad pw"}] );
     });
     it("checks enabled",function() {
         var  bl = mkAuction([['user',_.extend({},jk[1],{enabled:false})]]);
         assert.deepEqual(bl.addReturningOneOutputTo('self',
-                                                    ['logon',{user:"John Kozak",pw:"JK"},{port:'test://'}]),
+                                                    ['logon',{name:"John Kozak",pw:"JK"},{port:'test://'}]),
                          ['logon',{ok:false,msg:"logon disabled"}] );
     });
     it("checks user name",function() {
         var  bl = mkAuction([jk]);
         assert.deepEqual(bl.addReturningOneOutputTo('self',
-                                                    ['logon',{user:"Johnnie Kozak",pw:"JK"},{port:'test://'}]),
+                                                    ['logon',{name:"Johnnie Kozak",pw:"JK"},{port:'test://'}]),
                          ['logon',{ok:false,msg:"unknown user"}] );
     });
     it("logs users on",function() {
         var bl = mkAuction([jk]);
         assert.deepEqual(bl.addReturningOneOutputTo('self',
-                                                    ['logon',{user:"John Kozak",pw:"JK"},{port:'test://'}]),
+                                                    ['logon',{name:"John Kozak",pw:"JK"},{port:'test://'}]),
                          ['logon',{ok:true}] );
     });
     it("doesn't log users on twice",function() {
         var bl = mkAuction([jk]);
         assert.deepEqual(bl.addReturningOneOutputTo('self',
-                                                    ['logon',{user:"John Kozak",pw:"JK"},{port:'test://'}]),
+                                                    ['logon',{name:"John Kozak",pw:"JK"},{port:'test://'}]),
                          ['logon',{ok:true}] );
         assert.deepEqual(bl.addReturningOneOutputTo('self',
-                                                    ['logon',{user:"John Kozak",pw:"JK"},{port:'test://1'}]),
+                                                    ['logon',{name:"John Kozak",pw:"JK"},{port:'test://1'}]),
                          ['logon',{ok:false,msg:"already logged on"}] );
     });
     it("doesn't log users on twice even on same connection",function() {
         var bl = mkAuction([jk]);
         assert.deepEqual(bl.addReturningOneOutputTo('self',
-                                                    ['logon',{user:"John Kozak",pw:"JK"},{port:'test://'}]),
+                                                    ['logon',{name:"John Kozak",pw:"JK"},{port:'test://'}]),
                          ['logon',{ok:true}] );
         assert.deepEqual(bl.addReturningOneOutputTo('self',
-                                                    ['logon',{user:"John Kozak",pw:"JK"},{port:'test://'}]),
+                                                    ['logon',{name:"John Kozak",pw:"JK"},{port:'test://'}]),
                          ['logon',{ok:false,msg:"already logged on"}] );
     });
     it("lets users logon and logoff and logon",function() {
         var bl = mkAuction([jk]);
         assert.deepEqual(bl.addReturningOneOutputTo('self',
-                                                    ['logon',{user:"John Kozak",pw:"JK"},{port:'test://'}]),
+                                                    ['logon',{name:"John Kozak",pw:"JK"},{port:'test://'}]),
                          ['logon',{ok:true}] );
         bl.addReturningNoOutput(['logoff',{},{port:'test://'}]);
         assert.deepEqual(bl.addReturningOneOutputTo('self',
-                                                    ['logon',{user:"John Kozak",pw:"JK"},{port:'test://'}]),
+                                                    ['logon',{name:"John Kozak",pw:"JK"},{port:'test://'}]),
                          ['logon',{ok:true}] );
     });
 });

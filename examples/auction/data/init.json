@@ -1,8 +1,8 @@
 [
-    ["user",{"user":"John Kozak",    "pw":"JK","enabled":true,"port":null}],
-    ["user",{"user":"Sid Strong",    "pw":"SS","enabled":true,"port":null}],
-    ["user",{"user":"David Wileman", "pw":"DW","enabled":true,"port":null}],
-    ["user",{"user":"Miranda Telfer","pw":"MT","enabled":true,"port":null}],
+    ["user",{"name":"John Kozak",    "pw":"JK","enabled":true,"port":null}],
+    ["user",{"name":"Sid Strong",    "pw":"SS","enabled":true,"port":null}],
+    ["user",{"name":"David Wileman", "pw":"DW","enabled":true,"port":null}],
+    ["user",{"name":"Miranda Telfer","pw":"MT","enabled":true,"port":null}],
 
     ["stock",{"id":"spangles"}],
     ["stock",{"id":"marathon"}],
