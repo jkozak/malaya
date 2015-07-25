@@ -126,6 +126,8 @@ var Engine = exports.Engine = function(options) {
     options.tag       = options.tag;
     options.ports     = options.ports || {http:3000};
     options.bundles   = options.bundles || {};
+
+    compiler.debug    = options.debug;
     
     eng.prevalenceDir = options.prevalenceDir || path.join(options.dir,'.prevalence');
     eng.syshash       = null;

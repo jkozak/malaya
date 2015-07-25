@@ -70,6 +70,15 @@ subcommands.cat.addArgument(
 
 addSubcommand('compile',{addHelp:true});
 subcommands.compile.addArgument(
+    ['-D','--debug'],
+    {
+        action:       'storeTrue',
+        defaultValue: false,
+        help:         "generate debug code",
+        dest:         'debug'
+    }
+);
+subcommands.compile.addArgument(
     ['source'],
     {
         action:       'store',
@@ -125,6 +134,15 @@ subcommands.run.addArgument(
     }
 );
 subcommands.run.addArgument(
+    ['-D','--debug'],
+    {
+        action:       'storeTrue',
+        defaultValue: false,
+        help:         "run in debug mode",
+        dest:         'debug'
+    }
+);
+subcommands.run.addArgument(
     ['-m','--mode'],
     {
         action:       'store',
@@ -166,6 +184,15 @@ addSubcommand('save',{addHelp:true});
 
 addSubcommand('transform',{addHelp:true});
 subcommands.transform.addArgument(
+    ['-D','--debug'],
+    {
+        action:       'storeTrue',
+        defaultValue: false,
+        help:         "run transform in debug mode",
+        dest:         'debug'
+    }
+);
+subcommands.transform.addArgument(
     ['--stdout'],
     {
         action:       'storeTrue',
@@ -184,7 +211,7 @@ subcommands.transform.addArgument(
 addSubcommand('status',{addHelp:true});
 
 addSubcommand('dump',{addHelp:true});
-subcommands.transform.addArgument(
+subcommands.dump.addArgument(
     ['-s','--serialise'],
     {
         action:       'storeTrue',
@@ -303,8 +330,73 @@ exports.run = function(opts0) {
         var compiler = require('./compiler.js');
         var   recast = require('recast');
         options        = options || {attrs:true};
-        compiler.debug = options.debug || true;
+        compiler.debug = args.debug;
         return recast.print(compiler.compile(parse(fs.readFileSync(source),options))).code;
+    };
+
+    // basic tracing facility
+    // +++ move to `Engine`, make an `emit` stream +++
+    var isFactInteresting = function(f) {        // what's worth tracing?
+        return ['_tick','_take-outputs','_output'].indexOf(f[0])===-1;
+    };
+    var isAddInteresting = function(add) {
+        return isFactInteresting(add);
+    };
+    var isTraceInteresting = function(firing) {
+        if (firing.adds.length!==0)
+            return true;
+        if (firing.dels.filter(function(d){return isFactInteresting(d);}).length===0)
+            return false;
+        return true;
+    };
+    var traceChrjs = function(chrjs,source) {
+        // rule invocations nest, but that's an implementation detail;
+        // so we use `stack` and `outQ` to flatten out the display
+        var compiler = require('./compiler.js');
+        var    stack = [];
+        var     outQ = [];
+        var  ruleMap = compiler.getRuleMap(source);
+        var mySource = path.relative(process.cwd(),source);
+        var provoker = null;
+        chrjs.on('queue-rule',function(id,bindings) {
+            var firing = {id:id,done:false,dels:[],adds:[]};
+            stack.push(firing);
+            outQ.push(firing);
+        });
+        chrjs.on('add',function(t,f) {
+            if (stack.length>0)
+                stack[stack.length-1].adds.push(f);
+            else if (isAddInteresting(f)) {
+                console.log("> %j",f);
+                provoker = null;
+            } else
+                provoker = f;
+        });
+        chrjs.on('del',function(t,f) {
+            if (stack.length>0)
+                stack[stack.length-1].dels.push(f);
+        });
+        chrjs.on('finish-rule',function(id) {
+            var firing = stack.pop();
+            assert.strictEqual(firing.id,id);
+            firing.done = true;
+            while (outQ.length>0 && outQ[0].done) { /* eslint no-loop-func:0 */
+                var firing1 = outQ.shift();
+                if (isTraceInteresting(firing1)) {
+                    if (provoker) {
+                        console.log("> %j",provoker);
+                        provoker = null;
+                    }
+                    console.log(" rule %s:%d",mySource,ruleMap[firing1.id].start.line);
+                    firing1.dels.forEach(function(d){
+                        console.log("  - %j",d);
+                    });
+                    firing1.adds.forEach(function(a){
+                        console.log("  + %j",a);
+                    });
+                }
+            }
+        });
     };
 
     var _createEngine = opts.createEngine || function(options) {
@@ -387,12 +479,13 @@ exports.run = function(opts0) {
     var tickInterval = null;
     subcommands.run.exec = function() {
         checkDirectoriesExist();
-        var    auto = args.auto;
-        var  source = path.resolve(args.source);
-        var options = {businessLogic: source,
-                       ports:         {http:args.webPort},
-                       masterUrl:     args.masterUrl};
-        var     eng = createEngine(options);
+        var     auto = args.auto;
+        var   source = path.resolve(args.source);
+        var  options = {businessLogic: source,
+                        debug:         args.debug,
+                        ports:         {http:args.webPort},
+                        masterUrl:     args.masterUrl};
+        var      eng = createEngine(options);
         eng.on('listen',function(protocol,port) {
             util.debug("%s listening on *:%s",protocol,port);
             if (args.adminUI && protocol==='http') {
@@ -425,6 +518,8 @@ exports.run = function(opts0) {
             } else 
                 tickInterval = null;
         });
+        if (args.debug)
+            traceChrjs(eng.chrjs,source);
         eng.on('mode',function(mode) {
             if (auto && mode==='master')
                 eng.update(['_restart',{},{port:'system://'}]);
@@ -438,13 +533,16 @@ exports.run = function(opts0) {
         require('./compiler.js'); // for .chrjs extension
         var     cb = findCallback();
         var engine = require('./engine.js');
-        var    eng = createEngine({});
-        var  chrjs = require(path.resolve(process.cwd(),args.transform));
+        var    eng = createEngine({debug:args.debug});
+        var source = path.resolve(process.cwd(),args.transform);
+        var  chrjs = require(source);
         var  print = args.stdout;
         var   fact;
         var      t;
         eng.chrjs = engine.makeInertChrjs();
         eng.start();
+        if (args.debug)
+            traceChrjs(chrjs,source);
         eng.startPrevalence(function(err) {
             for (t=1;t<eng.chrjs.t;t++) {
                 fact = eng.chrjs.get(t+'');
