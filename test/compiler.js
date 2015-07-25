@@ -754,15 +754,15 @@ describe("compile hook",function() {
     });
 });
 
-describe("code stanzas",function() {
+describe("rule maps",function() {
     var tdir = temp.mkdirSync();
-    it("should build stanzas when asked",function() {
+    it("should build rule maps when asked",function() {
         try {
             var fn = path.join(tdir,'a.chrjs');
             var ok = false;
             compiler.debug = true;
             compiler.once('compile',function(filename) {
-                assert.equal(compiler.getStanzas(filename).length,1);
+                assert.equal(Object.keys(compiler.getRuleMap(filename)).length,1); // one rule
                 ok = true;
             });
             fs.writeFileSync(fn,"store {\nrule (['1'],+['2',for(0;[];a=>a+1)]);}");
@@ -772,12 +772,12 @@ describe("code stanzas",function() {
             compiler.debug = false;
         }
     });
-    it("should not build stanzas unless asked",function() {
+    it("should not build rule maps unless asked",function() {
         var fn = path.join(tdir,'b.chrjs');
         fs.writeFileSync(fn,"store {\nrule (['1']);}");
         require.extensions['.chrjs'](module,fn);
         assert.throws(function() {
-            compiler.getStanzas(filename)
+            compiler.getRuleMap(filename)
         });
     });
 });

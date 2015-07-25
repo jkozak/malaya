@@ -1099,6 +1099,13 @@ function generateJS(js,what) {
                 payload.push(b.expressionStatement(
                     b.callExpression(b.identifier('_add'),[genAdd(chr.items[j].expr)]) ) );
             });
+            if (exports.debug) // mark the effective end of this rule's processing
+                payload.push(b.expressionStatement(
+                    b.callExpression(b.memberExpression(b.identifier('ee'),
+                                                        b.identifier('emit'),
+                                                        false),
+                                     [b.literal('finish-rule'),
+                                      b.literal(unmangleIdentifier(chr.id)) ] ) ));
             // if we have deleted t_fact, return immediately as we can't match it again
             if (bailOut)
                 payload.push(b.returnStatement(null));
@@ -1418,6 +1425,25 @@ exports.compile = generateJS;
 
 exports.debug   = false;
 
+var ruleMaps = {};              // <path> -> <rule-id> -> <loc> ... 
+
+exports.getRuleMap = function(p) {
+    if (!exports.debug)
+        throw new Error("ruleMap building off");
+    return ruleMaps[path.resolve(p)];
+};
+
+function buildRuleMap(parsed) {
+    var ruleMap = {};
+    parser.visit(parsed,{
+        visitRuleStatement: function(p) {
+            ruleMap[p.node.id.name] = p.node.loc;
+            this.traverse(p);
+        }
+    });
+    return ruleMap;
+}
+
 var stanzas = {};               // <path> -> <stanzas>,...
 
 exports.getStanzas = function(p) {
@@ -1617,8 +1643,10 @@ require.extensions['.chrjs'] = function(module,filename) {
     filename = path.resolve(filename);
     var content = fs.readFileSync(filename,'utf8').replace(/\t/g,'        '); // remove tabs
     var   chrjs = parser.parse(content,{loc:exports.debug,attrs:true});
-    if (exports.debug)
-        stanzas[filename] = buildStanzas(content,chrjs); // +++ clone the parse! +++
+    if (exports.debug) {
+        //stanzas[filename] = buildStanzas(content,chrjs); // +++ clone the parse! +++
+        ruleMaps[filename] = buildRuleMap(chrjs);
+    }
     module._compile(recast.print(generateJS(chrjs)).code,filename);
     ee.emit('compile',filename);
 };
