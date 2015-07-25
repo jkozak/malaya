@@ -21,6 +21,7 @@ module.exports =  store {
     rule (-['logoff',{...},{port}],
           -['user',{port,...rs}],
           +['user',{port:null,...rs}] );
+    rule (-['logoff',...]);
 
     rule (-['init',{...},...],
           +['_output','self',['auctions',for ([];

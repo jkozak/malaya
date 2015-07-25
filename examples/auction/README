@@ -1,20 +1,12 @@
-URLs
+To run:
 
-/index.html
- * shows all auctions
- * launches new auctions
+ $ ./init && ./malaya run
 
-/new-auction
- * redirects to /auction/<next-id>
+Point browser at port 3000
 
-/auction/<id>
- * controls individual auction
- * launches new players
+Valid credentials can be found at ./data/init.json - once logged on,
+credentials should stick to a tab and one should be able to log
+multiple users on in one browser instance.
 
-/new-player/<id>
- * redirects to /auction/<id>/<next-player>
+Reasonably modern browser required; recent FireFox, Chrome, IE>=10
 
-/auction/<id>/<player>
- * participates in auction
-
-Browser dissects `window.location`, sends it to websocket.  Logon as per IDB.
