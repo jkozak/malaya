@@ -18,12 +18,14 @@ module.exports =  store {
           +['_output','self',['logon',{ok:false,msg:"bad pw"}]] );
     rule (-['logon',{name,pw},...],
           +['_output','self',['logon',{ok:false,msg:"unknown user"}]] );
+    rule ( ['logoff',{...},{port}],
+          -['subscription',{port,...}] );
     rule (-['logoff',{...},{port}],
           -['user',{port,...rs}],
           +['user',{port:null,...rs}] );
     rule (-['logoff',...]);
 
-    rule (-['init',{...},...],
+    rule (-['lsAuctions',{...},...],
           +['_output','self',['auctions',for ([];
                                               ['auction',a];
                                               x=>x.concat(a) )]] );
@@ -74,10 +76,26 @@ module.exports =  store {
 
     rule ( ['auction',rs],      // send all auction updates out
           +['_output','all',['auction',rs]] );
-    rule ( ['price',rs],    // send all price updates out
+    rule ( ['price',rs],        // send all price updates out
           +['_output','all',['price',rs]] );
     rule ( ['trade',rs],        // send all price updates out
           +['_output','all',['trade',rs]] );
+
+    // admin
+
+    rule ( ['lsUsers',{subscribe:true},{port}],
+          +['subscription',{what:'user',port}] );
+    rule ( ['lsUsers',{subscribe:false},{port}],
+          -['subscription',{what:'user',port}] );
+    rule (-['lsUsers',{...},{...}],
+          +['_output','self',['users',for ([];
+                                           ['user',u];
+                                           x=>x.concat(u) )]] ); // !!! omit password !!!
+    rule ( ['user',{pw,...rs}], // send all user updates out
+           ['subscription',{what:'user',port}],
+          +['_output',port,['user',rs]] );
+    
+    // standard housekeeping
     
     rule ( ['_take-outputs',...], -['_output',...]);
     rule (-['_take-outputs',...]);
@@ -85,6 +103,8 @@ module.exports =  store {
     rule ( ['_restart',...],
           -['user',{loggedOn:true,...rs}],
           +['user',{loggedOn:false,...rs}] );
+    rule ( ['_restart',...],
+          -['subscription',...] );
     rule ( ['_restart',...],
           -['_output',...] );
     rule (-['_restart',...]);

@@ -1,18 +1,30 @@
 <html>
   <head>
     <style>
-     body {font-family: Verdana,sans-serif}
-     tr:nth-child(even) {
-       background-color: white;
+     body {font-family: Verdana,sans-serif;}
+     table {
+       background: #F8F8F8;
      }
-     tr:nth-child(odd) {
-       background-color: lightyellow;
+     thead tr {
+       font-weight:      bold;
+       color:            grey;
+       background-color: #B0FFFF;
+     }
+     thead td {
+       text-align: center;
+     }
+     tbody tr:nth-child(odd) {
+       background-color: inherit;
+     }
+     tbody tr:nth-child(even) {
+       background-color: #DDFFFF;
      }
      td,th {
        padding-right: 1em;
       }
      .tbtn {
        cursor: pointer;
+       color: blue;
      }
     </style>
   </head>

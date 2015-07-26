@@ -1,3 +1,5 @@
+"use strict";
+
 var      ws = {'http:':'ws:','https:':'wss:'}[window.location.protocol];
 var    sock = new WebSocket(ws+'//'+window.location.host+'/admin/websocket');
 var cUsers  = 0;
@@ -8,10 +10,10 @@ var masterUrl = null;
 function showConnection(type,exists) {
     switch (type) {
     case 'data':
-        cUsers += (exists ? +1 : -1)
+        cUsers += (exists ? +1 : -1);
         break;
     case 'replication':
-        cSlaves += (exists ? +1 : -1)
+        cSlaves += (exists ? +1 : -1);
         break;
     }
     document.getElementById('connCounts').innerText = cUsers+" users, "+cSlaves+" spares";

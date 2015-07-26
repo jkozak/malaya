@@ -14,6 +14,7 @@ build: 	init
 
 tests:	init
 	eslint -c test/eslint.conf -f test/eslint-formatter-comment.js --env node $(filter-out %.chrjs.js,$(wildcard *.js examples/*/*.js))
+	eslint -c test/eslint.conf -f test/eslint-formatter-comment.js --env browser $(filter-out %.chrjs.js,$(wildcard www/*.jsx www/*.jsx examples/*/www/*.js examples/*/www/*.jsx))
 	NODE_ENV=test mocha -R min --compilers chrjs:compiler -C test examples/*/test #--grep "XXX"
 
 benchmarks: CHRJSS = $(wildcard benchmark/*.chrjs examples/*/benchmark/*.chrjs)
