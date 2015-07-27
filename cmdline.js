@@ -116,6 +116,15 @@ subcommands.run.addArgument(
     }
 );
 subcommands.run.addArgument(
+    ['--no-prefetch-bundles'],
+    {
+        action:       'storeFalse',
+        defaultValue: true,
+        help:         "don't prefetch browserify bundles at startup",
+        dest:         'prefetchBundles'
+    }
+);
+subcommands.run.addArgument(
     ['--no-tag-check'],
     {
         action:       'storeFalse',
@@ -498,6 +507,15 @@ exports.run = function(opts0) {
                                console.log("can't start admin browser: %s",err);
                            }
                        });
+            }
+            if (args.prefetchBundles) {
+                var http = require('http');
+                for (var k in eng.options.bundles) {
+                    http.request({
+                        port:args.webPort,
+                        path:k
+                    }).end();
+                }
             }
         });
         eng.on('saved',function(syshash) {
