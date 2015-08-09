@@ -367,6 +367,7 @@ exports.run = function(opts0) {
         var  ruleMap = compiler.getRuleMap(source);
         var mySource = path.relative(process.cwd(),source);
         var provoker = null;
+        var  borings = 0;       // count of `add`s deemed not interesting
         chrjs.on('queue-rule',function(id,bindings) {
             var firing = {id:id,done:false,dels:[],adds:[]};
             stack.push(firing);
@@ -376,10 +377,16 @@ exports.run = function(opts0) {
             if (stack.length>0)
                 stack[stack.length-1].adds.push(f);
             else if (isAddInteresting(f)) {
+                if (borings) {
+                    console.log("~~~ %d boring adds ignored ~~~",borings);
+                    borings = 0;
+                }
                 console.log("> %j",f);
                 provoker = null;
-            } else
+            } else {
+                borings++;
                 provoker = f;
+            }
         });
         chrjs.on('del',function(t,f) {
             if (stack.length>0)
@@ -403,7 +410,8 @@ exports.run = function(opts0) {
                     firing1.adds.forEach(function(a){
                         console.log("  + %j",a);
                     });
-                }
+                } else
+                    borings++;
             }
         });
     };
