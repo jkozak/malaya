@@ -25,13 +25,24 @@ module.exports =  store {
           +['user',{port:null,...rs}] );
     rule (-['logoff',...]);
 
-    rule (-['lsAuctions',{...},...],
+    rule (-['lsAuctions',{...},{port}],
+           ['user',{port,name}],
+          +['_output','self',['subclasses',for ([];
+                                                ['subclass',s];
+                                                x=>x.concat(s) )]],
+          +['_output','self',['stocks',for ([];
+                                            ['stock',s];
+                                            x=>x.concat(s) )]],
           +['_output','self',['auctions',for ([];
                                               ['auction',a];
-                                              x=>x.concat(a) )]] );
+                                              x=>x.concat(a) )]],
+          +['_output','self',['trades',for ([];
+                                            ['trade',t];
+                                            x=>([t.buyer,t.seller].indexOf(name)===-1 ? x : x.concat(t)) )]] );
     
     rule (-['auction',{id,state:'run',...rs1},{port}], // start auction, set start time
-          -['auction',{id,state:'ready',...rs0}],
+          -['auction',{id,state:ostate,...rs0}],
+           (['new','ready'].indexOf(ostate)!==-1),
            ['user',{port,name,...}],
           +['auction',_.extend({owner:name},rs0,rs1,{id:id,state:'run',start:Date.now()})] );
     rule (-['auction',{id,...rs1},{port}],             // update
@@ -60,6 +71,7 @@ module.exports =  store {
           +['_output','all',['price',_.extend({volume:0},rs)]] );
     rule ( ['price',{auction,stock,rate,buy,user,...}],     // new prices replace old
           -['price',{auction,stock,rate,buy,user,...}] );
+
     rule (-['price',{auction,stock,rate,volume:vB,user:uB,buy:true, ...brs}],
           -['price',{auction,stock,rate,volume:vS,user:uS,buy:false,...srs}],
            ['auction',{id:auction,type:'match'}],
@@ -68,18 +80,53 @@ module.exports =  store {
           +['price',{auction,stock,rate,volume:vB-vT,user:uB,buy:true, ...brs}],
           +['price',{auction,stock,rate,volume:vS-vT,user:uS,buy:false,...srs}],
           +['trade',{auction,stock,rate,volume:vT,buyer:uB,seller:uS}] );
-          
-    // +++ type-specific end of auction processing if required goes here +++
+
+    // +++  dutch  +++
+    // +++ english +++
+    // +++ candle  +++
+
+    // auctions determined at end
+
+    rule ( ['auction',{id:auct,state:'ended',type:'blind',...}],
+           ['price',{auction:auct,stock,buy:false,...brs}],
+          +['trade',{auction:auct,stock,rate:0}] );
+    rule ( ['auction',{id:auct,state:'ended',type:'blind',...}],
+           ['price',{auction:auct,buy:false,user:uS,...brs}],
+           ['price',{auction:auct,buy:true,user:uB,rate:pr,...srs}],
+          -['trade',{auction:auct,rate:tr,...}],
+           pr>tr,
+          +['trade',{auction:auct,rate:pr,buyer:uB,seller:uS}] );
+
+    // +++ vickrey - 2nd price sealed bid +++
+
+    rule (-['cloneAuction',{id,...rs},{port}],      // create a new auction from an old one
+           ['auction',{id,...ars}],
+          -['counters',{auction,...crs}],
+           ['user',{port,name,...}],
+          +['counters',{auction:auction+1,...crs}],
+          +['auction',_.extend({},ars,rs,{base:id,state:'new',id:'a#'+auction,owner:name})] );
+
+    rule (-['auction',{state:'new',...ars},{port}], // create a new auction
+          -['counters',{auction,...crs}],
+           ['user',{port,name,...}],
+          +['counters',{auction:auction+1,...crs}],
+          +['auction',{state:'new',id:'a#'+auction,owner:name,...ars}] );
 
     rule (-['auction',{state:'ended',...rs}],
           +['auction',{state:'done',...rs}] );
 
-    rule ( ['auction',rs],      // send all auction updates out
-          +['_output','all',['auction',rs]] );
-    rule ( ['price',rs],        // send all price updates out
+    rule ( ['auction',{state,...rs}], // send most auction updates out
+           state!=='new',
+          +['_output','all',['auction',{state,...rs}]] );
+    rule ( ['auction',{state,...rs}], // send new auction updates out to author only
+           state==='new',
+          +['_output','self',['auction',{state,...rs}]] );
+    rule ( ['price',rs],              // send all price updates out
           +['_output','all',['price',rs]] );
-    rule ( ['trade',rs],        // send all price updates out
+    rule ( ['trade',rs],              // send all price updates out
           +['_output','all',['trade',rs]] );
+    rule ( ['stock',rs],              // send all stock updates out
+          +['_output','all',['stock',rs]] );
 
     // admin
 
@@ -109,6 +156,7 @@ module.exports =  store {
           -['_output',...] );
     rule (-['_restart',...]);
     rule (-['_tick',...]);
+
 };
 
 // ['auction',{id,type,state:'ready'|'run'|'pause'|'ended'|'done',start,duration,stocks,prices,trades}]

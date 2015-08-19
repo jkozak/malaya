@@ -4,9 +4,15 @@ MAINTAINER John Kozak <jk@thameslighter.net>
 
 RUN apk --update add nodejs make
 
-# get malaya code somehow into /var/lib/malaya
+ADD . /var/lib/malaya
 
-RUN cd /var/lib/malaya;make tests
+# !!! prevalence stuff should be on its own volume !!!
 
-CMD cd /var/lib/malaya;./malaya run
+RUN cd /var/lib/malaya;make clean tests
+
+RUN cd /var/lib/malaya/examples/auction;rm -rf .prevalence;./malaya init -d data/init.json
+
+RUN cd /var/lib/malaya/examples/auction;rm -rf .prevalence/lock
+
+CMD cd /var/lib/malaya/examples/auction;./malaya run -D
 

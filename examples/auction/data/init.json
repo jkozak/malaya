@@ -1,43 +1,52 @@
 [
+    ["counters",{"auction":100}],
+    
     ["user",{"name":"John Kozak",    "pw":"JK","enabled":true,"port":null}],
     ["user",{"name":"Sid Strong",    "pw":"SS","enabled":true,"port":null}],
     ["user",{"name":"David Wileman", "pw":"DW","enabled":true,"port":null}],
     ["user",{"name":"Miranda Telfer","pw":"MT","enabled":true,"port":null}],
 
-    ["stock",{"id":"spangles"}],
-    ["stock",{"id":"marathon"}],
-
-    ["stock",{"id":"halibut"}],
-    ["stock",{"id":"mackerel"}],
-    ["stock",{"id":"cod"}],
-
-    ["stock",{"id":"prawns"}],
-    ["stock",{"id":"scallops"}],
+    ["subclass",{"name":"sweets"}],
+    ["subclass",{"name":"fish"}],
+    ["subclass",{"name":"invertebrates"}],
     
-    ["auction",{"id":"sweets1",
+    ["stock",{"name":"spangles","subclass":"sweets"}],
+    ["stock",{"name":"marathon","subclass":"sweets"}],
+
+    ["stock",{"name":"halibut","subclass":"fish"}],
+    ["stock",{"name":"mackerel","subclass":"fish"}],
+    ["stock",{"name":"cod","subclass":"fish"}],
+
+    ["stock",{"name":"prawns","subclass":"invertebrates"}],
+    ["stock",{"name":"scallops","subclass":"invertebrates"}],
+    
+    ["auction",{"id":"a#1",
                 "type":"match",
                 "stocks":["spangles","marathon"],
                 "state":"done",
                 "owner":"John Kozak",
                 "start":1437491862766,
-                "duration":30
+                "duration":30,
+                "description":"pudding"
                }],
 
-    ["auction",{"id":"fish1",
+    ["auction",{"id":"a#2",
                 "type":"match",
                 "stocks":["cod","halibut","mackerel"],
                 "state":"ready",
                 "owner":"John Kozak",
                 "start":1437494842958,
-                "duration":30
+                "duration":30,
+                "description":"main"
                }],
     
-    ["auction",{"id":"invertebrates",
+    ["auction",{"id":"a#3",
                 "type":"match",
                 "stocks":["prawns","scallops"],
                 "state":"ready",
                 "owner":"John Kozak",
                 "start":1437497206089,
-                "duration":30
+                "duration":30,
+                "description":"starter"
                }]
 ]

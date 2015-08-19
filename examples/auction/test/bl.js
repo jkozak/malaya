@@ -46,6 +46,7 @@ function mkAuction(fixture) {   // bare chrjs
 
 describe("logon",function() {
     var jk = ["user",{name:"John Kozak",pw:"JK",enabled:true,port:null}];
+    mkAuction([jk]);            // do this to avoid timeouts
     it("checks passwords",function() {
         var  bl = mkAuction([jk]);
         assert.deepEqual(bl.addReturningOneOutputTo('self',
@@ -100,10 +101,62 @@ describe("logon",function() {
     });
 });
 
+describe("auction generation",function() {
+    var fixture = [
+        ["counters",{auction:99}],
+        ["user",{name:"Nick Jenkins",      pw:"NJ",enabled:true,port:"test://N"}] ];
+    var      bl;
+
+    before(function() {
+        bl = mkAuction(fixture);
+    });
+        
+    it("makes an auction",function() {
+        var ans = bl.addReturningOneOutputTo('self',
+                                             ['auction',{state:'new'},{port:'test://N'}] );
+        assert.deepEqual(ans,['auction',{id:'a#99',state:'new',owner:"Nick Jenkins"}]);
+    });
+    it("makes another auction with different id",function() {
+        var ans = bl.addReturningOneOutputTo('self',
+                                             ['auction',{state:'new'},{port:'test://N'}] );
+        assert.deepEqual(ans,['auction',{id:'a#100',state:'new',owner:"Nick Jenkins"}]);
+    });
+    it("preserves supplied info",function() {
+        var ans = bl.addReturningOneOutputTo('self',
+                                             ['auction',{state:'new',description:"words"},{port:'test://N'}] );
+        assert.deepEqual(ans,['auction',{id:'a#101',state:'new',owner:"Nick Jenkins",description:"words"}]);
+    });
+});
+
+describe("auction cloning",function() {
+    var fixture = [
+        ["counters",{auction:112}],
+        ["user",{name:"Nick Jenkins",      pw:"NJ",enabled:true,port:"test://N"}],
+        ["user",{name:"Kenneth Widmerpool",pw:"KW",enabled:true,port:"test://K"}],
+        ['auction',{id:'a#111',state:'new',owner:"Nick Jenkins",description:"prolixity itself",wibble:'carrot'}] ];
+    var      bl;
+
+    before(function() {
+        bl = mkAuction(fixture);
+    });
+        
+    it("makes a similar auction",function() {
+        var ans = bl.addReturningOneOutputTo('self',
+                                             ['cloneAuction',{id:'a#111'},{port:'test://K'}] );
+        assert.strictEqual(ans[0],'auction');
+        assert.strictEqual((typeof ans[1].id),'string');
+        assert.notStrictEqual(ans[1].id,'a#111');
+        assert.strictEqual(ans[1].base,'a#111');
+        assert.strictEqual(ans[1].owner,"Kenneth Widmerpool");
+        assert.strictEqual(ans[1].wibble,'carrot');
+    });
+});
+
 describe("'match' type auction",function() {
     var  saveNow = Date.now;
     var duration = 2;
     var  fixture = [
+        ["counters",{auction:101}],
         ["user",{name:"Nick Jenkins",      pw:"NJ",enabled:true,port:"test://N"}],
         ["user",{name:"Kenneth Widmerpool",pw:"KW",enabled:true,port:"test://K"}],
         ["stock",{id:"spangles"}],
@@ -201,3 +254,4 @@ describe("'match' type auction",function() {
         assert.strictEqual(prices[0][1].volume,15);
     });
 });
+

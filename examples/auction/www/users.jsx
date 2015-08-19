@@ -7,7 +7,7 @@ var User = React.createClass({
         var user = this.props.user;
         return (<tr>
                 <td>{user.name}</td>
-                <td>{user.port?'\u2713':''}</td>
+                <td style={{textAlign:'center'}}>{user.port?'\u2713':''}</td>
                 </tr>);
     }
 });
