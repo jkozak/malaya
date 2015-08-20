@@ -1,8 +1,8 @@
 ifeq ($(OS),Windows_NT)
-  SHELL = bash
-  export PATH := $(PATH);.\node_modules\.bin
+  export PATH  := $(PATH);.\node_modules\.bin
+  export SHELL := wsh.cmd
 else
-  export PATH := $(PATH):./node_modules/.bin
+  export PATH  := $(PATH):./node_modules/.bin
 endif
 
 all: init

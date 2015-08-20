@@ -33,6 +33,7 @@
   "devDependencies": {
     "eslint-plugin-react": "^3.0.0",
     "faker": "^2.0.1",
+    "glob": "^5.0.14",
     "iocat": "0.0.5",
     "jsdom": "^3.1.2",
     "jsverify": "^0.6.0-alpha.5",
@@ -41,6 +42,7 @@
     "node-jsx": "^0.13.3",
     "prettyjson": "^1.0.0",
     "resumer": "0.0.0",
+    "shell-quote": "^1.4.3",
     "supertest": "^0.15.0",
     "xml2js": "^0.4.4"
   },
