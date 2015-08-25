@@ -187,7 +187,9 @@ Engine.prototype._saveWorld = function() {
 Engine.prototype.stopPrevalence = function(quick,cb) {
     var eng = this;
     if (eng.journal) {          // not true if opts.readonly set
-        eng.journal.on('finish',function() {
+        // 'close' event for `fs.WriteStream` is undocumented _but_
+        // cannot do dir renames in `_saveWorld` until journal closed.
+        eng.journal.on(util.onWindows ? 'close' : 'finish',function() {
             if (!quick) 
                 eng._saveWorld();
             if (cb) cb();
