@@ -26,7 +26,7 @@ describe("utility functions for this test file",function() {
     describe('fillDirWithSomeData',function() {
         it("does what it says on the tin",function(done) {
             var dir = temp.mkdirSync();
-            fillDirWithSomeData(dir,[['p',{}],['q',{}]],function(err) {
+            fillDirWithSomeData(dir,[['pp',{}],['qq',{}]],function(err) {
                 var eng = new engine.Engine({dir:dir});
                 var err = null
                 eng.start();

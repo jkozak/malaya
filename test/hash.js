@@ -5,7 +5,6 @@ var temp    = require('temp').track();
 var util    = require('../util.js');  
 var fs      = require('fs');
 var path    = require('path');
-var os      = require('os');
 var jsc     = require('jsverify');
 var resumer = require('resumer');
 
@@ -105,7 +104,7 @@ describe("hash('sha1')",function() {
     it("should set stashed hashes to read-only in production mode",function() {
         testHashMode('prod',4,null,4);
     });
-    if (!/^win/.test(os.platform())) { // +++ make work on windows +++
+    if (!util.onWindows) { // +++ make work on windows +++
         it("should leave stashed hashes read-write in dev mode",function() {
             testHashMode('dev', 6,null,4);
         });

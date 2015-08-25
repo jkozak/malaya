@@ -3,6 +3,7 @@
 
 var _util = require('util');
 var shell = require('shelljs');
+var    os = require('os');
 var    fs = require('fs');
 var  path = require('path');
 
@@ -155,6 +156,8 @@ exports.sourceVersion = (function() {
         return "???";
     }
 })();
+
+exports.onWindows = /^win/.test(os.platform());
 
 exports.env = (function() {
     var env = process.env.NODE_ENV;
