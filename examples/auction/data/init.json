@@ -5,6 +5,9 @@
     ["user",{"name":"Sid Strong",    "pw":"SS","enabled":true,"port":null}],
     ["user",{"name":"David Wileman", "pw":"DW","enabled":true,"port":null}],
     ["user",{"name":"Miranda Telfer","pw":"MT","enabled":true,"port":null}],
+    ["user",{"name":"Gavin Martin",  "pw":"GM","enabled":true,"port":null}],
+    ["user",{"name":"Derek Taylor",  "pw":"DT","enabled":true,"port":null}],
+    ["user",{"name":"Lee Bettridge", "pw":"LB","enabled":true,"port":null}],
 
     ["subclass",{"name":"sweets"}],
     ["subclass",{"name":"fish"}],
@@ -12,13 +15,26 @@
     
     ["stock",{"name":"spangles","subclass":"sweets"}],
     ["stock",{"name":"marathon","subclass":"sweets"}],
+    ["stock",{"name":"aztec","subclass":"sweets"}],
+    ["stock",{"name":"refreshers","subclass":"sweets"}],
 
     ["stock",{"name":"halibut","subclass":"fish"}],
     ["stock",{"name":"mackerel","subclass":"fish"}],
     ["stock",{"name":"cod","subclass":"fish"}],
+    ["stock",{"name":"hake","subclass":"fish"}],
+    ["stock",{"name":"herring","subclass":"fish"}],
+    ["stock",{"name":"pike","subclass":"fish"}],
+    ["stock",{"name":"anchovy","subclass":"fish"}],
+    ["stock",{"name":"plaice","subclass":"fish"}],
 
     ["stock",{"name":"prawns","subclass":"invertebrates"}],
     ["stock",{"name":"scallops","subclass":"invertebrates"}],
+    ["stock",{"name":"snails","subclass":"invertebrates"}],
+    ["stock",{"name":"mussels","subclass":"invertebrates"}],
+    ["stock",{"name":"crab","subclass":"invertebrates"}],
+    ["stock",{"name":"oysters","subclass":"invertebrates"}],
+    ["stock",{"name":"lobster","subclass":"invertebrates"}],
+    ["stock",{"name":"squid","subclass":"invertebrates"}],
     
     ["auction",{"id":"a#1",
                 "type":"match",

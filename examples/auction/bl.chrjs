@@ -39,7 +39,15 @@ module.exports =  store {
           +['_output','self',['trades',for ([];
                                             ['trade',t];
                                             x=>([t.buyer,t.seller].indexOf(name)===-1 ? x : x.concat(t)) )]] );
+
     
+    rule (-['subclass',{name,...rs},{port}], // maintain subclasses
+          -['subclass',{name,...}],
+          +['subclass',{name,...rs}]);
+    rule (-['stock',{name,...rs},{port}],    // maintain stocks
+          -['stock',{name,...}],
+          +['stock',{name,...rs}]);
+             
     rule (-['auction',{id,state:'run',...rs1},{port}], // start auction, set start time
           -['auction',{id,state:ostate,...rs0}],
            (['new','ready'].indexOf(ostate)!==-1),
@@ -127,6 +135,8 @@ module.exports =  store {
           +['_output','all',['trade',rs]] );
     rule ( ['stock',rs],              // send all stock updates out
           +['_output','all',['stock',rs]] );
+    rule ( ['subclass',rs],           // send all subclass updates out
+          +['_output','all',['subclass',rs]] );
 
     // admin
 

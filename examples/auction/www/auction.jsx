@@ -1,5 +1,6 @@
 "use strict";
 
+var _      = require('underscore');
 var React  = require('react');
 var Trades = require('./trades.jsx').Trades;
 
@@ -15,16 +16,21 @@ var ActiveMatchRow = React.createClass({
                 props.onPriceChange(auction,stock,buy,value);
             };
         };
+        var  active = false;
+        var  traded = false;
         var     bid = null;
         var   offer = null;
         var  bought = 0;
         var    sold = 0;
         auction.prices.forEach(function(p) {
-            if (p.user===props.user && p.stock===stock) {
-                if (p.buy)
-                    bid   = p.volume;
-                else
-                    offer = p.volume;
+            if (p.stock===stock) {
+                if (p.user===props.user) {
+                    if (p.buy)
+                        bid   = p.volume;
+                    else
+                        offer = p.volume;
+                }
+                active = true;
             }
         });
         auction.trades.forEach(function(t) {
@@ -33,15 +39,17 @@ var ActiveMatchRow = React.createClass({
                     bought += t.volume;
                 if (t.seller===props.user)
                     sold += t.volume;
+                traded = true;
             }
         });
+        var stockColour = traded ? 'red' : active ? 'green' : 'inherit';
         return (
             <tr>
-             <td>{stock}</td>
+             <td style={{color:stockColour}}>{stock}</td>
              <td>{bought===0 ? '' : bought}</td>
              <td>
               <select id={'sb'+stock} value={bid} onChange={onPC(true)}>
-               {[0,5,10,15,20].map(function(n) {
+               {[0,5,10,15,20,25].map(function(n) {
                    return (<option value={n}>{n}</option>);
                 })}
               </select>
@@ -49,7 +57,7 @@ var ActiveMatchRow = React.createClass({
              <td></td>
              <td>
               <select id={'ss'+stock} value={offer} onChange={onPC(false)}>
-               {[0,5,10,15,20].map(function(n){
+               {[0,5,10,15,20,25].map(function(n){
                    return (<option value={n}>{n}</option>);
                 })}
               </select>
@@ -91,31 +99,127 @@ var ActiveNthPriceSealedBidAuction = React.createClass({
 
 var PrepareMatchRow = React.createClass({
     render: function() {
-        var   props = this.props;
-        var   stock = props.stock;
+        var      props = this.props;
+        var      stock = props.stock;
         return (
             <tr>
              <td>{stock}</td>
              <td><input type="text" size="6" defaultValue="000.00" onChange={function(v){/* +++ */}}/></td>
              <td><input type="text" defaultValue="0 5 10 15 20 25" onChange={function(v){/* +++ */}}/></td>
+             <td>
+              <button type="button" style={{color:'red',padding:'0 2 0'}} onClick={props.delThisRow}>
+               {'\u2212'}
+              </button>
+             </td>
+            </tr>);
+    }
+});
+
+var PrepareMatchNewRow = React.createClass({
+    getInitialState: function() {
+        return {
+            name:    Object.keys(this.props.stocks)[0],
+            rate:    100,
+            volumes: [0,5,10,15,20,25]
+        };
+    },
+    render: function() {
+        var       self = this;
+        var      props = self.props;
+        var stockNames = Object.keys(props.stocks);
+        var     accept = function() {
+            props.accept({
+                name:   self.state.name,
+                rate:   self.state.rate,
+                volumes:self.state.volumes});
+        };
+        return (
+            <tr>
+             <td>
+              <select defaultValue={self.state.name}
+                      onChange={function(e){
+                                self.setState({name:e.target.value});
+                                }}>
+               {stockNames.map(function(s) {
+                   return (<option value={s}>{s}</option>);
+                })}
+              </select>
+             </td>
+             <td>
+              <input type="text"
+                     size="6"
+                     defaultValue={self.state.rate}
+                     onChange={function(v){self.setState({rate:parseFloat(v)});}}/>
+             </td>
+             <td>
+              <input type="text"
+                     defaultValue={self.state.volumes.join(' ')}
+                     onChange={function(v){self.setState({volumes:v.split(' ').map(parseFloat)});}}/>
+             </td>
+             <td>
+              <button type="button" style={{color:'red',padding:'0 2 0'}} onClick={props.delThisRow}>
+               {'\u2212'}
+              </button>
+              <button type="button" style={{color:'green',padding:0}} onClick={accept}>
+               {'\u2714'}
+              </button>
+             </td>
             </tr>);
     }
 });
 
 var PrepareMatchAuction = React.createClass({
+    getInitialState: function() {
+        return {newRow:false};
+    },
     render: function() {
-        var   props = this.props;
+        var    self = this;
+        var   props = self.props;
         var auction = props.auction;
+        var    rows = [];
+        var  accept = function(s) {
+            var a = _.extend({},
+                             auction,
+                             {
+                                 stocks:auction.stocks.concat(s.name)
+                             } );
+            props.update(a);
+            self.setState({newRow:false});
+        };
+        auction.stocks.forEach(function(s) {
+            rows = rows.concat(
+                <PrepareMatchRow key={s}
+                                 auction={auction}
+                                 delThisRow={function(){
+                                             auction.stocks = auction.stocks.filter(function(t){return t!==s;});
+                                             //self.forceUpdate();/* +++ do this with state +++ */
+                                             props.update(auction);
+                                             }}
+                                 stock={s}/> );
+        });
+        if (self.state.newRow)
+            rows = rows.concat(<PrepareMatchNewRow key="{newRow}"
+                                                   auction={auction}
+                                                   delThisRow={function(){self.setState({newRow:false});}}
+                                                   accept={accept}
+                                                   stocks={props.stocks}/>);
         return (
             <div>
              <table>
               <thead>
-               <tr><td>stock</td><td>rate</td><td>volumes</td></tr>
+               <tr><td>stock</td><td>rate</td><td>volumes</td><td/></tr>
               </thead>
               <tbody>
-               {auction.stocks.map(function(s) {
-                   return (<PrepareMatchRow key={s} auction={auction} stock={s}/>);
-                })}
+               {rows}
+               <tr>
+                <td style={{textAlign:'center'}} colSpan={3}>
+                 <button type="button"
+                         disabled={self.state.newRow}
+                         onClick={function(){self.setState({newRow:true});}}>
+                               + stock
+                 </button>
+                </td>
+               </tr>
               </tbody>
              </table>
             </div> );
@@ -244,7 +348,7 @@ var auctionClasses = {
 
 var Auction = React.createClass({
     getInitialState: function() {
-        return {type:'match',duration:0,description:''};
+        return {type:'match',duration:0,description:'',saveable:false,startable:true};
     },
     render: function() {
         var         self = this;
@@ -254,26 +358,34 @@ var Auction = React.createClass({
             var  elem = document.getElementById('auctionType');
             var value = elem.options[elem.selectedIndex].value;
             auction.type = value;
-            self.setState({type:value});
+            self.setState({type:value,saveable:true,startable:value==='match'});
         };
         var onChangeDuration  = function() {
             var  elem = document.getElementById('auctionDuration');
             var value = parseInt(elem.value);
             auction.duration = value;
-            self.setState({duration:value});
+            self.setState({duration:value,saveable:true});
         };
         var onChangeDescription  = function() {
             var  elem = document.getElementById('auctionDescription');
             var value = elem.value;
-            auction.duration = value;
-            self.setState({description:value});
+            auction.description = value;
+            self.setState({description:value,saveable:true});
         };
-        var startable = false;
+        var onChangeWantSubclasses = function() {
+            var  elem = document.getElementById('wantSubclasses');
+            var value = elem.value;
+            auction.wantSubclasses = value;
+            self.setState({wantSubclasses:value,saveable:true});
+        };
+        var updateAuction = function(a) {
+            props.updateAuction(a);
+            self.setState({saveable:true});
+        };
         auction.type = self.state.type;
         switch (auction.state) {
             case 'new':
             case 'ready':
-                startable = self.state.type==='match';
                 return (
                     <div>
                      <h2><i>prepare auction</i> {auction.description}</h2>
@@ -285,7 +397,11 @@ var Auction = React.createClass({
                       <tr>
                        <td>description</td>
                        <td style={{textAlign:'right'}}>
-                        <input id='auctionDescription' type='text' onChange={onChangeDescription} value={auction.description}/>
+                        <input id='auctionDescription'
+                               style={{textAlign:'center'}}
+                               type='text'
+                               onChange={onChangeDescription}
+                               defaultValue={auction.description}/>
                        </td>
                       </tr>
                       <tr>
@@ -302,9 +418,20 @@ var Auction = React.createClass({
                        <td>duration</td>
                        <td style={{textAlign:'right'}}>
                         <input id='auctionDuration'
+                               style={{textAlign:'right'}}
                                type='number' min='10' max='3600' step='5' 
-                               onChangeDuration={onChangeDuration}
+                               onChange={onChangeDuration}
                                defaultValue={auction.duration}/> 
+                       </td>
+                      </tr>
+                      <tr>
+                       <td>subclasses</td>
+                       <td style={{textAlign:'right'}}>
+                        <input id='wantSubclasses'
+                               type='checkbox'
+                               disabled={true}
+                               onChange={onChangeWantSubclasses}
+                               defaultValue={false}/> 
                        </td>
                       </tr>
                      </table>
@@ -313,12 +440,20 @@ var Auction = React.createClass({
                          React.createElement(auctionClasses[self.state.type].Prepare,
                                              {
                                                  user:   props.user,
-                                                 auction:auction
+                                                 auction:auction,
+                                                 stocks: props.stocks,
+                                                 update: updateAuction
                                              } )
                       }
                      <div style={{paddingTop:'30px'}}> </div>
                      <div style={{paddingLeft:'100px'}}>
-                      <button onClick={self.props.onStart} disabled={!startable} type="button">start</button>
+                      <button onClick={self.props.onSave}  disabled={!self.state.saveable} type="button">
+                       save
+                      </button>
+                      <span style={{paddingLeft:'20px'}}/>
+                      <button onClick={self.props.onStart} disabled={!self.state.startable} type="button">
+                       start
+                      </button>
                      </div>
                     </div> );
             case 'run':
@@ -349,3 +484,4 @@ var Auction = React.createClass({
 });
 
 exports.Auction = Auction;
+

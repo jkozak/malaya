@@ -1,10 +1,13 @@
 "use strict";
 
-var React   = require('react');
-var Logon   = require('./logon.jsx').Logon;
-var Auction = require('./auction.jsx').Auction;
-var Trades  = require('./trades.jsx').Trades;
-var Users   = require('./users.jsx').Users;
+var _          = require('underscore');
+var React      = require('react');
+var Logon      = require('./logon.jsx').Logon;
+var Auction    = require('./auction.jsx').Auction;
+var Trades     = require('./trades.jsx').Trades;
+var Users      = require('./users.jsx').Users;
+var Stocks     = require('./stocks.jsx').Stocks;
+var Subclasses = require('./stocks.jsx').Subclasses;
 
 var SideBar = React.createClass({
     render: function() {
@@ -82,10 +85,8 @@ document.body.onload = function() {
         var aucts = auctions.filter(function(a){return a.id===id;});
         if (aucts.length===1)
             return aucts[0];
-        else {
-            console.log("*** bad aucts: ",id,aucts);
+        else 
             return null;
-        }
     };
     var renderLogon;
     var      render;
@@ -240,9 +241,17 @@ document.body.onload = function() {
         send(['lsUsers',{subscribe:true}]); // +++ unsubscribe on moving away +++
         render();
     };
+    var onStocks = function() {
+        show = ['static','stocks'];
+        render();
+    };
+    var onSave = function(auction) {
+        show = ['ready',auction];
+        send(['auction',_.extend({},auction,{state:'ready'})]);
+    };
     var onStart = function(auction) {
         show = ['run',auction];
-        send(['auction',{id:auction.id,state:'run'}]);
+        send(['auction',_.extend({},auction,{state:'run'})]);
     };
     var onPriceChange = function(auction,stock,buy,volume) {
         send(['price',{auction:auction.id,stock:stock,buy:buy,volume:volume,user:user}]);
@@ -269,6 +278,15 @@ document.body.onload = function() {
                         case 'users':
                             main = (<Users users={users}/>);
                             break;
+                        case 'stocks':
+                            main = (
+                                <div>
+                                 <Subclasses subclasses={subclasses}/>
+                                 <div style={{paddingTop:'30px'}}/>
+                                 <Stocks stocks={stocks}/>
+                                </div>
+                            );
+                            break;
                         case 'trades':
                             main = (<Trades extraColumns={['auction']} auctions={auctions} user={user}/>);
                             //send(['lsTrades',{}]);
@@ -281,9 +299,22 @@ document.body.onload = function() {
                     break;
                 case 'new':
                 case 'ready': {
+                    var updateAuction = function(a) {
+                        var a1 = findAuction(a.id);
+                        if (a1)
+                            _.extend(a1,a);
+                        else
+                            auctions.push(a);
+                        render();
+                    };
                     auct = findAuction(show[1].id);
                     if (auct)
-                        main = (<Auction user={user} onStart={function(){onStart(auct);}} auction={auct}/>);
+                        main = (<Auction user={user}
+                                         onSave={function(){onSave(auct);}}
+                                         onStart={function(){onStart(auct);}}
+                                         stocks={stocks}
+                                         updateAuction={updateAuction}
+                                         auction={auct}/>);
                     console.log("*** new/ready: ",main,show,auct);
                     break;
                 }
@@ -332,6 +363,11 @@ document.body.onload = function() {
               <div style={{fontWeight:(show[0]==='static' && show[1]==='users'?'bold':'normal'),
                            background:"inherit"}}>
                <a nohref className="tbtn" onClick={onUsers}>users</a>
+              </div>
+              <div style={{paddingTop:'10px'}}/>
+              <div style={{fontWeight:(show[0]==='static' && show[1]==='stocks'?'bold':'normal'),
+                           background:"inherit"}}>
+               <a nohref className="tbtn" onClick={onStocks}>stocks</a>
               </div>
               <div style={{paddingTop:'30px'}}/>
               <div style={{fontWeight:(show[0]==='static' && show[1]==='trades'?'bold':'normal'),

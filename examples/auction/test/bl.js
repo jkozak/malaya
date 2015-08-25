@@ -173,6 +173,17 @@ describe("'match' type auction",function() {
     after(function() {
         Date.now = saveNow;
     });
+    it("can update stock field at auction start",function() {
+        var bl = mkAuction(fixture);
+        var  t = 1000;
+        Date.now = function(){return t;};
+        var ans = bl.addReturningOneOutputTo('all',
+                                             ['auction',{id:'sweets',stocks:['marathon'],state:'run'},{port:'test://N'}] );
+        assert.strictEqual(ans[0],'auction');
+        assert.strictEqual(ans[1].state,'run');
+        assert.strictEqual(ans[1].start,t);
+        assert.deepEqual(ans[1].stocks,['marathon']);
+    });
     it("runs for `duration` ticks",function() {
         var bl = mkAuction(fixture);
         var  t = 1000;
