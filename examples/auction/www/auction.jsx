@@ -54,7 +54,7 @@ var ActiveMatchRow = React.createClass({
                 })}
               </select>
              </td>
-             <td></td>
+             <td>100</td>
              <td>
               <select id={'ss'+stock} value={offer} onChange={onPC(false)}>
                {[0,5,10,15,20,25].map(function(n){
@@ -104,7 +104,7 @@ var PrepareMatchRow = React.createClass({
         return (
             <tr>
              <td>{stock}</td>
-             <td><input type="text" size="6" defaultValue="000.00" onChange={function(v){/* +++ */}}/></td>
+             <td><input type="text" size="6" defaultValue="100" onChange={function(v){/* +++ */}}/></td>
              <td><input type="text" defaultValue="0 5 10 15 20 25" onChange={function(v){/* +++ */}}/></td>
              <td>
               <button type="button" style={{color:'red',padding:'0 2 0'}} onClick={props.delThisRow}>
@@ -141,7 +141,7 @@ var PrepareMatchNewRow = React.createClass({
                                 self.setState({name:e.target.value});
                                 }}>
                {stockNames.map(function(s) {
-                   return (<option value={s}>{s}</option>);
+                   return (<option value={s} disabled={props.auction.stocks.indexOf(s)!==-1}>{s}</option>);
                 })}
               </select>
              </td>
@@ -192,7 +192,6 @@ var PrepareMatchAuction = React.createClass({
                                  auction={auction}
                                  delThisRow={function(){
                                              auction.stocks = auction.stocks.filter(function(t){return t!==s;});
-                                             //self.forceUpdate();/* +++ do this with state +++ */
                                              props.update(auction);
                                              }}
                                  stock={s}/> );
@@ -212,7 +211,7 @@ var PrepareMatchAuction = React.createClass({
               <tbody>
                {rows}
                <tr>
-                <td style={{textAlign:'center'}} colSpan={3}>
+                <td style={{textAlign:'center'}} colSpan={4}>
                  <button type="button"
                          disabled={self.state.newRow}
                          onClick={function(){self.setState({newRow:true});}}>
@@ -451,7 +450,9 @@ var Auction = React.createClass({
                        save
                       </button>
                       <span style={{paddingLeft:'20px'}}/>
-                      <button onClick={self.props.onStart} disabled={!self.state.startable} type="button">
+                      <button onClick={self.props.onStart}
+                              disabled={!self.state.startable || auction.stocks.length===0}
+                              type="button">
                        start
                       </button>
                      </div>

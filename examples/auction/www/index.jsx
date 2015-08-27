@@ -200,8 +200,9 @@ document.body.onload = function() {
                 }
                 case 'trade': {
                     var auction1 = findAuction(js[1].auction);
+                    var    trade = _.extend({},{rate:100},js[1]); // !!! frig rate for demo !!!
                     if (auction1) {
-                        auction1.trades.push(js[1]);
+                        auction1.trades.push(trade);
                         render();
                     }
                     break;
@@ -382,7 +383,7 @@ document.body.onload = function() {
               <div style={{paddingTop:'10px'}}/>
               <div style={{fontWeight:(show[0]==='new'?'bold':'normal'),
                            background:"inherit"}}>
-               <a nohref className="tbtn" onClick={function(){send(['auction',{state:'new'}]);}}>new auction</a>
+               <a nohref className="tbtn" onClick={function(){send(['auction',{state:'new',duration:20,description:"new"}]);}}>new auction</a>
               </div>
               <div style={{background:'#E6E680'}}>
                <div style={{fontStyle:'italic',textAlign:'center',marginTop:'30px',paddingBottom:'5px'}}>ready to run</div>
