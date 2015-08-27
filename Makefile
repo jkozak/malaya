@@ -9,6 +9,9 @@ all: init
 
 init:
 	@npm install
+ifeq (,$(wildcard /usr/bin/env)) # is it guix?
+	sed -e 's_^#!/usr/bin/env _#!/run/current-system/profile/bin/env _' -i $(shell find . -type f -and -executable -print)
+endif
 
 build: 	init
 
