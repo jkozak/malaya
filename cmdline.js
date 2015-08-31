@@ -369,7 +369,7 @@ exports.run = function(opts0) {
         var provoker = null;
         var  borings = 0;       // count of `add`s deemed not interesting
         chrjs.on('queue-rule',function(id,bindings) {
-            var firing = {id:id,done:false,dels:[],adds:[]};
+            var firing = {id:id,done:false,dels:[],adds:[],t:Date.now()};
             stack.push(firing);
             outQ.push(firing);
         });
@@ -403,7 +403,7 @@ exports.run = function(opts0) {
                         console.log("> %j",provoker);
                         provoker = null;
                     }
-                    console.log(" rule %s:%d",mySource,ruleMap[firing1.id].start.line);
+                    console.log(" rule %s:%d took %dms",mySource,ruleMap[firing1.id].start.line,Date.now()-firing1.t);
                     firing1.dels.forEach(function(d){
                         console.log("  - %j",d);
                     });

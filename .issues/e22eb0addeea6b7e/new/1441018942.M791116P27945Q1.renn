@@ -1,0 +1,45 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Mon, 31 Aug 2015 12:01:49 +0100
+Subject: Re: idb: robobroker causes lockup
+Message-Id: <e22eb0addeea6b7e-b7463ec31d18b930-artemis@renn>
+References: <e22eb0addeea6b7e-0-artemis@renn>
+In-Reply-To: <e22eb0addeea6b7e-0-artemis@renn>
+
+Here's a profile:
+
+Statistical profiling result from v8.log, (844915 ticks, 41992 unaccounted, 0 excluded).
+
+ [Unknown]:
+   ticks  total  nonlib   name
+  41992    5.0%
+
+ [Shared libraries]:
+   ticks  total  nonlib   name
+  771921   91.4%    0.0%  /lib/x86_64-linux-gnu/libc-2.19.so
+  28907    3.4%    0.0%  /usr/lib/libv8.so.3.14.5
+   1529    0.2%    0.0%  /lib/x86_64-linux-gnu/libpthread-2.19.so
+    517    0.1%    0.0%  /usr/bin/nodejs
+     23    0.0%    0.0%  7fff01da3000-7fff01da5000
+     12    0.0%    0.0%  /usr/lib/x86_64-linux-gnu/libcrypto.so.1.0.0
+      9    0.0%    0.0%  /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.20
+      5    0.0%    0.0%  /lib/x86_64-linux-gnu/libm-2.19.so
+
+ [JavaScript]:
+   ticks  total  nonlib   name
+
+ [C++]:
+   ticks  total  nonlib   name
+
+ [GC]:
+   ticks  total  nonlib   name
+   5264    0.6%
+
+ [Bottom up (heavy) profile]:
+  Note: percentage shows a share of a particular caller in the total
+  amount of its parent calls.
+  Callers occupying less than 2.0% are not shown.
+
+   ticks parent  name
+  771921   91.4%  /lib/x86_64-linux-gnu/libc-2.19.so
+
+  28907    3.4%  /usr/lib/libv8.so.3.14.5

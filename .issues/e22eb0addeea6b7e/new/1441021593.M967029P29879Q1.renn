@@ -1,0 +1,26 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Mon, 31 Aug 2015 12:40:04 +0100
+Subject: Re: idb: robobroker causes lockup
+Message-Id: <e22eb0addeea6b7e-ae284c13269a850a-artemis@renn>
+References: <e22eb0addeea6b7e-0-artemis@renn>
+In-Reply-To: <e22eb0addeea6b7e-0-artemis@renn>
+
+FE disconnects, CPU goes to 100% (not always).)
+
+Occurs on both node v0.10.29 and iojs v3.2.0
+
+Takes a bit less than 2 minutes on `renn`.
+
+Log size increase rate slows down a lot before FE disconnect, also CPU
+usage ramps up to 100%.
+
+A lot of it is probably due to the non-indexed searches, but the 100%
+CPU is real if intermittent; probably a lockup in JITted code.
+
+The Answer: 100% CPU bug is due to receipt of a packet larger than
+buffer max (64k at time of writing): the code in the FE3 constructor
+didn't exit properly if there was a packet fragment at the end.
+
+Perhaps limit rate to only one concurrent fact-add per data
+connection?
+
