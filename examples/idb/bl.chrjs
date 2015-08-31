@@ -5,6 +5,7 @@ const  faker = require('faker');
 const moment = require('moment');
 
 const  ROLES = {broker:1,trader:2,developer:256,auctionMonitor:1024};
+const STATES = {open:1,subject:2,closed:4,EOD:6};
 function importRoles(appRoles) {
     var ans = '';
     _.keys(ROLES).forEach(function(k) {
@@ -51,9 +52,9 @@ function mkHeartbeat(d) {
 const IDB = store {
     // filter the db data on its way in to remove the more egregious nasties
     // +++ this should be a transform +++
-    rule (-['Permissions',{Password,AppRole,...rs}],                      // remove trailing pwd spaces;roles
+    rule (-['Permissions',{Password,AppRole,...rs}],                      // remove trailing pwd spaces
           Password && Password.charAt(Password.length-1)===' ',
-          +['Permissions',{Password:Password.trimRight(),AppRole,roles:importRoles(AppRole),...rs}]);
+          +['Permissions',{Password:Password.trimRight(),AppRole,...rs}]);
     rule (-['Permissions',{ApplicationName:"John Kozak",Password,...rs}], // tweak my pwd
           Password!=="JK",
           +['Permissions',{ApplicationName:"John Kozak",Password:"JK",...rs}]);
@@ -72,12 +73,16 @@ const IDB = store {
     // market control
     rule (['MarketManager',{MarketID}],  -['MarketManager',{MarketID}]);
     rule (-['market-status',{ID,status,...},{port}],
-          ['Permissions',{port,roles,...}],
-          roles.indexOf('B')!==-1,
+          ['Permissions',{port,AppRole,...}],
+          (AppRole&ROLES.broker)!==0,
           -['MarketManager',{MarketID:ID,Status,...rs}],
           +['MarketManager',{MarketID:ID,Status:status,...rs}],
           +['_output','all',{'market-status':{ID,status}}] );
     rule(-['market-status',...]);
+    rule (['MarketManager',{Status:STATES.EOD,...}],
+          -['Price',...] );
+    rule (['MarketManager',{Status:STATES.EOD,...}],
+          -['Trade',...] );
 
     // restart
     rule (['_restart',...],

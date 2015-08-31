@@ -14,8 +14,6 @@ var AP_XML2        = 893;
 var AP_XML2A       = 918;
 var NUL            = new Buffer('\x00');
 
-util.inherits(FE3,stream.Duplex);
-
 function fixXmlTypes(fact) {                // replace some type information lost to XML
     switch (fact[0]) {
     case 'market-status':
@@ -98,11 +96,12 @@ function fixXmlTypes(fact) {                // replace some type information los
     return fact;
 }
 
-function FE3(sock,eng) {
+util.inherits(FE3,stream.Duplex);
+
+function FE3(sock) {
     var recved = new Buffer(0);
     var    fe3 = this;
     stream.Duplex.call(fe3,{objectMode:true});
-    fe3.eng  = eng;
     fe3.sock = sock;
     sock.on('data',function(data) {
         recved = Buffer.concat([recved,data]);
@@ -126,7 +125,8 @@ function FE3(sock,eng) {
                     // +++ maybe drop connection? +++
                 }
                 recved = recved.slice(FE3_HDR_LENGTH+cbData); // processed, forget
-            }
+            } else
+                break;          // leave fragment for next event
         }
     });
 }
@@ -152,11 +152,11 @@ FE3.prototype._write = function(chunk,encoding,cb) {
 
 var createFE3Server = function(eng) {
     return net.createServer(function(sock) {
-        var  fe3 = new FE3(sock,eng,{});
+        var  fe3 = new FE3(sock);
         var name = util.format("fe3://%s:%d/",sock.remoteAddress,sock.remotePort);
         eng.addConnection(name,{i:fe3,o:fe3,type:'data'});
         sock.on('error',function(){sock.end();});
-        sock.on('close',function(){eng.forgetConnection(name);});
+        sock.on('close',function(){eng.closeConnection(name);});
     });
 };
 
@@ -247,3 +247,8 @@ IDBEngine.prototype._logon = function(creds,port,cb) {
 IDBEngine.prototype._logon = null; // !!! disable pro tem
 
 exports.Engine = IDBEngine;
+
+exports.FE3 = FE3;
+
+exports.FE3_HDR_LENGTH = FE3_HDR_LENGTH;
+exports.AP_XML2A       = AP_XML2A;
