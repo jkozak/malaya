@@ -612,7 +612,7 @@ Engine.prototype.connectionSummary = function() {
 };
 
 Engine.prototype.addConnection = function(portName,io) {
-    var eng = this;
+    var       eng = this;
     if (eng.conns[portName]!==undefined)
         throw new VError("already have connection for %j",portName);
     if (!this.connIndex[io.type])
@@ -648,13 +648,20 @@ Engine.prototype.addConnection = function(portName,io) {
         break;
     }
     case 'data': {
+        var throttled = false;      // use this to ensure fairness
         io = eng.conns[portName];
         io.i.on('readable',function() {
             var js;
-            while ((js=io.i.read())!==null) {
+            while (!throttled && (js=io.i.read())!==null) {
                 if (js instanceof Array && js.length===2) {
                     js.push({port:portName});
-                    eng.update(js);
+                    eng.update(js,function() {
+                        throttled = false;
+                        setInterval(function() {
+                            io.i.emit('readable');
+                        });
+                    });
+                    throttled = true;
                 } else
                     eng.closeConnection(portName);
                 break;
