@@ -4,9 +4,6 @@ var events = require('events');
 var stream = require('stream');
 var   util = require('../../../util.js');
 
-
-// +++ test receipt of frames larger than buffer size +++
-
 describe("FE3",function() {
     var   ee = new events.EventEmitter();
     var ibuf = '';
