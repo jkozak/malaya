@@ -103,7 +103,11 @@ function FE3(sock) {
     var    fe3 = this;
     stream.Duplex.call(fe3,{objectMode:true});
     fe3.sock = sock;
+    fe3.nq   = 0;
+    fe3.qMax = 4;
     sock.on('data',function(data) {
+        // +++ rewrite to use new streams +++
+        // +++ use pause/resume for the time being +++
         recved = Buffer.concat([recved,data]);
         while (recved.length>=FE3_HDR_LENGTH) {
             var   type = recved.readInt32LE( 0);
@@ -148,6 +152,20 @@ FE3.prototype._write = function(chunk,encoding,cb) {
     this.sock.write(xml,'ascii');
     this.sock.write(NUL);
     cb();
+};
+
+FE3.prototype.push = function(x) {
+    if (++this.nq>=this.qMax)
+        this.pause();
+    return stream.Duplex.prototype.push.call(this,x);
+};
+FE3.prototype.read = function(x) {
+    var ans = stream.Duplex.prototype.read.call(this,x);
+    if (ans!==null) {
+        if (--this.nq<this.qMax)
+            this.resume();
+    }
+    return ans;
 };
 
 var createFE3Server = function(eng) {
