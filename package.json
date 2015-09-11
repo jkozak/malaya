@@ -49,9 +49,10 @@
   "engines": [
     "node >=0.10.0"
   ],
+  "license":"AGPL-1.0",
   "repository": {
     "type": "hg",
-    "url": "ssh://pooka.vm.bytemark.co.uk//var/local/data/hg/malaya"
+    "url": "ssh://malaya.club//"
   },
   "scripts": {
     "test": "NODE_ENV=test mocha -R min --compilers chrjs:compiler -C test examples/*/test",
