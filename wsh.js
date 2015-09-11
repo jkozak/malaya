@@ -42,7 +42,9 @@ var doCmd = function(tokens) {
         }
     });
 
-    if (exe==='rm') {
+    if (exe[0]==='#') {
+        // nothing to do
+    } else if (exe==='rm') {
         rest.forEach(function(d) {
             rmRF.sync(d);
         });
