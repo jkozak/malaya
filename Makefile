@@ -10,7 +10,7 @@ all: init
 init:
 	@npm install
 ifeq (,$(wildcard /usr/bin/env)) # is it guix?
-	sed -e 's_^#!/usr/bin/env _#!/run/current-system/profile/bin/env _' -i $(shell find . -type f -and -executable -print)
+	#sed -e 's_^#!/usr/bin/env _#!/run/current-system/profile/bin/env _' -i $(shell find . -type f -and -executable -print)
 endif
 
 build: 	init
@@ -26,6 +26,10 @@ benchmarks:	init
 	NODE_ENV=benchmark matcha -R plain $(sort $(wildcard benchmark/*.js examples/*/benchmark/*.js) $(patsubst %.chrjs,%.chrjs.js,$(CHRJSS)))
 	-@rm $(patsubst %.chrjs,%.chrjs.js,$(CHRJSS))
 
+doc:
+	(cd doc;make)
+
 clean:
 	rm -rf node_modules/* examples/*/node_modules/*
+	(cd doc;make clean)
 

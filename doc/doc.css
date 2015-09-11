@@ -1,0 +1,39 @@
+body
+{
+  margin:10px;
+  font-family:"futura-pt", sans-serif;
+  font-size:medium;
+  max-width:600px;
+  background-color:grey
+}
+
+h1,h2,h3,h4,h5,h6
+{
+  font-size:large;
+  margin:0 0 1rem 0
+}
+
+h1
+{
+  color:red;
+  text-transform:uppercase;
+  letter-spacing:3px
+}
+
+h1 a
+{
+  color:red
+}
+
+a
+{
+  color:blue;
+  text-decoration:underline;
+  font-weight:bold
+}
+
+a:hover,a:focus
+{
+  color:lightblue
+}
+

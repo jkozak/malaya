@@ -16,3 +16,5 @@ examples/*/bower_components/
 examples/idb/*.log
 idbfe-*.log
 
+doc/*.png
+doc/*.html
