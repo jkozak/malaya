@@ -12,7 +12,7 @@ var VError = require('verror');
 
 // +++ check argv[1] too +++
 if (process.argv[0]!=='node' || process.argv[2]!=='-c') {
-    throw new Error("unexpected call: %j",process.argv);
+    throw new VError("unexpected call: %j",process.argv);
 }
 
 var doCmd = function(tokens) {
