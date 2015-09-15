@@ -4,6 +4,7 @@ State: resolved
 Subject: lockfile handling doesn't detect wrong process
 Message-Id: <efee76a5a5eaf3d3-0-artemis@jkik2>
 resolution: duplicate
+original: c28d7d9c7820ecd7
 
 If a lockfile is left after exit, and the pid in it corresponds to a
 process that is running at the time malaya tries to restart, malaya
