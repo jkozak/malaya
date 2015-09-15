@@ -32,6 +32,7 @@
   THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*eslint-disable */
 /*jslint bitwise:true plusplus:true */
 /*global esprima:true, define:true, exports:true, window: true,
 throwErrorTolerant: true,
@@ -42,7 +43,6 @@ parseFunctionSourceElements: true, parseVariableIdentifier: true,
 parseLeftHandSideExpression: true,
 parseUnaryExpression: true,
 parseStatement: true, parseSourceElement: true */
-/*eslint-disable*/
 
 var util = require('./util.js');
 
@@ -81,7 +81,7 @@ var util = require('./util.js');
         lookahead,
         state,
         extra,
-	ruleGenId;
+        ruleGenId;
 
     Token = {
         BooleanLiteral: 1,
@@ -116,7 +116,7 @@ var util = require('./util.js');
                     '+', '-', '*', '/', '%', '++', '--', '<<', '>>', '>>>', '&',
                     '|', '^', '!', '~', '&&', '||', '?', ':', '===', '==', '>=',
                     '<=', '<', '>', '!=', '!==',
-		    '#'];	// chrjs
+                    '#'];       // chrjs
 
     Syntax = {
         AssignmentExpression: 'AssignmentExpression',
@@ -159,14 +159,14 @@ var util = require('./util.js');
         VariableDeclarator: 'VariableDeclarator',
         WhileStatement: 'WhileStatement',
         WithStatement: 'WithStatement',
-	// additions for chrjs
-	BindRest:       'BindRest',
-	StoreDeclaration: 'StoreDeclaration',
-	StoreExpression: 'StoreExpression',
-	RuleStatement: 'RuleStatement',
-	QueryStatement: 'QueryStatement',
-	SnapExpression: 'SnapExpression',
-	ItemExpression: 'ItemExpression'
+        // additions for chrjs
+        BindRest:       'BindRest',
+        StoreDeclaration: 'StoreDeclaration',
+        StoreExpression: 'StoreExpression',
+        RuleStatement: 'RuleStatement',
+        QueryStatement: 'QueryStatement',
+        SnapExpression: 'SnapExpression',
+        ItemExpression: 'ItemExpression'
     };
 
     PropertyKind = {
@@ -210,7 +210,7 @@ var util = require('./util.js');
         StrictLHSPostfix:  'Postfix increment/decrement may not have eval or arguments operand in strict mode',
         StrictLHSPrefix:  'Prefix increment/decrement may not have eval or arguments operand in strict mode',
         StrictReservedWord:  'Use of future reserved word in strict mode',
-	FunctionExpressionExpected: 'A function expression was expected here' // chrjs
+        FunctionExpressionExpected: 'A function expression was expected here' // chrjs
     };
 
     // see also tools/generate-unicode-regex.py.
@@ -335,12 +335,12 @@ var util = require('./util.js');
         case 4:
             return (id === 'this') || (id === 'else') || (id === 'case') ||
                 (id === 'void') || (id === 'with') || (id === 'enum') ||
-		(id === 'rule');                      // chrjs
+                (id === 'rule');                      // chrjs
         case 5:
             return (id === 'while') || (id === 'break') || (id === 'catch') ||
                 (id === 'throw') || (id === 'const') || (id === 'yield') ||
                 (id === 'class') || (id === 'super') ||
-		(id === 'store') || (id === 'query'); // chrjs
+                (id === 'store') || (id === 'query'); // chrjs
         case 6:
             return (id === 'return') || (id === 'typeof') || (id === 'delete') ||
                 (id === 'switch') || (id === 'export') || (id === 'import');
@@ -663,7 +663,7 @@ var util = require('./util.js');
         switch (code) {
 
         // Check for most common single-character punctuators.
-	case 0x23:  // # (chrjs)
+        case 0x23:  // # (chrjs)
         case 0x28:  // ( open bracket
         case 0x29:  // ) close bracket
         case 0x3B:  // ; semicolon
@@ -695,17 +695,17 @@ var util = require('./util.js');
         default:
             code2 = source.charCodeAt(index + 1);
 
-	    if (code2!==0x2E && code===0x2E) { // . dot all alone
-		++index;
-		return {
+            if (code2!==0x2E && code===0x2E) { // . dot all alone
+                ++index;
+                return {
                     type: Token.Punctuator,
                     value: '.',
                     lineNumber: lineNumber,
                     lineStart: lineStart,
                     start: start,
                     end: index
-		};
-	    }
+                };
+            }
 
             // '=' (U+003D) marks an assignment or comparison operator.
             if (code2 === 0x3D) {
@@ -771,7 +771,7 @@ var util = require('./util.js');
         ch3 = ch4.substr(0, 3);
 
         if (ch3 === '>>>' || ch3 === '<<=' || ch3 === '>>=' ||
-	    ch3 === '...') {	// chrjs
+            ch3 === '...') {    // chrjs
             index += 3;
             return {
                 type: Token.Punctuator,
@@ -1489,9 +1489,9 @@ var util = require('./util.js');
             if (extra.attachComment) {
                 this.processComment(node);
             }
-	    if (extra.attrs) {
-		node.attrs = {};
-	    }
+            if (extra.attrs) {
+                node.attrs = {};
+            }
             return node;
         },
 
@@ -1831,69 +1831,69 @@ var util = require('./util.js');
             };
         },
 
-	// chrjs additions follow
+        // chrjs additions follow
 
-	createBindRest: function(id) {
-	    return {
-		type: Syntax.BindRest,
-		id: id,
-	    };
-	},
+        createBindRest: function(id) {
+            return {
+                type: Syntax.BindRest,
+                id: id,
+            };
+        },
 
-	createStoreDeclaration: function(id, body) {
-	    return {
-		type: Syntax.StoreDeclaration,
-		id: id,
-		body: body
-	    };
-	},
+        createStoreDeclaration: function(id, body) {
+            return {
+                type: Syntax.StoreDeclaration,
+                id: id,
+                body: body
+            };
+        },
 
-	createStoreExpression: function(body) {
-	    return {
-		type: Syntax.StoreExpression,
-		id: null,
-		body: body
-	    };
-	},
+        createStoreExpression: function(body) {
+            return {
+                type: Syntax.StoreExpression,
+                id: null,
+                body: body
+            };
+        },
 
-	createItemExpression: function(op,expr) {
-	    return {
-		type: Syntax.ItemExpression,
-		op:op,
-		expr: expr,
-		t: null,
-		rank: null
-	    };
-	},
+        createItemExpression: function(op,expr) {
+            return {
+                type: Syntax.ItemExpression,
+                op:op,
+                expr: expr,
+                t: null,
+                rank: null
+            };
+        },
 
-    	createRuleStatement: function(id,items) {
-	    return {
-		type: Syntax.RuleStatement,
-		id: id,
-		items: items
-	    };
-	},
-	
-    	createQueryStatement: function(id, args, items, init, accum) {
-	    return {
-		type: Syntax.QueryStatement,
-		id: id,
-		args: args,
-		items: items,
-		init: init,
-		accum: accum
-	    };
-	},
+        createRuleStatement: function(id,items) {
+            return {
+                type: Syntax.RuleStatement,
+                id: id,
+                items: items
+            };
+        },
+        
+        createQueryStatement: function(id, args, items, init, accum) {
+            return {
+                type: Syntax.QueryStatement,
+                id: id,
+                args: args,
+                items: items,
+                init: init,
+                accum: accum
+            };
+        },
 
         createSnapExpression: function(id, init, items, accum) {
-	    return {
-		type: Syntax.SnapExpression,
-		id: id,
-		init: init,
-		items: items,
-		accum: accum
-	    };
-	}
+            return {
+                type: Syntax.SnapExpression,
+                id: id,
+                init: init,
+                items: items,
+                accum: accum
+            };
+        }
     };
 
     // Return true if there is a line terminator before the next token.
@@ -2082,13 +2082,13 @@ var util = require('./util.js');
                 lex();
                 elements.push(null);
             } else {
-		if (state.inStore && match('...')) { // chrjs
-		    expect('...');
-		    if (match(']') || match(','))
-			elements.push(delegate.createBindRest(null));
-		    else
-			elements.push(delegate.createBindRest(parseAssignmentExpression()));
-		} else
+                if (state.inStore && match('...')) { // chrjs
+                    expect('...');
+                    if (match(']') || match(','))
+                        elements.push(delegate.createBindRest(null));
+                    else
+                        elements.push(delegate.createBindRest(parseAssignmentExpression()));
+                } else
                     elements.push(parseAssignmentExpression());
                 if (!match(']')) {
                     expect(',');
@@ -2141,14 +2141,14 @@ var util = require('./util.js');
         token = lookahead;
         startToken = lookahead;
 
-	if (state.inStore && match('...')) {	// chrjs
-	    expect('...');
-	    if (match('}') || match(','))
-		value = null;
-	    else
-		value = parseVariableIdentifier();
+        if (state.inStore && match('...')) {    // chrjs
+            expect('...');
+            if (match('}') || match(','))
+                value = null;
+            else
+                value = parseVariableIdentifier();
             return delegate.markEnd(delegate.createProperty('bindRest', '', value), startToken);
-	} else if (token.type === Token.Identifier) {
+        } else if (token.type === Token.Identifier) {
 
             id = parseObjectPropertyKey();
 
@@ -2176,30 +2176,30 @@ var util = require('./util.js');
                 }
                 return delegate.markEnd(delegate.createProperty('set', key, value), startToken);
             }
-	    if (match(':')) {
-		expect(':');
-		value = parseAssignmentExpression();
-		if (value.type==='Identifier')
-		    return delegate.markEnd(delegate.createProperty('bindOne', id, value), startToken);
-		else
-		    return delegate.markEnd(delegate.createProperty('init', id, value), startToken);
-	    } else {		// chrjs
-		if (state.inStore && (match(',') || match('}')))
-		    return delegate.markEnd(delegate.createProperty('bindOne', id, id), startToken);
-		else
-		    throwUnexpected(token);
-	    }
+            if (match(':')) {
+                expect(':');
+                value = parseAssignmentExpression();
+                if (value.type==='Identifier')
+                    return delegate.markEnd(delegate.createProperty('bindOne', id, value), startToken);
+                else
+                    return delegate.markEnd(delegate.createProperty('init', id, value), startToken);
+            } else {            // chrjs
+                if (state.inStore && (match(',') || match('}')))
+                    return delegate.markEnd(delegate.createProperty('bindOne', id, id), startToken);
+                else
+                    throwUnexpected(token);
+            }
         }
         if (token.type === Token.EOF || token.type === Token.Punctuator) {
             throwUnexpected(token);
         } else {
             key = parseObjectPropertyKey();
-	    expect(':');
-	    value = parseAssignmentExpression();
-	    if (value.type==='Identifier')
-		return delegate.markEnd(delegate.createProperty('bindOne', key, value), startToken);
-	    else
-		return delegate.markEnd(delegate.createProperty('init', key, value), startToken);
+            expect(':');
+            value = parseAssignmentExpression();
+            if (value.type==='Identifier')
+                return delegate.markEnd(delegate.createProperty('bindOne', key, value), startToken);
+            else
+                return delegate.markEnd(delegate.createProperty('init', key, value), startToken);
         }
     }
 
@@ -2259,12 +2259,12 @@ var util = require('./util.js');
 
         expect('(');
 
-	if (match(')')) 	// for () in arrow functions
-	    expr = delegate.createSequenceExpression([]);
-	else 
+        if (match(')'))         // for () in arrow functions
+            expr = delegate.createSequenceExpression([]);
+        else 
             expr = parseExpression();
 
-	expect(')');
+        expect(')');
 
         return expr;
     }
@@ -2301,10 +2301,10 @@ var util = require('./util.js');
             if (matchKeyword('function')) {
                 return parseFunctionExpression();
             }
-	    if (state.inStore && matchKeyword('for')) {          // chrjs
+            if (state.inStore && matchKeyword('for')) {          // chrjs
                 return parseSnapExpression();
             }
-	    if (matchKeyword('store')) {                          // chrjs
+            if (matchKeyword('store')) {                          // chrjs
                 return parseStoreExpression();
             }
             if (matchKeyword('this')) {
@@ -2692,7 +2692,7 @@ var util = require('./util.js');
 
         node = left = parseConditionalExpression();
 
-	if (matchAssign()) {
+        if (matchAssign()) {
             // LeftHandSideExpression
             if (!isLeftHandSide(left)) {
                 throwErrorTolerant({}, Messages.InvalidLHSInAssignment);
@@ -2706,16 +2706,16 @@ var util = require('./util.js');
             token = lex();
             right = parseAssignmentExpression();
             node = delegate.markEnd(delegate.createAssignmentExpression(token.value, left, right), startToken);
-        } else 	if (match('=>')) { // arrow function for chrjs
-	    var params;
-	    if (node.type==='Identifier')
-		params = [node];
-	    else if (node.type==='SequenceExpression')
-		params = node.expressions;
-	    else 
-		throwUnexpected(node);
-	    node = parseArrowFunctionExpression(startToken,params);
-	} 
+        } else  if (match('=>')) { // arrow function for chrjs
+            var params;
+            if (node.type==='Identifier')
+                params = [node];
+            else if (node.type==='SequenceExpression')
+                params = node.expressions;
+            else 
+                throwUnexpected(node);
+            node = parseArrowFunctionExpression(startToken,params);
+        } 
 
         return node;
     }
@@ -3614,16 +3614,16 @@ var util = require('./util.js');
     }
 
     function parseArrowFunctionExpression(startToken,params) { // `params`: [<identifier>,...]
-	var body;
+        var body;
 
-	expect('=>');
+        expect('=>');
 
-	if (match('{')) 
-	    body = parseFunctionSourceElements();
-	else {
-	    var ret = delegate.createReturnStatement(parseAssignmentExpression());
-	    body = delegate.createBlockStatement([ret]);
-	}
+        if (match('{')) 
+            body = parseFunctionSourceElements();
+        else {
+            var ret = delegate.createReturnStatement(parseAssignmentExpression());
+            body = delegate.createBlockStatement([ret]);
+        }
 
         return delegate.markEnd(delegate.createFunctionExpression(null, params, [], body), startToken);
     }
@@ -3638,8 +3638,8 @@ var util = require('./util.js');
                 return parseConstLetDeclaration(lookahead.value);
             case 'function':
                 return parseFunctionDeclaration();
-	    case 'store':
-		return parseStoreDeclaration();
+            case 'store':
+                return parseStoreDeclaration();
             default:
                 return parseStatement();
             }
@@ -3746,7 +3746,7 @@ var util = require('./util.js');
             inIteration: false,
             inSwitch: false,
             lastCommentStart: -1,
-	    inStore: false	// chrjs
+            inStore: false      // chrjs
         };
 
         extra = {};
@@ -3839,7 +3839,7 @@ var util = require('./util.js');
         if (typeof options !== 'undefined') {
             extra.range = (typeof options.range === 'boolean') && options.range;
             extra.loc = (typeof options.loc === 'boolean') && options.loc;
-	    extra.attrs = (typeof options.attrs === 'boolean') && options.attrs;
+            extra.attrs = (typeof options.attrs === 'boolean') && options.attrs;
             extra.attachComment = (typeof options.attachComment === 'boolean') && options.attachComment;
 
             if (extra.loc && options.source !== null && options.source !== undefined) {
@@ -3888,22 +3888,22 @@ var util = require('./util.js');
     // chrjs parsing stuff follows
     // +++ markEnd +++
     function parseStoreBodyElement() {
-	if (matchKeyword('rule'))
-	    return parseRuleStatement();
-	else if (matchKeyword('query'))
-	    return parseQueryStatement();
-	else if (matchKeyword('function'))
-	    return parseFunctionDeclaration();
-	else if (match('[')) 
-	    return parseArrayInitialiser();
-	else if (match('{'))
-	    return parseObjectInitialiser();
-	else
-	    throwUnexpected(lex());
+        if (matchKeyword('rule'))
+            return parseRuleStatement();
+        else if (matchKeyword('query'))
+            return parseQueryStatement();
+        else if (matchKeyword('function'))
+            return parseFunctionDeclaration();
+        else if (match('[')) 
+            return parseArrayInitialiser();
+        else if (match('{'))
+            return parseObjectInitialiser();
+        else
+            throwUnexpected(lex());
     }
 
     function parseStoreBodyList() {
-	var body = [];
+        var body = [];
         while (index<length) {
             if (match('}')) 
                 break;
@@ -3911,100 +3911,100 @@ var util = require('./util.js');
             if ((typeof statement)==='undefined') 
                 break;
             body.push(statement);
-	    if (match(';'))
-		expect(';');
+            if (match(';'))
+                expect(';');
         }
-	return body;
+        return body;
     }
 
     function parseStoreDeclaration() {
-	state.inStore = true;
-	try {
-	    var         id = null;
+        state.inStore = true;
+        try {
+            var         id = null;
             var startToken = lookahead;
-	    expectKeyword('store');
-	    if (!match('{'))
-		id = parseVariableIdentifier();
-	    expect("{");
-	    var body = parseStoreBodyList();
-	    expect("}");
+            expectKeyword('store');
+            if (!match('{'))
+                id = parseVariableIdentifier();
+            expect("{");
+            var body = parseStoreBodyList();
+            expect("}");
             return delegate.markEnd(delegate.createStoreDeclaration(id,body),startToken);
-	} finally {
-	    state.inStore = false;
-	}
+        } finally {
+            state.inStore = false;
+        }
     }
 
     function parseStoreExpression() {
-	state.inStore = true;
-	try {
+        state.inStore = true;
+        try {
             var startToken = lookahead;
-	    expectKeyword('store');
-	    expect("{");
-	    var body = parseStoreBodyList();
-	    expect("}");
+            expectKeyword('store');
+            expect("{");
+            var body = parseStoreBodyList();
+            expect("}");
             return delegate.markEnd(delegate.createStoreExpression(body),startToken);
-	} finally {
-	    state.inStore = false;
-	}
+        } finally {
+            state.inStore = false;
+        }
     }
 
     function parseChrjsFullTerm() {
-	if (match('[')) 
-	    return parseArrayInitialiser();
-	else if (match('{'))
-	    return parseObjectInitialiser();
-	else
-	    throwUnexpected(lex());
+        if (match('[')) 
+            return parseArrayInitialiser();
+        else if (match('{'))
+            return parseObjectInitialiser();
+        else
+            throwUnexpected(lex());
     }
 
     function parseChrjsFullTermItemExpression(op) {
-	var expr = delegate.createItemExpression(op,parseChrjsFullTerm());
-	while (true) {
-	    if (match('^')) {
-		expect('^');
-		expr.rank = parseConditionalExpression();
-	    } else if (match('#')) {
-		expect('#');
-		expr.t = parseConditionalExpression();
-	    } else
-		break;
-	}
-	return expr;
+        var expr = delegate.createItemExpression(op,parseChrjsFullTerm());
+        while (true) {
+            if (match('^')) {
+                expect('^');
+                expr.rank = parseConditionalExpression();
+            } else if (match('#')) {
+                expect('#');
+                expr.t = parseConditionalExpression();
+            } else
+                break;
+        }
+        return expr;
     }
 
     function parseChrjsItem() {
-	var startToken = lookahead;
-	var        ans = null;
-	if (match('+')) {
-	    expect('+');
-	    ans = delegate.createItemExpression('+',parseChrjsFullTerm()); //N.B. no suffix ops
-	} else if (match('-')) {
-	    expect('-');
-	    ans = parseChrjsFullTermItemExpression('-');
-	} else if (match('[') || match('{')) {
-	    ans = parseChrjsFullTermItemExpression('M');
-	} else if (match('(')) {
-	    ans = delegate.createItemExpression('?',parseAssignmentExpression()); // guard
-	} else {
-	    var expr = parseAssignmentExpression();
-	    if (expr.type=='AssignmentExpression')
-		ans = delegate.createItemExpression('=',expr);                    // bind
-	    else
-		ans = delegate.createItemExpression('?',expr);                    // guard
-	}
-	if (ans===null)
-	    throwUnexpected(lex());
-	return delegate.markEnd(ans,startToken);
+        var startToken = lookahead;
+        var        ans = null;
+        if (match('+')) {
+            expect('+');
+            ans = delegate.createItemExpression('+',parseChrjsFullTerm()); //N.B. no suffix ops
+        } else if (match('-')) {
+            expect('-');
+            ans = parseChrjsFullTermItemExpression('-');
+        } else if (match('[') || match('{')) {
+            ans = parseChrjsFullTermItemExpression('M');
+        } else if (match('(')) {
+            ans = delegate.createItemExpression('?',parseAssignmentExpression()); // guard
+        } else {
+            var expr = parseAssignmentExpression();
+            if (expr.type=='AssignmentExpression')
+                ans = delegate.createItemExpression('=',expr);                    // bind
+            else
+                ans = delegate.createItemExpression('?',expr);                    // guard
+        }
+        if (ans===null)
+            throwUnexpected(lex());
+        return delegate.markEnd(ans,startToken);
     }
 
     function parseRuleStatement() {
-	var startToken = lookahead;
-	var         id = delegate.createIdentifier('%rule-'+ruleGenId++);
-	var      items = [];
-	expectKeyword('rule');
-	if (!match('('))
-	    id = parseVariableIdentifier();
-	expect('(');
+        var startToken = lookahead;
+        var         id = delegate.createIdentifier('%rule-'+ruleGenId++);
+        var      items = [];
+        expectKeyword('rule');
+        if (!match('('))
+            id = parseVariableIdentifier();
+        expect('(');
         if (!match(')')) {
             while (index<length) {
                 items.push(parseChrjsItem());
@@ -4013,12 +4013,12 @@ var util = require('./util.js');
                 expect(',');
             }
         }
-	expect(')');
+        expect(')');
         return delegate.markEnd(delegate.createRuleStatement(id,items),startToken);
     }
 
     function parseQuerySnapBackend() {
-	var qsb = {items:[],init:null,accum:null}
+        var qsb = {items:[],init:null,accum:null}
         if (!match(';')) {
             while (index<length) {
                 qsb.items.push(parseChrjsItem());
@@ -4027,19 +4027,19 @@ var util = require('./util.js');
                 expect(',');
             }
         }
-	expect(';');
-	qsb.init = parseAssignmentExpression();
-	expect(')');
-	qsb.accum = parseConditionalExpression();
-	return qsb;
+        expect(';');
+        qsb.init = parseAssignmentExpression();
+        expect(')');
+        qsb.accum = parseConditionalExpression();
+        return qsb;
     }
     
     function parseQueryStatement() {
-	var startToken = lookahead;
-	var       args = [];
-	expectKeyword('query');
-	var id = parseVariableIdentifier();
-	expect('(');
+        var startToken = lookahead;
+        var       args = [];
+        expectKeyword('query');
+        var id = parseVariableIdentifier();
+        expect('(');
         if (!match(';')) {
             while (index<length) {
                 args.push(parseAssignmentExpression());
@@ -4048,23 +4048,23 @@ var util = require('./util.js');
                 expect(',');
             }
         }
-	expect(';');
-	var qsb = parseQuerySnapBackend();
+        expect(';');
+        var qsb = parseQuerySnapBackend();
         return delegate.markEnd(delegate.createQueryStatement(id,args,qsb.items,qsb.init,qsb.accum),startToken);
     }
 
     function parseSnapExpression() {
-	var       init;
-	var      accum;
-	var      items = [];
-	var startToken = lookahead;
-	var         id = delegate.createIdentifier('%for-'+ruleGenId++);
-	expectKeyword('for');
-	if (!match('('))
-	    id = parseVariableIdentifier() // only for testing?
-	expect('(');
-	init = parseConditionalExpression();
-	expect(';');
+        var       init;
+        var      accum;
+        var      items = [];
+        var startToken = lookahead;
+        var         id = delegate.createIdentifier('%for-'+ruleGenId++);
+        expectKeyword('for');
+        if (!match('('))
+            id = parseVariableIdentifier() // only for testing?
+        expect('(');
+        init = parseConditionalExpression();
+        expect(';');
         if (!match(';')) {
             while (index<length) {
                 items.push(parseChrjsItem());
@@ -4073,11 +4073,11 @@ var util = require('./util.js');
                 expect(',');
             }
         }
-	expect(';');
-	accum = parseAssignmentExpression();
-	expect(')');
-	if (accum.type !== 'FunctionExpression')
-	    throwError({}, Messages.FunctionExpressionExpected);
+        expect(';');
+        accum = parseAssignmentExpression();
+        expect(')');
+        if (accum.type !== 'FunctionExpression')
+            throwError({}, Messages.FunctionExpressionExpected);
         return delegate.markEnd(delegate.createSnapExpression(id,init,items,accum),startToken);
     }
 
@@ -4089,54 +4089,54 @@ var util = require('./util.js');
     exports.parse = parse;
 
     exports.visit = (function() {
-	var types = require('recast').types;
-	var  Type = types.Type;
-	var   def = Type.def;
-	var    or = Type.or;
-	def('StoreDeclaration')
-	    .bases('Declaration')
-	    .build('id', 'body')
-	    .field('id',   def('Identifier'))
-	    .field('body', [def('Statement')]);
-	def('StoreExpression')
-	    .bases('Expression')
-	    .build('body')
-	    .field('body', [def('Statement')]);
-	def('RuleStatement')
-	    .bases('Statement')
-	    .build('id', 'items')
-	    .field('id',   or(def("Identifier"),null))
-	    .field('items',[def('ItemExpression')]);
-	def("ItemExpression")
-	    .bases('Expression')
-	    .build('op','expr')
-	    .field('op',   or('+','-','M','=','?'))
-	    .field('expr', def('Expression'))
-	    .field('t',    or(def('Identifier'),null))
-	    .field('rank', or(def('Expression'),null));
-	def('BindRest')
-	    .bases('Expression')
-	    .build('id')
-	    .field('id',   or(def('Identifier'),null));
-	def('QueryStatement')
-	    .bases('Statement')
-	    .build('id','args','init','items','accum')
-	    .field('id',   def('Identifier'))
-	    .field('args', [def('Identifier')])
-	    .field('init', def('AssignmentExpression'))
-	    .field('items',[def('ItemExpression')])
-	    .field('accum',def('Expression'));
-	def('SnapExpression')
-	    .bases('Expression')
-	    .build('id','init','items','accum')
-	    .field('id',   def('Identifier'))
-	    .field('init', def('AssignmentExpression'))
-	    .field('items',[def('ItemExpression')])
-	    .field('accum',def('Expression'));
-	types.finalize();
-	return function(ast,methods) {
-	    return types.visit(ast,methods);
-	};
+        var types = require('recast').types;
+        var  Type = types.Type;
+        var   def = Type.def;
+        var    or = Type.or;
+        def('StoreDeclaration')
+            .bases('Declaration')
+            .build('id', 'body')
+            .field('id',   def('Identifier'))
+            .field('body', [def('Statement')]);
+        def('StoreExpression')
+            .bases('Expression')
+            .build('body')
+            .field('body', [def('Statement')]);
+        def('RuleStatement')
+            .bases('Statement')
+            .build('id', 'items')
+            .field('id',   or(def("Identifier"),null))
+            .field('items',[def('ItemExpression')]);
+        def("ItemExpression")
+            .bases('Expression')
+            .build('op','expr')
+            .field('op',   or('+','-','M','=','?'))
+            .field('expr', def('Expression'))
+            .field('t',    or(def('Identifier'),null))
+            .field('rank', or(def('Expression'),null));
+        def('BindRest')
+            .bases('Expression')
+            .build('id')
+            .field('id',   or(def('Identifier'),null));
+        def('QueryStatement')
+            .bases('Statement')
+            .build('id','args','init','items','accum')
+            .field('id',   def('Identifier'))
+            .field('args', [def('Identifier')])
+            .field('init', def('AssignmentExpression'))
+            .field('items',[def('ItemExpression')])
+            .field('accum',def('Expression'));
+        def('SnapExpression')
+            .bases('Expression')
+            .build('id','init','items','accum')
+            .field('id',   def('Identifier'))
+            .field('init', def('AssignmentExpression'))
+            .field('items',[def('ItemExpression')])
+            .field('accum',def('Expression'));
+        types.finalize();
+        return function(ast,methods) {
+            return types.visit(ast,methods);
+        };
     })();
 
     exports.namedTypes = require('recast').types.namedTypes;
@@ -4164,37 +4164,37 @@ var util = require('./util.js');
     }());
 
     if (util.env==='test')
-	exports._private = {
-	    setupParse: function(code) {
-		delegate = SyntaxTreeDelegate;
-		source = code;
-		index = 0;
-		lineNumber = (source.length > 0) ? 1 : 0;
-		lineStart = 0;
-		length = source.length;
-		lookahead = null;
-		state = {
-		    allowIn: true,
-		    labelSet: {},
-		    inFunctionBody: false,
-		    inIteration: false,
-		    inSwitch: false,
-		    lastCommentStart: -1
-		};
-		extra = {};
-		skipComment();
-		peek();
-		strict = false;
-	    },
-	    parseExpression: function() {
-		state.inStore = true;
-		try {
-		    return parseExpression();
-		} finally {
-		    state.inStore = false;
-		}
-	    }
-	};
+        exports._private = {
+            setupParse: function(code) {
+                delegate = SyntaxTreeDelegate;
+                source = code;
+                index = 0;
+                lineNumber = (source.length > 0) ? 1 : 0;
+                lineStart = 0;
+                length = source.length;
+                lookahead = null;
+                state = {
+                    allowIn: true,
+                    labelSet: {},
+                    inFunctionBody: false,
+                    inIteration: false,
+                    inSwitch: false,
+                    lastCommentStart: -1
+                };
+                extra = {};
+                skipComment();
+                peek();
+                strict = false;
+            },
+            parseExpression: function() {
+                state.inStore = true;
+                try {
+                    return parseExpression();
+                } finally {
+                    state.inStore = false;
+                }
+            }
+        };
 
 }));
 

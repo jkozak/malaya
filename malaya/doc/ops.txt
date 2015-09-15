@@ -1,0 +1,112 @@
+Malaya from the ground up
+=========================
+
+This document will introduce Malaya from an operations viewpoint. It
+provides a conceptual overview of architecture, installation and
+operation.
+
+Installation
+------------
+
+Malaya runs on top of [nodejs](https://nodejs.org/en/) which in turn
+runs on almost all modern computer systems, particularly linux and
+windows.
+
+A Malaya app ships as source for linux systems, and as an `.msi` file
+for windows. Once installed, the system can optionally pull updates from
+our repository.
+
+A Malaya system
+---------------
+
+![](first_diag-small.png)
+
+Components
+----------
+
+A Malaya system is principally composed of a **server** and **clients**.
+
+The server contains the CHR business logic engine, ensures that the data
+is secure on disk and replicates itself to backup nodes.
+
+Clients are [HTML 5](https://en.wikipedia.org/wiki/HTML5)
+[SPA](https://en.wikipedia.org/wiki/Single-page_application)
+applications which can run in a modern web browser or be bundled up as a
+desktop app for more conventional packaging. Apart from the obvious
+screens to enter prices and trades, tools to administer the system
+(manage users, instruments and so on) are also implemented in this way.
+
+Clients typically communicate with a server by exchanging
+[JSON](http://json.org) objects over [websockets](http://websocket.org).
+
+Additionally, other components may connect to the server, such as STP
+hubs, legacy applications, market data feeds and ODBC databases for
+inter-operating with standard report generators.
+
+Disk Storage Used
+-----------------
+
+Apart from code and suchlike, Malaya stores its history and state in a
+**journal file**. This is updated continuously during normal operation;
+each input is saved here.
+
+Every so often, the system's fact store should be written out to a
+**world file**. When this is done the journal file is closed and saved
+to the **history directory**. A new empty journal file is then created.
+This operation is done atomically so that a power loss during any of
+this will not result in data loss.
+
+Individual journal files in the history directory are chained together;
+the complete history of the system can be reviewed at any time. Because
+of this chaining, the history directory is tamper proof - it can be
+deleted but not changed without leaving evidence of that.
+
+Server Start-up
+---------------
+
+The world file is loaded into the data store, then all the entries from
+the journal are replayed, reproducing the previous server state
+precisely (this works irrespective of how the server was shut down).
+
+After that, communications to the outside world are opened.
+
+Normal Operation of Server
+--------------------------
+
+JSON inputs are received from clients, or datafeeds, or whatever.
+
+They are saved to the journal file, and in parallel to that, are fed
+into the **CHR engine** which updates the data store and generates any
+outputs (to one or more clients or others). Also in parallel to that
+they are streamed to any connected **hot standby nodes**
+
+Server Shutdown
+---------------
+
+All connections to client programs are broken, the world file is written
+out as above, and the process exits.
+
+Reloading After a Server Outage
+-------------------------------
+
+Recovery is automatic and no special handling should be required.
+
+High Availability
+-----------------
+
+A hot standby node is another instance of a Malaya server started up in
+a special way: it is pointed at a running server to which it connects,
+transfers over all necessary files, starts up a running, mute, copy of
+the system, and receives streamed copy of the inputs to the master which
+it applies to itself.
+
+It has the same state as the master system and can be used as a live
+replacement if needed.
+
+Integration With Existing Infrastructure
+----------------------------------------
+
+Malaya apps have access to a broad range of third party libraries to
+connect to existing infrastructure; as mentioned above, ODBC databases,
+also e.g. Active Domain servers for centralised user authentication.
+

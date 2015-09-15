@@ -266,7 +266,7 @@ Engine.prototype._init = function() {
             } catch (err1) {
                 try {
                     rmRF.sync(eng.prevalenceDir);
-                } catch (e) {}
+                } catch (e) {/* eslint no-empty:0 */}
                 throw new VError(err1,"failed to init");
             }
         } else if (err.code)
