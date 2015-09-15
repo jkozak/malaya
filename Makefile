@@ -1,35 +1,20 @@
-ifeq ($(OS),Windows_NT)
-  export PATH  := $(PATH);.\node_modules\.bin
-  export SHELL := wsh.cmd
-else
-  export PATH  := $(PATH):./node_modules/.bin
-endif
-
-all: init
-
 init:
-	@npm install
-ifeq (,$(wildcard /usr/bin/env)) # is it guix?
-	#sed -e 's_^#!/usr/bin/env _#!/run/current-system/profile/bin/env _' -i $(shell find . -type f -and -executable -print)
-endif
+	(cd wsh;npm install;npm link)
+	(cd malaya;npm install;npm link)
+	(cd examples/chat;npm link malaya;npm install)
+	(cd examples/idb;npm link malaya;npm install)
+	(cd examples/auction;npm link malaya;npm install)
 
-build: 	init
-
-tests:	init
-	eslint -c test/eslint.conf -f test/eslint-formatter-comment.js --env node $(filter-out %.chrjs.js,$(wildcard *.js examples/*/*.js))
-	eslint -c test/eslint.conf -f test/eslint-formatter-comment.js --env browser $(filter-out %.chrjs.js,$(wildcard www/*.jsx www/*.jsx examples/*/www/*.js examples/*/www/*.jsx))
-	NODE_ENV=test mocha -R min --compilers chrjs:compiler -C test examples/*/test #--grep "XXX"
-
-benchmarks: CHRJSS = $(wildcard benchmark/*.chrjs examples/*/benchmark/*.chrjs)
-benchmarks:	init
-	$(foreach chrjs,$(CHRJSS),NODE_ENV=benchmark ./malaya compile $(chrjs);)
-	NODE_ENV=benchmark matcha -R plain $(sort $(wildcard benchmark/*.js examples/*/benchmark/*.js) $(patsubst %.chrjs,%.chrjs.js,$(CHRJSS)))
-	-@rm $(patsubst %.chrjs,%.chrjs.js,$(CHRJSS))
-
-doc:
-	(cd doc;make)
+test:	init
+	(cd wsh;npm test)
+	(cd malaya;npm test)
+	(cd examples/chat;npm test)
+	(cd examples/idb;npm test)
+	(cd examples/auction;npm test)
 
 clean:
-	rm -rf node_modules/* examples/*/node_modules/*
-	(cd doc;make clean)
-
+	(cd wsh;rm -rf node_modules)
+	(cd malaya;rm -rf node_modules)
+	(cd examples/chat;rm -rf node_modules)
+	(cd examples/idb;rm -rf node_modules)
+	(cd examples/auction;rm -rf node_modules)

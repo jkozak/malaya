@@ -10,11 +10,10 @@ syntax: glob
 node_modules/
 .prevalence/
 
-bower_components/
-examples/*/bower_components/
-
 examples/idb/*.log
 idbfe-*.log
 
 doc/*.png
 doc/*.html
+
+npm-debug.log

@@ -1,4 +1,4 @@
-var   util = require('../../../util.js');
+var   util = require('malaya').util;
 var assert = require('assert');
 var      _ = require('underscore');
 

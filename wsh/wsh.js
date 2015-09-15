@@ -1,25 +1,23 @@
 // barely enough of a shell to use GNU make for nodejs under windows
 // 
-// should be a module by itself
 
 "use strict";
 
 var   glob = require('glob');
-var   rmRF = require('rimraf');
+var rimraf = require('rimraf');
 var  child = require('child_process');
-var     sq = require('shell-quote');
 var VError = require('verror');
 
-// +++ check argv[1] too +++
-if (process.argv[0]!=='node' || process.argv[2]!=='-c') {
-    throw new VError("unexpected call: %j",process.argv);
-}
-
-var doCmd = function(tokens) {
+var doCmd = function(tokens,opts) {
     var     env = {};
     var     exe = null;
     var comment = false;
     var    rest = [];
+
+    opts = opts || {
+        exec:child.execSync,
+        rmRF:rimraf.sync
+    };
 
     tokens.forEach(function(token) {
         if (exe===null) {
@@ -45,18 +43,27 @@ var doCmd = function(tokens) {
     if (exe[0]==='#') {
         // nothing to do
     } else if (exe==='rm') {
-        rest.forEach(function(d) {
-            rmRF.sync(d);
+        if (rest[0]!=='-rf')
+            throw new VError("rm must specify -rf as first argument");
+        rest.slice(1).forEach(function(d) {
+            opts.rmRF(d);
         });
     } else {
+        var cmd = [exe].concat(rest).join(' ');
         try {
-            child.execSync(sq.quote([exe].concat(rest)),{stdio:'inherit',env:env});
-            return 0;
+            opts.exec(cmd,{stdio:'inherit',env:env});
         } catch (e) {
             return e.status;
         }
     }
+    return 0;
 };
 
-process.exit(doCmd(sq.parse(process.argv[3])));    /* eslint no-process-exit:0 */
+if (process.env.NODE_ENV==='test') {
+    exports._private = {
+        doCmd:    doCmd
+    };
+} else {
+    process.exit(doCmd(process.argv.slice(1)));    /* eslint no-process-exit:0 */
+}
 

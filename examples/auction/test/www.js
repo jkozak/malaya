@@ -9,7 +9,7 @@ require('node-jsx').install();
 var    assert = require('assert');
 var        fs = require('fs');
 var      path = require('path');
-var      util = require('../../../util.js');
+var      util = require('malaya').util;
 
 describe("www",function() {
     var saveWebSocket;

@@ -6,23 +6,17 @@
     "argparse": "^1.0.2",
     "basic-auth": "^1.0.1",
     "browserify": "^10.2.3",
-    "eslint": "^0.17.0",
     "esprima": "=1.2.2",
     "express": "^4.6.1",
     "ip": "^0.3.3",
     "minimist": "^1.1.1",
-    "moment": "^2.9.0",
     "monotonic-timestamp": "0.0.9",
     "morgan": "^1.2.2",
     "multistream": "^1.4.3",
     "node-sockjs-client": "^1.0.7",
-    "react": "^0.13.3",
-    "react-tabs": "^0.2.1",
-    "react-tools": "^0.13.3",
     "reactify": "^1.1.1",
     "recast": "^0.7.2",
     "rimraf": "~2.2.6",
-    "sax": "^0.6.1",
     "shelljs": "^0.3.0",
     "sockjs": "^0.3.9",
     "temp": "^0.8.0",
@@ -31,9 +25,8 @@
     "verror": "^1.6.0"
   },
   "devDependencies": {
+    "eslint": "^1.4.3",
     "eslint-plugin-react": "^3.0.0",
-    "faker": "^2.0.1",
-    "glob": "^5.0.14",
     "iocat": "0.0.5",
     "jsdom": "^3.1.2",
     "jsverify": "^0.6.0-alpha.5",
@@ -42,21 +35,26 @@
     "node-jsx": "^0.13.3",
     "prettyjson": "^1.0.0",
     "resumer": "0.0.0",
-    "shell-quote": "^1.4.3",
-    "supertest": "^0.15.0",
-    "xml2js": "^0.4.4"
+    "supertest": "^0.15.0"
   },
   "engines": [
     "node >=0.10.0"
   ],
   "license":"AGPL-1.0",
+  "private":true,
   "repository": {
     "type": "hg",
     "url": "ssh://malaya.club//"
   },
   "scripts": {
-    "test": "NODE_ENV=test mocha -R min --compilers chrjs:compiler -C test examples/*/test",
-    "start": "./malaya run"
+    "benchmark": "NODE_ENV=benchmark matcha -R plain benchmark/*.js",
+    "eslint": "eslint -c test/eslint.conf -f compact --env node *.js",
+    "eslint:test":  "eslint -c test/eslint.conf -f compact --env mocha test/*.js",
+    "pretest": "npm run eslint",
+    "test": "env NODE_ENV=test mocha -R min --compilers chrjs:compiler -C test",
+    "init": "node malaya init",
+    "start": "node malaya run"
   },
-  "main": "malaya"
+  "main": "index.js",
+  "bin": "malaya"
 }

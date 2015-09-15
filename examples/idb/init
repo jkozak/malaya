@@ -1,4 +1,4 @@
 #!/bin/sh
 
 rm -rf .prevalence
-./malaya init --data data/idb.json
+./idb init --data data/idb.json

@@ -2,7 +2,7 @@
 // -*- mode:javascript -*-
 "use strict";
 
-var cmdline = require('../../cmdline.js');
+var cmdline = require('malaya/cmdline.js');
 var auction = require('./auction.js');
 
 cmdline.run({createEngine:function(opts) {

@@ -1,60 +1,27 @@
-Malaya
-======
+Malaya has been restructured into separate npm modules:
+ malaya            - compiler and runtime
+ wsh               - minimal batch posix shell (for windows)
+ examples/chat     - the chat application
+ examples/idb  
+ examples/auction
 
-How to get started
-------------------
+Next, split it into separate repositories and move to git.
 
-Use linux.  The core stuff should work on windows, but the Makefile at
-least is linux specific. 
+If you're using the debian or derived `nodejs`, need to set npm prefix
+to something writeable, such as ~/npm, so add this to ~/.npmrc:
+ prefix = MY_HOME_DIRECTORY/npm
 
-Install `nodejs`.  I've run the tests against 0.10.29,0.10.36,0.12.0
-io.js 1.4.3 and 1.5.0.  Probably won't work with earlier versions.
-Most distributions have a nodejs package: _but_ you need `npm` as
-well.  You may shortly be placing your immortal soul in jeopardy by
-installing `npm` from outside the distribution, so you may as well
-install `nvm` which manages multiple parallel versions of node+tools.
+There is a top level Makefile which will build and test everything:
+ renn:~/malaya$ make clean
+ renn:~/malaya$ make init
+ renn:~/malaya$ make test
 
-Given you've installed it at ~/malaya and have GNU make and a C
-compiler installed you should be able to do this:
+For windows, need to set an environment variable (WTF doesn't npm do this?):
+ NODE_PATH = %USERPROFILE%\AppData\npm\node_modules
+ 
+and also `wsh` which is some glue for windows:
+ C:\malaya> npm install -g wsh
 
- $ cd ~/malaya
- $ make tests
+The `npm link` mechanism doesn't seem to work under windows, so let's
+leave this until we have it on some kind of npm repository.
 
-All 250+ tests should pass.
-
-
-What else can I do with it?
----------------------------
-
-See ~/malaya/examples/idb/README and ~/malaya/examples/chat/README
-for examples.
-
-Basically, create a directory, create the chrjs file there as
-`bl.chrjs` then do:
-
- $ ~/malaya/malaya init
- $ ~/malaya/malaya run
-
-This will start a websocket server on port 3000.  You can connect to
-it from another terminal, in the same directory:
-
- $ ~/malaya/malaya client
-
-You can then hurl pieces of json at your server.  You can have
-multiple client  running for extra excitement.
-
-Also, can compile `chrjs` files with `~/malaya/malaya compile`:
-resulting `.chrjs.js` files can be `require`d and used elsewhere,
-nothing else from malaya should be needed (does need `underscore`).
-
-
-Hollywood interface
--------------------
-
-Broken at the moment, waiting until `nwjs` 0.13 ships to fix it.
-
-
-Does it run on windows?
------------------------
-
-New runtime not tested yet.

@@ -2,8 +2,9 @@
 // -*- mode:javascript -*-
 "use strict";
 
-var   cmdline = require('../../cmdline.js');
-var       idb = require('./idb.js');
+var cmdline = require('malaya').cmdline;
+
+var     idb = require('./idb.js');
 
 cmdline.subcommands.run.addArgument(
     ['-f','--fe3'],

@@ -1,8 +1,8 @@
 "use strict";
 
 var    path = require('path');
-var    util = require('../../util.js');
-var  Engine = require('../../engine.js').Engine;
+var    util = require('malaya/util.js');
+var  Engine = require('malaya/engine.js').Engine;
 
 
 function AuctionEngine(options) {

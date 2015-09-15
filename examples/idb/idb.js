@@ -5,8 +5,10 @@ var    path = require('path');
 var  stream = require('stream');
 var  assert = require('assert');
 var     x2j = require('./x2j.js');
-var    util = require('../../util.js');
-var  Engine = require('../../engine.js').Engine;
+var  malaya = require('malaya');
+
+var    util = malaya.util;
+var  Engine = malaya.engine.Engine;
 
 var FE3_HDR_LENGTH = 24;
 var AP_HEARTBEAT   = 909;
@@ -96,8 +98,6 @@ function fixXmlTypes(fact) {                // replace some type information los
     return fact;
 }
 
-util.inherits(FE3,stream.Duplex);
-
 function FE3(sock) {
     var recved = new Buffer(0);
     var    fe3 = this;
@@ -134,6 +134,8 @@ function FE3(sock) {
         }
     });
 }
+
+util.inherits(FE3,stream.Duplex);
 
 FE3.prototype._read = function() {
     // all done in constructor

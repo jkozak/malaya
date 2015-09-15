@@ -2,7 +2,7 @@ var    idb = require('../idb.js');
 var assert = require('assert');
 var events = require('events');
 var stream = require('stream');
-var   util = require('../../../util.js');
+var   util = require('malaya').util;
 
 describe("FE3",function() {
     var   ee = new events.EventEmitter();
