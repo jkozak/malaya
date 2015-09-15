@@ -1,6 +1,7 @@
 From: John Kozak <jk@thameslighter.net>
 Date: Fri, 13 Feb 2015 16:57:28 +0000
 Subject: fix test issues with current versions of `esprima`
-State: new
+State: resolved
 Message-Id: <b9b91668ac097efd-0-artemis@renn>
+resolution: subsumed
 
