@@ -1,6 +1,6 @@
 {
   "name": "malaya-auction",
-  "version": "0.4.0",
+  "version": "0.4.5",
   "description": "Malaya demo auction system",
   "dependencies": {
     "faker": "^3.0.1",

@@ -1,6 +1,6 @@
 {
   "name": "idb",
-  "version": "0.4.0",
+  "version": "0.4.5",
   "description": "Malaya idb demo system",
   "dependencies": {
     "faker": "^3.0.1",
