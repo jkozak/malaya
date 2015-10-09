@@ -63,9 +63,9 @@ exports.build = function(obj,cb) {
                 cb(k);
                 Object.keys(obj[k]).forEach(function(a) {
                     if (a!=='_children') {
-                        if (obj[k][a]===undefined)
-                            console.log("*** undef obj: %j  k: %j  a: %j",obj,k,a);
-                        else {
+                        if (obj[k][a]===undefined) {
+                            //console.log("*** undef obj: %j  k: %j  a: %j",obj,k,a);
+                        } else {
                             var s = obj[k][a]===null  ? "" :
                                 obj[k][a]===true      ? "1" :
                                 obj[k][a]===false     ? "0" :

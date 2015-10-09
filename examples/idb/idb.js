@@ -271,4 +271,5 @@ exports.Engine = IDBEngine;
 exports.FE3 = FE3;
 
 exports.FE3_HDR_LENGTH = FE3_HDR_LENGTH;
+exports.AP_XML2        = AP_XML2;
 exports.AP_XML2A       = AP_XML2A;

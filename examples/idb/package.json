@@ -18,7 +18,7 @@
     "test": "test"
   },
   "scripts": {
-    "benchmark": "NODE_ENV=benchmark matcha -R plain benchmark/*.js",
+    "benchmark": "env NODE_ENV=benchmark matcha -R plain benchmark/*.js",
     "eslint": "eslint -c test/eslint.conf -f compact --env node *.js",
     "eslint:test": "eslint -c test/eslint.conf -f compact --env mocha test/*.js",
     "pretest": "npm run eslint",

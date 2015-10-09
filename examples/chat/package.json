@@ -4,8 +4,13 @@
   "dependencies": {
     "malaya": "^0.4.0"
   },
+  "devDependencies": {
+    "matcha": "^0.6.0",
+    "mocha": "^2.1.0"
+  },
   "description": "Malaya example: a trivial chat program",
   "scripts": {
+    "benchmark": "echo \"no benchmarks\"",
     "test": "echo \"no tests specified\""
   },
   "author": "John Kozak <jk@malaya.club>",
