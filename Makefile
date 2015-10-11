@@ -1,29 +1,18 @@
+APP_DIRS = examples/chat examples/idb examples/auction
+
 init:
 	(cd wsh;npm install;npm link)
 	(cd malaya;npm install;npm link)
-	(cd examples/chat;npm link malaya;npm install)
-	(cd examples/idb;npm link malaya;npm install)
-	(cd examples/auction;npm link malaya;npm install)
+	for d in $(APP_DIRS); do (cd $$d;npm link malaya;npm install); done
 
 test:	init
-	(cd wsh;npm test)
-	(cd malaya;npm test)
-	(cd examples/chat;npm test)
-	(cd examples/idb;npm test)
-	(cd examples/auction;npm test)
+	for d in wsh malaya $(APP_DIRS); do (cd $$d;npm test); done
 
 benchmark: CHRJSS = $(wildcard malaya/benchmark/*.chrjs examples/*/benchmark/*.chrjs)
 benchmark:	init
 	$(foreach chrjs,$(CHRJSS),NODE_ENV=benchmark malaya/malaya compile $(chrjs);)
-	(cd malaya;npm run benchmark)
-	(cd examples/chat;npm run benchmark)
-	(cd examples/idb;npm run benchmark)
-	(cd examples/auction;npm run benchmark)
+	for d in malaya $(APP_DIRS); do (cd $$d;npm run benchmark); done
 	-@rm $(patsubst %.chrjs,%.chrjs.js,$(CHRJSS))
 
 clean:
-	(cd wsh;rm -rf node_modules)
-	(cd malaya;rm -rf node_modules)
-	(cd examples/chat;rm -rf node_modules)
-	(cd examples/idb;rm -rf node_modules)
-	(cd examples/auction;rm -rf node_modules)
+	for d in $(APP_DIRS) malaya wsh; do (cd $$d;rm -rf node_modules); done
