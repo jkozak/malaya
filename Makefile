@@ -15,4 +15,4 @@ benchmark:	init
 	-@rm $(patsubst %.chrjs,%.chrjs.js,$(CHRJSS))
 
 clean:
-	for d in $(APP_DIRS) malaya wsh; do (cd $$d;rm -rf node_modules); done
+	for d in $(APP_DIRS) malaya wsh; do (cd $$d;rm -rf node_modules */*.chrjs.js); done
