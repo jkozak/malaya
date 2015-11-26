@@ -32,6 +32,7 @@
     "jsverify": "^0.6.0-alpha.5",
     "matcha": "^0.6.0",
     "mocha": "^2.1.0",
+    "mocha-tldr-reporter": "^1.0.0",
     "node-jsx": "^0.13.3",
     "prettyjson": "^1.0.0",
     "resumer": "0.0.0",
@@ -51,7 +52,7 @@
     "eslint": "eslint -c test/eslint.conf -f compact --env node *.js",
     "eslint:test":  "eslint -c test/eslint.conf -f compact --env mocha test/*.js",
     "pretest": "npm run eslint",
-    "test": "env NODE_ENV=test mocha -R min --compilers chrjs:compiler -C test",
+    "test": "env NODE_ENV=test mocha -R mocha-tldr-reporter --compilers chrjs:compiler -C test",
     "init": "node malaya init",
     "start": "node malaya run"
   },

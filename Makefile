@@ -1,4 +1,4 @@
-APP_DIRS = examples/chat examples/idb examples/auction
+APP_DIRS  = examples/chat examples/idb examples/auction
 
 init:
 	(cd wsh;npm install;npm link)
@@ -15,4 +15,4 @@ benchmark:	init
 	-@rm $(patsubst %.chrjs,%.chrjs.js,$(CHRJSS))
 
 clean:
-	for d in $(APP_DIRS) malaya wsh; do (cd $$d;rm -rf node_modules */*.chrjs.js); done
+	for d in $(APP_DIRS) malaya; do (cd $$d;rm -rf node_modules */*.chrjs.js); done

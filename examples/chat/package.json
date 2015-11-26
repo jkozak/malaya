@@ -6,7 +6,8 @@
   },
   "devDependencies": {
     "matcha": "^0.6.0",
-    "mocha": "^2.1.0"
+    "mocha": "^2.1.0",
+    "mocha-tldr-reporter": "^1.0.0"
   },
   "description": "Malaya example: a trivial chat program",
   "scripts": {

@@ -7,7 +7,7 @@
     "eslint": "eslint -c test/eslint.conf -f compact --env node *.js",
     "eslint:test":  "eslint -c test/eslint.conf -f compact --env mocha test/*.js",
     "pretest": "npm run eslint && npm run eslint:test",
-    "test": "env NODE_ENV=test mocha -R min test"
+    "test": "env NODE_ENV=test mocha -R mocha-tldr-reporter test"
   },
   "dependencies": {
     "glob": "^5.0.14",
