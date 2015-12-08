@@ -48,11 +48,11 @@
     "url": "ssh://malaya.club//"
   },
   "scripts": {
-    "benchmark": "env NODE_ENV=benchmark matcha -R plain benchmark/*.js",
+    "benchmark": "matcha -R plain benchmark/*.js",
     "eslint": "eslint -c test/eslint.conf -f compact --env node *.js",
     "eslint:test":  "eslint -c test/eslint.conf -f compact --env mocha test/*.js",
     "pretest": "npm run eslint",
-    "test": "env NODE_ENV=test mocha -R mocha-tldr-reporter --compilers chrjs:compiler -C test",
+    "test": "mocha -R mocha-tldr-reporter --compilers chrjs:compiler -C test",
     "init": "node malaya init",
     "start": "node malaya run"
   },
