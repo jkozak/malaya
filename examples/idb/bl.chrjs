@@ -53,45 +53,45 @@ const IDB = store {
     // filter the db data on its way in to remove the more egregious nasties
     // +++ this should be a transform +++
     rule (-['Permissions',{Password,AppRole,...rs}],                      // remove trailing pwd spaces
-          Password && Password.charAt(Password.length-1)===' ',
+           Password && Password.charAt(Password.length-1)===' ',
           +['Permissions',{Password:Password.trimRight(),AppRole,...rs}]);
     rule (-['Permissions',{ApplicationName:"John Kozak",Password,...rs}], // tweak my pwd
-          Password!=="JK",
+           Password!=="JK",
           +['Permissions',{ApplicationName:"John Kozak",Password:"JK",...rs}]);
     rule (-['Permissions',{ApplicationName,Password,...rs}],              // anonymise users and passwords
-          ApplicationName!=="John Kozak" && !rs.hasOwnProperty('anon'),
-          aname = faker.name.findName(),
-          apwd  = faker.internet.password(),
+           ApplicationName!=="John Kozak" && !rs.hasOwnProperty('anon'),
+           aname = faker.name.findName(),
+           apwd  = faker.internet.password(),
           +['Permissions',{ApplicationName:aname,Password:apwd,anon:null,...rs}]);
     rule (-['MarketManager',{auctionId,...rs}],                           // set a default start auctionId
-          _.isUndefined(auctionId),
+           _.isUndefined(auctionId),
           +['MarketManager',{auctionId:10000,...rs}] );
     rule (-['FEConfig',{CookieData,data,...ps}],                          // remove embedded XML
-          _.isUndefined(data),
+           _.isUndefined(data),
           +['FEConfig',{data:x2j.parse(CookieData),...ps}] );
 
     // market control
-    rule (['MarketManager',{MarketID}],  -['MarketManager',{MarketID}]);
+    rule ( ['MarketManager',{MarketID,...}],  -['MarketManager',{MarketID,...}]);
     rule (-['market-status',{ID,status,...},{port}],
-          ['Permissions',{port,AppRole,...}],
-          (AppRole&ROLES.broker)!==0,
+           ['Permissions',{port,AppRole,...}],
+           (AppRole&ROLES.broker)!==0,
           -['MarketManager',{MarketID:ID,Status,...rs}],
           +['MarketManager',{MarketID:ID,Status:status,...rs}],
           +['_output','all',{'market-status':{ID,status}}] );
-    rule(-['market-status',...]);
-    rule (['MarketManager',{Status:STATES.EOD,...}],
+    rule (-['market-status',...]);
+    rule ( ['MarketManager',{Status:STATES.EOD,...}],
           -['Price',...] );
-    rule (['MarketManager',{Status:STATES.EOD,...}],
+    rule ( ['MarketManager',{Status:STATES.EOD,...}],
           -['Trade',...] );
 
     // restart
-    rule (['_restart',...],
+    rule ( ['_restart',...],
           -['Permissions',{LoggedOn:1,...rs}],
           +['Permissions',{LoggedOn:0,...rs}] );
-    rule (['_restart',...], -['_output',...]);
-    rule (['_restart',...], -['_take-outputs',...]);
-    rule (['_restart',...], -['_tick',...]);
-    rule (['_restart',...], -['market-status',...]);
+    rule ( ['_restart',...], -['_output',...]);
+    rule ( ['_restart',...], -['_take-outputs',...]);
+    rule ( ['_restart',...], -['_tick',...]);
+    rule ( ['_restart',...], -['market-status',...]);
     rule (-['_restart',...]);
     
     // logon processing
@@ -110,8 +110,10 @@ const IDB = store {
           +['_output','self',{logon:{OK:0,error_code:17,text:"bad password"}}] );
     rule (-['logon',...],
           +['_output','self',{logon:{OK:0,error_code:18,text:"user unknown"}}] );
+    rule (-['FEstart',{},{port}],
+          +['start',{},{port}] );
     rule (-['start',{},{port}],
-          ['Permissions',{port,ApplicationID,ApplicationName,roles,AppRole,...}],
+           ['Permissions',{port,ApplicationID,ApplicationName,roles,AppRole,...}],
           +['_output','self',{
               'static-data':{
                   _children:
@@ -202,7 +204,7 @@ const IDB = store {
           +['_output','self',{initialised:{}}]
          );
     rule (-['start',...]);      // might get here if link fails at just the wrong moment
-    rule (['Permissions',{ApplicationID}],
+    rule ( ['Permissions',{ApplicationID}],
           -['Permissions',{ApplicationID}]);
     rule (-['logoff',     {appId,...},...], // +++ remove after switch to `Engine` +++
           -['Permissions',{ApplicationID:appId,LoggedOn:1,port,...rs}],
@@ -213,24 +215,24 @@ const IDB = store {
 
     // cookies
     rule (-['cookie',{id},{port}],
-          ['Permissions',{port,ApplicationID,...}],
-          ['Cookies',{ApplicationID,CookieID:id,Cookie,...}],
+           ['Permissions',{port,ApplicationID,...}],
+           ['Cookies',{ApplicationID,CookieID:id,Cookie,...}],
           +['_output','self',{'cookie':{id,_children:[Cookie]}}] );
     rule (-['cookie',{id},{port}],
           +['_output','self',{'cookie':{id,_children:[],error:"not found"}}] );
     rule (-['store-cookie',{id,_children:[cookie]},{port}],
-          ['Permissions',{port,ApplicationID}],
+           ['Permissions',{port,ApplicationID}],
           -['Cookies',{ApplicationID,CookieID:id}],
           +['Cookies',{ApplicationID,CookieID:id,Cookie:cookie}] );
 
     // prices
     // +++ test prices are acceptable (not worse than existing) +++
     // +++ price update +++
-    rule (['_restart',...], -['price',{...},{...}]);
+    rule ( ['_restart',...], -['price',{...},{...}]);
     rule (-['price',{action:'C',status:'A',marketID,...ps},{...}],
           -['SequenceNumbers',{MarketID:marketID,PriceID,PriceSequenceNo,...ss}],
           +['SequenceNumbers',{MarketID:marketID,PriceID:PriceID+1,PriceSequenceNo:PriceSequenceNo+1,...ss}],
-          valueDate = moment().format('DD/MM/YYYY'),
+           valueDate = moment().format('DD/MM/YYYY'),
           +['Price',{Action:          'C',
                      Status:          'A',
                      PriceID:         PriceID,
@@ -251,35 +253,35 @@ const IDB = store {
                                     ID:       PriceID,
                                     ...ps}}] );
     rule (-['price',{ID,action:'U',status:'D',...ps},{...}],
-          valueDate = (moment().format('DD/MM/YYYY')),
+           valueDate = (moment().format('DD/MM/YYYY')),
           -['Price',{PriceID:ID,...Ps}],
           +['Price',{PriceID:ID,Status:'D',...Ps}],
           +['_output','all',{price:{action:'D',status:'D',ID:ID,instrument:Ps.InstID,...ps}}] );
 
     // trades
     //  +++ checks: price tradable +++
-    rule (['_restart',...], -['trade',{...},{...}]);
+    rule ( ['_restart',...], -['trade',{...},{...}]);
     rule (-['trade',{action:'C',state:'R',status:'O',marketID,...ts},{port}],
           -['Price',{PriceID:ts.priceID,...Ps}],
-          Ps.Amount>0,
-          tradeVolume = Math.min(Ps.Amount,ts.volume),
+           Ps.Amount>0,
+           tradeVolume = Math.min(Ps.Amount,ts.volume),
           +['Price',{Action:'U',Status:'T',PriceID:ts.priceID,Amount:Ps.Amount-tradeVolume,...Ps}],
           -['SequenceNumbers',{MarketID:marketID,TradeID,TradeSequenceNo,...ss}],
           +['SequenceNumbers',{MarketID:marketID,TradeID:TradeID+1,TradeSequenceNo:TradeSequenceNo+1,...ss}],
-          ['Permissions',{ApplicationID,port}],
-          trade = _.extend({},  // +++ use extended objexpr syntax +++
-                           ts,
-                           {ID:         TradeID,
-                            seqNo:      TradeSequenceNo,
-                            priceID:    ts.priceID,
-                            action:     'C',
-                            state:      'R',
-                            status:     'C',
-                            instrument: Ps.InstID,
-                            volume:     tradeVolume,
-                            broker:     ApplicationID,
-                            update:     ApplicationID,
-                            painter:    Ps.OwnerAppID} ),
+           ['Permissions',{ApplicationID,port}],
+           trade = _.extend({},  // +++ use extended objexpr syntax +++
+                            ts,
+                            {ID:         TradeID,
+                             seqNo:      TradeSequenceNo,
+                             priceID:    ts.priceID,
+                             action:     'C',
+                             state:      'R',
+                             status:     'C',
+                             instrument: Ps.InstID,
+                             volume:     tradeVolume,
+                             broker:     ApplicationID,
+                             update:     ApplicationID,
+                             painter:    Ps.OwnerAppID} ),
           +['Trade',trade],
           +['_output','all',{trade:trade}],
           +['_output','all',{price:{ID:        ts.priceID,
@@ -301,34 +303,34 @@ const IDB = store {
           -['Trade',{priceID:ts.priceID,state:'R',...ts1}],
           -['SequenceNumbers',{MarketID:marketID,TradeID,TradeSequenceNo,...ss}],
           +['SequenceNumbers',{MarketID:marketID,TradeID:TradeID+1,TradeSequenceNo:TradeSequenceNo+1,...ss}],
-          ['Permissions',{ApplicationID,port}],
-          trade1 = _.extend({}, // +++ use extended objexpr syntax +++
-                            ts1,
-                            {ID:         ts1.ID,
-                             seqNo:      ts1.seqNo,
-                             priceID:    ts.priceID,
-                             action:     'U',
-                             status:     'O',
-                             state:      'D',
-                             instrument: Ps.InstID,
-                             volume:     ts1.volume,
-                             broker:     ApplicationID,
-                             update:     ApplicationID,
-                             painter:    Ps.OwnerAppID} ),
-          trade2 = _.extend({}, // +++ use extended objexpr syntax +++
-                            ts,
-                            {ID:         TradeID+1,
-                             seqNo:      TradeSequenceNo+1,
-                             priceID:    ts.priceID,
-                             action:     'C',
-                             status:     'O',
-                             state:      'Z',
-                             instrument: Ps.InstID,
-                             volume:     0,
-                             broker:     ApplicationID,
-                             update:     ApplicationID,
-                             hitter:     Ps.OwnerAppID,
-                             painter:    Ps.OwnerAppID} ),
+           ['Permissions',{ApplicationID,port}],
+           trade1 = _.extend({}, // +++ use extended objexpr syntax +++
+                             ts1,
+                             {ID:         ts1.ID,
+                              seqNo:      ts1.seqNo,
+                              priceID:    ts.priceID,
+                              action:     'U',
+                              status:     'O',
+                              state:      'D',
+                              instrument: Ps.InstID,
+                              volume:     ts1.volume,
+                              broker:     ApplicationID,
+                              update:     ApplicationID,
+                              painter:    Ps.OwnerAppID} ),
+           trade2 = _.extend({}, // +++ use extended objexpr syntax +++
+                             ts,
+                             {ID:         TradeID+1,
+                              seqNo:      TradeSequenceNo+1,
+                              priceID:    ts.priceID,
+                              action:     'C',
+                              status:     'O',
+                              state:      'Z',
+                              instrument: Ps.InstID,
+                              volume:     0,
+                              broker:     ApplicationID,
+                              update:     ApplicationID,
+                              hitter:     Ps.OwnerAppID,
+                              painter:    Ps.OwnerAppID} ),
           +['Trade',trade1],
           +['Trade',trade2],
           +['_output','all',{trade:trade1}],
@@ -352,7 +354,7 @@ const IDB = store {
     // +++ `InstHighlight` +++
 
     // auction
-    rule (['_restart',...], -['auction',...]); // !!! TESTING !!!
+    rule ( ['_restart',...], -['auction',...]); // !!! TESTING !!!
     rule (-['AuctionTemplateBlock',...],
           +['_output','self',{AuctionTemplateBlock:{_children:
                                                     for([];
@@ -367,12 +369,12 @@ const IDB = store {
                                                             MatchingDuration:     at.MatchingDuration,
                                                             SecondChanceDuration: 0 }}]) ) }}] );
     rule (-['AuctionTemplate',{id},{port,...}],
-          AuctionID = for(0;
-                          ['AuctionInstrumentsTemplate',{AuctionTemplateID:id,
-                                                         AuctionID,
-                                                         ...}];
-                          a=>Math.max(a,AuctionID) ),
-          ['AuctionTemplate',{AuctionTemplateID:id,...at}],
+           AuctionID = for(0;
+                           ['AuctionInstrumentsTemplate',{AuctionTemplateID:id,
+                                                          AuctionID,
+                                                          ...}];
+                           a=>Math.max(a,AuctionID) ),
+           ['AuctionTemplate',{AuctionTemplateID:id,...at}],
           +['_output',port,{AuctionTemplate:{
               cls:                  1,
               name:                 at.AuctionName,
@@ -398,8 +400,8 @@ const IDB = store {
           +['MarketManager',{auctionId:auctionId+1,...mrs}],
           +['annotatePrepareAuction',{id:auctionId+1,templateId:id,instruments:[],...prs}] );
     rule (-['annotatePrepareAuction',{instruments,_children:[child,...irs],...rs}],
-          ['Instrument',{InstID:child.AInst.InstID,SubClass}],
-          ['InstrumentClass',{InstSubClassID:SubClass,AuctionVolumes:av}],
+           ['Instrument',{InstID:child.AInst.InstID,SubClass}],
+           ['InstrumentClass',{InstSubClassID:SubClass,AuctionVolumes:av}],
           +['annotatePrepareAuction',{instruments:instruments.concat([{AInst:_.extend(child.AInst,
                                                                                       {AuctionVolumes:av} )}]),
                                       _children:[...irs],
@@ -409,13 +411,13 @@ const IDB = store {
           +['_output','all',{PrepareAuction:{AuctionID:id,Class:1,action:'I',_children:instruments,...rs}}] );
     rule (-['StartPreparedAuction',{id},{port}],
           -['auction',{id,state:'S',phases,...rs}],
-          state = {M:'Z',A:'R'}[phases[0]],
+           state = {M:'Z',A:'R'}[phases[0]],
           +['auction',{id,state:state,phases,port,...rs}] );
-    rule(-['auction',{state:undefined,port}],+['_output',port,{error:{msg:"arse"}}]);
-    rule (['_tick',...],
-          ['auction',{state,id,curPhase,...rs}],
-          state!='N',
-          d = {'M':rs.MatchingDuration,'A':rs.Duration,'S':rs.SecondChanceDuration}[curPhase],
+    rule (-['auction',{state:undefined,port}],+['_output',port,{error:{msg:"arse"}}]);
+    rule ( ['_tick',...],
+           ['auction',{state,id,curPhase,...rs}],
+           state!='N',
+           d = {'M':rs.MatchingDuration,'A':rs.Duration,'S':rs.SecondChanceDuration}[curPhase],
           +['_output','all',{AuctionState:{AuctionID:id,Class:1,State:state,Duration:d}}] );
     // +++ `AuctionPriceBlock` +++
     // +++ `AuctionSecondChance` +++
@@ -423,12 +425,12 @@ const IDB = store {
     // +++ `AuctionDelAll` +++
 
     // background
-    rule (['_tick',{date,...},...],
+    rule ( ['_tick',{date,...},...],
           +['_output','all',mkHeartbeat(date)] );
     rule (-['_tick',...]);
 
     // output
-    rule (['_take-outputs',...], -['_output',...]);
+    rule ( ['_take-outputs',...], -['_output',...]);
     rule (-['_take-outputs',...]);
 };
 

@@ -35,7 +35,7 @@
     "eslint": "eslint -c test/eslint.conf -f compact --env node *.js",
     "eslint:test": "eslint -c test/eslint.conf -f compact --env mocha test/*.js",
     "pretest": "npm run eslint",
-    "test": "env NODE_ENV=test mocha -R mocha-tldr-reporter -C test",
+    "test": "mocha -R mocha-tldr-reporter -C test",
     "init": "node auction init",
     "start": "node auction run"
   },

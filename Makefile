@@ -1,18 +1,17 @@
-APP_DIRS  = examples/chat examples/idb examples/auction
+ifeq ($(OS),Windows_NT)
+  RM_RF = rd /s /q
+else
+  RM_RF = rm -rf
+endif
 
-init:
-	(cd wsh;npm install;npm link)
-	(cd malaya;npm install;npm link)
-	for d in $(APP_DIRS); do (cd $$d;npm link malaya;npm install); done
+APP_DIRS = $(wildcard examples/*)
 
-test:	init
-	for d in wsh malaya $(APP_DIRS); do (cd $$d;npm test); done
+all:	test
 
-benchmark: CHRJSS = $(wildcard malaya/benchmark/*.chrjs examples/*/benchmark/*.chrjs)
-benchmark:	init
-	$(foreach chrjs,$(CHRJSS),NODE_ENV=benchmark malaya/malaya compile $(chrjs);)
-	for d in malaya $(APP_DIRS); do (cd $$d;npm run benchmark); done
-	-@rm $(patsubst %.chrjs,%.chrjs.js,$(CHRJSS))
+test benchmark:	init
+
+init test benchmark:
+	node build.js $@ malaya $(APP_DIRS)
 
 clean:
-	for d in $(APP_DIRS) malaya; do (cd $$d;rm -rf node_modules */*.chrjs.js); done
+	$(RM_RF) $(foreach d,$(APP_DIRS) malaya,$(d)/node_modules $(d)/*/*.chrjs.js)

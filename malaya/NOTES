@@ -51,3 +51,13 @@ journalised (as opposed to about 20 on a rotary drive!).  Using the
 the technique in ticket b2594b10848c4aec, so expect 4k updates/sec on
 cheap stock hardware.
 
+
+Type Inference
+--------------
+
+could have input definitions to supply type info:
+
+store {
+
+   rule (['Permissions',
+}

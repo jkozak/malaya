@@ -10,7 +10,8 @@
     "url": "ssh://pooka.vm.bytemark.co.uk/malaya"
   },
   "scripts": {
-    "test": "NODE_ENV=test mocha -C"
+    "benchmark": "echo 'no benchmarks'",
+    "test": "echo 'no tests'"
   },
   "main": "index.html",
   "window":{

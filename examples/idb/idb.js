@@ -157,15 +157,15 @@ FE3.prototype._write = function(chunk,encoding,cb) {
 };
 
 FE3.prototype.push = function(x) {
-    if (++this.nq>=this.qMax)
-        this.pause();
+    //    if (++this.nq>=this.qMax)
+    //        this.pause();
     return stream.Duplex.prototype.push.call(this,x);
 };
 FE3.prototype.read = function(x) {
     var ans = stream.Duplex.prototype.read.call(this,x);
     if (ans!==null) {
-        if (--this.nq<this.qMax)
-            this.resume();
+        //if (--this.nq<this.qMax)
+        //    this.resume();
     }
     return ans;
 };

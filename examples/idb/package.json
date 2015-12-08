@@ -18,17 +18,17 @@
     "test": "test"
   },
   "scripts": {
-    "benchmark": "env NODE_ENV=benchmark matcha -R plain benchmark/*.js",
+    "benchmark": "matcha -R plain benchmark/*.js",
     "eslint": "eslint -c test/eslint.conf -f compact --env node *.js",
     "eslint:test": "eslint -c test/eslint.conf -f compact --env mocha test/*.js",
     "pretest": "npm run eslint",
-    "test": "env NODE_ENV=test mocha -R mocha-tldr-reporter -C test",
+    "test": "mocha -R mocha-tldr-reporter -C test",
     "init": "node idb init",
     "start": "node idb run"
   },
   "author": "John Kozak <jk@malaya.club>",
   "license": "UNLICENCED",
-  "private":true,
+  "private": true,
   "devDependencies": {
     "eslint": "^1.4.3",
     "eslint-plugin-react": "^3.0.0",
@@ -42,6 +42,7 @@
     "prettyjson": "^1.0.0",
     "resumer": "0.0.0",
     "supertest": "^0.15.0",
+    "temp": "^0.8.3",
     "xml2js": "^0.4.4"
   }
 }
