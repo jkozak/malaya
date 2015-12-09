@@ -35,7 +35,7 @@ describe("utility functions for this test file",function() {
                     try {
                         assert.strictEqual(eng.chrjs.size,2);
                     } catch (e) {err=e;}
-                    done(err);
+                    eng.stopPrevalence(true,function(){done(err);});
                 });
             });
         });
@@ -83,6 +83,7 @@ describe("cmdline",function() {
                     eng.startPrevalence(function(err) {
                         assert(!err);
                         check(eng);
+                        eng.stopPrevalence(true);
                     });
                 }});
             });

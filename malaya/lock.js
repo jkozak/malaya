@@ -21,6 +21,7 @@ exports.lockSync = function(filename,data) {
                                  startTime:Date.now()-process.uptime()*1000 });
     
     fs.writeSync(tmp.fd,JSON.stringify(data),null,null,null);
+    fs.closeSync(tmp.fd);
     for (var i=0;i<2;i++) 
         try {
             fs.linkSync(tmp.path,filename);     // if locked, fails here
