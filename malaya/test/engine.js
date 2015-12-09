@@ -85,7 +85,7 @@ describe("Engine",function() {
                 else
                     eng.update(['test',{},{}],function() {
                         assert.strictEqual(eng.chrjs.size,1);
-                        eng.stop(true,function(err1) {
+                        eng.stopPrevalence(true,function(err1) {
                             if (err1)
                                 done(err1);
                             else {
@@ -103,9 +103,8 @@ describe("Engine",function() {
                                     default:
                                         throw new VError("unexpected line %d %j",i,l);
                                     }
-                                    return true;
                                 });
-                                done();
+                                eng.stop(true,done);
                             }
                         });
                     });
@@ -160,7 +159,7 @@ describe("Engine",function() {
         it("loads from newly initted state directory",function(done) {
             runInCountEngine(function(eng) {
                 assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:0}]]);
-                done();
+                eng.stopPrevalence(true,done);
             });
         });
         it("replays updates",function(done){
@@ -168,7 +167,7 @@ describe("Engine",function() {
                 init: function(eng) {appendToJournal(eng,'update',['x',{}]);},
                 main: function(eng) {
                     assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:1}]]);
-                    done();
+                    eng.stopPrevalence(true,done);
                 }
             }); 
         });
@@ -182,9 +181,9 @@ describe("Engine",function() {
                         eng.startPrevalence(function(err) {
                             assert(!err);
                             assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:1}]]);
+                            eng.stopPrevalence(true,done);
                         });
                     });
-                    done();
                 }
             }); 
         });
@@ -199,9 +198,9 @@ describe("Engine",function() {
                         eng.startPrevalence(function(err) {
                             assert(!err);
                             assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:2}]]);
+                            eng.stopPrevalence(true,done);
                         });
                     });
-                    done();
                 }
             }); 
         });
@@ -216,9 +215,9 @@ describe("Engine",function() {
                         eng.startPrevalence(function(err) {
                             assert(!err);
                             assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:2}]]);
+                            eng.stopPrevalence(true,done);
                         });
                     });
-                    done();
                 }
             }); 
         });
@@ -236,9 +235,9 @@ describe("Engine",function() {
                         eng.startPrevalence(function(err) {
                             assert(!err);
                             assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:2}]]);
+                            eng.stopPrevalence(true,done);
                         });
                     });
-                    done();
                 }
             }); 
         });
@@ -311,7 +310,7 @@ describe("Engine",function() {
                 eng.loadData(dfn,function(err) {
                     assert(!err);
                     assert.deepEqual(_.values(eng.chrjs._private.orderedFacts),data);
-                    done();
+                    eng.stopPrevalence(true,done);
                 });
             });
         });
@@ -329,7 +328,7 @@ describe("Engine",function() {
                 eng.loadData(dfn,function(err) {
                     assert(!err);
                     assert.deepEqual(_.values(eng.chrjs._private.orderedFacts),data);
-                    done();
+                    eng.stopPrevalence(true,done);
                 });
             });
         });
@@ -347,7 +346,7 @@ describe("Engine",function() {
                 io.on('rcved',function() {
                     try {
                         assert.deepEqual(io.rcved,[{msg:"will this do?"}]);
-                        done();
+                        eng.stopPrevalence(true,done);
                     } catch (e) {done(e);}
                 });
                 io.i.write(['do_summat',{}]);
@@ -360,7 +359,7 @@ describe("Engine",function() {
             var io2 = createIO();
             var io3 = createIO();
             var err = null;
-            var dun = _.after(3,function() {done(err);});
+            var dun = _.after(3,function() {eng.stopPrevalence(true,function(e){done(e);})});
             eng.init();
             eng.start();
             eng.startPrevalence(function(err) {
@@ -403,7 +402,7 @@ describe("Engine",function() {
                         assert.strictEqual(        io.rcved[2][1], 'update');
                         assert.deepEqual  (        io.rcved[2][2], ['else',{},{port:'test://'}]);
                         assert(io.rcved[1][0]<io.rcved[2][0]); // timestamps are monotonic increasing, distinct
-                        done();
+                        eng.stopPrevalence(true,done);
                     } catch (e) {done(e);}
                 });
             });

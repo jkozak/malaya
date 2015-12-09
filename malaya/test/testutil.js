@@ -12,7 +12,7 @@ describe("testutil",function() {
                     eng.addConnection('test://',io);
                     eng.chrjs.once('fire',function() {
                         assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:1}]]);
-                        done();
+                        eng.stopPrevalence(true,done);
                     });
                     assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:0}]]);
                     io.i.write(['x',{}]);
@@ -25,7 +25,7 @@ describe("testutil",function() {
                 eng.addConnection('test://',io);
                 eng.chrjs.once('fire',function() {
                     assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:1}]]);
-                    done();
+                    eng.stopPrevalence(true,done);
                 });
                 assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:0}]]);
                 io.i.write(['x',{}]);
