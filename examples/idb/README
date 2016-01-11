@@ -4,14 +4,14 @@ Malaya IDB example
 To initialise (assume `make tests` has run clean):
 
  $ cd ~/malaya/examples/idb
- $ ./malaya init -d data/idb.json
+ $ ./idb init -d data/idb.json
 
 Where `idb.json` is a JSON dump of an IDB db. This builds the
 prevalent store.
 
 To run thereafter:
 
- $ ~/malaya/examples/idb/malaya run
+ $ ~/malaya/examples/idb/idb run -D
 
 Ctrl-C to stop and save.
 
