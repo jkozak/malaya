@@ -59,5 +59,3 @@ function cmd(args) {
 }
 
 process.exit(cmd(process.argv.slice(2)));    /* eslint no-process-exit:0 */
-
-

@@ -220,8 +220,8 @@ IDBEngine.prototype._become = function(mode,cb) {
         eng.fe3Server = createFE3Server(eng);
         eng.on('slave',function(where) {
             var sp = where===null ? {} : {port:where.ports.fe3,server:where.host};
-            for (var port in eng.conns) 
-                if (util.startsWith(port,'fe3:')) 
+            for (var port in eng.conns)
+                if (util.startsWith(port,'fe3:'))
                     eng.conns[port].o.write({_spareFE3:sp});
         });
         eng.fe3Server.on('listening',function() {
@@ -252,7 +252,7 @@ IDBEngine.prototype._logon = function(creds,port,cb) {
             function(js) {
                 if (js.logon) {
                     cb(null,!!js.logon.OK);
-                    eng.conns[port].o.end();                                 
+                    eng.conns[port].o.end();
                 }
             })
         .on('finish',function() {

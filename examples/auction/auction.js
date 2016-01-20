@@ -51,7 +51,7 @@ AuctionEngine.prototype.createExpressApp = function() {
     app.get('/new-auction',function(req,res) {
         res.redirect('/auction/'+this.nextAuctionId());
     });
-    
+
     app.get('/new-player/*',function(req,res) {
         var     parts = req.path.split('/').slice(2);
         var auctionId = parts[0];
@@ -75,7 +75,7 @@ AuctionEngine.prototype.createExpressApp = function() {
             res.end();
         }
     });
-    
+
     return app;
 };
 

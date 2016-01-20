@@ -45,25 +45,25 @@ var ActiveMatchRow = React.createClass({
         var stockColour = traded ? 'red' : active ? 'green' : 'inherit';
         return (
             <tr>
-             <td style={{color:stockColour}}>{stock}</td>
-             <td>{bought===0 ? '' : bought}</td>
-             <td>
-              <select id={'sb'+stock} value={bid} onChange={onPC(true)}>
-               {[0,5,10,15,20,25].map(function(n) {
-                   return (<option value={n}>{n}</option>);
+              <td style={{color:stockColour}}>{stock}</td>
+              <td>{bought===0 ? '' : bought}</td>
+              <td>
+                <select id={'sb'+stock} value={bid} onChange={onPC(true)}>
+                  {[0,5,10,15,20,25].map(function(n) {
+                      return (<option value={n}>{n}</option>);
+                  })}
+            </select>
+                </td>
+                <td>100</td>
+                <td>
+                <select id={'ss'+stock} value={offer} onChange={onPC(false)}>
+                {[0,5,10,15,20,25].map(function(n){
+                    return (<option value={n}>{n}</option>);
                 })}
-              </select>
-             </td>
-             <td>100</td>
-             <td>
-              <select id={'ss'+stock} value={offer} onChange={onPC(false)}>
-               {[0,5,10,15,20,25].map(function(n){
-                   return (<option value={n}>{n}</option>);
-                })}
-              </select>
-             </td>
-             <td>{sold===0 ? '' : sold}</td>
-            </tr> );
+            </select>
+                </td>
+                <td>{sold===0 ? '' : sold}</td>
+                </tr> );
     }
 });
 
@@ -73,15 +73,15 @@ var ActiveMatchAuction = React.createClass({
         var auction = props.auction;
         return (
             <table>
-             <thead>
-              <tr><td>stock</td><td>bought</td><td>buy</td><td>rate</td><td>sell</td><td>sold</td></tr>
-             </thead>
-             <tbody>
-              {auction.stocks.map(function(s) {
-                  return (<ActiveMatchRow user={props.user} onPriceChange={props.onPriceChange} auction={auction} stock={s}/>);
-               })}
-             </tbody>
-            </table> );
+              <thead>
+                <tr><td>stock</td><td>bought</td><td>buy</td><td>rate</td><td>sell</td><td>sold</td></tr>
+              </thead>
+              <tbody>
+                {auction.stocks.map(function(s) {
+                    return (<ActiveMatchRow user={props.user} onPriceChange={props.onPriceChange} auction={auction} stock={s}/>);
+                })}
+            </tbody>
+                </table> );
     }
 });
 
@@ -103,14 +103,14 @@ var PrepareMatchRow = React.createClass({
         var      stock = props.stock;
         return (
             <tr>
-             <td>{stock}</td>
-             <td><input type="text" size="6" defaultValue="100" onChange={function(v){/* +++ */}}/></td>
-             <td><input type="text" defaultValue="0 5 10 15 20 25" onChange={function(v){/* +++ */}}/></td>
-             <td>
-              <button type="button" style={{color:'red',padding:'0 2 0'}} onClick={props.delThisRow}>
-               {'\u2212'}
-              </button>
-             </td>
+              <td>{stock}</td>
+              <td><input type="text" size="6" defaultValue="100" onChange={function(v){/* +++ */}}/></td>
+              <td><input type="text" defaultValue="0 5 10 15 20 25" onChange={function(v){/* +++ */}}/></td>
+              <td>
+                <button type="button" style={{color:'red',padding:'0 2 0'}} onClick={props.delThisRow}>
+                  {'\u2212'}
+                </button>
+              </td>
             </tr>);
     }
 });
@@ -135,28 +135,28 @@ var PrepareMatchNewRow = React.createClass({
         };
         return (
             <tr>
-             <td>
-              <select defaultValue={self.state.name}
-                      onChange={function(e){
-                                self.setState({name:e.target.value});
-                                }}>
-               {stockNames.map(function(s) {
-                   return (<option value={s} disabled={props.auction.stocks.indexOf(s)!==-1}>{s}</option>);
-                })}
-              </select>
-             </td>
-             <td>
-              <input type="text"
-                     size="6"
-                     defaultValue={self.state.rate}
-                     onChange={function(v){self.setState({rate:parseFloat(v)});}}/>
-             </td>
-             <td>
-              <input type="text"
-                     defaultValue={self.state.volumes.join(' ')}
-                     onChange={function(v){self.setState({volumes:v.split(' ').map(parseFloat)});}}/>
-             </td>
-             <td>
+              <td>
+                <select defaultValue={self.state.name}
+                        onChange={function(e){
+                            self.setState({name:e.target.value});
+                        }}>
+                  {stockNames.map(function(s) {
+                      return (<option value={s} disabled={props.auction.stocks.indexOf(s)!==-1}>{s}</option>);
+                  })}
+            </select>
+                </td>
+                <td>
+                <input type="text"
+            size="6"
+            defaultValue={self.state.rate}
+            onChange={function(v){self.setState({rate:parseFloat(v)});}}/>
+                </td>
+                <td>
+                <input type="text"
+            defaultValue={self.state.volumes.join(' ')}
+            onChange={function(v){self.setState({volumes:v.split(' ').map(parseFloat)});}}/>
+                </td>
+                <td>
               <button type="button" style={{color:'red',padding:'0 2 0'}} onClick={props.delThisRow}>
                {'\u2212'}
               </button>
@@ -418,9 +418,9 @@ var Auction = React.createClass({
                        <td style={{textAlign:'right'}}>
                         <input id='auctionDuration'
                                style={{textAlign:'right'}}
-                               type='number' min='10' max='3600' step='5' 
+                               type='number' min='10' max='3600' step='5'
                                onChange={onChangeDuration}
-                               defaultValue={auction.duration}/> 
+                               defaultValue={auction.duration}/>
                        </td>
                       </tr>
                       <tr>
@@ -430,7 +430,7 @@ var Auction = React.createClass({
                                type='checkbox'
                                disabled={true}
                                onChange={onChangeWantSubclasses}
-                               defaultValue={false}/> 
+                               defaultValue={false}/>
                        </td>
                       </tr>
                      </table>
@@ -485,4 +485,3 @@ var Auction = React.createClass({
 });
 
 exports.Auction = Auction;
-

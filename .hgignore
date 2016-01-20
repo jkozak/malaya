@@ -5,6 +5,8 @@ syntax: glob
 .\#*
 .nfs*
 
+.bash_history
+
 *.chrjs.js
 
 node_modules/

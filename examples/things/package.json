@@ -1,0 +1,29 @@
+{
+  "name": "things",
+  "version": "0.0.0",
+  "description": "Malaya Internet of Things",
+  "directories": {
+    "test": "test"
+  },
+  "main": "index.js",
+  "scripts": {
+    "benchmark": "matcha -R plain benchmark/*.js",
+    "eslint": "eslint -c test/eslint.conf -f compact --env node *.js",
+    "eslint:test": "eslint -c test/eslint.conf -f compact --env mocha test/*.js",
+    "pretest": "npm run eslint",
+    "test": "mocha -R mocha-tldr-reporter -C test",
+    "init": "node things init",
+    "start": "node things run"
+  },
+  "author": "John Kozak",
+  "license": "ISC",
+  "dependencies": {
+    "underscore": "^1.8.3"
+  },
+  "devDependencies": {
+    "eslint": "^1.6.0",
+    "matcha": "^0.6.0",
+    "mocha": "^2.3.3",
+    "mocha-tldr-reporter": "^1.0.0"
+  }
+}

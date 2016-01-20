@@ -1,0 +1,61 @@
+#!/usr/bin/env node
+// -*- mode:javascript -*-
+"use strict";
+
+var   dgram = require('dgram');
+var       _ = require('underscore');
+
+var cmdline = require('malaya').cmdline;
+
+function addressAndPort(s) {
+    var m =/^([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)(?::([0-9]+))?$/.exec(s);
+    return {address:m[1],port:parseInt(m[2])};
+}
+
+cmdline.subcommands.run.addArgument(
+    ['-t','--things'],
+    {
+        action:       'store',
+        type:         addressAndPort,
+        defaultValue: '224.0.0.199:7777',
+        help:         "multicast address and port for things",
+        dest:         'mcast',
+        metavar:      'mcast'
+    }
+);
+
+cmdline.run({createEngine:function(opts) {
+    var  things = dgram.createSocket("udp4");
+    var   mcast = cmdline.args.mcast;
+    things.bind(cmdline.args.mcast.port);
+    things.setBroadcast(true);
+    things.setMulticastTTL(128);
+    things.addMembership(mcast.address);
+    opts.tag = 'things';
+    var eng = new malaya.Engine(opts);
+    things.on('message',function(msg,rinfo) {
+        var   res;
+        var    js = JSON.parse(msg).concat({source:rinfo});
+        var done2 = _.after(2,function(t) {
+            var add = res.refs[t];
+            if (add[0]==='_output') {
+                if (add.length!==3)
+                    eng.emit('error',util.format("bad _output: %j",add));
+                else if (add[2]===null)
+                    ;           // discard
+                else if (add[1]==='all') {
+                    var msg = JSON.stringify(add[2]);
+                    things.send(msg,0,msg.length,mcast.address,mcast.port);
+                } else {
+                    // +++ particular device +++
+                }
+            }
+            
+        });
+        eng.journalise('update',js,done2);
+        res = eng.chrjs.update(js);
+        done2();
+    });
+    return eng;
+}});
+

@@ -1,0 +1,10 @@
+Malaya Internet of Things demo
+==============================
+
+Things (adorable ESP8266s, typically) blat their status about as
+multicast JSON. They can receive commands as well.  A malaya server
+handles sensor integration and command dispatch.
+
+This suffers from all the well-know IoT security problems and probably
+brings new ones to the party.  
+

@@ -1,0 +1,7 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Wed, 20 Jan 2016 17:44:32 +0000
+Subject: use `cross-env` for portability
+State: resolved
+Message-Id: <d798a51a8542f5e8-0-artemis@renn>
+resolution: fixed
+

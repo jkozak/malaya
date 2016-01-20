@@ -50,7 +50,7 @@ describe("Engine",function() {
             assert.throws(function() {
                 eng.init();
             });
-        });    
+        });
         it("won't start without initialising",function() {
             var dir = temp.mkdirSync();
             var eng = new Engine({dir:dir});
@@ -169,7 +169,7 @@ describe("Engine",function() {
                     assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:1}]]);
                     eng.stopPrevalence(true,done);
                 }
-            }); 
+            });
         });
         it("saves and reloads",function(done){
             runInCountEngine({
@@ -185,7 +185,7 @@ describe("Engine",function() {
                         });
                     });
                 }
-            }); 
+            });
         });
         it("saves and reloads journal",function(done){
             runInCountEngine({
@@ -202,7 +202,7 @@ describe("Engine",function() {
                         });
                     });
                 }
-            }); 
+            });
         });
         it("closes and reloads journal",function(done){
             runInCountEngine({
@@ -219,7 +219,7 @@ describe("Engine",function() {
                         });
                     });
                 }
-            }); 
+            });
         });
         it("copes with crash-damaged journal",function(done){ // bug in 2015-07-20 demo
             runInCountEngine({
@@ -239,9 +239,9 @@ describe("Engine",function() {
                         });
                     });
                 }
-            }); 
+            });
         });
-        // +++ 
+        // +++
     });
     describe("walking utilities",function() {
         it("traverses the journal file",function(done) {
@@ -431,4 +431,3 @@ describe("Engine",function() {
         });
     });
 });
-

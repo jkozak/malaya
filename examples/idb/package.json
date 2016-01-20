@@ -22,7 +22,7 @@
     "eslint": "eslint -c test/eslint.conf -f compact --env node *.js",
     "eslint:test": "eslint -c test/eslint.conf -f compact --env mocha test/*.js",
     "pretest": "npm run eslint",
-    "test": "mocha -R mocha-tldr-reporter -C test",
+    "test": "cross-env NODE_ENV=test mocha -R mocha-tldr-reporter -C test",
     "init": "node idb init",
     "start": "node idb run"
   },
@@ -30,6 +30,7 @@
   "license": "UNLICENCED",
   "private": true,
   "devDependencies": {
+    "cross-env": "^1.0.7",
     "eslint": "^1.4.3",
     "eslint-plugin-react": "^3.0.0",
     "iocat": "0.0.5",
