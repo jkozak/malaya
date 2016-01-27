@@ -1,0 +1,11 @@
+#!/usr/bin/env node
+// -*- mode:javascript -*-
+"use strict";
+
+var cmdline = require('malaya/cmdline.js');
+var     web = require('./web.js');
+
+cmdline.run({createEngine:function(opts) {
+    opts.tag = 'web';
+    return new web.Engine(opts);
+}});

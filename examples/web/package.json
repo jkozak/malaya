@@ -1,0 +1,32 @@
+{
+  "name": "web",
+  "version": "0.0.0",
+  "description": "Malaya Web",
+  "directories": {
+    "test": "test"
+  },
+  "main": "index.js",
+  "scripts": {
+    "benchmark": "matcha -R plain benchmark/*.js",
+    "eslint": "eslint -c test/eslint.conf -f compact --env node *.js",
+    "eslint:test": "eslint -c test/eslint.conf -f compact --env mocha test/*.js",
+    "pretest": "npm run eslint",
+    "test": "cross-env NODE_ENV=test mocha -R mocha-tldr-reporter -C test",
+    "init": "node web init",
+    "start": "node web run"
+  },
+  "author": "John Kozak",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.14.2",
+    "underscore": "^1.8.3"
+  },
+  "devDependencies": {
+    "cross-env": "^1.0.7",
+    "eslint": "^1.6.0",
+    "jsdom": "^7.2.0",
+    "matcha": "^0.6.0",
+    "mocha": "^2.3.3",
+    "mocha-tldr-reporter": "^1.0.0"
+  }
+}
