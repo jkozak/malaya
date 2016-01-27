@@ -9,7 +9,6 @@ const bodyParser = require('body-parser');
 function WebEngine(options) {
     const eng = this;
     options.bundles = {
-        "/bundle.js":[path.join(process.cwd(),'www/index.js')]
     };
     options.logging = true;
     Engine.call(eng,options);
@@ -23,6 +22,7 @@ WebEngine.prototype.createExpressApp = function() {
 
     app.use('/static/',express.static('www'));
     app.use(bodyParser.urlencoded({extended:true}));
+    app.use(bodyParser.json());
     app.all('/REST/*',function(req,res){
         console.log("   req: %j %j %j",req.method,req.url,req.params);
         if (req.method==='POST')
