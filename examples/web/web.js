@@ -31,7 +31,9 @@ WebEngine.prototype.createExpressApp = function() {
                             url:   req.url,
                             params:req.params,
                             body:  req.body}]);
-        res.send(200);
+        res.setHeader('Content-Type','application/json');
+        res.status(200);
+        res.end(JSON.stringify('{}'));
     });
     app.get('/',function(res,req){
         res.redirect('/static/index.html');
