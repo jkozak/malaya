@@ -107,7 +107,7 @@ var compile = exports.compile = function(source) {
         var    loads = _.difference(module.children,children);
         if (loads.length>1)
             throw new VError("compiling %s added %s modules",source,loads.length);
-        for (var i in loads) 
+        for (var i in loads)
             sources[loads[i].filename] = null;
         chrjs.reset();          // because `require` caches values
         return chrjs;
@@ -128,7 +128,7 @@ var Engine = exports.Engine = function(options) {
     options.bundles   = options.bundles || {};
 
     compiler.debug    = options.debug;
-    
+
     eng.prevalenceDir = options.prevalenceDir || path.join(options.dir,'.prevalence');
     eng.syshash       = null;
     eng.chrjs         = compile(options.businessLogic) || exports.makeInertChrjs();
@@ -136,7 +136,7 @@ var Engine = exports.Engine = function(options) {
     eng.options       = options;
     eng.mode          = 'idle';                  // 'master' | 'slave' | 'idle'
     eng.conns         = {};                      // <port> -> {i:<in-stream>,o:<out-stream>,type:<type>}
-    eng.connIndex     = {};                      // <type> -> [<port>,...]    
+    eng.connIndex     = {};                      // <type> -> [<port>,...]
     eng.http          = null;                    // express http server
     eng.journal       = null;                    // journal write stream
     eng.timestamp     = options.timestamp || require('monotonic-timestamp');
@@ -146,10 +146,10 @@ var Engine = exports.Engine = function(options) {
     eng.chrjs.tag     = options.tag;
 
     eng.masterUrl     = eng.options.masterUrl;
-    eng.replicateSock = null;  
+    eng.replicateSock = null;
 
     eng.chrjs.on('error',function(err){eng.emit(new VError(err,"chrjs: "));});
-    
+
     eng.on('mode',function(mode) {
         eng.broadcast(['mode',mode],'admin');
     });
@@ -190,7 +190,7 @@ Engine.prototype.stopPrevalence = function(quick,cb) {
         // 'close' event for `fs.WriteStream` is undocumented _but_
         // cannot do dir renames in `_saveWorld` until journal closed.
         eng.journal.on(util.onWindows ? 'close' : 'finish',function() {
-            if (!quick) 
+            if (!quick)
                 eng._saveWorld();
             if (cb) cb();
         });
@@ -236,9 +236,9 @@ Engine.prototype.loadData = function(data,cb) {
     } else if (/.json$/.test(data)) {      // single json array-of-arrays
         var  arr = JSON.parse(fs.readFileSync(data));
         var take = function() {
-            if (arr.length===0) 
-                cb(null); 
-            else 
+            if (arr.length===0)
+                cb(null);
+            else
                 eng.update(arr.shift(),take);
         };
         if (!(arr instanceof Array))
@@ -438,7 +438,7 @@ Engine.prototype.createExpressApp = function() {
             });
         };
     };
-    
+
     var doBrowserify = function(files) {
         files = Array.isArray(files) ? files : [files];
         return viaJSCache(function(_fn,cb) {
@@ -464,7 +464,7 @@ Engine.prototype.createExpressApp = function() {
                     var deps = {};
                     filesRead.forEach(function(f) {
                         deps[f] = fs.statSync(f);
-                        eng.cacheFile(f); 
+                        eng.cacheFile(f);
                     });
                     cb(null,[js,deps]);
                 });
@@ -475,7 +475,7 @@ Engine.prototype.createExpressApp = function() {
         //app.use(morgan(":remote-addr - :remote-user [:date] \":method :url HTTP/:http-version\" :status :res[content-length] \":referrer\" \":user-agent\" :res[etag]"));
         app.use(morgan('dev'));
     }
-    
+
     app.get('/replication/hashes',function(req,res) {
         fs.readdir(eng.prevalenceDir+'/hashes',function(err,files) {
             if (err) {
@@ -513,14 +513,14 @@ Engine.prototype.createExpressApp = function() {
                     }
                 });
         });
-    
+
     app.get('/',function(req,res) {
         res.redirect('/index.html');
     });
 
-    for (var k in eng.options.bundles) 
+    for (var k in eng.options.bundles)
         app.get(k,doBrowserify(eng.options.bundles[k]));
-    
+
     app.get('/*.chrjs',viaJSCache(true,function(filename,cb) {
         try {
             var chrjs = fs.readFileSync(filename);
@@ -537,7 +537,7 @@ Engine.prototype.createExpressApp = function() {
     app.get('/*.jsx',function(req,res) {
         return doBrowserify(path.join(webDir,req.path.substr(1)))(req,res);
     });
-    
+
     app.use(function(req,res,next) {
         if (req.method==='GET' || req.method==='HEAD') {
             try {
@@ -557,7 +557,7 @@ Engine.prototype.createExpressApp = function() {
         }
         next();
     });
-        
+
     return app;
 };
 
@@ -695,7 +695,7 @@ Engine.prototype.listenHttp = function(mode,port,done) {
             io.i    = new whiskey.JSONParseStream();
             io.o    = new whiskey.StringifyJSONStream();
             break;
-        case '/replication/journal': 
+        case '/replication/journal':
             io.type = 'replication';
             io.i    = new whiskey.LineStream(util.deserialise);
             io.o    = new whiskey.StringifyObjectStream(util.serialise);
@@ -715,7 +715,7 @@ Engine.prototype.listenHttp = function(mode,port,done) {
         default:
             // +++ jump around breaking things +++
         }
-        if (eng.mode!=='master' && io && io.type!=='admin') 
+        if (eng.mode!=='master' && io && io.type!=='admin')
             io = null;
         if (io) {
             conn.pipe(io.i);
@@ -728,7 +728,7 @@ Engine.prototype.listenHttp = function(mode,port,done) {
             });
             io.o.on('error',function() {
                 io.o.end();
-            });                                 // +++ to here 
+            });                                 // +++ to here
             conn.on('close',function() {
                 eng.closeConnection(portName);
             });
@@ -751,7 +751,7 @@ Engine.prototype.journaliseCodeSources = function(type,item2,always,cb) {
     var srcs = sources;
     if (always || _.keys(sources).length>0) {
         sources = {};
-        for (var fn in srcs) 
+        for (var fn in srcs)
             srcs[fn] = this.hashes.putFileSync(fn);
         this.journalise(type,[util.sourceVersion,item2,srcs],cb);
     } else
@@ -859,7 +859,7 @@ Engine.prototype.journalise = function(type,data,cb) {
             err = err || e;
             if (err)
                 done();
-            else 
+            else
                 eng.journalFlush(done);
         });
         eng.broadcast(jit,'replication',done);
@@ -957,13 +957,13 @@ Engine.prototype.walkJournalFile = function(filename,deepCheck,cb,done) {
             case 'code':
                 if (js[2][2][js[2][1]]) // hash from the bl src code filename
                     cb(null,js[2][2][js[2][1]],'bl',js[2][1]);
-                for (k in js[2][2]) 
+                for (k in js[2][2])
                     cb(null,js[2][2][k],"source code",k);
                 break;
             case 'transform':
                 if (js[2][2][js[2][1]]) // hash from the transform src code filename
                     cb(null,js[2][2][js[2][1]],'transform',js[2][1]);
-                for (k in js[2][2]) 
+                for (k in js[2][2])
                     cb(null,js[2][2][k],"source code",k);
                 break;
             case 'http':
@@ -991,7 +991,7 @@ Engine.prototype.walkHashes = function(hash0,deepCheck,cb,done) {
             if (err)
                 cb(new VError("walkJournalFile fails: %s",h));
             else if (what==='journal') {
-                if (h!==null) 
+                if (h!==null)
                     cb(new VError("multiple journal backlinks in: %s",hash1));
                 else
                     h = hash1;
@@ -1023,7 +1023,7 @@ Engine.prototype.journalChain = function(cb) { // delivers list of journal files
                         function(err,x,what) {
                             if (err)
                                 cb(err);
-                            else if (what==='journal') 
+                            else if (what==='journal')
                                 eng.walkHashes(x,
                                                false,
                                                function(err1,h,what1) {
@@ -1214,7 +1214,7 @@ Engine.prototype.replicateFrom = function(url) { // `url` is base e.g. http://lo
     sock.onerror = function(err) {
         util.error("!!! ws socket failed: %s",err);
     };
-    
+
     sock.onclose = function(err) {
         eng.stopPrevalence(false,function(err1) {
             if (err1)
@@ -1270,4 +1270,5 @@ Engine.prototype.administer = function(port) {
 };
 
 
-exports.Engine = Engine;
+exports.Engine  = Engine;
+exports.express = express;
