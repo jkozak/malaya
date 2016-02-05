@@ -2,24 +2,26 @@
 // I'm writing tests to describe what I think should happen in these cases,
 // and they will show in the future if those assumptions were unsafe.
 
-var     fs = require('fs');
-var   path = require('path');
-var   temp = require('temp').track();
-var assert = require('assert');
-var VError = require('verror');
+"use strict";
+
+const     fs = require('fs');
+const   path = require('path');
+const   temp = require('temp').track();
+const assert = require('assert');
+const VError = require('verror');
 
 describe("fs stream",function() {
     it("written data should be immediately available",function(done) {
-        var     data = "line 1\n";
-        var      dir = temp.mkdirSync();
-        var      err = null;
-        var filename = path.join(dir,'xxx');
+        const     data = "line 1\n";
+        const      dir = temp.mkdirSync();
+        let        err = null;
+        const filename = path.join(dir,'xxx');
         fs.writeFileSync(filename,data);
-        var readable = fs.createReadStream(filename);
+        const readable = fs.createReadStream(filename);
         readable.setEncoding('utf8');
         readable.on('readable',function() {
             try {
-                var js = readable.read();
+                const js = readable.read();
                 if (js!==null)
                     assert.strictEqual(js,data);
             } catch (e) {err=e;}
@@ -27,18 +29,18 @@ describe("fs stream",function() {
         readable.on('end',function(){done(err);});
     });
     it("writes and reads interleave",function(done) {
-        var    data1 = "line 1\n";
-        var    data2 = "line 2\n";
-        var      dir = temp.mkdirSync();
-        var      err = null;
-        var filename = path.join(dir,'xxx');
-        var        i = 0;
+        const    data1 = "line 1\n";
+        const    data2 = "line 2\n";
+        const      dir = temp.mkdirSync();
+        let        err = null;
+        const filename = path.join(dir,'xxx');
+        let          i = 0;
         fs.writeFileSync(filename,data1);
-        var readable = fs.createReadStream(filename);
+        const readable = fs.createReadStream(filename);
         readable.setEncoding('utf8');
         readable.on('readable',function() {
             try {
-                var js = readable.read();
+                const js = readable.read();
                 if (js!==null)
                     switch (i++) {
                     case 0:

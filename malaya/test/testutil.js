@@ -1,10 +1,13 @@
-var testutil = require('../testutil.js');
+"use strict";
 
-var   assert = require('assert');
+const      testutil = require('../testutil.js');
+const        assert = require('assert');
+
+const makeTimestamp = testutil.makeTimestamp;
 
 describe("testutil",function() {
-    
-    describe("runInCountEngine",function(done) {
+
+    describe("runInCountEngine",function() {
         it("organises an engine with a chr store to which connections can be made",function(done) {
             testutil.runInCountEngine({
                 main: function(eng) {
@@ -47,7 +50,5 @@ describe("testutil",function() {
             assert.strictEqual(ts2(),4);
         });
     });
-    
-});
 
-    
+});

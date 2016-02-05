@@ -8,20 +8,20 @@
 "use strict";
 /*eslint-disable*/
 
-var  recast = require('recast');
-var      fs = require('fs');
-var  parser = require('./parser.js');
-var  assert = require('assert');
-var  events = require('events');
-var    util = require('./util.js');
-var    path = require('path');
-var       _ = require('underscore');
+const  recast = require('recast');
+const      fs = require('fs');
+const  parser = require('./parser.js');
+const  assert = require('assert');
+const  events = require('events');
+const    util = require('./util.js');
+const    path = require('path');
+const       _ = require('underscore');
 
-var templates       = {};
-var template_marker = 'TEMPLATE_';
+const templates       = {};
+const template_marker = 'TEMPLATE_';
 
-var b = (function() {
-    var b = recast.types.builders;
+const b = (function() {
+    const b = recast.types.builders;
     // +++ add `attrs` to more things if needed +++
     return _.extend({},b,{
         identifier: function(id) {return _.extend({attrs:{}},b.identifier(id));}
@@ -97,11 +97,14 @@ function TEMPLATE_store() {
                 adds = [];dels = [];refs = {};
                 return ans;
             },
+            _del: function(t) { // only used for handling magic outputs
+                delete facts[t];
+            },
             get t()       {return t;},
             get size()    {return Object.keys(facts).length;},
             get queries() {return queries;},
             reset: function(){t=1;index={};facts={};init();},
-            
+
             // business logic protocol
             tag: null,
             init: function() {
@@ -141,7 +144,7 @@ function TEMPLATE_store() {
         // +++ obj = Object.freeze(obj) if it's not too slow. +++
 
         // `rules` is an array [[variant,...],...]
-        INSERT_RULES;           
+        INSERT_RULES;
 
         // `queries` is an object {name:query,...}
         INSERT_QUERIES;
@@ -149,7 +152,7 @@ function TEMPLATE_store() {
         // initial store contents
         INSERT_INIT;
         init();
-        
+
         return obj;
     })();
 }
@@ -162,7 +165,7 @@ function TEMPLATE_indexed_matches() {
 }
 
 // to be embedded in store above, whence `adds`, `dels` &c
-function TEMPLATE_rule() {      
+function TEMPLATE_rule() {
     var INSERT_NAME = function (t_fact) {
         var    fact;
         var in_play = [];
@@ -387,7 +390,7 @@ function annotateParse1(js) {   // poor man's attribute grammar - pass one
         },
         visitIdentifier:          function(path) {
             if (vars[path.node.name]===undefined) {
-                if (!findVar(path.node.name,path)) 
+                if (!findVar(path.node.name,path))
                     vars[path.node.name] = {};
             }
             return false;
@@ -402,9 +405,9 @@ function annotateParse1(js) {   // poor man's attribute grammar - pass one
         },
         visitProperty:            function(path) { // keys may be Identifiers, don't mangle
             var prop = path.node;
-            if (prop.value===null) 
+            if (prop.value===null)
                 return false;
-            else if (prop.value.type==='Identifier') 
+            else if (prop.value.type==='Identifier')
                 return this.visitIdentifier(path.get('value'));
             else {
                 this.visit(path.get('value'));
@@ -457,7 +460,7 @@ function annotateParse2(chrjs) {        // poor man's attribute grammar - pass t
                 if (path.node===js)
                     this.traverse(path); // process iff initial value
                 else
-                    return false;        // will be handled in own pass from below 
+                    return false;        // will be handled in own pass from below
             },
             // don't visit sites that can't bind vars
             visitUnaryExpression:     function(path){return false;},
@@ -501,11 +504,11 @@ function mangleIdentifier(name) {
 function unmangleIdentifier(id) {
     return id.attrs ? id.attrs.was : id.name; // allow for genned ids without attrs
 }
-function mangle(js) {           // `js` must have been previously annotated 
+function mangle(js) {           // `js` must have been previously annotated
     js = deepClone(js);
     parser.visit(js,{
         doVars:                   function(path) {
-            for (var v in path.node.attrs.vars) 
+            for (var v in path.node.attrs.vars)
                 path.node.attrs.vars[v].mangled = mangleIdentifier(v);
             this.traverse(path);
         },
@@ -585,7 +588,7 @@ function Ref(obj,path) {        // a location in a JSON structure +++ replace wi
 Ref.prototype.get = function() {
     var  obj = this.obj;
     var path = this.path;
-    for (var i in path) 
+    for (var i in path)
         obj = obj[path[i]];
     return obj;
 };
@@ -645,7 +648,7 @@ Ref.prototype.previous = function() {
 Ref.flatAt = function(obj,fn) {
     assert(obj instanceof Array);
     for (var i=0;i<obj.length;i++) {
-        if (fn(obj[i])) 
+        if (fn(obj[i]))
             return new Ref(obj,[i]);
     }
     throw new Error("not found");
@@ -678,7 +681,7 @@ function genAccessor(x,path) {  //N.B. `path` is not a `NodePath`
 
 function genMatch(term,genRest,bIdFact) { // genRest() >> [stmt,...]; returns BlockStatement
     bIdFact = bIdFact || b.identifier('fact');
-    
+
     var    bools = [];
     var    binds = {};
     var    visit = function(term,path) { // generates boolean terms to && together
@@ -724,7 +727,7 @@ function genMatch(term,genRest,bIdFact) { // genRest() >> [stmt,...]; returns Bl
                 visit(term.elements[i],path.concat(i));
             }
             // gen check that enough elements are offered
-            bools.push(b.binaryExpression(rest_bound ? '>=' : '===', 
+            bools.push(b.binaryExpression(rest_bound ? '>=' : '===',
                                           b.memberExpression(genAccessor(bIdFact,path),
                                                              b.identifier('length'),
                                                              false),
@@ -803,7 +806,7 @@ function genMatch(term,genRest,bIdFact) { // genRest() >> [stmt,...]; returns Bl
     visit(term,[]);
 
     var stmt = b.blockStatement(genRest());
-    for (var p in binds) 
+    for (var p in binds)
         stmt.body.unshift(b.expressionStatement(b.assignmentExpression('=',b.identifier(p),binds[p])));
     if (bools.length>0) {
         var test = bools.pop();
@@ -818,7 +821,7 @@ function genMatch(term,genRest,bIdFact) { // genRest() >> [stmt,...]; returns Bl
 
 function generateJS(js,what) {
     what = what || 'Program';
-    
+
     var genCheckInPlay = function(jss,vt) { // >> Statement
         parser.namedTypes.Statement.assert(jss[0]); // CBB
         parser.namedTypes.Identifier.assert(vt);
@@ -947,7 +950,7 @@ function generateJS(js,what) {
         path.replace(b.callExpression(qjs,[]));
         return false;
     };
-    
+
     var genAdd = function(x) {
         var bindRest = null;
         return parser.visit(deepClone(x),{
@@ -982,8 +985,8 @@ function generateJS(js,what) {
                     var  after = b.arrayExpression([]);
                     var   rest = null;
                     for (var i=0;i<path.node.elements.length;i++) {
-                        if (path.node.elements[i].type==='BindRest') 
-                            rest = path.node.elements[i].id; 
+                        if (path.node.elements[i].type==='BindRest')
+                            rest = path.node.elements[i].id;
                         else if (rest!==null)
                             after.elements.push(path.node.elements[i]);
                         else
@@ -1004,7 +1007,7 @@ function generateJS(js,what) {
             visitSnapExpression: visitSnapExpressionAndCompile
         });
     };
-    
+
     var genRuleVariant = function(chr,i,genPayload) {
         var bIdFact = b.identifier('fact');
         var addenda = [];
@@ -1138,7 +1141,7 @@ function generateJS(js,what) {
                     this.traverse(path);
             }
         });
-        
+
         return js;
     };
 
@@ -1173,10 +1176,10 @@ function generateJS(js,what) {
         });
         // +++
         rv.body.body.unshift(b.variableDeclaration('var',[b.variableDeclarator(chr.init.left,chr.init.right)]));
-        
+
         return rv;
     };
-    
+
     var genSnap = function(chr,args) {
         // a snap is a hacked-up rule.  CBB?
         var bVarAccum = b.identifier('accum');
@@ -1216,10 +1219,10 @@ function generateJS(js,what) {
         });
         // +++
         rv.body.body.unshift(b.variableDeclaration('var',[b.variableDeclarator(bVarAccum,chr.init)]));
-        
+
         return rv;
     };
-    
+
     var genStore = function(path) {
         var storeCHR = path.node;
         // generate a JS `function` to implement a CHRJS `store`
@@ -1241,7 +1244,7 @@ function generateJS(js,what) {
         },
                              {strict:false});
 
-        var dispatchBranches = {};                    // used to build the `_add` function below 
+        var dispatchBranches = {};                    // used to build the `_add` function below
         var  dispatchGeneric = [];
         var     noteDispatch = function(item,r,i) {
             if (item.type==='ArrayExpression' && item.elements.length>0 && item.elements[0].type=='Literal') {
@@ -1340,7 +1343,7 @@ function generateJS(js,what) {
         findTag('INSERT_INIT').insertAfter(b.variableDeclaration('var',[
             b.variableDeclarator(b.identifier('init'),
                                  b.functionExpression(null,[],b.blockStatement(code.inits)) ) ]));
-                                     
+
         findTag('INSERT_RULES').cut();
         findTag('INSERT_QUERIES').cut();
         findTag('INSERT_INIT').cut();
@@ -1373,18 +1376,18 @@ function generateJS(js,what) {
             var brs = dispatchGeneric.map(function(br){return genInvokeRuleItem(br);})
             _addSwitch.cases.push(b.switchCase(null,brs.concat(b.breakStatement())));
         }
-            
+
         parser.visit(storeJS,{  // remove any `var;` that we have generated
             visitVariableDeclaration: function(path) {
                 this.traverse(path);
-                if (path.node.declarations.length===0) 
+                if (path.node.declarations.length===0)
                     path.replace();
             },
             visitSnapExpression:      function(path) {
                 throw new util.Fail(util.format("unexpected for-expression"));
             }
         });
-        
+
         return storeJS;
     };
 
@@ -1425,7 +1428,7 @@ exports.compile = generateJS;
 
 exports.debug   = false;
 
-var ruleMaps = {};              // <path> -> <rule-id> -> <loc> ... 
+var ruleMaps = {};              // <path> -> <rule-id> -> <loc> ...
 
 exports.getRuleMap = function(p) {
     if (!exports.debug)
@@ -1503,7 +1506,7 @@ function buildStanzas(code,parsed) {
             currentRule = node;
             this.traverse(path);
             currentRule = null;
-        }, 
+        },
         visitItemExpression: function(path) {
             var node = path.node;
             for (var l=node.loc.start.line;l<=node.loc.end.line;l++)
@@ -1555,7 +1558,7 @@ function buildStanzas(code,parsed) {
             this.traverse(path);
         }
     });
-    
+
     var stanza = null;
     var    tag = null;
     for (var l=0;l<lines1.length;l++) {
@@ -1626,7 +1629,7 @@ function buildStanzas(code,parsed) {
             }
         }
     });
-    
+
     return stanzas;
 }
 

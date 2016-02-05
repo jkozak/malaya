@@ -1,17 +1,19 @@
-var cmdline = require("../cmdline.js");
+"use strict";
 
-var util    = require("../util.js");
-var fs      = require("fs");
-var temp    = require("temp").track();
-var path    = require("path");
-var assert  = require("assert");
-var VError  = require("verror");
+const cmdline = require("../cmdline.js");
 
-var engine  = require('../engine.js');
-var whiskey = require('../whiskey.js');
- 
-var fillDirWithSomeData = function(dir,data,cb) {
-    var dfn = path.join(dir,'data.json');
+const util    = require("../util.js");
+const fs      = require("fs");
+const temp    = require("temp").track();
+const path    = require("path");
+const assert  = require("assert");
+const VError  = require("verror");
+
+const engine  = require('../engine.js');
+const whiskey = require('../whiskey.js');
+
+const fillDirWithSomeData = function(dir,data,cb) {
+    const dfn = path.join(dir,'data.json');
     fs.writeFileSync(dfn,JSON.stringify(data));
     process.argv = [null,null,
                     "-p",path.join(dir,'.prevalence'),
@@ -25,25 +27,32 @@ var fillDirWithSomeData = function(dir,data,cb) {
 describe("utility functions for this test file",function() {
     describe('fillDirWithSomeData',function() {
         it("does what it says on the tin",function(done) {
-            var dir = temp.mkdirSync();
-            fillDirWithSomeData(dir,[['pp',{}],['qq',{}]],function(err) {
-                var eng = new engine.Engine({dir:dir});
-                var err = null
-                eng.start();
-                eng.startPrevalence(function(err) {
-                    assert(!err);
-                    try {
-                        assert.strictEqual(eng.chrjs.size,2);
-                    } catch (e) {err=e;}
-                    eng.stopPrevalence(true,function(){done(err);});
-                });
+            const dir = temp.mkdirSync();
+            fillDirWithSomeData(dir,[['pp',{}],['qq',{}]],function(err0) {
+                if (err0)
+                    done(err0);
+                else {
+                    const eng = new engine.Engine({dir:dir});
+                    eng.start();
+                    eng.startPrevalence(function(err1) {
+                        if (err1)
+                            done(err1);
+                        else {
+                            let err = null;
+                            try {
+                                assert.strictEqual(eng.chrjs.size,2);
+                            } catch (e) {err=e;}
+                            eng.stopPrevalence(true,function(){done(err);});
+                        }
+                    });
+                }
             });
         });
     });
 });
 
 describe("cmdline",function() {
-    var saveArgv;
+    let saveArgv;
     before(function() {
         saveArgv = process.argv;
     });
@@ -52,7 +61,7 @@ describe("cmdline",function() {
     });
     describe("init",function() {
         it("builds the prevalence directory structure",function() {
-            var dir = temp.mkdirSync();
+            const dir = temp.mkdirSync();
             process.argv = [null,null,
                             "-p",path.join(dir,'.prevalence'),
                             "init",
@@ -69,19 +78,19 @@ describe("cmdline",function() {
     describe("slave",function() {
     });
     describe("transform",function() {
-        var transform = function(data,sourcefn,check) { // a test driver for `transform`
-            var dir = temp.mkdirSync();
+        const transform = function(data,sourcefn,check) { // a test driver for `transform`
+            const dir = temp.mkdirSync();
             fillDirWithSomeData(dir,data,function(err) {
                 process.argv = [null,null,
                                 "-p",path.join(dir,'.prevalence'),
                                 "transform",
                                 path.join(__dirname,'tfm',sourcefn) ];
-                cmdline.run({callback:function(err) {
-                    if (err) throw err;
-                    var eng = new engine.Engine({dir:dir});
+                cmdline.run({callback:function(err1) {
+                    if (err1) throw err1;
+                    const eng = new engine.Engine({dir:dir});
                     eng.start();
-                    eng.startPrevalence(function(err) {
-                        assert(!err);
+                    eng.startPrevalence(function(err2) {
+                        assert(!err2);
                         check(eng);
                         eng.stopPrevalence(true);
                     });
@@ -92,7 +101,7 @@ describe("cmdline",function() {
             transform([['a',{}]],
                       "null.chrjs",
                       function(eng) {
-                          var err = null;
+                          let err = null;
                           try {
                               assert.deepEqual(eng.chrjs._private.orderedFacts,[]);
                           } catch (e) {err=e;}
@@ -103,7 +112,7 @@ describe("cmdline",function() {
             transform([['b',{}],['c',{}]],
                       "keep_b.chrjs",
                       function(eng) {
-                          var err = null;
+                          let err = null;
                           try {
                               assert.deepEqual(eng.chrjs._private.orderedFacts,
                                                [['b',{}]] );
@@ -115,7 +124,7 @@ describe("cmdline",function() {
             transform([['b',{}],['c',{}]],
                       "global.chrjs",
                       function(eng) {
-                          var err = null;
+                          let err = null;
                           try {
                               assert.deepEqual(eng.chrjs._private.orderedFacts,
                                                [['theLot',{}]] );
@@ -131,7 +140,7 @@ describe("cmdline",function() {
                               if (err)
                                   done(err);
                               else {
-                                  var n = 0;
+                                  let n = 0;
                                   history.pipe(whiskey.LineStream(util.deserialise))
                                       .on('data',function(js) {
                                           if (js[1]==='transform')

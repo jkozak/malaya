@@ -3,16 +3,16 @@
 "use strict";
 /*eslint-disable no-console*/
 
-var     argv = require('minimist')(process.argv.slice(2));
-var compiler = require('./compiler.js');
+const     argv = require('minimist')(process.argv.slice(2));
+const compiler = require('./compiler.js');
 
 compiler.debug = true;
 
-var sourceFilename = argv._[0];
+const sourceFilename = argv._[0];
 
 require(sourceFilename);
 
-var stanzas = compiler.getStanzas(sourceFilename);
+const stanzas = compiler.getStanzas(sourceFilename);
 
 stanzas.forEach(function(stanza) {
     stanza.draws.forEach(function(draw) {

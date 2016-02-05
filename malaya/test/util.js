@@ -1,9 +1,11 @@
-var util    = require("../util.js");
+"use strict";
 
-var fs      = require("fs");
-var temp    = require("temp").track();
-var path    = require("path");
-var assert  = require("assert");
+const util    = require("../util.js");
+
+const fs      = require("fs");
+const temp    = require("temp").track();
+const path    = require("path");
+const assert  = require("assert");
 
 describe('constants',function() {
     it("`env` will always be 'test' when testing",function() {
@@ -21,7 +23,7 @@ describe('deserialise',function() {
 });
 
 describe('serialise',function() {
-    var date = new Date(0);
+    const date = new Date(0);
     it("should encode bare dates nicely",function() {
         assert(util.deserialise(util.serialise(date)) instanceof Date);
     });
@@ -34,12 +36,12 @@ describe('serialise',function() {
 });
 
 describe("readFileLinesSync",function() {
-    var  tdir = temp.mkdirSync();
-    var lines = ["line 1","line 2","line 3","line 4"];
-    var    fn = path.join(tdir,"1.txt");
+    const  tdir = temp.mkdirSync();
+    const lines = ["line 1","line 2","line 3","line 4"];
+    const    fn = path.join(tdir,"1.txt");
     fs.writeFileSync(fn,lines.join('\n')+'\n');
     it("should read a file linewise",function() {
-        var i = 0;
+        let i = 0;
         util.readFileLinesSync(fn,function(l) {
             assert.strictEqual(l,lines[i++]);
             return true;
@@ -47,10 +49,10 @@ describe("readFileLinesSync",function() {
         assert.strictEqual(i,lines.length);
     });
     it("should give up if asked",function() {
-        var i = 0;
+        let i = 0;
         util.readFileLinesSync(fn,function(l) {
             i++;
-            return i!=2;
+            return i!==2;
         });
         assert.strictEqual(i,2);
     });
@@ -58,18 +60,18 @@ describe("readFileLinesSync",function() {
         assert.strictEqual('',util.readFileLinesSync(fn,function(l) {return true;}));
     });
     it("should return fragment after last '\n' for ill-formed file",function() {
-        var  fn2 = path.join(tdir,"2.txt");
-        var junk = "this is some junk left over at the end";
-        var    n = 0;
+        const  fn2 = path.join(tdir,"2.txt");
+        const junk = "this is some junk left over at the end";
+        let      n = 0;
         fs.writeFileSync(fn2,lines.join('\n')+'\n');
         fs.appendFileSync(fn2,junk);
         assert.strictEqual(junk,util.readFileLinesSync(fn2,function(l) {n++;return true;}));
         assert.strictEqual(n,lines.length);
     });
     it("should return lots after last '\n' for ill-formed file",function() {
-        var  fn2 = path.join(tdir,"2.txt");
-        var junk = (new Array(16*1024)).join("x"); //N.B. should be bigger than readFileLinesSync's buffer
-        var    n = 0;
+        const  fn2 = path.join(tdir,"2.txt");
+        const junk = (new Array(16*1024)).join("x"); //N.B. should be bigger than readFileLinesSync's buffer
+        let      n = 0;
         fs.writeFileSync(fn2,lines.join('\n')+'\n');
         fs.appendFileSync(fn2,junk);
         assert.strictEqual(junk,util.readFileLinesSync(fn2,function(l) {n++;return true;}));

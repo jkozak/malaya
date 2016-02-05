@@ -1,9 +1,11 @@
-var   lock = require('../lock.js');
+"use strict";
 
-var     fs = require('fs');
-var   temp = require('temp').track();
-var   path = require('path');
-var assert = require('assert');
+const   lock = require('../lock.js');
+
+const     fs = require('fs');
+const   temp = require('temp').track();
+const   path = require('path');
+const assert = require('assert');
 
 
 describe("basic locking",function() {
@@ -59,7 +61,7 @@ describe("multiprocess locking",function() {
         pid:  null,
         kill: killer
     };
-        
+
     before(function() {
         lock._private.setProcess(proc);
     });
@@ -130,4 +132,3 @@ describe("multiprocess locking",function() {
         }
     });
 });
-

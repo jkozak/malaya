@@ -1,26 +1,26 @@
 "use strict";
 
-var _      = require('underscore');
-var crypto = require('crypto');
-var stream = require('stream');
-var fs     = require('fs');
-var util   = require('./util.js');
-var events = require('events');
-var path   = require('path');
-var VError = require('verror');
+const _      = require('underscore');
+const crypto = require('crypto');
+const stream = require('stream');
+const fs     = require('fs');
+const util   = require('./util.js');
+const events = require('events');
+const path   = require('path');
+const VError = require('verror');
 
 // This module is largely sync but is only called during single-activity time
 // (loading,saving) so that doesn't really matter.
 
 module.exports = function(algorithm) {
-    var ans = {
+    const ans = {
         init: function(dirname) {
             try {               // if dirname doesn't exist, create it
-                var st = fs.statSync(dirname);
+                const st = fs.statSync(dirname);
                 if (!st.isDirectory())
                     throw new util.Fail(util.format("hash store %j exists and is not a directory",dirname));
             } catch (err) {
-                if (err.code==='ENOENT') 
+                if (err.code==='ENOENT')
                     try {
                         fs.mkdirSync(dirname);
                     } catch (err1) {
@@ -31,13 +31,13 @@ module.exports = function(algorithm) {
             }
         },
         makeStore: function(dirname) {
-            var      ee = new events.EventEmitter();
-            var setMode = function(filename) {
+            const      ee = new events.EventEmitter();
+            const setMode = function(filename) {
                 if (util.env==='prod')
                     fs.chmodSync(filename,4*8*8+4*8+4); // mode 0444
             };
             ans.init(dirname);
-            var store = {
+            const store = {
                 on:           function(what,handler) {ee.on(what,handler);},
                 makeFilename: function(h) {
                     return path.join(dirname,h);
@@ -49,8 +49,8 @@ module.exports = function(algorithm) {
                     return store.putSync(fs.readFileSync(filename));
                 },
                 putSync: function(x) {
-                    var        h = ans.hash(x);
-                    var filename = store.makeFilename(h);
+                    const        h = ans.hash(x);
+                    const filename = store.makeFilename(h);
                     if (!fs.existsSync(filename)) {
                         ee.emit('add',h);
                         fs.writeFileSync(filename,x);
@@ -66,28 +66,28 @@ module.exports = function(algorithm) {
                     return fs.readdirSync(dirname);
                 },
                 check: function(hash) {
-                    var b = ans.hash(store.getSync(hash))===hash;
+                    const b = ans.hash(store.getSync(hash))===hash;
                     if (!b)
                         fs.unlinkSync(store.makeFilename(hash)); // not worth keeping?
                     return b;
                 },
                 sanityCheck: function(cb) {
-                    var hashes = store.getHashes();
-                    for (var k in hashes) { // check all hashes are sound
-                        var h = hashes[k];
+                    const hashes = store.getHashes();
+                    for (const k in hashes) { // check all hashes are sound
+                        const h = hashes[k];
                         if (ans.hash(store.getSync(h))!==h)
                             cb(new VError("broken hash: %j",h));
                     }
                 },
                 stageId: 1,
                 createWriteStream: function() {
-                    var      fn = path.join(dirname,util.format('stage.%d',this.stageId++));
-                    var hstream = crypto.createHash(algorithm);
-                    var fstream = fs.createWriteStream(fn);
-                    var wstream = stream.PassThrough();
-                    var   done2 = _.after(2,function() {
-                        var   h = hstream.read().toString('hex');
-                        var hfn = store.makeFilename(h);
+                    const      fn = path.join(dirname,util.format('stage.%d',this.stageId++));
+                    const hstream = crypto.createHash(algorithm);
+                    const fstream = fs.createWriteStream(fn);
+                    const wstream = stream.PassThrough();
+                    const   done2 = _.after(2,function() {
+                        const   h = hstream.read().toString('hex');
+                        const hfn = store.makeFilename(h);
                         fs.rename(fn,hfn,function(err1) {
                             if (err1)
                                 wstream.emit('error',new Error("failed to rename hash"));
@@ -110,7 +110,7 @@ module.exports = function(algorithm) {
             return crypto.createHash(algorithm);
         },
         hash: function(x) {
-            var hasher = ans.makeHasher();
+            const hasher = ans.makeHasher();
             hasher.write(x);
             return hasher.digest('hex');
         }

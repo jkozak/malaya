@@ -44,7 +44,7 @@ parseLeftHandSideExpression: true,
 parseUnaryExpression: true,
 parseStatement: true, parseSourceElement: true */
 
-var util = require('./util.js');
+const util = require('./util.js');
 
 (function (root, factory) {
     'use strict';
@@ -1873,7 +1873,7 @@ var util = require('./util.js');
                 items: items
             };
         },
-        
+
         createQueryStatement: function(id, args, items, init, accum) {
             return {
                 type: Syntax.QueryStatement,
@@ -2261,7 +2261,7 @@ var util = require('./util.js');
 
         if (match(')'))         // for () in arrow functions
             expr = delegate.createSequenceExpression([]);
-        else 
+        else
             expr = parseExpression();
 
         expect(')');
@@ -2712,10 +2712,10 @@ var util = require('./util.js');
                 params = [node];
             else if (node.type==='SequenceExpression')
                 params = node.expressions;
-            else 
+            else
                 throwUnexpected(node);
             node = parseArrowFunctionExpression(startToken,params);
-        } 
+        }
 
         return node;
     }
@@ -3618,7 +3618,7 @@ var util = require('./util.js');
 
         expect('=>');
 
-        if (match('{')) 
+        if (match('{'))
             body = parseFunctionSourceElements();
         else {
             var ret = delegate.createReturnStatement(parseAssignmentExpression());
@@ -3894,7 +3894,7 @@ var util = require('./util.js');
             return parseQueryStatement();
         else if (matchKeyword('function'))
             return parseFunctionDeclaration();
-        else if (match('[')) 
+        else if (match('['))
             return parseArrayInitialiser();
         else if (match('{'))
             return parseObjectInitialiser();
@@ -3905,10 +3905,10 @@ var util = require('./util.js');
     function parseStoreBodyList() {
         var body = [];
         while (index<length) {
-            if (match('}')) 
+            if (match('}'))
                 break;
             var statement = parseStoreBodyElement();
-            if ((typeof statement)==='undefined') 
+            if ((typeof statement)==='undefined')
                 break;
             body.push(statement);
             if (match(';'))
@@ -3949,7 +3949,7 @@ var util = require('./util.js');
     }
 
     function parseChrjsFullTerm() {
-        if (match('[')) 
+        if (match('['))
             return parseArrayInitialiser();
         else if (match('{'))
             return parseObjectInitialiser();
@@ -4008,7 +4008,7 @@ var util = require('./util.js');
         if (!match(')')) {
             while (index<length) {
                 items.push(parseChrjsItem());
-                if (match(')')) 
+                if (match(')'))
                     break;
                 expect(',');
             }
@@ -4022,7 +4022,7 @@ var util = require('./util.js');
         if (!match(';')) {
             while (index<length) {
                 qsb.items.push(parseChrjsItem());
-                if (match(';')) 
+                if (match(';'))
                     break;
                 expect(',');
             }
@@ -4033,7 +4033,7 @@ var util = require('./util.js');
         qsb.accum = parseConditionalExpression();
         return qsb;
     }
-    
+
     function parseQueryStatement() {
         var startToken = lookahead;
         var       args = [];
@@ -4043,7 +4043,7 @@ var util = require('./util.js');
         if (!match(';')) {
             while (index<length) {
                 args.push(parseAssignmentExpression());
-                if (match(';')) 
+                if (match(';'))
                     break;
                 expect(',');
             }
@@ -4068,7 +4068,7 @@ var util = require('./util.js');
         if (!match(';')) {
             while (index<length) {
                 items.push(parseChrjsItem());
-                if (match(';')) 
+                if (match(';'))
                     break;
                 expect(',');
             }
@@ -4197,4 +4197,3 @@ var util = require('./util.js');
         };
 
 }));
-

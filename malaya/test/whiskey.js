@@ -1,16 +1,18 @@
-var whiskey = require('../whiskey.js');
+"use strict";
 
-var       _ = require('underscore');
-var  stream = require('stream');
-var    util = require('util'); 
-var  assert = require("assert");
-var resumer = require('resumer');
-var  VError = require('verror');
+const whiskey = require('../whiskey.js');
+
+const       _ = require('underscore');
+const  stream = require('stream');
+const    util = require('util');
+const  assert = require("assert");
+const resumer = require('resumer');
+const  VError = require('verror');
 
 describe("LineStream",function() {
     it("turns '\\n' delimited stream into object stream of strings",function(done) {
-        var strs = [];
-        var   ls = whiskey.LineStream();
+        const strs = [];
+        const   ls = whiskey.LineStream();
         resumer().queue("1\n2\n3\n").end().pipe(ls);
         ls.on('data',function(s) {
             strs.push(s);
@@ -21,8 +23,8 @@ describe("LineStream",function() {
         });
     });
     it("keeps last line even if no final '\\n'",function(done) {
-        var strs = [];
-        var   ls = whiskey.LineStream();
+        const strs = [];
+        const   ls = whiskey.LineStream();
         resumer().queue("1\n2\n3").end().pipe(ls);
         ls.on('data',function(s) {
             strs.push(s);
@@ -33,8 +35,8 @@ describe("LineStream",function() {
         });
     });
     it("transforms on-the-fly",function(done) {
-        var strs = [];
-        var   ls = whiskey.LineStream(function(s){return parseInt(s)+1});
+        const strs = [];
+        const   ls = whiskey.LineStream(function(s){return parseInt(s)+1;});
         resumer().queue("1\n2\n3\n").end().pipe(ls);
         ls.on('data',function(s) {
             strs.push(s);
@@ -48,8 +50,8 @@ describe("LineStream",function() {
 
 describe("JSON object streams",function() {
     describe("string -> json",function() {
-        var convert = function(js,done) {
-            var jps = whiskey.JSONParseStream();
+        const convert = function(js,done) {
+            const jps = whiskey.JSONParseStream();
             resumer().queue(JSON.stringify(js)+'\n').end().pipe(jps).on('data',function(chunk) {
                 assert.deepEqual(chunk,js);
                 done();
@@ -61,8 +63,8 @@ describe("JSON object streams",function() {
             });
         });
         it("converts multiple strings",function() {
-            var   jps = new whiskey.JSONParseStream();
-            var rcved = [];
+            const   jps = new whiskey.JSONParseStream();
+            const rcved = [];
             resumer().queue('[1,2]\n[3,4]\n').end().pipe(jps)
                 .on('data',function(chunk) {
                     rcved.push(chunk);
@@ -72,9 +74,8 @@ describe("JSON object streams",function() {
                 });
         });
         it("handles broken JSON gracefully",function() {
-            var   jps = new whiskey.JSONParseStream();
-            var rcved = [];
-            var    ok = false;
+            const   jps = new whiskey.JSONParseStream();
+            let      ok = false;
             resumer().queue('{{{\n\n').end().pipe(jps)
                 .on('error',function() {
                     ok = true;
@@ -84,9 +85,8 @@ describe("JSON object streams",function() {
                 });
         });
         it("handles nulls gracefully",function() {
-            var   jps = new whiskey.JSONParseStream();
-            var rcved = [];
-            var    ok = false;
+            const   jps = new whiskey.JSONParseStream();
+            let      ok = false;
             resumer().queue('null\n').end().pipe(jps)
                 .on('error',function() {
                     ok = true;
@@ -97,8 +97,8 @@ describe("JSON object streams",function() {
         });
     });
     describe("json -> string",function() {
-        var convert = function(s,done) {
-            var sjs = whiskey.StringifyJSONStream();
+        const convert = function(s,done) {
+            const sjs = whiskey.StringifyJSONStream();
             resumer().queue(JSON.parse(s)).end().pipe(sjs).on('data',function(chunk) {
                 assert.deepEqual(chunk,s+'\n');
                 done();
@@ -110,8 +110,8 @@ describe("JSON object streams",function() {
             });
         });
         it("converts multiple json objects",function() {
-            var   sjs = new whiskey.StringifyJSONStream();
-            var rcved = '';
+            const   sjs = new whiskey.StringifyJSONStream();
+            let   rcved = '';
             resumer().queue([1,2]).queue([3,4]).end().pipe(sjs)
                 .on('data',function(chunk) {
                     rcved += chunk;
@@ -124,15 +124,15 @@ describe("JSON object streams",function() {
     describe("StreamWithOffset",function() {
         [0,10].forEach(function(offset0) {
             it(util.format("tags an object stream with offset counter: %d",offset0),function(done) {
-                var offset = offset0;
-                var    swo = whiskey.StreamWithOffset(offset,{objectMode:true});
-                var   send = [[],[1]];
-                var  rcved = [];
-                var   rsmr = resumer();
+                let   offset = offset0;
+                const    swo = whiskey.StreamWithOffset(offset,{objectMode:true});
+                const   send = [[],[1]];
+                const  rcved = [];
+                const   rsmr = resumer();
                 send.forEach(function(x) {rsmr.queue(x);});
                 rsmr.end().pipe(swo)
-                    .on('dataWithOffset',function(data,offset0) {
-                        assert.equal(offset0,offset);
+                    .on('dataWithOffset',function(data,offset1) {
+                        assert.equal(offset1,offset);
                         offset += 1;
                         rcved.push(data);
                     })
@@ -145,16 +145,16 @@ describe("JSON object streams",function() {
         });
         [0,1000].forEach(function(offset0) {
             it(util.format("tags a stream with offset counter: %d",offset0),function(done) {
-                var offset = offset0;
-                var    swo = whiskey.StreamWithOffset(offset);
-                var   send = ["one","two","three"];
-                var  rcved = [];
-                var   rsmr = resumer();
+                let   offset = offset0;
+                const    swo = whiskey.StreamWithOffset(offset);
+                const   send = ["one","two","three"];
+                const  rcved = [];
+                const   rsmr = resumer();
                 swo.setEncoding('utf8');
                 send.forEach(function(x) {rsmr.queue(x);});
                 rsmr.end().pipe(swo)
-                    .on('dataWithOffset',function(chunk,offset0) {
-                        assert.equal(offset0,offset);
+                    .on('dataWithOffset',function(chunk,offset1) {
+                        assert.equal(offset1,offset);
                         offset += chunk.length;
                         rcved.push(chunk);
                     })
@@ -169,11 +169,11 @@ describe("JSON object streams",function() {
     describe("OffsetStream",function() {
         [0,10].forEach(function(offset0) {
             it(util.format("tags an object stream with offset counter: %d",offset0),function(done) {
-                var offset = offset0;
-                var     os = whiskey.OffsetStream(offset,{objectMode:true});
-                var   send = [[],[1]];
-                var  rcved = [];
-                var   rsmr = resumer();
+                let   offset = offset0;
+                const     os = whiskey.OffsetStream(offset,{objectMode:true});
+                const   send = [[],[1]];
+                const  rcved = [];
+                const   rsmr = resumer();
                 send.forEach(function(x) {rsmr.queue(x);});
                 rsmr.end().pipe(os)
                     .on('data',function(data) {
@@ -190,11 +190,11 @@ describe("JSON object streams",function() {
         });
         [0,1000].forEach(function(offset0) {
             it(util.format("tags a stream with offset counter: %d",offset0),function(done) {
-                var offset = offset0;
-                var     os = whiskey.OffsetStream(offset);
-                var   send = ["one","two","three"];
-                var  rcved = [];
-                var   rsmr = resumer();
+                let   offset = offset0;
+                const     os = whiskey.OffsetStream(offset);
+                const   send = ["one","two","three"];
+                const  rcved = [];
+                const   rsmr = resumer();
                 send.forEach(function(x) {rsmr.queue(x);});
                 rsmr.end().pipe(os)
                     .on('data',function(chunk) {
@@ -212,28 +212,28 @@ describe("JSON object streams",function() {
     });
 });
 
-var createObjectReadableStream = function(objs) {
-    var input = new stream.Readable({objectMode:true});
+const createObjectReadableStream = function(objs) {
+    const input = new stream.Readable({objectMode:true});
     objs.forEach(function(o){input.push(o);});
     input.push(null);
     return input;
 };
 
-var createEmptyObjectReadableStream = function() {
+const createEmptyObjectReadableStream = function() {
     return createObjectReadableStream([]);
 };
 
-var createDevNullStream = function() {
-    var output = new stream.Writable({objectMode:true});
+const createDevNullStream = function() {
+    const output = new stream.Writable({objectMode:true});
     output._write = function(chunk,enc,cb){cb(null);};
     return output;
 };
 
-var checkReadableStreamContents = function(stream,data,done) {
-    var    i = 0;
-    stream.on('readable',function() {
+const checkReadableStreamContents = function(stream0,data,done) {
+    let i = 0;
+    stream0.on('readable',function() {
         for (;;) {
-            var datum = stream.read();
+            const datum = stream0.read();
             if (datum===null)
                 break;
             else if (!_.isEqual(data[i],datum))
@@ -241,8 +241,8 @@ var checkReadableStreamContents = function(stream,data,done) {
             i++;
         }
     });
-    stream.on('end',function() {
-        assert(i==data.length,util.format("not all data read: %j %j",i,data.length));
+    stream0.on('end',function() {
+        assert(i===data.length,util.format("not all data read: %j %j",i,data.length));
         done();
     });
 };
@@ -255,31 +255,31 @@ describe("trivial streams",function() {
     });
     describe("ObjectReadableStream",function() {
         it("reads its data",function(done) {
-            var   data = [['one'],'two',[[3]],4];
-            var stream = createObjectReadableStream(data);
-            checkReadableStreamContents(stream,data,done);
+            const data = [['one'],'two',[[3]],4];
+            const  str = createObjectReadableStream(data);
+            checkReadableStreamContents(str,data,done);
         });
     });
 });
 
 describe("BackFillStream",function() {
     it("simplest case",function(done) {
-        var bfs = whiskey.createBackFillStream(createObjectReadableStream([1]),
+        const bfs = whiskey.createBackFillStream(createObjectReadableStream([1]),
                                                createObjectReadableStream([1,2]) );
         checkReadableStreamContents(bfs,[1,2],done);
     });
     it("next simplest case",function(done) {
-        var bfs = whiskey.createBackFillStream(createObjectReadableStream([1,'two']),
+        const bfs = whiskey.createBackFillStream(createObjectReadableStream([1,'two']),
                                                createObjectReadableStream([1,2]) );
         checkReadableStreamContents(bfs,[1,2],done);
     });
     it("non-common prefix",function(done) {
-        var bfs = whiskey.createBackFillStream(createObjectReadableStream([1,['two'],3]),
+        const bfs = whiskey.createBackFillStream(createObjectReadableStream([1,['two'],3]),
                                                createObjectReadableStream([['two'],'III','IV']) );
         checkReadableStreamContents(bfs,[1,['two'],'III','IV'],done);
     });
     it("fails when streams cannot be synced",function(done) {
-        var bfs = whiskey.createBackFillStream(createObjectReadableStream([2,3]),
+        const bfs = whiskey.createBackFillStream(createObjectReadableStream([2,3]),
                                                createObjectReadableStream([1,2]) );
         bfs.on('error',function(e) {
             done();
@@ -287,7 +287,7 @@ describe("BackFillStream",function() {
         bfs.pipe(createDevNullStream());
     });
     it("fails when first stream is empty",function(done) {
-        var bfs = whiskey.createBackFillStream(createEmptyObjectReadableStream(),
+        const bfs = whiskey.createBackFillStream(createEmptyObjectReadableStream(),
                                                createObjectReadableStream([1,2]) );
         bfs.on('error',function(e) {
             done();
