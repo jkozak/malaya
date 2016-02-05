@@ -52,7 +52,7 @@
     "benchmark": "matcha -R plain benchmark/*.js",
     "eslint": "eslint -c test/eslint.conf -f compact --env node *.js",
     "eslint:test":  "eslint -c test/eslint.conf -f compact --env mocha test/*.js",
-    "pretest": "npm run eslint",
+    "pretest": "npm run eslint && npm run eslint:test",
     "test": "cross-env NODE_ENV=test mocha -R mocha-tldr-reporter --compilers chrjs:compiler -C test",
     "init": "node malaya init",
     "start": "node malaya run"

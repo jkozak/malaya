@@ -2,32 +2,32 @@
 
 "use strict";
 
-var      _ = require('underscore');
-var   temp = require('temp').track();
-var   path = require('path');
-var     fs = require('fs');
-var     os = require('os');
-var VError = require('verror');
+const      _ = require('underscore');
+const   temp = require('temp').track();
+const   path = require('path');
+const     fs = require('fs');
+const     os = require('os');
+const VError = require('verror');
 
-var   util = require('./util.js');
+const   util = require('./util.js');
 
-var process_ = process;
-var      os_ = os;
+let process_ = process;
+let      os_ = os;
 
-exports.lockSync = function(filename,data) { 
-    var tmp = temp.openSync({dir:path.dirname(filename)});
+exports.lockSync = function(filename,data) {
+    const tmp = temp.openSync({dir:path.dirname(filename)});
 
     data = _.extend({},data||{},{pid:      process_.pid,
                                  startTime:Date.now()-process.uptime()*1000 });
-    
+
     fs.writeSync(tmp.fd,JSON.stringify(data),null,null,null);
     fs.closeSync(tmp.fd);
-    for (var i=0;i<2;i++) 
+    for (let i=0;i<2;i++)
         try {
             fs.linkSync(tmp.path,filename);     // if locked, fails here
             return true;
         } catch (e) {
-            var pid = exports.pidLockedSync(filename);
+            const pid = exports.pidLockedSync(filename);
             if (pid===process_.pid)
                 return false;
             else if (pid===null) {
@@ -45,7 +45,7 @@ exports.lockSync = function(filename,data) {
 };
 
 exports.lockDataSync = function(filename) {
-    var data;
+    let data;
     try {
         data = JSON.parse(fs.readFileSync(filename));
     } catch (e) {
@@ -53,7 +53,7 @@ exports.lockDataSync = function(filename) {
             throw new VError(e,"can't read or parse lockfile %s",filename);
         return null;
     }
-    var systemStartTime = Date.now()-os_.uptime()*1000;
+    const systemStartTime = Date.now()-os_.uptime()*1000;
     if (data.startTime<systemStartTime) // process can't be older than the system
         return null;
     try {
@@ -65,15 +65,15 @@ exports.lockDataSync = function(filename) {
 };
 
 exports.pidLockedSync = function(filename) {
-    var data = exports.lockDataSync(filename);
+    let data = exports.lockDataSync(filename);
     return data===null ? null : data.pid;
 };
 
 exports.unlockSync = function(filename) {
-    var data = exports.lockDataSync(filename);
+    let data = exports.lockDataSync(filename);
     if (data===null)
         throw new VError("lockfile %s does not exist",filename);
-    if (data.pid!==process_.pid) 
+    if (data.pid!==process_.pid)
         throw new VError("lockfile %s locked by process %d",filename,data.pid);
     fs.unlinkSync(filename);
 };

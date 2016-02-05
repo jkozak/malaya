@@ -1,3 +1,5 @@
+/*eslint-disable*/
+
 var compiler = require("../compiler.js");
 var   parser = require("../parser.js");
 var   assert = require("assert");
@@ -569,13 +571,19 @@ describe("mangle",function() {
 });
 
 describe("compile",function() {
-    it("should generate JS for trivial store",function() {
+    it("should generate JS for trivial store via var",function() {
         var js = compile("var st = store {['user',{name:'sid'}];rule(['user',{name:a}]);rule(['company',{user:a,name:b}]);};");
         eval(recast.print(js).code);
         assert.deepEqual(eval(mangleId('st'))._private.facts,{"1":['user',{name:'sid'}]});
     });
+    it("should generate JS for trivial store via const",function() {
+        var js = compile("const st = store {['user',{name:'sid'}];rule(['user',{name:a}]);rule(['company',{user:a,name:b}]);};");
+        eval(recast.print(js).code);
+        assert.deepEqual(eval(mangleId('st'))._private.facts,{"1":['user',{name:'sid'}]});
+    });
+    // ??? what about 'let' declarations? ???
     it("should handle store containing `for`",function() {
-        var  ast = parse("var st = store {rule(-['a',p],+['b',for(0;['c',q];a=>a+p+q+1)]);};");
+        var  ast = parse("const st = store {rule(-['a',p],+['b',for(0;['c',q];a=>a+p+q+1)]);};");
         var   js = compiler.compile(ast);
         eval(recast.print(js).code);
         var   st = eval(mangleId('st'));
@@ -589,7 +597,7 @@ describe("compile",function() {
         assert.deepEqual(st.get(ans.adds[0]),['b',19]);
     });
     it("should handle store containing `for` (non-deleting variant)",function() {
-        var  ast = parse("var st = store {rule(['a',p],+['b',for(0;['c',q];a=>a+p+q+1)]);};");
+        var  ast = parse("const st = store {rule(['a',p],+['b',for(0;['c',q];a=>a+p+q+1)]);};");
         var   js = compiler.compile(ast);
         eval(recast.print(js).code);
         var   st = eval(mangleId('st'));
@@ -598,7 +606,7 @@ describe("compile",function() {
         assert.deepEqual(_.values(st._private.facts),[['c',1],['a',17],['b',19]]);
     });
     it("should handle guards starting with ! [cd50013ab17474a6]",function() {
-        var ast = parse("var st = store {rule(['a',b],!b==0,+['c']);rule(-['a',...]);};");
+        var ast = parse("const st = store {rule(['a',b],!b==0,+['c']);rule(-['a',...]);};");
         var  js = compiler.compile(ast);
         eval(recast.print(js).code);
         var   st = eval(mangleId('st'));
@@ -608,34 +616,34 @@ describe("compile",function() {
         assert.deepEqual(_.values(st._private.facts),[['c']]);
     });
     it("should handle nuladic arrow functions",function() {
-        var js = compiler.compile(parse("var fn = ()=>23;"));
+        var js = compiler.compile(parse("const fn = ()=>23;"));
         eval(recast.print(js).code);
         var fn = eval(mangleId('fn'));
         assert.strictEqual(fn(),23);
     });
     it("should handle monadic arrow functions",function() {
-        var js = compiler.compile(parse("var fn = x=>x+1;"));
+        var js = compiler.compile(parse("const fn = x=>x+1;"));
         eval(recast.print(js).code);
         var fn = eval(mangleId('fn'));
         assert.strictEqual(fn(1),2);
         assert.strictEqual(fn(2),3);
     });
     it("should handle bracketed monadic arrow functions",function() {
-        var js = compiler.compile(parse("var fn = (x)=>x+1;"));
+        var js = compiler.compile(parse("const fn = (x)=>x+1;"));
         eval(recast.print(js).code);
         var fn = eval(mangleId('fn'));
         assert.strictEqual(fn(1),2);
         assert.strictEqual(fn(2),3);
     });
     it("should handle dyadic arrow functions",function() {
-        var js = compiler.compile(parse("var fn = (x,y)=>x+y+1;"));
+        var js = compiler.compile(parse("const fn = (x,y)=>x+y+1;"));
         eval(recast.print(js).code);
         var fn = eval(mangleId('fn'));
         assert.strictEqual(fn(1,2),4);
         assert.strictEqual(fn(2,3),6);
     });
     it("should handle dyadic arrow functions in a store",function() {
-        var js = compiler.compile(parse("var t=fn=>fn(2,3);store st {rule (-['a'],+['b',t((x,y)=>x+y+1)]);};"));
+        var js = compiler.compile(parse("const t=fn=>fn(2,3);store st {rule (-['a'],+['b',t((x,y)=>x+y+1)]);};"));
         eval(recast.print(js).code);
         var st = eval(mangleId('st'));
         st.add(['a']);
@@ -645,7 +653,7 @@ describe("compile",function() {
         compile("store{rule(['a'],+['b',for(0;['p'];a=>a+for(0;['q'];b=>b+1))]);}");
     });
     it("should handle object expression extensions on 'RHS'",function() {
-        var js = compile("var st = store{rule(-['a',{p,...qs}],+['b',{p,...qs}]);}");
+        var js = compile("const st = store{rule(-['a',{p,...qs}],+['b',{p,...qs}]);}");
         eval(recast.print(js).code);
         var st = eval(mangleId('st'));
         st.add(['a',{p:67,a:'a',b:23}]);
@@ -747,7 +755,7 @@ describe("compile hook",function() {
             ok = true;
         });
         fs.writeFileSync(fn,"store {\nrule (['1']);}");
-        //N.B. used to use just `require(fn)` but that doesn't work 
+        //N.B. used to use just `require(fn)` but that doesn't work
         //     with another version of node under `nvm`.
         require.extensions['.chrjs'](module,fn);
         assert(ok);

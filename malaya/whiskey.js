@@ -1,14 +1,14 @@
 // ... where STREAMS of WHISKEY are flowing ...
 "use strict";
 
-var             _ = require('underscore');
-var        stream = require('stream');
-var     _through2 = require('through2');
-var StringDecoder = require('string_decoder').StringDecoder;
-var        VError = require('verror');
+const             _ = require('underscore');
+const        stream = require('stream');
+const     _through2 = require('through2');
+const StringDecoder = require('string_decoder').StringDecoder;
+const        VError = require('verror');
 
-var through2 = function(options,transform) {
-    var pt = _through2.apply(this,arguments);
+const through2 = function(options,transform) {
+    const pt = _through2.apply(this,arguments);
     // dodgy workaround for lack of {readable,writable}ObjectMode
     if (options.readableObjectMode && !pt._readableState.objectMode)
         pt._readableState.objectMode = true;
@@ -18,29 +18,29 @@ var through2 = function(options,transform) {
 };
 exports.through2 = through2;
 
-// Stream of lines, maybe transformed 
+// Stream of lines, maybe transformed
 exports.LineStream = function(fn) {
-    var send = function(out,x) {
+    const send = function(out,x) {
         try {
             if (fn)
                 x = fn(x);
         } catch (err) {
             return err;
         }
-        if (x===null) 
+        if (x===null)
             return new Error("null can't be sent to a node stream");
         else {
             out.push(x);
             return null;
         }
     };
-    var  ans = through2({readableObjectMode:true},
+    const  ans = through2({readableObjectMode:true},
                         function(chunk,encoding,cb) {
                             this._buffer += this._decoder.write(chunk);
-                            var lines = this._buffer.split(/\r?\n/); // split on newlines
+                            const lines = this._buffer.split(/\r?\n/); // split on newlines
                             this._buffer = lines.pop();              // keep the last partial line buffered
-                            for (var l=0;l<lines.length;l++) {
-                                var err = send(this,lines[l]);
+                            for (let l=0;l<lines.length;l++) {
+                                const err = send(this,lines[l]);
                                 if (err) {
                                     cb(err);
                                     return;
@@ -49,10 +49,10 @@ exports.LineStream = function(fn) {
                             cb(null);
                         },
                         function(cb) {                               // flush at end
-                            var b = this._buffer;
+                            const b = this._buffer;
                             this._buffer = '';
                             if (b!=='') {
-                                var err = send(this,b);
+                                const err = send(this,b);
                                 if (err) {
                                     cb(err);
                                     return;
@@ -67,8 +67,8 @@ exports.LineStream = function(fn) {
 
 // StringifyObjectStreamStream is the inverse of LineStream
 exports.StringifyObjectStream = function(fn) {
-    var ans = through2({writableObjectMode:true},function(chunk,encoding,cb) {
-        var s;
+    const ans = through2({writableObjectMode:true},function(chunk,encoding,cb) {
+        let s;
         try {
             s = fn(chunk);
         } catch (err) {
@@ -83,13 +83,13 @@ exports.StringifyObjectStream = function(fn) {
 
 // JSONParseStream gets \n-delimited JSON string data, and emits the parsed objects
 exports.JSONParseStream = function() {
-    var ans = through2({readableObjectMode:true},function(chunk,encoding,cb) {
+    const ans = through2({readableObjectMode:true},function(chunk,encoding,cb) {
         this._buffer += this._decoder.write(chunk);
-        var lines = this._buffer.split(/\r?\n/); // split on newlines
+        const lines = this._buffer.split(/\r?\n/); // split on newlines
         this._buffer = lines.pop();              // keep the last partial line buffered
-        for (var l=0;l<lines.length;l++) {
-            var line = lines[l];
-            var  obj;
+        for (let l=0;l<lines.length;l++) {
+            const line = lines[l];
+            let  obj;
             try {
                 obj = JSON.parse(line);
             } catch (err) {
@@ -111,8 +111,8 @@ exports.JSONParseStream = function() {
 
 // StringifyJSONStream is the inverse of JSONParseStream
 exports.StringifyJSONStream = function() {
-    var ans = through2({writableObjectMode:true},function(chunk,encoding,cb) {
-        var s;
+    const ans = through2({writableObjectMode:true},function(chunk,encoding,cb) {
+        let s;
         try {
             s = JSON.stringify(chunk);
         } catch (err) {
@@ -131,7 +131,7 @@ exports.StreamWithOffset = function(offset,options) {
         offset  = 0;
     if (options===undefined)
         options = {};
-    var swo = stream.PassThrough(options);
+    const swo = stream.PassThrough(options);
     if (swo._offset!==undefined)
         throw new Error("_offset field in use");
     swo._offset = offset;
@@ -152,7 +152,7 @@ exports.OffsetStream = function(offset,options) {
     if (options===undefined)
         options = {};
     options = _.extend({},options,{readableObjectMode:true});
-    var os = through2(options,function(chunk,encoding,cb) {
+    const os = through2(options,function(chunk,encoding,cb) {
         this.push([os._offset,chunk]);
         if (options.objectMode || options.writableObjectMode)
             os._offset++;
@@ -167,7 +167,7 @@ exports.OffsetStream = function(offset,options) {
 // Remove offset from stream items
 exports.DeoffsetStream = function(options) {
     options = _.extend({},options||{},{writableObjectMode:true});
-    var ds = through2(options,function(chunk,encoding,cb) {
+    const ds = through2(options,function(chunk,encoding,cb) {
         this.push(chunk[1]);
         cb();
     });
@@ -176,16 +176,16 @@ exports.DeoffsetStream = function(options) {
 
 // returns stream which passes objects from `stream1` until an object
 // is given which matches the first from `stream2` from which point that
-// will be returned instead.  
+// will be returned instead.
 exports.createBackFillStream = function(stream1,stream2,options) {
-    var   output = new stream.PassThrough({objectMode:true,allowHalfOpen:false});
-    var streamId = 1;
-    var  lastOn1 = null;
-    var firstOn2 = null;
+    const output = new stream.PassThrough({objectMode:true,allowHalfOpen:false});
+    let streamId = 1;
+    let  lastOn1 = null;
+    let firstOn2 = null;
     options = options || {readAfterSwitch:false};
     stream2.on('readable',function() {
         for (;;) {
-            var datum;
+            let datum;
             if (streamId===2) {
                 datum = stream2.read();
                 if (datum===null)
@@ -201,7 +201,7 @@ exports.createBackFillStream = function(stream1,stream2,options) {
                 }
                 break;
             }
-            else 
+            else
                 output.emit('error',new VError("bad streamId: %j",streamId));
         }
     });
@@ -215,7 +215,7 @@ exports.createBackFillStream = function(stream1,stream2,options) {
         if (firstOn2!==null)
             for (;;) {
                 if (streamId===1) {
-                    var datum = stream1.read();
+                    const datum = stream1.read();
                     if (datum===null)
                         break;
                     else {
@@ -248,4 +248,3 @@ exports.createBackFillStream = function(stream1,stream2,options) {
     });
     return output;
 };
-

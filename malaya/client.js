@@ -3,24 +3,24 @@
 "use strict";
 /*eslint-disable no-process-exit*/
 
-var     argv = require('minimist')(process.argv.slice(2));
-var   SockJS = require('node-sockjs-client');
-var readline = require('readline');
-var     path = require('path');
+const     argv = require('minimist')(process.argv.slice(2));
+const   SockJS = require('node-sockjs-client');
+const readline = require('readline');
+const     path = require('path');
 
-var     util = require('./util.js');
-var     lock = require('./lock.js');
+const     util = require('./util.js');
+const     lock = require('./lock.js');
 
 exports.repl = function(url) {
-    var sock = new SockJS(url);
+    const sock = new SockJS(url);
 
-    var write = function(js) {
+    const write = function(js) {
         sock.send(JSON.stringify(js)+'\n');
     };
 
-    var messages = [];
+    const messages = [];
 
-    var rl = readline.createInterface({
+    const rl = readline.createInterface({
         input:  process.stdin,
         output: process.stdout
     });
@@ -30,13 +30,13 @@ exports.repl = function(url) {
             if (answer)
                 try {
                     /* eslint no-eval:0 */
-                    var js = eval(answer); // !!! nicer to use than JSON.parse, but dodgy !!!
+                    const js = eval(answer); // !!! nicer to use than JSON.parse, but dodgy !!!
                     if (js)
                         write(js);
                 } catch (e) {
                     console.log("! %s",answer,e.message);
                 }
-            var msgs = messages;
+            const msgs = messages;
             messages = [];
             msgs.forEach(function(msg) {
                 process.stdout.write(util.format("< %j\n",JSON.parse(msg)));
@@ -72,7 +72,7 @@ exports.repl = function(url) {
 };
 
 exports.nonInteractive = function(url) {
-    var sock = new SockJS(url);
+    const sock = new SockJS(url);
 
     sock.onmessage = function(e) {
         process.stdout.write(e.data);
@@ -81,7 +81,7 @@ exports.nonInteractive = function(url) {
 
 exports.findURL = function(p) {
     p = p || 'data';
-    var data = lock.lockDataSync(path.join(process.cwd(),'.prevalence','lock'));
+    const data = lock.lockDataSync(path.join(process.cwd(),'.prevalence','lock'));
     if (data===null)
         return null;
     else
@@ -89,13 +89,13 @@ exports.findURL = function(p) {
 };
 
 if (require.main===module) {
-    var url1;
+    let url1;
     if (argv._.length!==1) {
         url1 = exports.findURL();
     } else
         url1 = argv._[0];
     if (url1)
         exports.repl(url1);
-    else 
+    else
         console.log("connection URL you want is something like `http://localhost:3000/data`");
 }

@@ -1,21 +1,21 @@
-var    engine = require('../engine.js');
-var    Engine = engine.Engine;
+"use strict";
 
-var         _ = require("underscore");
-var    assert = require("assert");
-var    events = require("events");
-var    stream = require("stream");
-var      temp = require('temp').track();
-var        fs = require('fs');
-var      path = require('path');
-var      util = require('../util.js');
-var  testutil = require('../testutil.js');
-var    VError = require('verror');
-var      rmRF = require('rimraf');
+const   engine = require('../engine.js');
+const   Engine = engine.Engine;
+
+const        _ = require("underscore");
+const   assert = require("assert");
+const     temp = require('temp').track();
+const       fs = require('fs');
+const     path = require('path');
+const     util = require('../util.js');
+const testutil = require('../testutil.js');
+const   VError = require('verror');
+const     rmRF = require('rimraf');
 
 describe("makeInertChrjs",function() {
     it("behaves somewhat like a chrjs store with no rules",function() {
-        var st = engine.makeInertChrjs();
+        const st = engine.makeInertChrjs();
         assert.strictEqual(st.size,0);
         assert.deepEqual(st.add(['test',1]),{err:null,adds:[1],dels:[],refs:[]});
         assert.strictEqual(st.size,1);
@@ -24,17 +24,16 @@ describe("makeInertChrjs",function() {
     });
 });
 
-runInCountEngine      = testutil.runInCountEngine;
-createIO              = testutil.createIO;
-makeTimestamp         = testutil.makeTimestamp;
-appendToJournal       = testutil.appendToJournal;
-appendStringToJournal = testutil.appendStringToJournal;
+const runInCountEngine      = testutil.runInCountEngine;
+const createIO              = testutil.createIO;
+const appendToJournal       = testutil.appendToJournal;
+const appendStringToJournal = testutil.appendStringToJournal;
 
 describe("Engine",function() {
     describe("initialisation",function() {
         it("initialises various good things",function() {
-            var dir = temp.mkdirSync();
-            var eng = new Engine({dir:dir});
+            const dir = temp.mkdirSync();
+            const eng = new Engine({dir:dir});
             eng.init();
             fs.statSync(dir);
             fs.statSync(path.join(dir,'.prevalence'));
@@ -44,16 +43,16 @@ describe("Engine",function() {
             fs.statSync(path.join(dir,'.prevalence','state','world'));
         });
         it("won't initialise over existing dir",function() {
-            var  dir = temp.mkdirSync();
-            var pdir = fs.mkdirSync(path.join(dir,'.prevalence'));
-            var  eng = new Engine({dir:dir});
+            const  dir = temp.mkdirSync();
+            const  eng = new Engine({dir:dir});
+            fs.mkdirSync(path.join(dir,'.prevalence'));
             assert.throws(function() {
                 eng.init();
             });
         });
         it("won't start without initialising",function() {
-            var dir = temp.mkdirSync();
-            var eng = new Engine({dir:dir});
+            const dir = temp.mkdirSync();
+            const eng = new Engine({dir:dir});
             assert.throws(function() {
                 eng.start();
             });
@@ -61,21 +60,21 @@ describe("Engine",function() {
     });
     describe("hashes",function() {
         it("creates a hash store at init time",function() {
-            var dir = temp.mkdirSync();
-            var eng = new Engine({dir:dir});
+            const dir = temp.mkdirSync();
+            const eng = new Engine({dir:dir});
             eng.init();
             eng.start();
-            var cHashes = eng.hashes.getHashes().length;
-            var x = "testie testie";
-            var h = eng.hashes.putSync(x);
+            const cHashes = eng.hashes.getHashes().length;
+            const x = "testie testie";
+            const h = eng.hashes.putSync(x);
             assert.strictEqual(eng.hashes.getHashes().length,cHashes+1);
             assert.strictEqual(eng.hashes.getSync(h,{encoding:'utf8'}),x);
         });
     });
-    describe("#update",function(done) {
+    describe("#update",function() {
         it("writes items to store",function(done) {
-            var dir = temp.mkdirSync();
-            var eng = new Engine({dir:dir});
+            const dir = temp.mkdirSync();
+            const eng = new Engine({dir:dir});
             eng.init();
             eng.start();
             assert.strictEqual(eng.chrjs.size,0);
@@ -89,9 +88,9 @@ describe("Engine",function() {
                             if (err1)
                                 done(err1);
                             else {
-                                var i = 1;
+                                let i = 1;
                                 util.readFileLinesSync(path.join(eng.prevalenceDir,'state','journal'),function(l) {
-                                    var js = util.deserialise(l);
+                                    const js = util.deserialise(l);
                                     switch (i++) {
                                     case 1:
                                         assert.strictEqual(js[1],'previous');
@@ -113,8 +112,8 @@ describe("Engine",function() {
     });
     describe("#stop",function(done) {
         it("saves the world slowly",function() {
-            var dir = temp.mkdirSync();
-            var eng = new Engine({dir:dir});
+            const dir = temp.mkdirSync();
+            const eng = new Engine({dir:dir});
             eng.init();
             eng.start();
             eng.startPrevalence(function(err1) {
@@ -123,19 +122,16 @@ describe("Engine",function() {
                 else {
                     rmRF.sync(path.join(eng.prevalenceDir,'state-OLD'));
                     eng.stopPrevalence(false,function(err2) {
-                        if (err2)
-                            cb(err2);
-                        else {
-                            assert(fs.existsSync(path.join(eng.prevalenceDir,'state')));
-                            assert(fs.existsSync(path.join(eng.prevalenceDir,'state-OLD')));
-                        }
+                        assert(!err2);
+                        assert(fs.existsSync(path.join(eng.prevalenceDir,'state')));
+                        assert(fs.existsSync(path.join(eng.prevalenceDir,'state-OLD')));
                     });
                 }
             });
         });
         it("saves the world quickly",function() {
-            var dir = temp.mkdirSync();
-            var eng = new Engine({dir:dir});
+            const dir = temp.mkdirSync();
+            const eng = new Engine({dir:dir});
             eng.init();
             eng.start();
             eng.startPrevalence(function(err1) {
@@ -144,12 +140,9 @@ describe("Engine",function() {
                 else {
                     rmRF.sync(path.join(eng.prevalenceDir,'state-OLD'));
                     eng.stopPrevalence(true,function(err2) {
-                        if (err2)
-                            cb(err2);
-                        else {
-                            assert( fs.existsSync(path.join(eng.prevalenceDir,'state')));
-                            assert(!fs.existsSync(path.join(eng.prevalenceDir,'state-OLD')));
-                        }
+                        assert(!err2);
+                        assert( fs.existsSync(path.join(eng.prevalenceDir,'state')));
+                        assert(!fs.existsSync(path.join(eng.prevalenceDir,'state-OLD')));
                     });
                 }
             });
@@ -178,8 +171,8 @@ describe("Engine",function() {
                     assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:1}]]);
                     eng.stopPrevalence(false,function(err) {
                         assert(!err);
-                        eng.startPrevalence(function(err) {
-                            assert(!err);
+                        eng.startPrevalence(function(err1) {
+                            assert(!err1);
                             assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:1}]]);
                             eng.stopPrevalence(true,done);
                         });
@@ -195,8 +188,8 @@ describe("Engine",function() {
                     eng.stopPrevalence(false,function(err) {
                         assert(!err);
                         appendToJournal(eng,'update',['x',{}]);
-                        eng.startPrevalence(function(err) {
-                            assert(!err);
+                        eng.startPrevalence(function(err1) {
+                            assert(!err1);
                             assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:2}]]);
                             eng.stopPrevalence(true,done);
                         });
@@ -212,8 +205,8 @@ describe("Engine",function() {
                     eng.stopPrevalence(true,function(err) {
                         assert(!err);
                         appendToJournal(eng,'update',['x',{}]);
-                        eng.startPrevalence(function(err) {
-                            assert(!err);
+                        eng.startPrevalence(function(err1) {
+                            assert(!err1);
                             assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:2}]]);
                             eng.stopPrevalence(true,done);
                         });
@@ -232,8 +225,8 @@ describe("Engine",function() {
                     eng.stopPrevalence(true,function(err) {
                         assert(!err);
                         appendToJournal(eng,'update',['x',{}]);
-                        eng.startPrevalence(function(err) {
-                            assert(!err);
+                        eng.startPrevalence(function(err1) {
+                            assert(!err1);
                             assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:2}]]);
                             eng.stopPrevalence(true,done);
                         });
@@ -245,9 +238,9 @@ describe("Engine",function() {
     });
     describe("walking utilities",function() {
         it("traverses the journal file",function(done) {
-            var dir = temp.mkdirSync();
-            var eng = new Engine({dir:dir});
-            var  hs = [];
+            const dir = temp.mkdirSync();
+            const eng = new Engine({dir:dir});
+            const  hs = [];
             eng.init();
             eng.start();
             eng.stop();
@@ -263,10 +256,10 @@ describe("Engine",function() {
                                     done(); });
         });
         it("traverses the journal file and hash store",function(done) {
-            var   dir = temp.mkdirSync();
-            var   eng = new Engine({dir:dir});
-            var    hs = [];
-            var done2 = _.after(2,done);
+            const   dir = temp.mkdirSync();
+            const   eng = new Engine({dir:dir});
+            const    hs = [];
+            const done2 = _.after(2,done);
             eng.init();
             eng.start();
             eng.startPrevalence(function(e1) {
@@ -280,7 +273,8 @@ describe("Engine",function() {
                                             if (what==='journal') {
                                                 eng.walkHashes(x,
                                                                false,
-                                                               function(err,h,what) {
+                                                               function(err1,h,w) {
+                                                                   assert(!err1);
                                                                    if (what==='journal')
                                                                        hs.push(h);
                                                                },
@@ -297,36 +291,36 @@ describe("Engine",function() {
     });
     describe("#loadData",function() {
         it("loads single item from a json file",function(done) {
-            var   dir = temp.mkdirSync();
-            var   eng = new Engine({dir:dir});
-            var  data = [['abc',{a:1}]];
-            var   dfn = path.join(dir,'data.json');
+            const   dir = temp.mkdirSync();
+            const   eng = new Engine({dir:dir});
+            const  data = [['abc',{a:1}]];
+            const   dfn = path.join(dir,'data.json');
             fs.writeFileSync(dfn,JSON.stringify(data));
             eng.init();
             eng.start();
             eng.startPrevalence(function(err) {
                 assert(!err);
                 assert.deepEqual(_.values(eng.chrjs._private.orderedFacts),[]);
-                eng.loadData(dfn,function(err) {
-                    assert(!err);
+                eng.loadData(dfn,function(err1) {
+                    assert(!err1);
                     assert.deepEqual(_.values(eng.chrjs._private.orderedFacts),data);
                     eng.stopPrevalence(true,done);
                 });
             });
         });
         it("loads two items from a json file",function(done) {
-            var   dir = temp.mkdirSync();
-            var   eng = new Engine({dir:dir});
-            var  data = [['abc',{a:1}],['def',{d:4}]];
-            var   dfn = path.join(dir,'data.json');
+            const   dir = temp.mkdirSync();
+            const   eng = new Engine({dir:dir});
+            const  data = [['abc',{a:1}],['def',{d:4}]];
+            const   dfn = path.join(dir,'data.json');
             fs.writeFileSync(dfn,JSON.stringify(data));
             eng.init();
             eng.start();
             eng.startPrevalence(function(err) {
                 assert(!err);
                 assert.deepEqual(_.values(eng.chrjs._private.orderedFacts),[]);
-                eng.loadData(dfn,function(err) {
-                    assert(!err);
+                eng.loadData(dfn,function(err1) {
+                    assert(!err1);
                     assert.deepEqual(_.values(eng.chrjs._private.orderedFacts),data);
                     eng.stopPrevalence(true,done);
                 });
@@ -335,9 +329,9 @@ describe("Engine",function() {
     });
     describe("#addConnection",function() {
         it("sends input, receives output",function(done) {
-            var eng = new Engine({dir:           temp.mkdirSync(),
+            const eng = new Engine({dir:           temp.mkdirSync(),
                                   businessLogic: path.join(__dirname,'bl','output.chrjs') });
-            var  io = createIO();
+            const  io = createIO();
             eng.init();
             eng.start();
             eng.startPrevalence(function(err) {
@@ -353,13 +347,12 @@ describe("Engine",function() {
             });
         });
         it("multiplexes",function(done) {
-            var eng = new Engine({dir:           temp.mkdirSync(),
+            const eng = new Engine({dir:           temp.mkdirSync(),
                                   businessLogic: path.join(__dirname,'bl','output.chrjs') });
-            var io1 = createIO();
-            var io2 = createIO();
-            var io3 = createIO();
-            var err = null;
-            var dun = _.after(3,function() {eng.stopPrevalence(true,function(e){done(e);})});
+            const io1 = createIO();
+            const io2 = createIO();
+            const io3 = createIO();
+            const dun = _.after(3,()=>eng.stopPrevalence(true,(e)=>done(e)));
             eng.init();
             eng.start();
             eng.startPrevalence(function(err) {
@@ -381,9 +374,9 @@ describe("Engine",function() {
     });
     describe("replication",function() {
         it("streams out the journal",function(done) {
-            var eng = new Engine({dir:           temp.mkdirSync(),
+            const eng = new Engine({dir:           temp.mkdirSync(),
                                   businessLogic: path.join(__dirname,'bl','null.chrjs') });
-            var io = createIO('replication');
+            const io = createIO('replication');
             eng.init();
             eng.start();
             eng.startPrevalence(function(err) {
@@ -397,10 +390,10 @@ describe("Engine",function() {
                         assert.strictEqual((typeof io.rcved[0][1].journalSize),'number');
                         assert.strictEqual((typeof io.rcved[1][0]),'number');
                         assert.strictEqual(        io.rcved[1][1], 'update');
-                        assert.deepEqual  (        io.rcved[1][2], ['something',{},{port:'test://'}]);
+                        assert.deepEqual(          io.rcved[1][2], ['something',{},{port:'test://'}]);
                         assert.strictEqual((typeof io.rcved[2][0]),'number');
                         assert.strictEqual(        io.rcved[2][1], 'update');
-                        assert.deepEqual  (        io.rcved[2][2], ['else',{},{port:'test://'}]);
+                        assert.deepEqual(          io.rcved[2][2], ['else',{},{port:'test://'}]);
                         assert(io.rcved[1][0]<io.rcved[2][0]); // timestamps are monotonic increasing, distinct
                         eng.stopPrevalence(true,done);
                     } catch (e) {done(e);}
@@ -410,10 +403,10 @@ describe("Engine",function() {
     });
     describe("administration",function() {
         it("supplies handy info on connect",function(done) {
-            var eng = new Engine({dir:           temp.mkdirSync(),
+            const eng = new Engine({dir:           temp.mkdirSync(),
                                   businessLogic: path.join(__dirname,'bl','null.chrjs') });
-            var  io = createIO('admin');
-            var  ok = false;
+            const  io = createIO('admin');
+            let    ok = false;
             eng.init();
             eng.start();
             io.on('rcved',function() {
@@ -428,6 +421,54 @@ describe("Engine",function() {
                 } catch (e) {done(e);}
             });
             eng.addConnection('test://admin',io);
+        });
+    });
+    describe("magic outputs",function() {
+        it("are just removed from the store with no callback",function(done) {
+            const dir = temp.mkdirSync();
+            const eng = new Engine({dir:dir});
+            eng.init();
+            eng.addMagicOutput('_trevor');
+            eng.start();
+            assert.strictEqual(eng.chrjs.size,0);
+            eng.startPrevalence(function(err) {
+                if (err)
+                    done(err);
+                else
+                    eng.update(['_trevor',{},{}],null,function() {
+                        assert.strictEqual(eng.chrjs.size,0);
+                        eng.stopPrevalence(true,function(err1) {
+                            if (err1)
+                                done(err1);
+                            else
+                                eng.stop(true,done);
+                        });
+                    });
+            });
+        });
+        it("are removed from the store and callback done",function(done) {
+            const dir = temp.mkdirSync();
+            const eng = new Engine({dir:dir});
+            let     n = 0;
+            eng.init();
+            eng.addMagicOutput('_trevor');
+            eng.start();
+            assert.strictEqual(eng.chrjs.size,0);
+            eng.startPrevalence(function(err) {
+                if (err)
+                    done(err);
+                else
+                    eng.update(['_trevor',{},{}],function(x){n+=1;},function() {
+                        assert.strictEqual(eng.chrjs.size,0);
+                        assert.strictEqual(n,1);
+                        eng.stopPrevalence(true,function(err1) {
+                            if (err1)
+                                done(err1);
+                            else
+                                eng.stop(true,done);
+                        });
+                    });
+            });
         });
     });
 });

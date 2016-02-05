@@ -2,25 +2,25 @@
 
 // for use in test scripts
 
-var util = require('./util.js');
+const util = require('./util.js');
 
 if (util.env==='test')  {
-    var    engine = require('./engine.js');
-    var    Engine = engine.Engine;
-    var    assert = require("assert");
-    var    events = require("events");
-    var    stream = require("stream");
-    var      path = require('path');
-    var      temp = require('temp').track();
-    var        fs = require('fs');
+    const    engine = require('./engine.js');
+    const    Engine = engine.Engine;
+    const    assert = require("assert");
+    const    events = require("events");
+    const    stream = require("stream");
+    const      path = require('path');
+    const      temp = require('temp').track();
+    const        fs = require('fs');
 
-    var runInEngine = exports.runInEngine = function(source,opts) {
+    const runInEngine = exports.runInEngine = function(source,opts) {
         if ((typeof opts)==='function')
             opts = {main:opts};
         else
             opts = opts || {};
-        var dir = temp.mkdirSync();
-        var eng = new Engine({dir:dir,businessLogic:source});
+        const dir = temp.mkdirSync();
+        const eng = new Engine({dir:dir,businessLogic:source});
         eng.init();
         eng.start();
         if (opts.init)
@@ -34,8 +34,8 @@ if (util.env==='test')  {
     exports.runInCountEngine = function(opts) {runInEngine(path.join(__dirname,'test/bl/count.chrjs'),opts);};
 
     exports.createIO = function(type) { // make a "terminal" which can be connected to an Engine
-        var ee = new events.EventEmitter();
-        var io = {
+        const ee = new events.EventEmitter();
+        const io = {
             i:     new stream.PassThrough({objectMode:true}),
             o:     new stream.PassThrough({objectMode:true}),
             type:  type || 'data',
@@ -50,7 +50,7 @@ if (util.env==='test')  {
     };
 
     exports.makeTimestamp = function() {
-        var i = 1;
+        let i = 1;
         return function() {
             return i++;
         };
@@ -63,7 +63,7 @@ if (util.env==='test')  {
     exports.appendStringToJournal = function(eng,s) {
         fs.writeFileSync(path.join(eng.prevalenceDir,'state','journal'),s,{flag:'a'});
     };
-    
+
     exports.dumpFile = function(filename) {
         console.log("========================== begin %s ==========================",filename);
         util.readFileLinesSync(filename,function(l) {
@@ -72,7 +72,5 @@ if (util.env==='test')  {
         });
         console.log("=========================== end %s ===========================",filename);
     };
-    
-}
 
-        
+}

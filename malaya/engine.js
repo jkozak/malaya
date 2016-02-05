@@ -2,7 +2,7 @@
 
 // use thus:
 
-//  var eng = new Engine(<dir>,<chrjs>,<opts>)
+//  const eng = new Engine(<dir>,<chrjs>,<opts>)
 //  eng.start()
 //  eng.become('master'|'slave'|'idle')
 //     ... 'mode' event fires with new mode when done
@@ -27,35 +27,35 @@
 
 "use strict";
 
-var           _ = require('underscore');
-var      events = require('events');
-var      VError = require('verror');
-var        util = require('./util.js');
-var        path = require('path');
-var          fs = require('fs');
-var        rmRF = require('rimraf');
-var    through2 = require('through2');
-var multistream = require('multistream');
-var   basicAuth = require('basic-auth');
-var     express = require('express');
-var  browserify = require('browserify');
-var    reactify = require('reactify');
-var      morgan = require('morgan');
-var      recast = require('recast');
-var        http = require('http');
-var      sockjs = require('sockjs');
-var          ip = require('ip');
+const           _ = require('underscore');
+const      events = require('events');
+const      VError = require('verror');
+const        util = require('./util.js');
+const        path = require('path');
+const          fs = require('fs');
+const        rmRF = require('rimraf');
+const    through2 = require('through2');
+const multistream = require('multistream');
+const   basicAuth = require('basic-auth');
+const     express = require('express');
+const  browserify = require('browserify');
+const    reactify = require('reactify');
+const      morgan = require('morgan');
+const      recast = require('recast');
+const        http = require('http');
+const      sockjs = require('sockjs');
+const          ip = require('ip');
 
-var      parser = require('./parser.js');
-var    compiler = require('./compiler.js');
-var     whiskey = require('./whiskey.js');
-var        hash = require('./hash.js');
-var        lock = require('./lock.js');
+const      parser = require('./parser.js');
+const    compiler = require('./compiler.js');
+const     whiskey = require('./whiskey.js');
+const        hash = require('./hash.js');
+const        lock = require('./lock.js');
 
 
 exports.makeInertChrjs = function(opts) {
     opts = opts || {tag:null};
-    var obj = {              // behaves like `store {}`;
+    const obj = {              // behaves like `store {}`;
         t:        1,
         facts:    {},
         get: function(t) {
@@ -76,12 +76,15 @@ exports.makeInertChrjs = function(opts) {
             this.facts = {};
         },
         add:   function(f) {
-            var ans = {err:null,adds:[this.t],dels:[],refs:[]};
+            const ans = {err:null,adds:[this.t],dels:[],refs:[]};
             this.facts[this.t++] = f;
             return ans;
         },
+        _del: function(t) {
+            delete this.facts[t];
+        },
         update:   function(f) {
-            var ans = this.add(f);
+            const ans = this.add(f);
             ans.refs[this.t-1] = f;
             return ans;
         },
@@ -92,22 +95,22 @@ exports.makeInertChrjs = function(opts) {
         obj._private = {
             get facts() {return obj.facts;},   // be compatible with real chrjs
             get orderedFacts() {
-                var keys = _.keys(obj.facts).map(function(t){return parseInt(t);});
+                const keys = _.keys(obj.facts).map(function(t){return parseInt(t);});
                 return keys.sort(function(p,q){return p-q;}).map(function(t){return obj.facts[t];});
             }
         };
     return obj;
 };
 
-var sources = {};
-var compile = exports.compile = function(source) {
+let   sources = {};
+const compile = exports.compile = function(source) {
     if (source) {
-        var children = module.children.slice(0);
-        var    chrjs = require(path.resolve(source));
-        var    loads = _.difference(module.children,children);
+        const children = module.children.slice(0);
+        const    chrjs = require(path.resolve(source));
+        const    loads = _.difference(module.children,children);
         if (loads.length>1)
             throw new VError("compiling %s added %s modules",source,loads.length);
-        for (var i in loads)
+        for (const i in loads)
             sources[loads[i].filename] = null;
         chrjs.reset();          // because `require` caches values
         return chrjs;
@@ -115,10 +118,10 @@ var compile = exports.compile = function(source) {
         return null;
 };
 
-var Engine = exports.Engine = function(options) {
+const Engine = exports.Engine = function(options) {
     events.EventEmitter.call(this);
 
-    var eng = this;
+    const eng = this;
 
     options           = options || {};
     options.dir       = options.dir || process.cwd();
@@ -140,11 +143,9 @@ var Engine = exports.Engine = function(options) {
     eng.http          = null;                    // express http server
     eng.journal       = null;                    // journal write stream
     eng.timestamp     = options.timestamp || require('monotonic-timestamp');
-
+    eng.magicOutputs  = {};                      // <headTag> -> fn|null
     eng.journalFlush  = function(cb){cb(null);}; // flush journal
-
     eng.chrjs.tag     = options.tag;
-
     eng.masterUrl     = eng.options.masterUrl;
     eng.replicateSock = null;
 
@@ -163,15 +164,15 @@ var Engine = exports.Engine = function(options) {
     return eng;
 };
 
+
 util.inherits(Engine,events.EventEmitter);
 
 Engine.prototype._saveWorld = function() {
     // +++ prevalence.batch (i.e. we are currently using `state-NEW`) +++
-    var dirCur = path.join(this.prevalenceDir,"state");
-    var dirNew = path.join(this.prevalenceDir,"state-NEW");
-    var dirOld = path.join(this.prevalenceDir,"state-OLD");
-    var syshash = null;
-    syshash = this.hashes.putFileSync(path.join(dirCur,"/journal"));
+    const  dirCur = path.join(this.prevalenceDir,"state");
+    const  dirNew = path.join(this.prevalenceDir,"state-NEW");
+    const  dirOld = path.join(this.prevalenceDir,"state-OLD");
+    const syshash = this.hashes.putFileSync(path.join(dirCur,"/journal"));
     rmRF.sync(dirNew);
     fs.mkdirSync(dirNew);
     fs.writeFileSync( path.join(dirNew,"world"),  util.serialise(syshash)+'\n');
@@ -185,7 +186,7 @@ Engine.prototype._saveWorld = function() {
 };
 
 Engine.prototype.stopPrevalence = function(quick,cb) {
-    var eng = this;
+    const eng = this;
     if (eng.journal) {          // not true if opts.readonly set
         // 'close' event for `fs.WriteStream` is undocumented _but_
         // cannot do dir renames in `_saveWorld` until journal closed.
@@ -201,7 +202,7 @@ Engine.prototype.stopPrevalence = function(quick,cb) {
 
 Engine.prototype.stop = function(unlock,cb) {
     unlock = unlock===undefined ? true : unlock;
-    var eng = this;
+    const eng = this;
     if (unlock)
         lock.unlockSync(path.join(eng.prevalenceDir,'lock'));
     if (cb) cb();
@@ -227,15 +228,15 @@ Engine.prototype._ensureStateDirectory = function() {
 };
 
 Engine.prototype.loadData = function(data,cb) {
-    var eng = this;
+    const eng = this;
     if (data==='-') {                      // stdin, stream of [<type>,{<field>:value>,...}]
         process.stdin
             .pipe(whiskey.JSONParseStream())
             .on('end',cb)
             .pipe(eng.createUpdateStream());
     } else if (/.json$/.test(data)) {      // single json array-of-arrays
-        var  arr = JSON.parse(fs.readFileSync(data));
-        var take = function() {
+        const  arr = JSON.parse(fs.readFileSync(data));
+        const take = function() {
             if (arr.length===0)
                 cb(null);
             else
@@ -251,15 +252,15 @@ Engine.prototype.loadData = function(data,cb) {
 };
 
 Engine.prototype._init = function() {
-    var eng = this;
+    const eng = this;
     try {
         fs.statSync(eng.prevalenceDir);
         throw new VError("prevalence dir %s already exists, won't init",eng.prevalenceDir);
     } catch (err) {
         if (err.code==='ENOENT') {
             try {
-                var    h = hash(util.hashAlgorithm);
-                var hdir = path.join(eng.prevalenceDir,'hashes');
+                const    h = hash(util.hashAlgorithm);
+                const hdir = path.join(eng.prevalenceDir,'hashes');
                 fs.mkdirSync(eng.prevalenceDir);
                 fs.mkdirSync(path.join(eng.prevalenceDir,'state'));
                 h.init(hdir);
@@ -277,7 +278,7 @@ Engine.prototype._init = function() {
 };
 
 Engine.prototype._ensureStateDir = function() { // after calling successfully, `state` might be loadable
-    var eng = this;
+    const eng = this;
     try {
         fs.statSync(path.join(eng.prevalenceDir,'state'));
     } catch (err) {
@@ -301,8 +302,8 @@ Engine.prototype._makeHashes = function() {
 };
 
 Engine.prototype.init = function(data) {
-    var      eng = this;
-    var jrnlFile = path.join(eng.prevalenceDir,'state','journal');
+    const      eng = this;
+    const jrnlFile = path.join(eng.prevalenceDir,'state','journal');
     eng._init();
     eng._ensureStateDir();
     eng._makeHashes();
@@ -311,7 +312,7 @@ Engine.prototype.init = function(data) {
 };
 
 Engine.prototype.start = function(cb) {
-    var eng = this;
+    const eng = this;
     lock.lockSync(path.join(eng.prevalenceDir,'lock'),eng.options);
     eng._makeHashes();
     if (cb) cb();
@@ -322,12 +323,12 @@ Engine.prototype.startPrevalence = function(opts,cb) {
         cb   = opts;
         opts = {};
     }
-    var eng = this;
+    const eng = this;
     eng._ensureStateDir();
-    var jrnlFile = path.join(eng.prevalenceDir,'state','journal');
+    const jrnlFile = path.join(eng.prevalenceDir,'state','journal');
     eng._loadWorld();
-    var residue = util.readFileLinesSync(jrnlFile,function(l) { // replay
-        var js = util.deserialise(l);
+    const residue = util.readFileLinesSync(jrnlFile,function(l) { // replay
+        const js = util.deserialise(l);
         switch (js[1]) {
         case 'update':
             eng.chrjs.update(js[2]);
@@ -340,7 +341,7 @@ Engine.prototype.startPrevalence = function(opts,cb) {
         return true;
     });
     if (residue) {
-        var jrnlSize = fs.statSync(jrnlFile).size;
+        const jrnlSize = fs.statSync(jrnlFile).size;
         console.log("truncating journal file to lose junk: %j",residue);
         fs.truncateSync(jrnlFile,jrnlSize-residue.length);
     }
@@ -349,10 +350,10 @@ Engine.prototype.startPrevalence = function(opts,cb) {
 };
 
 Engine.prototype.cacheFile = function(fn,cb) {
-    var     eng = this;
-    var    seen = {};
-    var encache = function(url,filename,entry) {
-        var ws = eng.hashes.createWriteStream();
+    const     eng = this;
+    const    seen = {};
+    const encache = function(url,filename,entry) {
+        const ws = eng.hashes.createWriteStream();
         ws.on('error',function(err){eng.emit('error',new VError(err,"cacheFile failed"));});
         ws.on('stored',function(h) {
             eng.journalise('http',[url,h]);
@@ -362,9 +363,9 @@ Engine.prototype.cacheFile = function(fn,cb) {
         });
         fs.createReadStream(filename).pipe(ws);
     };
-    var      sn = seen[fn];
-    var      st = fs.statSync(fn);
-    var      en = {mtime:st.mtime,size:st.size};
+    const    sn = seen[fn];
+    const    st = fs.statSync(fn);
+    const    en = {mtime:st.mtime,size:st.size};
     if (sn) {
         if (st.size!==sn.size || st.mtime.getTime()!==sn.mtime.getTime()) // has base file changed?
             encache(fn,fn,en);
@@ -373,8 +374,8 @@ Engine.prototype.cacheFile = function(fn,cb) {
 };
 
 Engine.prototype._loadWorld = function() {
-    var    eng = this;
-    var lineNo = 1;
+    const   eng = this;
+    let lineNo = 1;
     util.readFileLinesSync(path.join(eng.prevalenceDir,'state','world'),function(line) {
         switch (lineNo++) {
         case 1:
@@ -393,21 +394,21 @@ Engine.prototype._loadWorld = function() {
 Engine.prototype._logon = null;
 
 Engine.prototype.createExpressApp = function() {
-    var     eng = this;
-    var     app = express();
-    var jscache = {};   // req.path -> [compiled,stat]
-    var  webDir = eng.options.webDir;
+    const     eng = this;
+    const     app = express();
+    const jscache = {};   // req.path -> [compiled,stat]
+    const  webDir = eng.options.webDir;
 
-    var   viaJSCache = function(build) {
+    const viaJSCache = function(build) {
         return function(req,res) { // +++ eventually use disk cache +++
-            var filename = path.join(webDir,req.path.substr(1));
+            const filename = path.join(webDir,req.path.substr(1));
             try {
-                var entry = jscache[req.path];
+                const entry = jscache[req.path];
                 if (entry) {
-                    var clean = true;
-                    for (var fn in entry[1]) {
-                        var stat1 = fs.statSync(fn);
-                        var stat2 = entry[1][fn];
+                    let clean = true;
+                    for (const fn in entry[1]) {
+                        const stat1 = fs.statSync(fn);
+                        const stat2 = entry[1][fn];
                         if (stat1.size!==stat2.size || stat1.mtime.getTime()!==stat2.mtime.getTime() ) {
                             clean = false;
                             break;
@@ -439,12 +440,12 @@ Engine.prototype.createExpressApp = function() {
         };
     };
 
-    var doBrowserify = function(files) {
+    const doBrowserify = function(files) {
         files = Array.isArray(files) ? files : [files];
         return viaJSCache(function(_fn,cb) {
-            var        js = '';
-            var filesRead = [];
-            var         b = browserify(files,{
+            let        js = '';
+            let filesRead = [];
+            const       b = browserify(files,{
                 extensions:['.jsx','.chrjs','.malaya'],
                 transform: [reactify]
             });
@@ -461,7 +462,7 @@ Engine.prototype.createExpressApp = function() {
                     js += chunk.toString();
                 })
                 .on('end',function() {
-                    var deps = {};
+                    const deps = {};
                     filesRead.forEach(function(f) {
                         deps[f] = fs.statSync(f);
                         eng.cacheFile(f);
@@ -492,9 +493,9 @@ Engine.prototype.createExpressApp = function() {
 
     if (eng._logon)             // ??? does this work? ???
         app.use('/data',function(req,res,next) {
-            var creds = basicAuth(req);
-            var  port = eng.makeHttpPortName(req.connection,'/data');
-            var  conn = eng.conns[port];
+            const creds = basicAuth(req);
+            const  port = eng.makeHttpPortName(req.connection,'/data');
+            const  conn = eng.conns[port];
             if (!creds) {
                 res.writeHead(401,{'WWW-Authenticate':'Basic realm="example"'});
                 res.end();
@@ -518,14 +519,14 @@ Engine.prototype.createExpressApp = function() {
         res.redirect('/index.html');
     });
 
-    for (var k in eng.options.bundles)
+    for (const k in eng.options.bundles)
         app.get(k,doBrowserify(eng.options.bundles[k]));
 
     app.get('/*.chrjs',viaJSCache(true,function(filename,cb) {
         try {
-            var chrjs = fs.readFileSync(filename);
-            var    js = recast.print(compiler.compile(parser.parse(chrjs,{attrs:true}))).code;
-            var  deps = {};
+            const chrjs = fs.readFileSync(filename);
+            const    js = recast.print(compiler.compile(parser.parse(chrjs,{attrs:true}))).code;
+            const  deps = {};
             deps[filename] = fs.statSync(filename);
             eng.cacheFile(filename);
             cb(null,[js,deps]);
@@ -541,7 +542,7 @@ Engine.prototype.createExpressApp = function() {
     app.use(function(req,res,next) {
         if (req.method==='GET' || req.method==='HEAD') {
             try {
-                var fn = path.join(webDir,req.path);
+                const fn = path.join(webDir,req.path);
                 eng.cacheFile(fn,function(h) {
                     res.setHeader("Content-Type",express.static.mime.lookup(fn));
                     res.setHeader("ETag",        h);
@@ -562,8 +563,8 @@ Engine.prototype.createExpressApp = function() {
 };
 
 Engine.prototype.closeConnection = function(portName) {
-    var eng = this;
-    var  io = eng.conns[portName];
+    const eng = this;
+    const  io = eng.conns[portName];
     if (io && !io.closing) { // can be called more than once, allow for that
         io.closing = true;
         io.o.end(function() {
@@ -573,16 +574,16 @@ Engine.prototype.closeConnection = function(portName) {
 };
 
 Engine.prototype.forgetConnection = function(portName) {
-    var io = this.conns[portName];
+    const io = this.conns[portName];
     this.connIndex[io.type] = _.without(this.connIndex[io.type],portName);
     delete this.conns[portName];
     this.emit('connectionClose',portName,io.type);
 };
 
 Engine.prototype.closeAllConnections = function(type,cb) {
-    var   eng = this;
-    var ports = eng.connIndex[type] || [];
-    var     n = ports.length;
+    const   eng = this;
+    const ports = eng.connIndex[type] || [];
+    const     n = ports.length;
     if (n===0)
         cb();
     else {
@@ -599,10 +600,10 @@ Engine.prototype.closeAllConnections = function(type,cb) {
 };
 
 Engine.prototype.connectionSummary = function() {
-    var eng = this;
-    var ans = {data:0,replication:0};
-    for (var k in eng.conns) {
-        var type = eng.conns[k].type;
+    const eng = this;
+    const ans = {data:0,replication:0};
+    for (const k in eng.conns) {
+        const type = eng.conns[k].type;
         if (ans[type])
             ans[type]++;
         else
@@ -612,7 +613,7 @@ Engine.prototype.connectionSummary = function() {
 };
 
 Engine.prototype.addConnection = function(portName,io) {
-    var       eng = this;
+    const eng = this;
     if (eng.conns[portName]!==undefined)
         throw new VError("already have connection for %j",portName);
     if (!this.connIndex[io.type])
@@ -624,15 +625,15 @@ Engine.prototype.addConnection = function(portName,io) {
         eng.administer(portName);
         break;
     case 'replication': {
-        var st = fs.statSync(path.join(eng.prevalenceDir,'state','journal'));
+        const st = fs.statSync(path.join(eng.prevalenceDir,'state','journal'));
         io = eng.conns[portName];
         io.o.write(['open',{journalSize:st.size}]);
         io.i.on('readable',function() {
-            var js;
+            let js;
             while ((js=io.i.read())!==null) {
                 if (js instanceof Array && js.length===2) {
                     if (js[0]==='sync') {
-                        var src = js[1];
+                        const src = js[1];
                         if (!src.host)
                             src.host = io.host;
                         eng.emit('slave',src);
@@ -648,10 +649,10 @@ Engine.prototype.addConnection = function(portName,io) {
         break;
     }
     case 'data': {
-        var throttled = false;      // use this to ensure fairness
+        let throttled = false;      // use this to ensure fairness
         io = eng.conns[portName];
         io.i.on('readable',function() {
-            var js;
+            let js;
             while (!throttled && (js=io.i.read())!==null) {
                 if (js instanceof Array && js.length===2) {
                     js.push({port:portName});
@@ -678,8 +679,8 @@ Engine.prototype.makeHttpPortName = function(conn,prefix) { // nodejs http conne
 };
 
 Engine.prototype.listenHttp = function(mode,port,done) {
-    var  eng = this;
-    var sock = sockjs.createServer({log:function(severity,text) {
+    const  eng = this;
+    const sock = sockjs.createServer({log:function(severity,text) {
         if (['error','info'].indexOf(severity)!==-1)
             util.error(text);
     }});
@@ -687,8 +688,8 @@ Engine.prototype.listenHttp = function(mode,port,done) {
     eng.http = http.Server(eng.createExpressApp());
 
     sock.on('connection',function(conn) {
-        var portName = eng.makeHttpPortName(conn);
-        var       io = {i:null,o:null,type:null};
+        const portName = eng.makeHttpPortName(conn);
+        const       io = {i:null,o:null,type:null};
         switch (conn.prefix) {
         case '/data':
             io.type = 'data';
@@ -748,10 +749,10 @@ Engine.prototype.listenHttp = function(mode,port,done) {
 };
 
 Engine.prototype.journaliseCodeSources = function(type,item2,always,cb) {
-    var srcs = sources;
+    const srcs = sources;
     if (always || _.keys(sources).length>0) {
         sources = {};
-        for (var fn in srcs)
+        for (const fn in srcs)
             srcs[fn] = this.hashes.putFileSync(fn);
         this.journalise(type,[util.sourceVersion,item2,srcs],cb);
     } else
@@ -759,7 +760,7 @@ Engine.prototype.journaliseCodeSources = function(type,item2,always,cb) {
 };
 
 Engine.prototype._become = function(mode,cb) {
-    var eng = this;
+    const eng = this;
     if (mode===eng.mode)
         cb();
     else switch (mode) {
@@ -785,7 +786,7 @@ Engine.prototype._become = function(mode,cb) {
         case 'idle':
             switch (eng.mode) {
             case 'master': {
-                var done = _.after(2,function(err) {
+                const done = _.after(2,function(err) {
                     if (err)
                         cb(err);
                     else
@@ -812,9 +813,9 @@ Engine.prototype._become = function(mode,cb) {
 };
 
 Engine.prototype.become = function(mode) {
-    var  eng = this;
-    var port = eng.options.ports.http;
-    var main = function() {
+    const  eng = this;
+    const port = eng.options.ports.http;
+    const main = function() {
         if (mode!=='idle' && eng.mode!=='idle') { // change mode via intervening 'idle'
             eng._become('idle',function(err) {
                 if (err)
@@ -845,16 +846,16 @@ Engine.prototype.become = function(mode) {
 };
 
 Engine.prototype.journalise = function(type,data,cb) {
-    var  eng = this;
-    var  err = null;
+    const eng = this;
+    let   err = null;
     if (eng.mode==='idle' && eng.journal===null)
         console.log("discarded idle log item: %j",data);
     else {
-        var done = _.after(2,function() {
+        const done = _.after(2,function() {
             if (cb) cb(err);
         });
-        var  jit = [eng.timestamp(),type,data];
-        var  str = util.serialise(jit)+'\n';
+        const  jit = [eng.timestamp(),type,data];
+        const  str = util.serialise(jit)+'\n';
         eng.journal.write(str,'utf8',function(e) {
             err = err || e;
             if (err)
@@ -869,22 +870,38 @@ Engine.prototype.journalise = function(type,data,cb) {
 Engine.prototype.broadcast = function(js,type,cb) {
     type = type || 'data';
     cb   = cb || function(){};
-    var   eng = this;
-    var ports = eng.connIndex[type] || [];
-    var  done = _.after(1+ports.length,cb);
+    const   eng = this;
+    const ports = eng.connIndex[type] || [];
+    const  done = _.after(1+ports.length,cb);
     ports.forEach(function(port) {
         eng.conns[port].o.write(js,done);
     });
     done();                     // for when ports.length===0 as _.after won't callback then
 };
 
-Engine.prototype.update = function(data,cb) {
-    var   eng = this;
-    var   res;
-    var done2 = _.after(2,function() {
+Engine.prototype.addMagicOutput = function(tag) {
+    const eng = this;
+    // Automatically remove anything called [tag,...] at end of each
+    // update, optionally calling `fn` on it
+    // This subsumes the `_output` mechanism.
+    // +++ it should move to the compiler to avoid exporting
+    // +++ store-damaging primitives
+    eng.magicOutputs[tag] = true;
+};
+
+Engine.prototype.update = function(data,fn,cb) {
+    const   eng = this;
+    let     res;
+    const done2 = _.after(2,function() {
         res.adds.forEach(function(t) {
-            var add = res.refs[t];
-            if (add[0]==='_output') {
+            const add = res.refs[t];
+            if (Object.keys(eng.magicOutputs).length>0) {
+                if (eng.magicOutputs[add[0]]) {
+                    eng.chrjs._del(t);
+                    if (fn)
+                        fn(add);
+                }
+            } else if (add[0]==='_output') {
                 if (add.length!==3)
                     eng.emit('error',util.format("bad _output: %j",add));
                 else if (add[2]===null)
@@ -892,14 +909,14 @@ Engine.prototype.update = function(data,cb) {
                 else if (add[1]==='all')
                     eng.broadcast(add[2],'data');
                 else if (add[1]==='self') {
-                    var io = eng.conns[data[2].port];
+                    const io = eng.conns[data[2].port];
                     if (io)
                         io.o.write(add[2]);
                     else
                         console.log("*** self gone away: %j",data);
                 }
                 else {
-                    var dest = eng.conns[add[1]];
+                    const dest = eng.conns[add[1]];
                     if (dest)
                         dest.o.write(add[2]);
                 }
@@ -907,20 +924,22 @@ Engine.prototype.update = function(data,cb) {
         });
         if (cb) cb(null,res);
     });
+    if (Object.keys(eng.magicOutputs).length===0) // trad style only has two args
+        cb = fn;
     eng.journalise('update',data,done2);
     res = eng.chrjs.update(data);
     done2();
 };
 
 Engine.prototype.createUpdateStream = function() {
-    var eng = this;
+    const eng = this;
     return through2({objectMode:true},function(js,encoding,cb) {
         eng.update(js,cb);
     });
 };
 
 Engine.prototype.buildHistoryStream = function(cb) {
-    var eng = this;
+    const eng = this;
     eng.journalChain(function(err,hs) {
         if (err) throw cb(err);
         cb(null,multistream(hs.map(function(h) {
@@ -938,9 +957,9 @@ Engine.prototype.createWorldReadStream = function() {
 };
 
 Engine.prototype.walkJournalFile = function(filename,deepCheck,cb,done) {
-    var   i = 0;
+    let i = 0;
     util.readFileLinesSync(filename,function(line) {
-        var js = util.deserialise(line);
+        const js = util.deserialise(line);
         if (i++===0) {
             switch (js[1]) {
             case 'init':
@@ -952,18 +971,17 @@ Engine.prototype.walkJournalFile = function(filename,deepCheck,cb,done) {
                 cb(new VError("bad log file hash: %s",hash));
             }
         } else if (deepCheck) {
-            var k;
             switch (js[1]) {
             case 'code':
                 if (js[2][2][js[2][1]]) // hash from the bl src code filename
                     cb(null,js[2][2][js[2][1]],'bl',js[2][1]);
-                for (k in js[2][2])
+                for (const k in js[2][2])
                     cb(null,js[2][2][k],"source code",k);
                 break;
             case 'transform':
                 if (js[2][2][js[2][1]]) // hash from the transform src code filename
                     cb(null,js[2][2][js[2][1]],'transform',js[2][1]);
-                for (k in js[2][2])
+                for (const k in js[2][2])
                     cb(null,js[2][2][k],"source code",k);
                 break;
             case 'http':
@@ -978,13 +996,13 @@ Engine.prototype.walkJournalFile = function(filename,deepCheck,cb,done) {
 };
 
 Engine.prototype.walkHashes = function(hash0,deepCheck,cb,done) {
-    var eng = this;
+    const eng = this;
     // the structure of the hash store is a linear chain of journal files with
     // other items hanging off them to a depth of one.  A recursive transversal
     // is not needed to scan this exhaustively.
-    for (var h=hash0;h;) {
+    for (let h=hash0;h;) {
         /* eslint no-loop-func:0 */
-        var fn = eng.hashes.makeFilename(h);
+        const fn = eng.hashes.makeFilename(h);
         cb(null,h,"journal");
         h = null;
         eng.walkJournalFile(fn,deepCheck,function(err,hash1,what) {
@@ -1003,8 +1021,8 @@ Engine.prototype.walkHashes = function(hash0,deepCheck,cb,done) {
 };
 
 Engine.prototype.checkHashes = function(hash0,cb) {
-    var       eng = this;
-    var deepCheck = true;
+    const     eng = this;
+    let deepCheck = true;
     eng.hashes.sanityCheck(cb);
     eng.walkHashes(hash0,deepCheck,function(err,h,what) {
         if (err)
@@ -1016,8 +1034,8 @@ Engine.prototype.checkHashes = function(hash0,cb) {
 };
 
 Engine.prototype.journalChain = function(cb) { // delivers list of journal files in chronological order
-    var eng = this;
-    var  hs = [];
+    const eng = this;
+    const  hs = [];
     eng.walkJournalFile(path.join(eng.prevalenceDir,'state','journal'),
                         false,
                         function(err,x,what) {
@@ -1042,7 +1060,7 @@ Engine.prototype.journalChain = function(cb) { // delivers list of journal files
 };
 
 Engine.prototype.replicateFile = function(filename,url,opts,callback) {
-    var wstream = fs.createWriteStream(filename);
+    const wstream = fs.createWriteStream(filename);
     http.get(url,function(response) { // +++ opts +++
         response.pipe(wstream);
         wstream.on('finish',callback);
@@ -1050,9 +1068,9 @@ Engine.prototype.replicateFile = function(filename,url,opts,callback) {
 };
 
 Engine.prototype.initReplication = function(url,init,callback) {
-    var     eng = this;
-    var     err = null;
-    var gotFile = _.after(2,function() {
+    const     eng = this;
+    let       err = null;
+    const gotFile = _.after(2,function() {
         callback(err);
     });
     eng.replicateFile(path.join(eng.prevalenceDir,'state','world'),url+'replication/state/world',{},function(e) {
@@ -1068,14 +1086,14 @@ Engine.prototype.initReplication = function(url,init,callback) {
 };
 
 Engine.prototype.replicateHashes = function(url,callback) {
-    var               eng = this;
-    var          jrnlhash;       // hash of the active journal
-    var           syshash;       // `previous` hash of active journal
-    var     businessLogic;       // from active journal
-    var     hashSourceMap = {};  // `code` of active journal
-    var            hashes = {};  // <hash> -> <what>
-    var fetchHashIfAbsent = function(hash0,what,cb) {
-        var filename = eng.hashes.makeFilename(hash0);
+    const               eng = this;
+    let            jrnlhash;       // hash of the active journal
+    let             syshash;       // `previous` hash of active journal
+    let       businessLogic;       // from active journal
+    const     hashSourceMap = {};  // `code` of active journal
+    const            hashes = {};  // <hash> -> <what>
+    const fetchHashIfAbsent = function(hash0,what,cb) {
+        const filename = eng.hashes.makeFilename(hash0);
         try {
             fs.statSync(filename);
             cb(null);
@@ -1086,8 +1104,8 @@ Engine.prototype.replicateHashes = function(url,callback) {
                 cb(e);
         }
     };
-    var              next;
-    var     doJournalFile = function(hash0) {
+    let              next;
+    const   doJournalFile = function(hash0) {
         eng.walkJournalFile(eng.hashes.makeFilename(hash0),
                         true,
                         function(err,h,what,x) {
@@ -1105,7 +1123,7 @@ Engine.prototype.replicateHashes = function(url,callback) {
                         next);
     };
     next = function() {
-        var ks = _.keys(hashes);
+        const ks = _.keys(hashes);
         if (ks.length===0) {
             eng.checkHashes(jrnlhash,
                             function(err) {
@@ -1115,8 +1133,8 @@ Engine.prototype.replicateHashes = function(url,callback) {
                                     callback(null,syshash,{bl:businessLogic,map:hashSourceMap});
                             });
         } else {
-            var    h = ks[0];
-            var what = hashes[h];
+            const    h = ks[0];
+            const what = hashes[h];
             fetchHashIfAbsent(h,what,function(e) {
                 if (e)
                     callback(e);
@@ -1141,14 +1159,14 @@ Engine.prototype._replicationSource = function() {
 };
 
 Engine.prototype.replicateFrom = function(url) { // `url` is base e.g. http://localhost:3000/
-    var       eng = this;
-    var    SockJS = require('node-sockjs-client');
-    var      sock = new SockJS(url+'replication/journal');
-    var   started = false;
-    var   pending = [];
-    var      tidy = false;
-    var doJournal = function(js,cb) {
-        var  str = util.serialise(js)+'\n';
+    const       eng = this;
+    const    SockJS = require('node-sockjs-client');
+    const      sock = new SockJS(url+'replication/journal');
+    let     started = false;
+    let     pending = [];
+    const      tidy = false;
+    const doJournal = function(js,cb) {
+        const str = util.serialise(js)+'\n';
         eng.journal.write(str,'utf8',cb);
         if (js[1]==='update')
             eng.chrjs.update(js[2]);
@@ -1157,9 +1175,9 @@ Engine.prototype.replicateFrom = function(url) { // `url` is base e.g. http://lo
     eng.replicateSock = sock;
 
     sock.onopen = function() {
-        var journalFile = path.join(eng.prevalenceDir,'state','journal');
+        const journalFile = path.join(eng.prevalenceDir,'state','journal');
         if (fs.existsSync(journalFile)) {
-            var syshash = eng.hashes.putFileSync(journalFile);
+            const syshash = eng.hashes.putFileSync(journalFile);
             console.log("saving old journal as: %s",syshash);
         }
         if (fs.existsSync(path.join(eng.prevalenceDir,'state')))
@@ -1168,7 +1186,7 @@ Engine.prototype.replicateFrom = function(url) { // `url` is base e.g. http://lo
     };
 
     sock.onmessage = function(e) {
-        var js = util.deserialise(e.data);
+        const js = util.deserialise(e.data);
         if (!started) {
             eng.initReplication(url,js[1],function(err) {
                 if (err)
@@ -1187,7 +1205,7 @@ Engine.prototype.replicateFrom = function(url) { // `url` is base e.g. http://lo
                                     eng.emit('error',err2);
                                 else {
                                     eng.emit('loaded','state');
-                                    var doPending = function() {
+                                    const doPending = function() {
                                         if (pending.length!==0) {
                                             doJournal(pending.pop());
                                             doPending();
@@ -1220,7 +1238,7 @@ Engine.prototype.replicateFrom = function(url) { // `url` is base e.g. http://lo
             if (err1)
                 eng.emit('error',err1);
             else {
-                var syshash = eng.hashes.putFileSync(path.join(eng.prevalenceDir,'state','journal'));
+                const syshash = eng.hashes.putFileSync(path.join(eng.prevalenceDir,'state','journal'));
                 util.debug("replication socket closed %s: %s",(tidy?"nicely":"roughly"),syshash);
                 eng.replicateSock = null;
                 eng.become('idle',function() {
@@ -1232,8 +1250,8 @@ Engine.prototype.replicateFrom = function(url) { // `url` is base e.g. http://lo
 };
 
 Engine.prototype.administer = function(port) {
-    var eng = this;
-    var  io = eng.conns[port];
+    const eng = this;
+    const  io = eng.conns[port];
     io.o.write(['engine',{syshash:   eng.syshash,
                           mode:      eng.mode,
                           masterUrl: eng.masterUrl,
@@ -1241,7 +1259,7 @@ Engine.prototype.administer = function(port) {
                           ip:        ip.address(),
                           tag:       eng.tag}]);
     io.i.on('readable',function() {
-        var js;
+        let js;
         while ((js=io.i.read())!==null) {
             console.log("*** admin: %j",js);
             try {
@@ -1250,7 +1268,7 @@ Engine.prototype.administer = function(port) {
                     eng.become(js[1]);
                     break;
                 case 'engine':
-                    for (var k in js[1]) {
+                    for (const k in js[1]) {
                         switch (k) {
                         case 'mode':
                             eng.become(js[1][k]);

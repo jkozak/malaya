@@ -1,11 +1,11 @@
 "use strict";
 /*eslint-disable no-extend-native*/
 
-var _util = require('util');
-var shell = require('shelljs');
-var    os = require('os');
-var    fs = require('fs');
-var  path = require('path');
+const _util = require('util');
+const shell = require('shelljs');
+const    os = require('os');
+const    fs = require('fs');
+const  path = require('path');
 
 exports.verbosity     = 3;
 exports.hashAlgorithm = 'sha1';
@@ -34,11 +34,11 @@ exports.printf  = function (msg) {
 exports.inherits = _util.inherits;
 
 exports.readFdLinesSync = function(fd,fn) {
-    var bufferSize = 1024;
-    var buffer     = new Buffer(bufferSize);
-    var leftOver   = '';
-    var done       = false;
-    var read,line,idxStart,idx;
+    const bufferSize = 1024;
+    const buffer     = new Buffer(bufferSize);
+    let   leftOver   = '';
+    let   done       = false;
+    let   read,line,idxStart,idx;
     while (!done && (read=fs.readSync(fd,buffer,0,bufferSize,null))!==0) {
         leftOver += buffer.toString('utf8',0,read);
         idxStart  = 0;
@@ -56,7 +56,7 @@ exports.readFdLinesSync = function(fd,fn) {
 };
 
 exports.readFileLinesSync = function(path0,fn) {
-    var fd = fs.openSync(path0,"r+");
+    const fd = fs.openSync(path0,"r+");
     try {
         return exports.readFdLinesSync(fd,fn);
     } finally {
@@ -69,7 +69,7 @@ exports.readFileLinesSync = function(path0,fn) {
 //     string "abc" is encoded as ":abc"
 //     date   DDD   is encoded as "date:"+DDD
 //     ...
-var serialise = function(v0) {
+const serialise = function(v0) {
     return JSON.stringify(v0,function(k,v) {
         if (v instanceof Date)
             return "date:"+v.toISOString();
@@ -79,7 +79,7 @@ var serialise = function(v0) {
             return v;
     });
 };
-var deserialise = function(v) {
+const deserialise = function(v) {
     if (typeof v!=="string")
         return v;
     else if (v.charAt(0)===':')
@@ -111,7 +111,7 @@ process.on('uncaughtException', function(err) {
 
 exports.serialise = function(v) {
     // disable standard `toJSON` processing which we replace above
-    var saveDate = Date.prototype.toJSON;
+    const saveDate = Date.prototype.toJSON;
     try {
         Date.prototype.toJSON = function(){return this;};
         return serialise(v);
@@ -141,8 +141,8 @@ exports.endsWith = function(str,suffix) {
 // environmental stuff
 
 exports.sourceVersion = (function() {
-    var cmd;
-    var out;
+    let cmd;
+    let out;
     cmd = shell.exec("hg id -t",{silent:true});
     out = cmd.output.trim();
     if (cmd.code===0 && out!=='' && out!=='tip')
@@ -160,7 +160,7 @@ exports.sourceVersion = (function() {
 exports.onWindows = /^win/.test(os.platform());
 
 exports.env = (function() {
-    var env = process.env.NODE_ENV;
+    const env = process.env.NODE_ENV;
     if (env==='production')
         env = 'prod';
     if (env==='' || env===undefined || env==='development')
@@ -172,7 +172,7 @@ exports.env = (function() {
 
 exports.inspect = _util.inspect;
 
-if (exports.env==='test') 
+if (exports.env==='test')
     exports._private = {
         deserialise: deserialise
     };

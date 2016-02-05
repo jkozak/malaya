@@ -2,16 +2,16 @@
 
 // all-in-one command to administer malaya
 
-var     fs = require('fs');
-var   path = require('path');
-var VError = require('verror');
-var assert = require('assert');
-var   util = require('./util.js');
-var execCP = require('child_process').exec;
+const     fs = require('fs');
+const   path = require('path');
+const VError = require('verror');
+const assert = require('assert');
+const   util = require('./util.js');
+const execCP = require('child_process').exec;
 
 // configure main arg parser
 
-var argparse = new (require('argparse').ArgumentParser)({
+const argparse = new (require('argparse').ArgumentParser)({
     addHelp:     true,
     description: "tiny vegetarian mosquito"
 });
@@ -38,13 +38,13 @@ exports.argparse = argparse;
 
 // configure subcommand parsers
 
-var subparsers = argparse.addSubparsers({
+const subparsers = argparse.addSubparsers({
     title: 'subcommands',
     dest:  'subcommandName'
 });
-var subcommands = exports.subcommands = {};
+const subcommands = exports.subcommands = {};
 
-var addSubcommand = exports.addSubcommand = function(name,opts) {
+const addSubcommand = exports.addSubcommand = function(name,opts) {
     subcommands[name] = subparsers.addParser(name,opts);
     assert.strictEqual(subcommands[name].exec,undefined); // we'll be using this later
     return subcommands[name];
@@ -284,16 +284,16 @@ process.on('uncaughtException',function(err) {
 });
 
 exports.run = function(opts0) {
-    var          opts = opts0 || {};
-    var          args = argparse.parseArgs();
-    var prevalenceDir = path.resolve(args.prevalence_directory);
-    var hashAlgorithm = opts.hashAlgorithm || util.hashAlgorithm;
+    const          opts = opts0 || {};
+    const          args = argparse.parseArgs();
+    const prevalenceDir = path.resolve(args.prevalence_directory);
+    const hashAlgorithm = opts.hashAlgorithm || util.hashAlgorithm;
 
     exports.verbosity = args.verbose-args.quiet;
     exports.args      = args;
 
-    var findCallback = function() { // extract the callback for single-shot use.
-        var cb;
+    const findCallback = function() { // extract the callback for single-shot use.
+        let cb;
         if (opts.callback) {
             cb = opts.callback;
             delete opts.callback;
@@ -302,14 +302,14 @@ exports.run = function(opts0) {
         return cb;
     };
 
-    var checkDirectoriesExist = function() {
+    const checkDirectoriesExist = function() {
         if (!fs.existsSync(prevalenceDir))
             throw new VError("can't find prevalence directory");
         if (!fs.existsSync(path.join(prevalenceDir,'state')))
             throw new VError("can't find state directory");
     };
 
-    var installSignalHandlers = function(eng) {
+    const installSignalHandlers = function(eng) {
         /* eslint no-process-exit:0 */
         process.on('SIGINT',function() {
             process.stderr.write(' interrupt\n');
@@ -334,10 +334,10 @@ exports.run = function(opts0) {
         });
     };
 
-    var compile = function(source,options) {
-        var    parse = require('./parser.js').parse;
-        var compiler = require('./compiler.js');
-        var   recast = require('recast');
+    const compile = function(source,options) {
+        const    parse = require('./parser.js').parse;
+        const compiler = require('./compiler.js');
+        const   recast = require('recast');
         options        = options || {attrs:true};
         compiler.debug = args.debug;
         return recast.print(compiler.compile(parse(fs.readFileSync(source),options))).code;
@@ -345,31 +345,31 @@ exports.run = function(opts0) {
 
     // basic tracing facility
     // +++ move to `Engine`, make an `emit` stream +++
-    var isFactInteresting = function(f) {        // what's worth tracing?
+    const isFactInteresting = function(f) {        // what's worth tracing?
         return ['_tick','_take-outputs','_output'].indexOf(f[0])===-1;
     };
-    var isAddInteresting = function(add) {
+    const isAddInteresting = function(add) {
         return isFactInteresting(add);
     };
-    var isTraceInteresting = function(firing) {
+    const isTraceInteresting = function(firing) {
         if (firing.adds.length!==0)
             return true;
         if (firing.dels.filter(function(d){return isFactInteresting(d);}).length===0)
             return false;
         return true;
     };
-    var traceChrjs = function(chrjs,source) {
+    const traceChrjs = function(chrjs,source) {
         // rule invocations nest, but that's an implementation detail;
         // so we use `stack` and `outQ` to flatten out the display
-        var compiler = require('./compiler.js');
-        var    stack = [];
-        var     outQ = [];
-        var  ruleMap = compiler.getRuleMap(source);
-        var mySource = path.relative(process.cwd(),source);
-        var provoker = null;
-        var  borings = 0;       // count of `add`s deemed not interesting
+        const compiler = require('./compiler.js');
+        const    stack = [];
+        const     outQ = [];
+        const  ruleMap = compiler.getRuleMap(source);
+        const mySource = path.relative(process.cwd(),source);
+        const provoker = null;
+        const  borings = 0;       // count of `add`s deemed not interesting
         chrjs.on('queue-rule',function(id,bindings) {
-            var firing = {id:id,done:false,dels:[],adds:[],t:Date.now()};
+            const firing = {id:id,done:false,dels:[],adds:[],t:Date.now()};
             stack.push(firing);
             outQ.push(firing);
         });
@@ -393,11 +393,11 @@ exports.run = function(opts0) {
                 stack[stack.length-1].dels.push(f);
         });
         chrjs.on('finish-rule',function(id) {
-            var firing = stack.pop();
+            const firing = stack.pop();
             assert.strictEqual(firing.id,id);
             firing.done = true;
             while (outQ.length>0 && outQ[0].done) { /* eslint no-loop-func:0 */
-                var firing1 = outQ.shift();
+                const firing1 = outQ.shift();
                 if (isTraceInteresting(firing1)) {
                     if (provoker) {
                         console.log("> %j",provoker);
@@ -416,16 +416,16 @@ exports.run = function(opts0) {
         });
     };
 
-    var _createEngine = opts.createEngine || function(options) {
-        var engine = require('./engine.js');
-        var    eng = new engine.Engine(options);
+    const _createEngine = opts.createEngine || function(options) {
+        const engine = require('./engine.js');
+        const    eng = new engine.Engine(options);
         return eng;
     };
-    
-    var createEngine = function(options) {
+
+    const createEngine = function(options) {
         options               = options || {};
         options.prevalenceDir = prevalenceDir;
-        var eng = _createEngine(options);
+        const eng = _createEngine(options);
         eng.on('mode',function(mode) {
             console.log("mode now: %s",mode);
         });
@@ -435,7 +435,7 @@ exports.run = function(opts0) {
             else
                 console.log("slave offline");
             if (args.auto) {
-                var sp = where===null ? {} : {port:where.ports.http,server:where.host};
+                const sp = where===null ? {} : {port:where.ports.http,server:where.host};
                 eng.broadcast({'_spare':sp});
             }
         });
@@ -450,7 +450,7 @@ exports.run = function(opts0) {
             fs.createReadStream(path.join(args.prevalence_directory,'state',args.what)).pipe(process.stdout);
             break;
         case 'history': {
-            var eng = createEngine({});
+            const eng = createEngine({});
             eng._makeHashes();
             eng.buildHistoryStream(function(err,history) {
                 if (err) throw err;
@@ -459,8 +459,8 @@ exports.run = function(opts0) {
             break;
         }
         default: {
-            var   hash = require('./hash.js')(hashAlgorithm);
-            var hstore = hash.makeStore(path.join(prevalenceDir,'hashes'));
+            const   hash = require('./hash.js')(hashAlgorithm);
+            const hstore = hash.makeStore(path.join(prevalenceDir,'hashes'));
             fs.createReadStream(hstore.makeFilename(args.what)).pipe(process.stdout);
             break;
         }
@@ -472,8 +472,8 @@ exports.run = function(opts0) {
     };
 
     subcommands.init.exec = function() {
-        var eng = createEngine({businessLogic:path.resolve(args.source)});
-        var  cb = findCallback();
+        const eng = createEngine({businessLogic:path.resolve(args.source)});
+        const  cb = findCallback();
         eng.init();
         eng.start();
         if (args.data) {
@@ -482,7 +482,7 @@ exports.run = function(opts0) {
                     cb(err1);
                 else
                     eng.loadData(args.data,function(err2) {
-                        if (err2) 
+                        if (err2)
                             cb(err2);
                         else
                             eng.stopPrevalence(false,function(err3) {
@@ -493,16 +493,16 @@ exports.run = function(opts0) {
         }
     };
 
-    var tickInterval = null;
+    let tickInterval = null;
     subcommands.run.exec = function() {
         checkDirectoriesExist();
-        var     auto = args.auto;
-        var   source = path.resolve(args.source);
-        var  options = {businessLogic: source,
-                        debug:         args.debug,
-                        ports:         {http:args.webPort},
-                        masterUrl:     args.masterUrl};
-        var      eng = createEngine(options);
+        const     auto = args.auto;
+        const   source = path.resolve(args.source);
+        const  options = {businessLogic: source,
+                          debug:         args.debug,
+                          ports:         {http:args.webPort},
+                          masterUrl:     args.masterUrl};
+        const      eng = createEngine(options);
         eng.on('listen',function(protocol,port) {
             util.debug("%s listening on *:%s",protocol,port);
             if (args.adminUI && protocol==='http') {
@@ -517,8 +517,8 @@ exports.run = function(opts0) {
                        });
             }
             if (args.prefetchBundles) {
-                var http = require('http');
-                for (var k in eng.options.bundles) {
+                const http = require('http');
+                for (let k in eng.options.bundles) {
                     http.request({
                         port:args.webPort,
                         path:k
@@ -534,14 +534,14 @@ exports.run = function(opts0) {
         });
         eng.start();
         eng.on('become',function(mode) {
-            if (tickInterval) 
+            if (tickInterval)
                 clearInterval(tickInterval);
             if (auto && mode==='master') {
                 tickInterval = setInterval(function() {
                     eng.update(['_tick',{date:new Date()},{port:'server:'}]);
                     eng.update(['_take-outputs',{},{port:'server:'}]);
                 },1000);
-            } else 
+            } else
                 tickInterval = null;
         });
         if (args.debug)
@@ -557,21 +557,19 @@ exports.run = function(opts0) {
     subcommands.transform.exec = function() {
         checkDirectoriesExist();
         require('./compiler.js'); // for .chrjs extension
-        var     cb = findCallback();
-        var engine = require('./engine.js');
-        var    eng = createEngine({debug:args.debug});
-        var source = path.resolve(process.cwd(),args.transform);
-        var  chrjs = require(source);
-        var  print = args.stdout;
-        var   fact;
-        var      t;
+        const     cb = findCallback();
+        const engine = require('./engine.js');
+        const    eng = createEngine({debug:args.debug});
+        const source = path.resolve(process.cwd(),args.transform);
+        const  chrjs = require(source);
+        const  print = args.stdout;
         eng.chrjs = engine.makeInertChrjs();
         eng.start();
         if (args.debug)
             traceChrjs(chrjs,source);
         eng.startPrevalence(function(err) {
-            for (t=1;t<eng.chrjs.t;t++) {
-                fact = eng.chrjs.get(t+'');
+            for (let t=1;t<eng.chrjs.t;t++) {
+                const fact = eng.chrjs.get(t+'');
                 if (fact) {
                     if (!(fact instanceof Array && fact.length===2)) {
                         console.log("bad fact in store to be transformed: %j",fact);
@@ -583,8 +581,8 @@ exports.run = function(opts0) {
             }
             chrjs.add(['_transform',{},{keep:false}]); // for global operations
             if (print) {
-                for (t=1;t<chrjs.t;t++) {
-                    fact = chrjs.get(t+'');
+                for (let t=1;t<chrjs.t;t++) {
+                    const fact = chrjs.get(t+'');
                     if (fact) {
                         if (!(fact instanceof Array && [2,3].indexOf(fact.length)!==-1))
                             return cb(new VError("bad fact from transform: %j",fact));
@@ -599,8 +597,8 @@ exports.run = function(opts0) {
                         cb(err1);
                     else {
                         eng.chrjs = engine.makeInertChrjs();
-                        for (t=1;t<chrjs.t;t++) {
-                            fact = chrjs.get(t+'');
+                        for (let t=1;t<chrjs.t;t++) {
+                            const fact = chrjs.get(t+'');
                             if (fact) {
                                 if (!(fact instanceof Array && [2,3].indexOf(fact.length)!==-1))
                                     return cb(new VError("bad fact from transform: %j",fact));
@@ -617,31 +615,31 @@ exports.run = function(opts0) {
 
     subcommands.save.exec = function() {
         checkDirectoriesExist();
-        var lock = require("./lock.js");
-        var data = lock.lockDataSync(path.join(prevalenceDir,'lock'));
+        const lock = require("./lock.js");
+        const data = lock.lockDataSync(path.join(prevalenceDir,'lock'));
         if (data===null || data.pid===null)
             util.printf("not running\n");
-        else 
+        else
             process.kill(data.pid,'SIGHUP');
     };
 
     subcommands.status.exec = function() {
         checkDirectoriesExist();
-        var lock   = require("./lock.js");
-        var moment = require('moment');
-        var pLock  = path.join(prevalenceDir,'lock');
-        var data   = lock.lockDataSync(pLock);
-        var hash   = require('./hash.js')(hashAlgorithm);
-        var hstore = hash.makeStore(path.join(prevalenceDir,'hashes'));
-        var tfmt   = "YYYY-MM-DD HH:mm:ss";
+        const   lock = require("./lock.js");
+        const moment = require('moment');
+        const  pLock = path.join(prevalenceDir,'lock');
+        const   data = lock.lockDataSync(pLock);
+        const   hash = require('./hash.js')(hashAlgorithm);
+        const hstore = hash.makeStore(path.join(prevalenceDir,'hashes'));
+        const   tfmt = "YYYY-MM-DD HH:mm:ss";
         util.printf("stashed: %d hashes\n",hstore.getHashes().length);
         if (data===null || data.pid===null)
             util.printf("server:  not running\n");
         else {
-            var    stLock = fs.statSync(pLock);
-            var    pWorld = path.join(prevalenceDir,'state','world');
-            var   stWorld = fs.statSync(pWorld);
-            var stJournal = fs.statSync(path.join(prevalenceDir,'state','journal'));
+            const    stLock = fs.statSync(pLock);
+            const    pWorld = path.join(prevalenceDir,'state','world');
+            const   stWorld = fs.statSync(pWorld);
+            const stJournal = fs.statSync(path.join(prevalenceDir,'state','journal'));
             util.readFileLinesSync(pWorld,function(l) {
                 util.printf("syshash: %s\n",util.deserialise(l));
                 return false;
@@ -649,7 +647,7 @@ exports.run = function(opts0) {
             util.printf("server:\t running (pid %d) since %s\n",data.pid,moment(stLock.mtime).format(tfmt));
             util.printf("world:\t %d bytes, saved at %s\n",stWorld.size,  moment(stWorld.mtime).format(tfmt));
             util.printf("journal: %d bytes, updated %s\n",stJournal.size,moment(stJournal.mtime).format(tfmt));
-            for (var k in data.ports) {
+            for (const k in data.ports) {
                 util.printf("%s:\t listening on *:%d\n",k,data.ports[k]);
             }
         }
@@ -657,16 +655,14 @@ exports.run = function(opts0) {
 
     subcommands.dump.exec = function() {
         checkDirectoriesExist();
-        var engine = require('./engine.js');
-        var    eng = createEngine({});
-        var   fact;
-        var      t;
+        const engine = require('./engine.js');
+        const    eng = createEngine({});
         eng.chrjs = engine.makeInertChrjs();
         eng.start();
-        for (t=1;t<eng.chrjs.t;t++) {
-            fact = eng.chrjs.get(t+'');
+        for (const t=1;t<eng.chrjs.t;t++) {
+            const fact = eng.chrjs.get(t+'');
             if (fact) {
-                var text = args.serialise ? util.serialise(fact) : JSON.stringify(fact);
+                const text = args.serialise ? util.serialise(fact) : JSON.stringify(fact);
                 process.stdout.write(text);
                 process.stdout.write('\n');
             }
@@ -674,8 +670,8 @@ exports.run = function(opts0) {
     };
 
     subcommands.client.exec = function() {
-        var client = require('./client.js');
-        var    url = args.url || client.findURL(args.urlPath);
+        const client = require('./client.js');
+        const    url = args.url || client.findURL(args.urlPath);
         if (args.urlPath && args.url)
             throw new VError("can't specify URL and connection type");
         if (!url)
@@ -687,10 +683,10 @@ exports.run = function(opts0) {
         else
             client.repl(url);
     };
-    
+
     subcommands.logs.exec = function() {
         checkDirectoriesExist();
-        var eng = createEngine({});
+        const eng = createEngine({});
         eng._makeHashes();
         eng.journalChain(function(err,hs) {
             if (err)
@@ -700,13 +696,13 @@ exports.run = function(opts0) {
             });
         });
     };
-    
+
     if (subcommands[args.subcommandName]===undefined)
         throw new VError("unknown subcommand: %s",args.subcommandName);
     if (subcommands[args.subcommandName].exec===undefined)
         throw new VError("NYI: subcommand `%s`",args.subcommandName);
-    
+
     subcommands[args.subcommandName].exec(args);
-    
+
     findCallback()(null);
 };
