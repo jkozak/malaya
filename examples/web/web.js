@@ -1,6 +1,5 @@
 "use strict";
 
-const       path = require('path');
 const       util = require('malaya/util.js');
 const     Engine = require('malaya/engine.js').Engine;
 const    express = require('malaya/engine.js').express;
