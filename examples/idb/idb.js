@@ -1,20 +1,20 @@
 "use strict";
 
-var     net = require('net');
-var    path = require('path');
-var  stream = require('stream');
-var  assert = require('assert');
-var     x2j = require('./x2j.js');
-var  malaya = require('malaya');
+const     net = require('net');
+const    path = require('path');
+const  stream = require('stream');
+const  assert = require('assert');
+const     x2j = require('./x2j.js');
+const  malaya = require('malaya');
 
-var    util = malaya.util;
-var  Engine = malaya.engine.Engine;
+const    util = malaya.util;
+const  Engine = malaya.engine.Engine;
 
-var FE3_HDR_LENGTH = 24;
-var AP_HEARTBEAT   = 909;
-var AP_XML2        = 893;
-var AP_XML2A       = 918;
-var NUL            = new Buffer('\x00');
+const FE3_HDR_LENGTH = 24;
+const AP_HEARTBEAT   = 909;
+const AP_XML2        = 893;
+const AP_XML2A       = 918;
+const NUL            = new Buffer('\x00');
 
 function fixXmlTypes(fact) {                // replace some type information lost to XML
     switch (fact[0]) {
@@ -99,8 +99,8 @@ function fixXmlTypes(fact) {                // replace some type information los
 }
 
 function FE3(sock) {
-    var recved = new Buffer(0);
-    var    fe3 = this;
+    const  fe3 = this;
+    let recved = new Buffer(0);
     stream.Duplex.call(fe3,{objectMode:true});
     fe3.sock = sock;
     fe3.nq   = 0;
@@ -110,15 +110,15 @@ function FE3(sock) {
         // +++ use pause/resume for the time being +++
         recved = Buffer.concat([recved,data]);
         while (recved.length>=FE3_HDR_LENGTH) {
-            var   type = recved.readInt32LE( 0);
-            var cbData = recved.readInt32LE(12);
+            const   type = recved.readInt32LE( 0);
+            const cbData = recved.readInt32LE(12);
             if (recved.length>=FE3_HDR_LENGTH+cbData) {
                 switch (type) {
                 case AP_XML2A: {
-                    var xml = recved.toString('ascii',FE3_HDR_LENGTH+4,FE3_HDR_LENGTH+cbData-1);
-                    var jsx = x2j.parse(xml);
+                    const xml = recved.toString('ascii',FE3_HDR_LENGTH+4,FE3_HDR_LENGTH+cbData-1);
+                    const jsx = x2j.parse(xml);
                     assert.equal(Object.keys(jsx).length,1);
-                    var tag = Object.keys(jsx)[0];
+                    const tag = Object.keys(jsx)[0];
                     fe3.push(fixXmlTypes([tag,jsx[tag]]));
                     break;
                 }
@@ -142,8 +142,8 @@ FE3.prototype._read = function() {
 };
 
 FE3.prototype._write = function(chunk,encoding,cb) {
-    var xml = x2j.build(chunk);
-    var hdr = new Buffer(FE3_HDR_LENGTH);
+    const xml = x2j.build(chunk);
+    const hdr = new Buffer(FE3_HDR_LENGTH);
     hdr.writeInt32LE(AP_XML2,      0); // type
     hdr.writeInt32LE(0,            4); // drain
     hdr.writeInt32LE(0,            8); // ticks
@@ -162,7 +162,7 @@ FE3.prototype.push = function(x) {
     return stream.Duplex.prototype.push.call(this,x);
 };
 FE3.prototype.read = function(x) {
-    var ans = stream.Duplex.prototype.read.call(this,x);
+    const ans = stream.Duplex.prototype.read.call(this,x);
     if (ans!==null) {
         //if (--this.nq<this.qMax)
         //    this.resume();
@@ -170,10 +170,10 @@ FE3.prototype.read = function(x) {
     return ans;
 };
 
-var createFE3Server = function(eng) {
+const createFE3Server = function(eng) {
     return net.createServer(function(sock) {
-        var  fe3 = new FE3(sock);
-        var name = util.format("fe3://%s:%d/",sock.remoteAddress,sock.remotePort);
+        const  fe3 = new FE3(sock);
+        const name = util.format("fe3://%s:%d/",sock.remoteAddress,sock.remotePort);
         eng.addConnection(name,{i:fe3,o:fe3,type:'data'});
         sock.on('error',function(){sock.end();});
         sock.on('close',function(){eng.closeConnection(name);});
@@ -181,7 +181,7 @@ var createFE3Server = function(eng) {
 };
 
 function IDBEngine(options) {
-    var eng = this;
+    const eng = this;
     options.bundles = {
         "/bundle.js":[path.join(process.cwd(),'www/index.jsx')]
     };
@@ -194,8 +194,8 @@ function IDBEngine(options) {
 util.inherits(IDBEngine,Engine);
 
 IDBEngine.prototype.closeConnection = function(portName) {
-    var eng = this;
-    var  io = eng.conns[portName];
+    const eng = this;
+    const  io = eng.conns[portName];
     if (io && !io.closing) { // can be called more than once, allow for that
         eng.update(['logoff',{},{port:portName}],function() {
             Engine.prototype.closeConnection.call(eng,portName);
@@ -204,8 +204,8 @@ IDBEngine.prototype.closeConnection = function(portName) {
 };
 
 IDBEngine.prototype._become = function(mode,cb) {
-    var  eng = this;
-    var done = function(e) {
+    const  eng = this;
+    const done = function(e) {
         if (e)
             cb(e);
         else
@@ -219,8 +219,8 @@ IDBEngine.prototype._become = function(mode,cb) {
     } else if (eng.options.ports.fe3 && eng.mode==='idle' && mode==='master') {
         eng.fe3Server = createFE3Server(eng);
         eng.on('slave',function(where) {
-            var sp = where===null ? {} : {port:where.ports.fe3,server:where.host};
-            for (var port in eng.conns)
+            const sp = where===null ? {} : {port:where.ports.fe3,server:where.host};
+            for (const port in eng.conns)
                 if (util.startsWith(port,'fe3:'))
                     eng.conns[port].o.write({_spareFE3:sp});
         });
@@ -234,15 +234,15 @@ IDBEngine.prototype._become = function(mode,cb) {
 };
 
 IDBEngine.prototype._replicationSource = function() {
-    var eng = this;
-    var ans = Engine.prototype._replicationSource.call(eng);
+    const eng = this;
+    const ans = Engine.prototype._replicationSource.call(eng);
     if (eng.options.ports.fe3)
         ans.ports.fe3 = eng.options.ports.fe3;
     return ans;
 };
 
 IDBEngine.prototype._logon = function(creds,port,cb) {
-    var eng = this;
+    const eng = this;
     eng.conns[port] = {type:'data',
                        i:   null,
                        o:   new stream.PassThrough({objectMode:true})

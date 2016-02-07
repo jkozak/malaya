@@ -19,6 +19,7 @@
   "license": "ISC",
   "dependencies": {
     "body-parser": "^1.14.2",
+    "express-minify": "^0.2.0",
     "underscore": "^1.8.3"
   },
   "devDependencies": {

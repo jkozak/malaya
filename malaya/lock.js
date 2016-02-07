@@ -65,12 +65,12 @@ exports.lockDataSync = function(filename) {
 };
 
 exports.pidLockedSync = function(filename) {
-    let data = exports.lockDataSync(filename);
+    const data = exports.lockDataSync(filename);
     return data===null ? null : data.pid;
 };
 
 exports.unlockSync = function(filename) {
-    let data = exports.lockDataSync(filename);
+    const data = exports.lockDataSync(filename);
     if (data===null)
         throw new VError("lockfile %s does not exist",filename);
     if (data.pid!==process_.pid)

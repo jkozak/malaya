@@ -443,9 +443,9 @@ Engine.prototype.createExpressApp = function() {
     const doBrowserify = function(files) {
         files = Array.isArray(files) ? files : [files];
         return viaJSCache(function(_fn,cb) {
-            let        js = '';
-            let filesRead = [];
-            const       b = browserify(files,{
+            let          js = '';
+            const filesRead = [];
+            const         b = browserify(files,{
                 extensions:['.jsx','.chrjs','.malaya'],
                 transform: [reactify]
             });
@@ -583,7 +583,7 @@ Engine.prototype.forgetConnection = function(portName) {
 Engine.prototype.closeAllConnections = function(type,cb) {
     const   eng = this;
     const ports = eng.connIndex[type] || [];
-    const     n = ports.length;
+    let       n = ports.length;
     if (n===0)
         cb();
     else {
@@ -689,7 +689,7 @@ Engine.prototype.listenHttp = function(mode,port,done) {
 
     sock.on('connection',function(conn) {
         const portName = eng.makeHttpPortName(conn);
-        const       io = {i:null,o:null,type:null};
+        let         io = {i:null,o:null,type:null};
         switch (conn.prefix) {
         case '/data':
             io.type = 'data';
@@ -1021,8 +1021,8 @@ Engine.prototype.walkHashes = function(hash0,deepCheck,cb,done) {
 };
 
 Engine.prototype.checkHashes = function(hash0,cb) {
-    const     eng = this;
-    let deepCheck = true;
+    const       eng = this;
+    const deepCheck = true;
     eng.hashes.sanityCheck(cb);
     eng.walkHashes(hash0,deepCheck,function(err,h,what) {
         if (err)

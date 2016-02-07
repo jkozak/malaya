@@ -26,12 +26,12 @@ function getMessageType(message) {
 
 module.exports = function(results) {
 
-    var output = "",
-        total = 0;
+    let output = "";
+    let  total = 0;
 
     results.forEach(function(result) {
 
-        var messages = result.messages;
+        const messages = result.messages;
         total += messages.length;
 
         messages.forEach(function(message) {

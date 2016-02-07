@@ -160,7 +160,7 @@ exports.sourceVersion = (function() {
 exports.onWindows = /^win/.test(os.platform());
 
 exports.env = (function() {
-    const env = process.env.NODE_ENV;
+    let env = process.env.NODE_ENV;
     if (env==='production')
         env = 'prod';
     if (env==='' || env===undefined || env==='development')

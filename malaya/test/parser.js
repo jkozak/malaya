@@ -200,7 +200,7 @@ const chrjsTestFixture = {      // see esprima/test/test.js for format
 describe("esprima-based parser",function() {
     it("should pass original javascript tests",function() {
         let   total    = 0;
-        let   failures = [];
+        const failures = [];
         this.timeout(5000);
         vm.runInThisContext(fs.readFileSync(path.join(__dirname,'../node_modules/esprima/test/test.js'),'utf-8'));
         // this code largely taken from the esprima test runner
@@ -217,7 +217,7 @@ describe("esprima-based parser",function() {
         };
         NotMatchingError.prototype = new Error();
         const errorToObject = function(e) {
-            const msg = e.toString();
+            let msg = e.toString();
 
             // Opera 9.64 produces an non-standard string in toString().
             if (msg.substr(0, 6) !== 'Error:') {
@@ -515,7 +515,7 @@ describe("esprima-based parser",function() {
 
 describe("visit",function() {
     it("should visit StoreDeclaration",function(){
-        var ok = false;
+        let ok = false;
         parser.visit(parser.parse("store {}"),
                       {
                           visitStoreDeclaration: function(node) {
@@ -525,7 +525,7 @@ describe("visit",function() {
         assert(ok);
     });
     it("should visit RuleStatement",function(){
-        var n = 0;
+        let n = 0;
         parser.visit(parser.parse("store {rule (['a'])}"),
                       {
                           visitStoreDeclaration: function(node) {
@@ -539,7 +539,7 @@ describe("visit",function() {
         assert.equal(n,2);
     });
     it("should visit ItemExpressions",function(){
-        var n = 0;
+        let n = 0;
         parser.visit(parser.parse("store {rule (['a',a],['b',a])}"),
                       {
                           visitStoreDeclaration: function(node) {

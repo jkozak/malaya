@@ -7,18 +7,18 @@
 "use strict";
 /*eslint-disable curly*/
 
-var assert = require('assert');
-var    sax = require('sax');
-var parser = sax.parser(true);
+const assert = require('assert');
+const    sax = require('sax');
+const parser = sax.parser(true);
 
 
 exports.parse = function(xml) {
-    var       ans;
-    var     stack = [];
-    var pushChild = function(ch) {
-        var keys = Object.keys(stack[0]);
+    let         ans;
+    const     stack = [];
+    const pushChild = function(ch) {
+        const keys = Object.keys(stack[0]);
         assert.equal(keys.length,1);
-        var insertHere = stack[0][keys[0]];
+        const insertHere = stack[0][keys[0]];
         if (insertHere._children===undefined)
             insertHere._children = [];
         insertHere._children.push(ch);
@@ -32,9 +32,9 @@ exports.parse = function(xml) {
         pushChild(t);
     };
     parser.onopentag = function (node) {
-        var newnode = {};
+        const newnode = {};
         newnode[node.name] = node.attributes;
-        if (stack.length>0) 
+        if (stack.length>0)
             pushChild(newnode);
         stack.unshift(newnode);
     };
@@ -48,7 +48,7 @@ exports.parse = function(xml) {
 };
 
 exports.build = function(obj,cb) {
-    var ans = '';
+    let ans = '';
     if (cb===undefined)
         cb = function(s) {ans += s;};
     if ((typeof obj)==='string')
@@ -56,7 +56,7 @@ exports.build = function(obj,cb) {
     else {
         assert.equal((typeof obj),'object');
         Object.keys(obj).forEach(function(k) {
-            if (k==='_XML' && (typeof obj[k])==='string') 
+            if (k==='_XML' && (typeof obj[k])==='string')
                 cb(obj[k]);
             else {
                 cb("<");
@@ -66,7 +66,7 @@ exports.build = function(obj,cb) {
                         if (obj[k][a]===undefined) {
                             //console.log("*** undef obj: %j  k: %j  a: %j",obj,k,a);
                         } else {
-                            var s = obj[k][a]===null  ? "" :
+                            const s = obj[k][a]===null  ? "" :
                                 obj[k][a]===true      ? "1" :
                                 obj[k][a]===false     ? "0" :
                                 obj[k][a].toString();
@@ -75,11 +75,11 @@ exports.build = function(obj,cb) {
                         }
                     }
                 });
-                var children = obj[k]._children;
+                const children = obj[k]._children;
                 if (children!==undefined) {
                     cb('>');
                     assert(children instanceof Array);
-                    for (var i=0;i<children.length;i++)
+                    for (let i=0;i<children.length;i++)
                         exports.build(children[i],cb);
                     cb("</");cb(k);cb('>');
                 } else
