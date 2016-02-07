@@ -10,6 +10,7 @@
     "express": "^4.6.1",
     "ip": "^0.3.3",
     "minimist": "^1.1.1",
+    "moment": "^2.11.2",
     "monotonic-timestamp": "0.0.9",
     "morgan": "^1.2.2",
     "multistream": "^1.4.3",
@@ -42,8 +43,8 @@
   "engines": [
     "node >=0.10.0"
   ],
-  "license":"AGPL-1.0",
-  "private":true,
+  "license": "AGPL-1.0",
+  "private": true,
   "repository": {
     "type": "hg",
     "url": "ssh://malaya.club//"
@@ -51,9 +52,10 @@
   "scripts": {
     "benchmark": "matcha -R plain benchmark/*.js",
     "eslint": "eslint -c test/eslint.conf -f compact --env node *.js",
-    "eslint:test":  "eslint -c test/eslint.conf -f compact --env mocha test/*.js",
+    "eslint:test": "eslint -c test/eslint.conf -f compact --env mocha test/*.js",
     "pretest": "npm run eslint && npm run eslint:test",
     "test": "cross-env NODE_ENV=test mocha -R mocha-tldr-reporter --compilers chrjs:compiler -C test",
+    "test:quick": "cross-env NODE_ENV=test mocha -R mocha-tldr-reporter --compilers chrjs:compiler -C -if [slow] test",
     "init": "node malaya init",
     "start": "node malaya run"
   },

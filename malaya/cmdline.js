@@ -504,7 +504,7 @@ exports.run = function(opts0) {
                           masterUrl:     args.masterUrl};
         const      eng = createEngine(options);
         eng.on('listen',function(protocol,port) {
-            util.debug("%s listening on *:%s",protocol,port);
+            console.log("%s listening on *:%s",protocol,port);
             if (args.adminUI && protocol==='http') {
                 execCP(util.format("chromium -disk-cache-dir=/dev/null -app='http://%s:%d/%s'",
                                    'localhost',
@@ -527,10 +527,10 @@ exports.run = function(opts0) {
             }
         });
         eng.on('saved',function(syshash) {
-            util.debug("saved world:  %s",syshash);
+            console.log("saved world:  %s",syshash);
         });
         eng.on('loaded',function(syshash) {
-            util.debug("loaded: %s",syshash);
+            console.log("loaded: %s",syshash);
         });
         eng.start();
         eng.on('become',function(mode) {
@@ -618,7 +618,7 @@ exports.run = function(opts0) {
         const lock = require("./lock.js");
         const data = lock.lockDataSync(path.join(prevalenceDir,'lock'));
         if (data===null || data.pid===null)
-            util.printf("not running\n");
+            console.log("not running");
         else
             process.kill(data.pid,'SIGHUP');
     };
@@ -632,23 +632,23 @@ exports.run = function(opts0) {
         const   hash = require('./hash.js')(hashAlgorithm);
         const hstore = hash.makeStore(path.join(prevalenceDir,'hashes'));
         const   tfmt = "YYYY-MM-DD HH:mm:ss";
-        util.printf("stashed: %d hashes\n",hstore.getHashes().length);
+        console.log("stashed: %d hashes",hstore.getHashes().length);
         if (data===null || data.pid===null)
-            util.printf("server:  not running\n");
+            console.log("server:  not running");
         else {
             const    stLock = fs.statSync(pLock);
             const    pWorld = path.join(prevalenceDir,'state','world');
             const   stWorld = fs.statSync(pWorld);
             const stJournal = fs.statSync(path.join(prevalenceDir,'state','journal'));
             util.readFileLinesSync(pWorld,function(l) {
-                util.printf("syshash: %s\n",util.deserialise(l));
+                console.log("syshash: %s",util.deserialise(l));
                 return false;
             });
-            util.printf("server:\t running (pid %d) since %s\n",data.pid,moment(stLock.mtime).format(tfmt));
-            util.printf("world:\t %d bytes, saved at %s\n",stWorld.size,  moment(stWorld.mtime).format(tfmt));
-            util.printf("journal: %d bytes, updated %s\n",stJournal.size,moment(stJournal.mtime).format(tfmt));
+            console.log("server:\t running (pid %d) since %s",data.pid,moment(stLock.mtime).format(tfmt));
+            console.log("world:\t %d bytes, saved at %s",stWorld.size,  moment(stWorld.mtime).format(tfmt));
+            console.log("journal: %d bytes, updated %s",stJournal.size,moment(stJournal.mtime).format(tfmt));
             for (const k in data.ports) {
-                util.printf("%s:\t listening on *:%d\n",k,data.ports[k]);
+                console.log("%s:\t listening on *:%d",k,data.ports[k]);
             }
         }
     };

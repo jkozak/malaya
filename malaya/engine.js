@@ -188,15 +188,16 @@ Engine.prototype._saveWorld = function() {
 Engine.prototype.stopPrevalence = function(quick,cb) {
     const eng = this;
     if (eng.journal) {          // not true if opts.readonly set
+        const journal = eng.journal;
+        eng.journal = null;
         // 'close' event for `fs.WriteStream` is undocumented _but_
         // cannot do dir renames in `_saveWorld` until journal closed.
-        eng.journal.on(util.onWindows ? 'close' : 'finish',function() {
+        journal.on(util.onWindows ? 'close' : 'finish',function() {
             if (!quick)
                 eng._saveWorld();
             if (cb) cb();
         });
-        eng.journal.end();
-        eng.journal = null;
+        journal.end();
     }
 };
 
@@ -322,7 +323,8 @@ Engine.prototype.startPrevalence = function(opts,cb) {
     if ((typeof opts)==='function' && cb===undefined) {
         cb   = opts;
         opts = {};
-    }
+    } else if (opts===undefined)
+        opts = {};
     const eng = this;
     eng._ensureStateDir();
     const jrnlFile = path.join(eng.prevalenceDir,'state','journal');
@@ -743,7 +745,7 @@ Engine.prototype.listenHttp = function(mode,port,done) {
     sock.installHandlers(eng.http,{prefix:'/admin'});
 
     eng.http.listen(port,function() {
-        eng.emit('listen','http',port,sock);
+        eng.emit('listen','http',eng.http.address().port);
         done();
     });
 };

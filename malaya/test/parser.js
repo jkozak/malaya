@@ -198,7 +198,7 @@ const chrjsTestFixture = {      // see esprima/test/test.js for format
 };
 
 describe("esprima-based parser",function() {
-    it("should pass original javascript tests",function() {
+    it("should pass original javascript tests [slow]",function() {
         let   total    = 0;
         const failures = [];
         this.timeout(5000);

@@ -8,6 +8,7 @@ const temp    = require("temp").track();
 const path    = require("path");
 const assert  = require("assert");
 const VError  = require("verror");
+const child   = require('child_process');
 
 const engine  = require('../engine.js');
 const whiskey = require('../whiskey.js');
@@ -156,5 +157,101 @@ describe("cmdline",function() {
                           });
                       });
         });
+    });
+});
+
+describe("cmd line interface [slow]",function() {
+    const   dir = temp.mkdirSync();
+    const  pdir = path.join(dir,'.prevalence');
+    let  malaya;
+    const ports = {};
+    //N.B. use "node malaya" in these tests (rather than ./malaya) to
+    //     get something that should work on linux and windows.
+    it("inits prevalence store",function(done) {
+        this.timeout(10000);
+        child.exec(util.format("node malaya -p %j init",pdir),
+                   {},
+                   (code,stdout,stderr)=>{
+                       if (code!==null)
+                           done(new VError("`malaya init` failed code: %j",code));
+                       else if (code!==null)
+                           done(new VError("failed code: %j",code));
+                       else if (!fs.statSync(pdir).isDirectory())
+                           done(new VError("prevalence dir not created"));
+                       else
+                           done();
+                   });
+    });
+    it("rejects attempts to init twice",function(done) {
+        this.timeout(10000);
+        child.exec(util.format("node malaya -p %j init",pdir),
+                   {},
+                   (code,stdout,stderr)=>{
+                       if (code===null)
+                           done(new VError("`malaya init` didn't detect extant prevalence dir"));
+                       else
+                           done();
+                   });
+    });
+    it("shows as not running",function(done) {
+        this.timeout(10000);
+        child.exec(util.format("node malaya -p %j status",pdir),
+                   {},
+                   (code,stdout,stderr)=>{
+                       if (code!==null)
+                           done(new VError("`malaya status` fails"));
+                       else {
+                           if (stdout.split('\n').filter((l)=>/server:[ ]+not running/.exec(l)).length===1)
+                               done();
+                           else
+                               done(new VError("bad output from `malaya status`: %j",stdout));
+                       }
+                   });
+    });
+    it("runs",function(done) {
+        this.timeout(10000);
+        let buf = '';
+        malaya = child.spawn("node",['malaya','-p',pdir,'run','-w0']);
+        malaya.stdout.on('data',(data)=>{
+            buf += data;
+            const lines = buf.split('\n');
+            buf = lines.slice(-1)[0];
+            lines.slice(0,-1).forEach((l)=>{
+                const m = /([a-z0-9]+) listening on [^:]:([0-9]+)/.exec(l);
+                if (m) {
+                    ports[m[1]] = parseInt(m[2]);
+                } else if (/mode now: master/.exec(l)) {
+                    malaya.stdout.removeAllListeners();
+                    done();
+                }
+            });
+        });
+    });
+    it("shows as running",function(done) {
+        this.timeout(10000);
+        child.exec(util.format("node malaya -p %j status",pdir),
+                   {},
+                   (code,stdout,stderr)=>{
+                       if (code!==null)
+                           done(new VError("`malaya status` fails"));
+                       else {
+                           if (stdout.split('\n').filter((l)=>/server:[\t ]+running .*/.exec(l)).length===1)
+                               done();
+                           else
+                               done(new VError("bad output from `malaya status`: %j",stdout));
+                       }
+                   });
+    });
+    // +++ saving, port access &c +++
+    it("stops",function(done) {
+        this.timeout(10000);
+        malaya.on('exit',(code,signal)=> {
+            if (code===1)
+                done();
+            else
+                done(new VError("bad return code: %j",code));
+            malaya = null;
+        });
+        malaya.kill('SIGINT');
     });
 });
