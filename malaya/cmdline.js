@@ -366,8 +366,8 @@ exports.run = function(opts0) {
         const     outQ = [];
         const  ruleMap = compiler.getRuleMap(source);
         const mySource = path.relative(process.cwd(),source);
-        const provoker = null;
-        const  borings = 0;       // count of `add`s deemed not interesting
+        let   provoker = null;
+        let    borings = 0;       // count of `add`s deemed not interesting
         chrjs.on('queue-rule',function(id,bindings) {
             const firing = {id:id,done:false,dels:[],adds:[],t:Date.now()};
             stack.push(firing);
@@ -518,7 +518,7 @@ exports.run = function(opts0) {
             }
             if (args.prefetchBundles) {
                 const http = require('http');
-                for (let k in eng.options.bundles) {
+                for (const k in eng.options.bundles) {
                     http.request({
                         port:args.webPort,
                         path:k
@@ -659,7 +659,7 @@ exports.run = function(opts0) {
         const    eng = createEngine({});
         eng.chrjs = engine.makeInertChrjs();
         eng.start();
-        for (const t=1;t<eng.chrjs.t;t++) {
+        for (let t=1;t<eng.chrjs.t;t++) {
             const fact = eng.chrjs.get(t+'');
             if (fact) {
                 const text = args.serialise ? util.serialise(fact) : JSON.stringify(fact);
@@ -671,7 +671,7 @@ exports.run = function(opts0) {
 
     subcommands.client.exec = function() {
         const client = require('./client.js');
-        const    url = args.url || client.findURL(args.urlPath);
+        let      url = args.url || client.findURL(args.urlPath);
         if (args.urlPath && args.url)
             throw new VError("can't specify URL and connection type");
         if (!url)

@@ -11,7 +11,7 @@ describe("testutil",function() {
         it("organises an engine with a chr store to which connections can be made",function(done) {
             testutil.runInCountEngine({
                 main: function(eng) {
-                    var io = testutil.createIO();
+                    const io = testutil.createIO();
                     eng.addConnection('test://',io);
                     eng.chrjs.once('fire',function() {
                         assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:1}]]);
@@ -24,7 +24,7 @@ describe("testutil",function() {
         });
         it("works with a simpler syntax",function(done) {
             testutil.runInCountEngine(function(eng) {
-                var io = testutil.createIO();
+                const io = testutil.createIO();
                 eng.addConnection('test://',io);
                 eng.chrjs.once('fire',function() {
                     assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:1}]]);
@@ -38,8 +38,8 @@ describe("testutil",function() {
 
     describe("makeTimestamp",function() {
         it("generates multiple timestamp makers",function() {
-            var ts1 = makeTimestamp();
-            var ts2 = makeTimestamp();
+            const ts1 = makeTimestamp();
+            const ts2 = makeTimestamp();
             assert.strictEqual(ts1(),1);
             assert.strictEqual(ts1(),2);
             assert.strictEqual(ts2(),1);

@@ -18,7 +18,7 @@ exports.repl = function(url) {
         sock.send(JSON.stringify(js)+'\n');
     };
 
-    const messages = [];
+    let messages = [];
 
     const rl = readline.createInterface({
         input:  process.stdin,
