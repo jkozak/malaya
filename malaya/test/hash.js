@@ -51,6 +51,7 @@ describe("hash('sha1')",function() {
         assert.notEqual(store.getHashes().indexOf("02e0182ae38f90d11be647e337665e67f9243817"),-1);
     });
     it("should import arbitrary files",function() {
+        this.timeout(10000);
         const  sdir = temp.mkdirSync(); // store
         const  tdir = temp.mkdirSync(); // scratch
         const store = hash('sha1').makeStore(sdir);
