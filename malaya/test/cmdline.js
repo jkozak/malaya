@@ -246,12 +246,29 @@ describe("cmd line interface [slow]",function() {
     it("stops",function(done) {
         this.timeout(10000);
         malaya.on('exit',(code,signal)=> {
-            if (code===1)
+            if (util.onWindows && code===null)
+                done();
+            else if (code===1)
                 done();
             else
                 done(new VError("bad return code: %j",code));
             malaya = null;
         });
         malaya.kill('SIGINT');
+    });
+    it("shows as not running",function(done) {
+        this.timeout(10000);
+        child.exec(util.format("node malaya -p %j status",pdir),
+                   {},
+                   (code,stdout,stderr)=>{
+                       if (code!==null)
+                           done(new VError("`malaya status` fails"));
+                       else {
+                           if (stdout.split('\n').filter((l)=>/server:[ ]+not running/.exec(l)).length===1)
+                               done();
+                           else
+                               done(new VError("bad output from `malaya status`: %j",stdout));
+                       }
+                   });
     });
 });
