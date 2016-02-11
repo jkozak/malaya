@@ -395,9 +395,13 @@ Engine.prototype._loadWorld = function() {
 
 Engine.prototype._logon = null;
 
+Engine.prototype.express = function() {
+    return express();
+};
+
 Engine.prototype.createExpressApp = function() {
     const     eng = this;
-    const     app = express();
+    const     app = eng.express();
     const jscache = {};   // req.path -> [compiled,stat]
     const  webDir = eng.options.webDir;
 
@@ -474,10 +478,8 @@ Engine.prototype.createExpressApp = function() {
         });
     };
 
-    if (eng.options.logging) {
-        //app.use(morgan(":remote-addr - :remote-user [:date] \":method :url HTTP/:http-version\" :status :res[content-length] \":referrer\" \":user-agent\" :res[etag]"));
+    if (eng.options.logging)
         app.use(morgan('dev'));
-    }
 
     app.get('/replication/hashes',function(req,res) {
         fs.readdir(eng.prevalenceDir+'/hashes',function(err,files) {
@@ -524,7 +526,7 @@ Engine.prototype.createExpressApp = function() {
     for (const k in eng.options.bundles)
         app.get(k,doBrowserify(eng.options.bundles[k]));
 
-    app.get('/*.chrjs',viaJSCache(true,function(filename,cb) {
+    app.get('/*.chrjs',viaJSCache(function(filename,cb) {
         try {
             const chrjs = fs.readFileSync(filename);
             const    js = recast.print(compiler.compile(parser.parse(chrjs,{attrs:true}))).code;
@@ -841,6 +843,8 @@ Engine.prototype.become = function(mode) {
     eng.emit('become',mode);
     if (eng.http===null && (port || port===0)) {
         eng.listenHttp(mode,port,function(err) {
+            if (err)
+                eng.emit('error',err);
             main();
         });
     } else

@@ -12,6 +12,7 @@ const     util = require('../util.js');
 const testutil = require('../testutil.js');
 const   VError = require('verror');
 const     rmRF = require('rimraf');
+const  request = require('request');
 
 describe("makeInertChrjs",function() {
     it("behaves somewhat like a chrjs store with no rules",function() {
@@ -471,4 +472,74 @@ describe("Engine",function() {
             });
         });
     });
+    describe("web server",function() {
+        const  dir = temp.mkdirSync();
+        const wdir = path.join(dir,'www');
+        const text = "What! Dead? and never called me Mother!";
+        const file = "EastLynne.txt";
+        let   port;
+        it("starts",function(done) {
+            fs.mkdirSync(wdir);
+            const  eng = new Engine({ports:  {http:0},
+                                     dir:    dir});
+            eng.init();
+            eng.start();
+            fs.writeFileSync(path.join(wdir,file),text);
+            eng.on('listen',(type,port0)=>{
+                port = port0;
+                done();
+            });
+            eng.become('master');
+        });
+        it("serves static content",function(done){
+            request(util.format('http://localhost:%d/%s',port,file),
+                    (err,resp,body) => {
+                        if (err)
+                            done(err);
+                        else {
+                            if (resp.statusCode!==200)
+                                done(new VError("expected status 200, got %j",resp.statusCode));
+                            else if (body===text)
+                                done();
+                            else
+                                done(new VError("expected East Lynne, got: %j",body));
+                        }
+                    } );
+        });
+        it("handles requests for non-existent files graciously",function(done){
+            request(util.format('http://localhost:%d/%s',port,'there-is-no-file-called-this'),
+                    (err,resp,body) => {
+                        if (err)
+                            done(err);
+                        else {
+                            if (resp.statusCode!==404)
+                                done(new VError("expected status 404, got %j",resp.statusCode));
+                            else
+                                done();
+                        }
+                    } );
+        });
+        it("transpiles chrjs",function(done){
+            const filej = "test.chrjs";
+            const chrjs = "module.exports = store {};";
+            fs.writeFileSync(path.join(wdir,filej),chrjs);
+            request(util.format('http://localhost:%d/%s',port,filej),
+                    (err,resp,body) => {
+                        if (err)
+                            done(err);
+                        else {
+                            const contentType = resp.headers['content-type'];
+                            if (resp.statusCode!==200)
+                                done(new VError("expected status 200, got %j %s",resp.statusCode,body));
+                            else if (body===chrjs)
+                                done(new VError("no transpilation!"));
+                            else if (!contentType.startsWith('application/javascript'))
+                                done(new VError("expected application/javascript, got %j",contentType));
+                            else
+                                done();
+                        }
+                    } );
+        });
+    });
+    // +++ tests for require/bundle +++
 });
