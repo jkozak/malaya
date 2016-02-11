@@ -37,6 +37,7 @@
     "mocha-tldr-reporter": "^1.0.0",
     "node-jsx": "^0.13.3",
     "prettyjson": "^1.0.0",
+    "request": "^2.69.0",
     "resumer": "0.0.0",
     "supertest": "^0.15.0"
   },
