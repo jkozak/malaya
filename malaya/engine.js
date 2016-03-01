@@ -45,6 +45,7 @@ const      recast = require('recast');
 const        http = require('http');
 const      sockjs = require('sockjs');
 const          ip = require('ip');
+const      minify = require('express-minify');
 
 const      parser = require('./parser.js');
 const    compiler = require('./compiler.js');
@@ -129,6 +130,7 @@ const Engine = exports.Engine = function(options) {
     options.tag       = options.tag;
     options.ports     = options.ports || {http:3000};
     options.bundles   = options.bundles || {};
+    options.minify    = options.minify===undefined ? util.env!=='test' : options.minify;
 
     compiler.debug    = options.debug;
 
@@ -480,6 +482,9 @@ Engine.prototype.createExpressApp = function() {
 
     if (eng.options.logging)
         app.use(morgan('dev'));
+
+    if (eng.options.minify)
+        app.use(minify());
 
     app.get('/replication/hashes',function(req,res) {
         fs.readdir(eng.prevalenceDir+'/hashes',function(err,files) {
