@@ -8,6 +8,7 @@
     "browserify": "^10.2.3",
     "esprima": "=1.2.2",
     "express": "^4.6.1",
+    "express-minify": "^0.2.0",
     "ip": "^0.3.3",
     "minimist": "^1.1.1",
     "moment": "^2.11.2",
