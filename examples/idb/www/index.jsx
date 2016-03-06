@@ -41,12 +41,12 @@ document.body.onload = function() {
         var ws = {'http:':'ws:','https:':'wss:'}[window.location.protocol];
 
         iHost = (iHost+1)%hosts.length;
-        
+
         sock =  new WebSocket(ws+'//'+hosts[iHost]+'/data/websocket');
 
         sock.onopen = function() {
             console.log('*** open');
-            if (user && pw && !connected) 
+            if (user && pw && !connected)
                 send(['logon',{user:user,pw:pw}]);
             connected = true;
             render();
@@ -87,7 +87,7 @@ document.body.onload = function() {
                                 name:sd[1].Name,
                                 title:sd[1].Title
                                 // +++
-                            }; 
+                            };
                             break;
                         case 'instrument':
                             instruments[sd[1].ID] = {
@@ -175,7 +175,7 @@ document.body.onload = function() {
             render();
         };
     };
-    
+
     var        onLogon = function(data) {
         console.log("*** logon "+JSON.stringify(data));
         user = data.user;
@@ -222,7 +222,7 @@ document.body.onload = function() {
         else
             renderLogon('');
     };
-    
+
     insertPrice = function(price) {
         console.log("*** insertPrice: ",price);
         var instId = price.instrument;

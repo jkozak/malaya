@@ -93,7 +93,7 @@ const IDB = store {
     rule ( ['_restart',...], -['_tick',...]);
     rule ( ['_restart',...], -['market-status',...]);
     rule (-['_restart',...]);
-    
+
     // logon processing
     rule (-['logon0',...],      // no pw encryption at the moment
           +['_output','self',{'logon0':{}}] );
@@ -348,7 +348,7 @@ const IDB = store {
                                     marketID:  marketID,
                                     minLotSize:Ps.MinLotSize}}]
          );
-    
+
     // +++ `BigFigBlock` +++
     // +++ `EndBigFigBlock` +++
     // +++ `InstHighlight` +++
@@ -394,7 +394,7 @@ const IDB = store {
                                  InstID:       InstID,
                                  Midprice:     inst.MidPrice,
                                  Tolerance:    inst.VolatilityPercent,
-                                 AddTolerance: inst.VolatilitySpread }}]) ) }}] ); 
+                                 AddTolerance: inst.VolatilitySpread }}]) ) }}] );
     rule (-['PrepareAuction',{id,action:'I',...prs},...],
           -['MarketManager',{auctionId,...mrs}],
           +['MarketManager',{auctionId:auctionId+1,...mrs}],
@@ -435,4 +435,3 @@ const IDB = store {
 };
 
 module.exports = IDB;
-

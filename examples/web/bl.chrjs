@@ -1,2 +1,16 @@
+const  _ = require('underscore');
+
 module.exports =  store {
+    rule (-['_req',{method:'POST',body:[{q0:name},...qfields],...}],
+          -['survey',survey],
+          +['survey',survey.concat([[name,qfields]])],
+          +['_resp',{body:{},code:200}] );
+    rule (-['_req',{method:'GET',...}],
+           ['survey',survey],
+          +['_resp',{body:survey,code:200}]);
+    rule (-['_req',...],
+          +['_resp',{body:{},code:404}] );
+    rule (-['_tick',...]);
+    rule (-['_take-outputs',...]);
+    ['survey',[]];
 };
