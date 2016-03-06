@@ -1,0 +1,6 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Sat, 05 Mar 2016 19:44:58 +0000
+Subject: non-existent key should not match as undefined
+State: new
+Message-Id: <a738c90cc5bfcb5b-0-artemis@renn>
+
