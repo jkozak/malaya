@@ -5,11 +5,13 @@
 const util = require('./util.js');
 
 if (util.env==='test')  {
+    const         _ = require('underscore');
     const    engine = require('./engine.js');
     const    Engine = engine.Engine;
     const    assert = require("assert");
     const    events = require("events");
     const    stream = require("stream");
+    const     jsdom = require('jsdom');
     const      path = require('path');
     const      temp = require('temp').track();
     const        fs = require('fs');
@@ -73,4 +75,108 @@ if (util.env==='test')  {
         console.log("=========================== end %s ===========================",filename);
     };
 
+    exports.resetBl = (bl,fixture) => {
+        bl.reset();                 // `bl` is effectively shared by `require`
+        for (const i in fixture)
+            bl.add(fixture[i]);
+        bl.getOutputs = function() {
+            const ans = [];
+            this._private.orderedFacts.forEach(function(f) {
+                if (f[0]==='_output')
+                    ans.push(f);
+            });
+            return ans;
+        };
+        bl.addReturningOutputs = function(x) {
+            this.add(x);
+            const outs = this.getOutputs();
+            this.add(['_take-outputs']); // convention to delete `_output` from store
+            return outs;
+        };
+        bl.addReturningOneOutput = function(x) {
+            const outs = this.addReturningOutputs(x);
+            assert(outs.length===1,util.format("expected single output, not: %j",outs));
+            return outs[0];
+        };
+        bl.addReturningNoOutput = function(x) {
+            const outs = this.addReturningOutputs(x);
+            assert(outs.length===0,util.format("expected no output, not: %j",outs));
+        };
+        bl.getFactsWithTag = function(tag) { // +++ use Set() +++
+            const ans = [];
+            this._private.orderedFacts.forEach(function(f) {
+                if (f[0]===tag)
+                    ans.push(f[1]);
+            });
+            return ans;
+        };
+        return bl;
+    };
+
+    exports.SystemSlice = function(bl) {
+        this.ports    = 10000;
+        this.bl       = bl;
+        this.browsers = [];
+    };
+
+    exports.SystemSlice.prototype.reset = function(fixture) {
+        exports.resetBl(this.bl,fixture||[]);
+        this.browsers = [];
+    };
+
+    exports.SystemSlice.prototype.addBrowser = function(config) {
+        const ss = this;
+        return jsdom.env(_.extend(
+            {
+                features: {
+                    ProcessExternalResources: ["script"]
+                }
+            },
+            config,
+            {
+                created: (err,w) => {
+                    if (err)
+                        config.created(err);
+                    else {
+                        w.WebSocket = function(url) {
+                            const ws = {
+                                port:      ss.port++,
+                                send:      (s) => {
+                                    const   js = JSON.parse(s);
+                                    const outs = ss.bl.addReturningOutputs([js[0],js[1],{port:this.port}]);
+                                    console.log("exec: %j\n====> %j",js,outs);
+                                    for (const k in outs) {
+                                        const   out = outs[k];
+                                        const reply = {data:JSON.stringify(out[2])+'\n'};
+                                        if (out[1]==='all')
+                                            for (const win in ss.browsers)
+                                                win._ws.onmessage(reply);
+                                        else if (out[1]==='self')
+                                            ws.onmessage(reply);
+                                        else
+                                            throw new Error("NYI");
+                                    }
+                                },
+                                onmessage: (x) => {
+                                    throw new Error("onmessage called without handler: %j",x);
+                                },
+                                onerror: (x) => {
+                                    throw new Error("onerror called without handler: %j",x);
+                                }
+                            };
+                            w._ws = ws;
+                            return ws;
+                        };
+                        if (config.created)
+                            config.created(null,w);
+                    }
+                },
+                onload:   (w) => {
+                    ss.browsers.push(w);
+                    if (config.onload)
+                        config.onload(w);
+                },
+                ws: null
+            }));
+    };
 }
