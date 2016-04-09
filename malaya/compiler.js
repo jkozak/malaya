@@ -232,6 +232,7 @@ var chrGlobalVars = {           // only javascript globals allowed in CHRjs
     require:    {ext:true,mutable:false,type:'function'},
     module:     {ext:true,mutable:false,type:'function'},
     console:    {ext:true,mutable:false,type:'function'},
+    out:        {ext:true,mutable:false,type:'function'},
     __dirname:  {ext:true,mutable:false,type:'string'}
 };
 if (util.env==='test')
@@ -288,7 +289,7 @@ function annotateParse1(js) {   // poor man's attribute grammar - pass one
                 vars[param.name] = {bound:true,declared:true};
             }
             this.traverse(path);
-            stmt = save.stmt;;
+            stmt = save.stmt;
             vars = save.vars;
         },
         visitProgram:             function(path) {

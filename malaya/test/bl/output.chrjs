@@ -3,7 +3,7 @@ module.exports = store {
     rule (-['do_summat',...],
           +['_output','self',{msg:"will this do?"}] );
 
-        rule (-['do_em_all',...],
+    rule (-['do_em_all',...],
           +['_output','all',{msg:"that's yer lot"}] );
 
 
