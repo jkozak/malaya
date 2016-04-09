@@ -117,6 +117,7 @@ if (util.env==='test')  {
         this.ports    = 10000;
         this.bl       = bl;
         this.browsers = [];
+        this.jsdom    = jsdom;  // save this so users can get correct module
     };
 
     exports.SystemSlice.prototype.reset = function(fixture) {
@@ -136,7 +137,7 @@ if (util.env==='test')  {
             {
                 created: (err,w) => {
                     if (err)
-                        config.created(err);
+                        throw err;
                     else {
                         w.WebSocket = function(url) {
                             const ws = {
