@@ -1,0 +1,7 @@
+module.exports = store {
+    rule (-['do_summat',...],
+          out('self',{msg:"did you like that?"}) );
+
+    rule (-['do_em_all',...],
+          out('all',{msg:"shame... that's all there is..."}) );
+};

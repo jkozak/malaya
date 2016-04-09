@@ -150,6 +150,7 @@ const Engine = exports.Engine = function(options) {
     eng.chrjs.tag     = options.tag;
     eng.masterUrl     = eng.options.masterUrl;
     eng.replicateSock = null;
+    eng.active        = null;                    // update being processed
 
     eng.chrjs.on('error',function(err){eng.emit(new VError(err,"chrjs: "));});
 
@@ -900,6 +901,34 @@ Engine.prototype.addMagicOutput = function(tag) {
     eng.magicOutputs[tag] = true;
 };
 
+Engine.prototype.out = function(dest,json) {
+    const eng = this;
+    if (json===null)
+        ;           // discard
+    else if (dest==='all')
+        eng.broadcast(json,'data');
+    else if (dest==='self') {
+        const port = eng.active[2].port;
+        const io = eng.conns[port];
+        if (io)
+            io.o.write(json);
+        else
+            console.log("self gone away: %j",eng.active);
+    }
+    else {
+        const d = eng.conns[dest];
+        if (d)
+            d.o.write(json);
+        else
+            console.log("no connection found for: %j",dest);
+    }
+};
+
+Engine.prototype._callOut = function(d,j) {
+    this.out(d,j);
+    return true;                // else execution will stop
+};
+
 Engine.prototype.update = function(data,fn,cb) {
     const   eng = this;
     let     res;
@@ -915,30 +944,20 @@ Engine.prototype.update = function(data,fn,cb) {
             } else if (add[0]==='_output') {
                 if (add.length!==3)
                     eng.emit('error',util.format("bad _output: %j",add));
-                else if (add[2]===null)
-                    ;           // discard
-                else if (add[1]==='all')
-                    eng.broadcast(add[2],'data');
-                else if (add[1]==='self') {
-                    const io = eng.conns[data[2].port];
-                    if (io)
-                        io.o.write(add[2]);
-                    else
-                        console.log("*** self gone away: %j",data);
-                }
-                else {
-                    const dest = eng.conns[add[1]];
-                    if (dest)
-                        dest.o.write(add[2]);
-                }
+                else
+                    eng.out(add[1],add[2]);
             }
         });
+        eng.active = null;
         if (cb) cb(null,res);
     });
     if (Object.keys(eng.magicOutputs).length===0) // trad style only has two args
         cb = fn;
     eng.journalise('update',data,done2);
-    res = eng.chrjs.update(data);
+    eng.active = data;
+    GLOBAL.out = eng._callOut.bind(eng);
+    res        = eng.chrjs.update(data);
+    GLOBAL.out = undefined;
     done2();
 };
 

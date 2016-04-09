@@ -4,7 +4,7 @@ const       bl = require('../bl');
 
 const testutil = require('malaya/testutil');
 
-const   assert = require('chair').assert;
+const   assert = require('chai').assert;
 const        _ = require('underscore');
 
 const     path = require('path');

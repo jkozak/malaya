@@ -1,8 +1,9 @@
 From: John Kozak <jk@thameslighter.net>
 Date: Wed, 15 Jul 2015 09:13:59 +0100
-State: new
+State: resolved
 Subject: `_output` is clunky
 Message-Id: <da7cd772d9215ad5-0-artemis@renn>
+resolution: fixed
 
 How about changing input from:
 

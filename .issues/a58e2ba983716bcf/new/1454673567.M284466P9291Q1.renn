@@ -1,6 +1,7 @@
 From: John Kozak <jk@thameslighter.net>
 Date: Fri, 05 Feb 2016 11:59:27 +0000
 Subject: magic outputs should be handled in compiler
-State: new
+State: resolved
 Message-Id: <a58e2ba983716bcf-0-artemis@renn>
+resolution: fixed
 

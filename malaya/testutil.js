@@ -76,21 +76,26 @@ if (util.env==='test')  {
     };
 
     exports.resetBl = (bl,fixture) => {
+        const outputs = [];
         bl.reset();                 // `bl` is effectively shared by `require`
         for (const i in fixture)
             bl.add(fixture[i]);
+        GLOBAL.out = function(d,j) { // !!! this is not ideal !!!
+            outputs.push(['_output',d,j]);
+        };
         bl.getOutputs = function() {
             const ans = [];
             this._private.orderedFacts.forEach(function(f) {
                 if (f[0]==='_output')
                     ans.push(f);
             });
-            return ans;
+            return ans.concat(outputs);
         };
         bl.addReturningOutputs = function(x) {
             this.add(x);
             const outs = this.getOutputs();
             this.add(['_take-outputs']); // convention to delete `_output` from store
+            outputs.length = 0;
             return outs;
         };
         bl.addReturningOneOutput = function(x) {

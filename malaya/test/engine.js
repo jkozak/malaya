@@ -328,7 +328,7 @@ describe("Engine",function() {
             });
         });
     });
-    describe("#addConnection",function() {
+    describe("#addConnection using `_output` pseudo-fact",function() {
         it("sends input, receives output",function(done) {
             const eng = new Engine({dir:           temp.mkdirSync(),
                                   businessLogic: path.join(__dirname,'bl','output.chrjs') });
@@ -347,13 +347,19 @@ describe("Engine",function() {
                 io.i.write(['do_summat',{}]);
             });
         });
-        it("multiplexes",function(done) {
+        it("multiplexes XXX",function(done) {
             const eng = new Engine({dir:           temp.mkdirSync(),
                                   businessLogic: path.join(__dirname,'bl','output.chrjs') });
             const io1 = createIO();
             const io2 = createIO();
             const io3 = createIO();
-            const dun = _.after(3,()=>eng.stopPrevalence(true,(e)=>done(e)));
+            let  err1 = null;
+            let     n = 0;
+            const dun = _.after(3,()=>eng.stopPrevalence(true,(e)=>{
+                if (!err1)
+                    assert.strictEqual(n,3);
+                done(err1);
+            }));
             eng.init();
             eng.start();
             eng.startPrevalence(function(err) {
@@ -365,8 +371,61 @@ describe("Engine",function() {
                     io.on('rcved',function() {
                         try {
                             assert.deepEqual(io.rcved,[{msg:"that's yer lot"}]);
+                            n++;
                             dun();
-                        } catch (e) {err=e;dun();}
+                        } catch (e) {err1=e;dun();}
+                    });
+                });
+                io1.i.write(['do_em_all',{}]);
+            });
+        });
+    });
+    describe("#addConnection using `out` function",function() {
+        it("sends input, receives output",function(done) {
+            const eng = new Engine({dir:           temp.mkdirSync(),
+                                    businessLogic: path.join(__dirname,'bl','out.chrjs') });
+            const  io = createIO();
+            eng.init();
+            eng.start();
+            eng.startPrevalence(function(err) {
+                assert(!err);
+                eng.addConnection('test://1',io);
+                io.on('rcved',function() {
+                    try {
+                        assert.deepEqual(io.rcved,[{msg:"did you like that?"}]);
+                        eng.stopPrevalence(true,done);
+                    } catch (e) {done(e);}
+                });
+                io.i.write(['do_summat',{}]);
+            });
+        });
+        it("multiplexes XXX",function(done) {
+            const eng = new Engine({dir:           temp.mkdirSync(),
+                                    businessLogic: path.join(__dirname,'bl','out.chrjs') });
+            const io1 = createIO();
+            const io2 = createIO();
+            const io3 = createIO();
+            let     n = 0;
+            let  err1 = null;
+            const dun = _.after(3,()=>eng.stopPrevalence(true,(e)=>{
+                if (!err1)
+                    assert.strictEqual(n,3);
+                done(err1);
+            }));
+            eng.init();
+            eng.start();
+            eng.startPrevalence(function(err) {
+                assert(!err);
+                eng.addConnection('test://1',io1);
+                eng.addConnection('test://2',io2);
+                eng.addConnection('test://3',io3);
+                [io1,io2,io3].forEach(function(io) {
+                    io.on('rcved',function() {
+                        try {
+                            assert.deepEqual(io.rcved,[{msg:"shame... that's all there is..."}]);
+                            n++;
+                            dun();
+                        } catch (e) {err1=e;dun();}
                     });
                 });
                 io1.i.write(['do_em_all',{}]);

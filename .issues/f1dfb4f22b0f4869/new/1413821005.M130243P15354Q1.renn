@@ -1,6 +1,7 @@
 From: John Kozak <jk@thameslighter.net>
 Date: Mon, 20 Oct 2014 17:03:25 +0100
 Subject: [incident] the restart clearout of `_take-outputs` doesn't seem to clear them all?
-State: new
+State: resolved
 Message-Id: <f1dfb4f22b0f4869-0-artemis@renn>
+resolution: fixed
 
