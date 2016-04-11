@@ -1,9 +1,13 @@
 Malaya, or the Utopia of Business Rules
 =======================================
 
-Malaya is a somewhat theoretically grounded, yet pragmatic approach to
-designing and implementing small-to-medium sized business systems.  It
-is a server-side framework comprised of:
- * a DSL embedded in javascript derived from the CHR logic programming
+Malaya is a server-side framework for designing and implementing the
+business logic of small-to-medium sized business systems, somewhat
+theoretically grounded yet pragmatic.  It consists of:
+
+* a DSL embedded in javascript derived from the CHR logic programming
    formalism
  * a prevalent data persistence mechanism
+
+It is usable at the moment but under active development and liable to
+change.
