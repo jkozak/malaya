@@ -6,6 +6,7 @@ const util = require('./util.js');
 
 if (util.env==='test')  {
     const         _ = require('underscore');
+    const    VError = require('verror');
     const    engine = require('./engine.js');
     const    Engine = engine.Engine;
     const    assert = require("assert");
@@ -118,8 +119,9 @@ if (util.env==='test')  {
         return bl;
     };
 
+    const testPort0 = 10000;
     exports.SystemSlice = function(bl) {
-        this.port     = 10000;
+        this.port     = testPort0;
         this.bl       = bl;
         this.browsers = [];
         this.jsdom    = jsdom;  // save this so users can get correct module
@@ -156,12 +158,17 @@ if (util.env==='test')  {
                                         const   out = outs[k];
                                         const reply = {data:JSON.stringify(out[2])+'\n'};
                                         if (out[1]==='all')
-                                            for (const win in ss.browsers)
-                                                win._ws.onmessage(reply);
+                                            ss.browsers.forEach((b)=>b._ws.onmessage(reply));
                                         else if (out[1]==='self')
                                             ws.onmessage(reply);
-                                        else
-                                            throw new Error("NYI");
+                                        else if (Number.isInteger(out[1])) {
+                                            const dest = ss.browsers[out[1]-testPort0];
+                                            if (dest)
+                                                dest._ws.onmessage(reply);
+                                            else
+                                                throw new VError("NYI: send to %j",out[1]);
+                                        } else
+                                            throw new VError("NYI: send to %j",out[1]);
                                     }
                                 },
                                 onmessage: (x) => {
