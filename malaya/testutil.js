@@ -119,7 +119,7 @@ if (util.env==='test')  {
     };
 
     exports.SystemSlice = function(bl) {
-        this.ports    = 10000;
+        this.port     = 10000;
         this.bl       = bl;
         this.browsers = [];
         this.jsdom    = jsdom;  // save this so users can get correct module
@@ -149,8 +149,9 @@ if (util.env==='test')  {
                                 port:      ss.port++,
                                 send:      (s) => {
                                     const   js = JSON.parse(s);
-                                    const outs = ss.bl.addReturningOutputs([js[0],js[1],{port:this.port}]);
-                                    console.log("exec: %j\n====> %j",js,outs);
+                                    const fact = [js[0],js[1],{port:ws.port}];
+                                    const outs = ss.bl.addReturningOutputs(fact);
+                                    console.log("exec: %j\n====> %j",fact,outs);
                                     for (const k in outs) {
                                         const   out = outs[k];
                                         const reply = {data:JSON.stringify(out[2])+'\n'};
