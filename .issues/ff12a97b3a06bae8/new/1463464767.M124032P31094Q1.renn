@@ -1,0 +1,6 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Tue, 17 May 2016 06:59:27 +0100
+Subject: use Object.assign and remove underscore
+State: new
+Message-Id: <ff12a97b3a06bae8-0-artemis@renn>
+
