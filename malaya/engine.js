@@ -456,7 +456,8 @@ Engine.prototype.createExpressApp = function() {
             const filesRead = [];
             const         b = browserify(files,{
                 extensions:['.jsx','.chrjs','.malaya'],
-                transform: [reactify]
+                transform: [reactify],
+                debug:     eng.options.debug
             });
             b.on('file',function(f,id,parent){
                 if (!/node_modules/.test(f)) // presume node_module contents are stable
