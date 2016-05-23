@@ -1,6 +1,7 @@
 From: John Kozak <jk@thameslighter.net>
 Date: Mon, 23 May 2016 18:27:12 +0100
 Subject: tests using eval fail in node v6
-State: new
+State: resolved
 Message-Id: <ecc140af2eea266b-0-artemis@renn>
+resolution: fixed
 
