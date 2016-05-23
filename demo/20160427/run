@@ -1,0 +1,24 @@
+#!/bin/bash
+
+set -e
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if [ ! -e /tmp/reveal.js/logo.png ]
+then
+
+    cd /tmp/
+
+    git clone https://github.com/hakimel/reveal.js.git
+
+    cd reveal.js
+
+    npm install
+
+else
+    cd /tmp/reveal.js
+fi
+
+cp $DIR/index.html $DIR/logo.png .
+
+grunt serve
