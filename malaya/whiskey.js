@@ -151,7 +151,7 @@ exports.OffsetStream = function(offset,options) {
         offset  = 0;
     if (options===undefined)
         options = {};
-    options = _.extend({},options,{readableObjectMode:true});
+    options = Object.assign({},options,{readableObjectMode:true});
     const os = through2(options,function(chunk,encoding,cb) {
         this.push([os._offset,chunk]);
         if (options.objectMode || options.writableObjectMode)
@@ -166,7 +166,7 @@ exports.OffsetStream = function(offset,options) {
 
 // Remove offset from stream items
 exports.DeoffsetStream = function(options) {
-    options = _.extend({},options||{},{writableObjectMode:true});
+    options = Object.assign({},options||{},{writableObjectMode:true});
     const ds = through2(options,function(chunk,encoding,cb) {
         this.push(chunk[1]);
         cb();

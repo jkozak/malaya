@@ -2,7 +2,6 @@
 
 "use strict";
 
-const      _ = require('underscore');
 const   temp = require('temp').track();
 const   path = require('path');
 const     fs = require('fs');
@@ -17,8 +16,8 @@ let      os_ = os;
 exports.lockSync = function(filename,data) {
     const tmp = temp.openSync({dir:path.dirname(filename)});
 
-    data = _.extend({},data||{},{pid:      process_.pid,
-                                 startTime:Date.now()-process.uptime()*1000 });
+    data = Object.assign({},data||{},{pid:      process_.pid,
+                                      startTime:Date.now()-process.uptime()*1000 });
 
     fs.writeSync(tmp.fd,JSON.stringify(data),null,null,null);
     fs.closeSync(tmp.fd);

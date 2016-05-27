@@ -17,9 +17,9 @@ describe("match example",function() {
         var match = store {
             ['user',{name:"John Kozak",company:"Acecomp"}];
             ['user',{name:"Val Wardlaw",company:"Perluceo"}];
-            
+
             ['instrument',{name:"IL21"}];
-            
+
             rule (-['match-price', {volume:0}]);
             rule (-['match-price', {user:uB, instrument, volume:vB, isBuy:true,  ...rB}]^rB.t,
                   -['match-price', {user:uS, instrument, volume:vS, isBuy:false, ...rS}]^rS.t,
@@ -30,11 +30,11 @@ describe("match example",function() {
                   +['match-trade', {buyer:uB, seller:uS, instrument, volume:vT}],
                   +['match-price', {user:uB, instrument, volume:vB-vT, isBuy:true,  ...rB}],
                   +['match-price', {user:uS, instrument, volume:vS-vT, isBuy:false, ...rS}] );
-            
+
             rule (['user', {name}],       -['user', {name}]);
             rule (['instrument', {name}], -['instrument', {name}]);
         };
-        
+
         assert.strictEqual(Object.keys(match._private.facts).length,3); // 3 facts from the match.chrjs source
         var r1 = match.add(['match-price',{user:"John Kozak", instrument:"IL21",volume:10000000,isBuy:true, t:1}]);
         assert.equal(r1.adds.length,1);
@@ -59,9 +59,9 @@ describe("match example",function() {
         var match = store {
             ['user',{name:"John Kozak",company:"Acecomp"}];
             ['user',{name:"Val Wardlaw",company:"Perluceo"}];
-            
+
             ['instrument',{name:"IL21"}];
-            
+
             rule (-['match-price', {volume:0}]);
             rule (-['match-price', {user:uB, instrument, volume:vB, isBuy:true,  ...rB}]^rB.t,
                   -['match-price', {user:uS, instrument, volume:vS, isBuy:false, ...rS}]^rS.t,
@@ -72,7 +72,7 @@ describe("match example",function() {
                   +['match-trade', {buyer:uB, seller:uS, instrument, volume:vT}],
                   +['match-price', {user:uB, instrument, volume:vB-vT, isBuy:true,  ...rB}],
                   +['match-price', {user:uS, instrument, volume:vS-vT, isBuy:false, ...rS}] );
-            
+
             rule (['user', {name}],       -['user', {name}]);
             rule (['instrument', {name}], -['instrument', {name}]);
         };
@@ -83,7 +83,7 @@ describe("match example",function() {
 
         match.reset();
         assert.strictEqual(match.size,3);
-        
+
         for (var i=0;i<10;i++)
             match.add(['match-price',{user:"John Kozak", instrument:"IL21",volume:10000000,isBuy:true, t:1}]);
         assert.strictEqual(match.size,13);
@@ -299,8 +299,10 @@ describe("regression tests",function() {
             rule (-['annotatePrepareAuction',{instruments,_children:[child,...irs],...rs}],
                   ['Instrument',{InstID:child.AInst.InstID,SubClass}],
                   ['InstrumentClass',{InstSubClassID:SubClass,AuctionVolumes:av}],
-                  +['annotatePrepareAuction',{instruments:instruments.push({AInst:_.extend(child.AInst,
-                                                                                           {AuctionVolumes:av} )}),
+                  +['annotatePrepareAuction',{instruments:instruments.push(
+                      {AInst:Object.assign({},
+                                           child.AInst,
+                                           {AuctionVolumes:av} )}),
                                               _children:[...irs],
                                               ...rs}] );
         };
@@ -338,8 +340,9 @@ describe("regression tests",function() {
             rule (-['annotatePrepareAuction',{instruments,_children:[child,...irs],...rs}],
                   ['Instrument',{InstID:child.AInst.InstID,SubClass}],
                   ['InstrumentClass',{InstSubClassID:SubClass,AuctionVolumes:av}],
-                  +['annotatePrepareAuction',{instruments:instruments.concat([{AInst:_.extend(child.AInst,
-                                                                                              {AuctVols:av} )}]),
+                  +['annotatePrepareAuction',{instruments:instruments.concat([
+                      {AInst:Object.assign(child.AInst,
+                                           {AuctVols:av} )}]),
                                               _children:[...irs],
                                               ...rs}] );
             rule (-['annotatePrepareAuction',{id,instruments,_children:[],phases,...rs}],
@@ -353,7 +356,7 @@ describe("regression tests",function() {
         assert.deepEqual(_.values(IDB._private.facts).map(function(f){return f[0];}).sort(),
                          ["Instrument","InstrumentClass","_o","auction"] );
         _.values(IDB._private.facts).forEach(function(f) {
-            if (f[0]==='auction') 
+            if (f[0]==='auction')
                 assert.deepEqual(f[1].instruments,[{AInst:{InstID:999,AuctVols:"10 20 30"}}]);
             else if (f[0]==='_o')
                 assert.deepEqual(f[1].PrepareAuction._children,[{AInst:{InstID:999,AuctVols:"10 20 30"}}]);
@@ -392,6 +395,3 @@ describe("regression tests",function() {
         assert.equal(st.size,3);
     });
 });
-
-
-

@@ -5,7 +5,6 @@
 const util = require('./util.js');
 
 if (util.env==='test')  {
-    const         _ = require('underscore');
     const    VError = require('verror');
     const    engine = require('./engine.js');
     const    Engine = engine.Engine;
@@ -134,7 +133,7 @@ if (util.env==='test')  {
 
     exports.SystemSlice.prototype.addBrowser = function(config) {
         const ss = this;
-        return jsdom.env(_.extend(
+        return jsdom.env(Object.assign(
             {
                 features: {
                     ProcessExternalResources: ["script"]
