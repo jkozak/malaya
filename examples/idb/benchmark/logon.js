@@ -3,14 +3,13 @@
 var    idb = require('../idb.js');
 
 var malaya = require('malaya');
- 
+
 var assert = require('assert');
 var events = require('events');
 var   path = require('path');
 var   util = require('util');
 var   temp = require('temp');
 var     fs = require('fs');
-var      _ = require('underscore');
 
 temp.track();                   // auto-cleanup at exit
 
@@ -34,7 +33,7 @@ var mkFE3 = function(s,ap_type) {
 };
 
 var mkServer = function(opts,cb) {
-    var srvr =  new idb.Engine(_.extend({
+    var srvr =  new idb.Engine(Object.assign({
         prevalenceDir: path.join(temp.mkdirSync(),'prevalence'),
         audit:         true,
         logging:       false,
@@ -49,7 +48,7 @@ var mkServer = function(opts,cb) {
             cb(err1);
         else
             srvr.loadData(jsonFile,function(err2) {
-                if (err2) 
+                if (err2)
                     cb(err2,null);
                 else
                     cb(null,srvr);
@@ -69,7 +68,7 @@ function mkSock(id) {
 
 suite('IDB',function() {
     var sock,fe3c,srvr;
-    before(function(next) { 
+    before(function(next) {
         srvr = mkServer({},function(err,eng) {
             if (err)
                 throw err;

@@ -23,8 +23,8 @@ const template_marker = 'TEMPLATE_';
 const b = (function() {
     const b = recast.types.builders;
     // +++ add `attrs` to more things if needed +++
-    return _.extend({},b,{
-        identifier: function(id) {return _.extend({attrs:{}},b.identifier(id));}
+    return Object.assign({},b,{
+        identifier: function(id) {return Object.assign({attrs:{}},b.identifier(id));}
     });
 })();
 
@@ -137,7 +137,7 @@ function TEMPLATE_store() {
             obj._private = {
                 get facts()   {return facts;},
                 get orderedFacts() {
-                    var keys = _.keys(facts).map(function(t){return parseInt(t);});
+                    var keys = Object.keys(facts).map(function(t){return parseInt(t);});
                     return keys.sort(function(p,q){return p-q;}).map(function(t){return facts[t];});
                 }
             };
@@ -236,24 +236,24 @@ var chrGlobalVars = {           // only javascript globals allowed in CHRjs
     __dirname:  {ext:true,mutable:false,type:'string'}
 };
 if (util.env==='test')
-    chrGlobalVars = _.extend(chrGlobalVars,
-                             {
-                                 // general testing stuff
-                                 console: {ext:true,mutable:false,type:'function'},
-                                 process: {ext:true,mutable:false,type:'function'},
-                                 // the `mocha` globals
-                                 before:  {ext:true,mutable:false,type:'function'},
-                                 after:   {ext:true,mutable:false,type:'function'},
-                                 describe:{ext:true,mutable:false,type:'function'},
-                                 it:      {ext:true,mutable:false,type:'function'},
-                             });
+    chrGlobalVars = Object.assign(chrGlobalVars,
+                                  {
+                                      // general testing stuff
+                                      console: {ext:true,mutable:false,type:'function'},
+                                      process: {ext:true,mutable:false,type:'function'},
+                                      // the `mocha` globals
+                                      before:  {ext:true,mutable:false,type:'function'},
+                                      after:   {ext:true,mutable:false,type:'function'},
+                                      describe:{ext:true,mutable:false,type:'function'},
+                                      it:      {ext:true,mutable:false,type:'function'},
+                                  });
 if (util.env==='benchmark')
-    chrGlobalVars = _.extend(chrGlobalVars,
-                             {
-                                 // the `matcha` globals
-                                 suite:   {ext:true,mutable:false,type:'function'},
-                                 bench:   {ext:true,mutable:false,type:'function'}
-                             });
+    chrGlobalVars = Object.assign(chrGlobalVars,
+                                  {
+                                      // the `matcha` globals
+                                      suite:   {ext:true,mutable:false,type:'function'},
+                                      bench:   {ext:true,mutable:false,type:'function'}
+                                  });
 
 function findVar(v,path) {
     if (path===null)
@@ -368,9 +368,9 @@ function annotateParse1(js) {   // poor man's attribute grammar - pass one
             this.markItemsWithId(path.node);
             var save = {vars:vars,stmt:stmt,item:item};
             path.node.attrs.vars = vars = {};
-            _.keys(save.vars).forEach(function(k){ // copy over bound vars from container
+            Object.keys(save.vars).forEach(function(k){ // copy over bound vars from container
                 if (save.vars[k].bound)
-                    vars[k] = _.extend({inherited:true},save.vars[k]);
+                    vars[k] = Object.assign({inherited:true},save.vars[k]);
             });
             stmt = 'snap';
             item = null;
@@ -431,7 +431,7 @@ function annotateParse1(js) {   // poor man's attribute grammar - pass one
 
 function annotateParse2(chrjs) {        // poor man's attribute grammar - pass two
     var checkBound = function(vars) {
-        _.keys(vars).map(function(k) {
+        Object.keys(vars).map(function(k) {
             if (!vars[k].bound)
                 throw new util.Fail(util.format("variable never bound: %s",k));
         });
@@ -486,7 +486,7 @@ function annotateParse2(chrjs) {        // poor man's attribute grammar - pass t
         },
         doVars:                   function(path) {
             this.traverse(path);
-            _.keys(path.node.attrs.vars).map(function(k) {
+            Object.keys(path.node.attrs.vars).map(function(k) {
                 if (!findVar(k,path).declared)
                     throw new util.Fail(util.format("variable never declared: %s",k));
             });
@@ -575,7 +575,7 @@ function insertCode(chrjs,replaces,opts) {
         },
     });
     if (opts.strict) {
-        var ds = _.difference(_.keys(replaces),_.keys(rs));
+        var ds = _.difference(Object.keys(replaces),Object.keys(rs));
         if (ds.length>0)
             throw new Error(util.format("not replaced: %j",ds));
     }
@@ -960,8 +960,8 @@ function generateJS(js,what) {
                 bindRest = null;
                 this.traverse(path);
                 if (bindRest!==null) {
-                    path.replace(b.callExpression(b.memberExpression(b.identifier('_'),
-                                                                     b.identifier('extend'),
+                    path.replace(b.callExpression(b.memberExpression(b.identifier('Object'),
+                                                                     b.identifier('assign'),
                                                                      false),
                                                   [b.objectExpression([]),bindRest.value,path.node]) );
                 }
@@ -1124,7 +1124,7 @@ function generateJS(js,what) {
 
         assert.strictEqual(templates['rule'].body.length,1);
         var    js = deepClone(templates['rule'].body[0].declarations[0].init);
-        var binds = _.keys(chr.attrs.vars)
+        var binds = Object.keys(chr.attrs.vars)
             .filter(function(k){return !chr.attrs.vars[k].inherited && k[0]!=='%'})
             .map(function(k){return chr.attrs.vars[k].mangled;});
         var js1 = genItem(0,i,genPayload);
@@ -1255,7 +1255,7 @@ function generateJS(js,what) {
                 else
                     dispatchBranches[item.elements[0].value].push([r,i]);
             } else {
-                _.keys(dispatchBranches).forEach(function(tag) {
+                Object.keys(dispatchBranches).forEach(function(tag) {
                     dispatchBranches[tag].push([r,i]);
                 });
                 dispatchGeneric.push([r,i]);
@@ -1320,7 +1320,7 @@ function generateJS(js,what) {
             b.variableDeclarator(b.identifier('rules'),
                                  b.arrayExpression(code.rules))
         ] ));
-        if (_.keys(code.queries).length>0)
+        if (Object.keys(code.queries).length>0)
             findTag('INSERT_QUERIES').insertAfter(b.variableDeclaration('var',[
                 b.variableDeclarator(b.identifier('queries'),
                                      b.callExpression(b.functionExpression(
@@ -1328,12 +1328,12 @@ function generateJS(js,what) {
                                          [],
                                          b.blockStatement([
                                              b.variableDeclaration('var',
-                                                                   _.keys(code.queries).map(function(k) {
+                                                                   Object.keys(code.queries).map(function(k) {
                                                                        return b.variableDeclarator(
                                                                            b.identifier(k),
                                                                            code.queries[k]); }) ),
                                              b.returnStatement(b.objectExpression(
-                                                 _.keys(code.queries).map(function(k) {
+                                                 Object.keys(code.queries).map(function(k) {
                                                      return b.property(
                                                          'init',
                                                          b.identifier(k),
@@ -1362,7 +1362,7 @@ function generateJS(js,what) {
         var    _addDef = Ref.flatAt(storeJS.callee.body.body,
                                     function(x){return x.type==='VariableDeclaration' &&
                                                 x.declarations[0].id.name==='_add';}).get();
-        if (_.keys(dispatchBranches).length>128)
+        if (Object.keys(dispatchBranches).length>128)
             console.log("Warning: more than 128 cases in switch statement");
         var _addSwitch = _addDef.declarations[0].init.body.body[0].consequent.body[7];
         assert.equal(_addSwitch.type,'SwitchStatement');
@@ -1542,7 +1542,7 @@ function buildStanzas(code,parsed) {
                 if (!isVar)
                     colour = 'F';
                 else if (colour===undefined) {
-                    if (_.keys(colours).length<idColours.length) {
+                    if (Object.keys(colours).length<idColours.length) {
                         colour   = ruleColours[currentRule.id.name][name] = idColours[idAlloc++];
                         idAlloc %= idColours.length;
                     } else {

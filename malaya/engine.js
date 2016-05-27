@@ -96,7 +96,7 @@ exports.makeInertChrjs = function(opts) {
         obj._private = {
             get facts() {return obj.facts;},   // be compatible with real chrjs
             get orderedFacts() {
-                const keys = _.keys(obj.facts).map(function(t){return parseInt(t);});
+                const keys = Object.keys(obj.facts).map(function(t){return parseInt(t);});
                 return keys.sort(function(p,q){return p-q;}).map(function(t){return obj.facts[t];});
             }
         };
@@ -761,7 +761,7 @@ Engine.prototype.listenHttp = function(mode,port,done) {
 
 Engine.prototype.journaliseCodeSources = function(type,item2,always,cb) {
     const srcs = sources;
-    if (always || _.keys(sources).length>0) {
+    if (always || Object.keys(sources).length>0) {
         sources = {};
         for (const fn in srcs)
             srcs[fn] = this.hashes.putFileSync(fn);
@@ -1154,7 +1154,7 @@ Engine.prototype.replicateHashes = function(url,callback) {
                         next);
     };
     next = function() {
-        const ks = _.keys(hashes);
+        const ks = Object.keys(hashes);
         if (ks.length===0) {
             eng.checkHashes(jrnlhash,
                             function(err) {

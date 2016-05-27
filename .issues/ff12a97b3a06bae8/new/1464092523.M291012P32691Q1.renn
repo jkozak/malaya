@@ -1,0 +1,8 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Tue, 24 May 2016 13:21:25 +0100
+Subject: Re: use Object.assign and remove underscore
+Message-Id: <ff12a97b3a06bae8-dc7c4ab9e904df25-artemis@renn>
+References: <ff12a97b3a06bae8-0-artemis@renn>
+In-Reply-To: <ff12a97b3a06bae8-0-artemis@renn>
+
+destructuring assignment only supported in node v6 (es7)

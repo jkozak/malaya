@@ -1,0 +1,9 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Tue, 24 May 2016 12:53:58 +0100
+Subject: Re: use Object.assign and remove underscore
+Message-Id: <ff12a97b3a06bae8-e2813673527ecd19-artemis@renn>
+References: <ff12a97b3a06bae8-0-artemis@renn>
+In-Reply-To: <ff12a97b3a06bae8-0-artemis@renn>
+
+At runtime, underscore is needed for omit, isEqual and extend.
+Object.assign can only replace extend.

@@ -101,7 +101,7 @@ function literalise(x) {
     if (_.isArray(x))
         return b.arrayExpression(x.map(literalise));
     else if (_.isObject(x))
-        return b.objectExpression(_.keys(x).map(function(k) {
+        return b.objectExpression(Object.keys(x).map(function(k) {
             return b.property('init',
                               b.identifier(k),
                               literalise(x[k]) );
@@ -146,7 +146,7 @@ describe("genAdd",function() {
     var evalAdd = function(add,bindings) {
         if (bindings===undefined)
             bindings = {};
-        var   ks = _.keys(bindings);
+        var   ks = Object.keys(bindings);
         var code = recast.print(b.callExpression(b.functionExpression(null,
                                                                       ks.map(function(k){return b.identifier(k);}),
                                                                       b.blockStatement([b.returnStatement(add)]) ),
@@ -481,7 +481,7 @@ describe("mangle",function() {
     it("should translate user variable names to something safe",function() {
         var  ast = parse("var a;");
         var ast1 = mangle(ast);
-        assert.strictEqual(_.keys(ast1.attrs.vars).length,1);
+        assert.strictEqual(Object.keys(ast1.attrs.vars).length,1);
         assert.strictEqual(ast1.attrs.vars['a'].mangled,mangleId('a'));
         assert.strictEqual(ast1.attrs.vars['a'].declared,true);
         assert.strictEqual(ast1.attrs.vars['a'].mutable,true);

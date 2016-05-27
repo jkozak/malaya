@@ -1,5 +1,3 @@
-var _ = require('underscore');
-
 module.exports =  store {
 
     rule (-['logon',{name,pw},{port}],
@@ -40,23 +38,23 @@ module.exports =  store {
                                             ['trade',t];
                                             x=>([t.buyer,t.seller].indexOf(name)===-1 ? x : x.concat(t)) )]] );
 
-    
+
     rule (-['subclass',{name,...rs},{port}], // maintain subclasses
           -['subclass',{name,...}],
           +['subclass',{name,...rs}]);
     rule (-['stock',{name,...rs},{port}],    // maintain stocks
           -['stock',{name,...}],
           +['stock',{name,...rs}]);
-             
+
     rule (-['auction',{id,state:'run',...rs1},{port}], // start auction, set start time
           -['auction',{id,state:ostate,...rs0}],
            (['new','ready'].indexOf(ostate)!==-1),
            ['user',{port,name,...}],
-          +['auction',_.extend({owner:name},rs0,rs1,{id:id,state:'run',start:Date.now()})] );
+          +['auction',Object.assign({owner:name},rs0,rs1,{id:id,state:'run',start:Date.now()})] );
     rule (-['auction',{id,...rs1},{port}],             // update
           -['auction',{id,...rs0}],
            ['user',{port,name,...}],
-          +['auction',_.extend({owner:name},rs0,rs1,{id:id})] );
+          +['auction',Object.assign({owner:name},rs0,rs1,{id:id})] );
     rule (-['auction',{id,...},{port}],                // ensure sane
            console.log("no user found for %j",port) );
 
@@ -74,9 +72,9 @@ module.exports =  store {
     rule (-['price',{auction,stock,rate,buy,...rs},{port}], // set user name from port
            ['user',{name,port,...}],
           +['price',{auction,stock,rate,buy,user:name,...rs}] );
-    
+
     rule (-['price',{volume:0,...rs},...],
-          +['_output','all',['price',_.extend({volume:0},rs)]] );
+          +['_output','all',['price',Object.assign({volume:0},rs)]] );
     rule ( ['price',{auction,stock,rate,buy,user,...}],     // new prices replace old
           -['price',{auction,stock,rate,buy,user,...}] );
 
@@ -112,7 +110,7 @@ module.exports =  store {
           -['counters',{auction,...crs}],
            ['user',{port,name,...}],
           +['counters',{auction:auction+1,...crs}],
-          +['auction',_.extend({},ars,rs,{base:id,state:'new',id:'a#'+auction,owner:name})] );
+          +['auction',Object.assign({},ars,rs,{base:id,state:'new',id:'a#'+auction,owner:name})] );
 
     rule (-['auction',{state:'new',...ars},{port}], // create a new auction
           -['counters',{auction,...crs}],
@@ -151,9 +149,9 @@ module.exports =  store {
     rule ( ['user',{pw,...rs}], // send all user updates out
            ['subscription',{what:'user',port}],
           +['_output',port,['user',rs]] );
-    
+
     // standard housekeeping
-    
+
     rule ( ['_take-outputs',...], -['_output',...]);
     rule (-['_take-outputs',...]);
 

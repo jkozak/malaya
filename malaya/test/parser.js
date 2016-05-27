@@ -1,8 +1,7 @@
 "use strict";
 
-const parser = require("../parser.js");
+const  parser = require("../parser.js");
 
-const       _ = require('underscore');
 const  assert = require("assert");
 const    temp = require('temp');
 const    util = require('../util.js');
@@ -491,7 +490,7 @@ describe("esprima-based parser",function() {
             /*eslint-disable no-undef,dot-notation */
             delete testFixture['Invalid syntax']['i #= 42']; // not invalid now
             delete testFixture['API']['Syntax'];             // we have added to `Syntax`
-            _.extend(testFixture,chrjsTestFixture);          // add in tests for chrJS
+            Object.assign(testFixture,chrjsTestFixture);     // add in tests for chrJS
             Object.keys(testFixture).forEach(function(category) {
                 Object.keys(testFixture[category]).forEach(function(source) {
                     const expected = testFixture[category][source];

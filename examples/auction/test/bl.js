@@ -2,7 +2,7 @@ var   util = require('malaya').util;
 var assert = require('assert');
 var      _ = require('underscore');
 
-function mkAuction(fixture) {   // bare chrjs 
+function mkAuction(fixture) {   // bare chrjs
     var bl = require('../bl.chrjs');
     bl.reset();                 // `bl` is effectively shared by `require`
     for (var i in fixture||[])
@@ -54,7 +54,7 @@ describe("logon",function() {
                          ['logon',{ok:false,msg:"bad pw"}] );
     });
     it("checks enabled",function() {
-        var  bl = mkAuction([['user',_.extend({},jk[1],{enabled:false})]]);
+        var  bl = mkAuction([['user',Object.assign({},jk[1],{enabled:false})]]);
         assert.deepEqual(bl.addReturningOneOutputTo('self',
                                                     ['logon',{name:"John Kozak",pw:"JK"},{port:'test://'}]),
                          ['logon',{ok:false,msg:"logon disabled"}] );
@@ -110,7 +110,7 @@ describe("auction generation",function() {
     before(function() {
         bl = mkAuction(fixture);
     });
-        
+
     it("makes an auction",function() {
         var ans = bl.addReturningOneOutputTo('self',
                                              ['auction',{state:'new'},{port:'test://N'}] );
@@ -139,7 +139,7 @@ describe("auction cloning",function() {
     before(function() {
         bl = mkAuction(fixture);
     });
-        
+
     it("makes a similar auction",function() {
         var ans = bl.addReturningOneOutputTo('self',
                                              ['cloneAuction',{id:'a#111'},{port:'test://K'}] );
@@ -193,7 +193,7 @@ describe("'match' type auction",function() {
         assert.strictEqual(ans[0],'auction');
         assert.strictEqual(ans[1].state,'run');
         assert.strictEqual(ans[1].start,t);
-        
+
         assert.deepEqual(bl.addReturningOneOutputTo('all',['_tick',{date:t+1000}]),
                          ['tick',{id:'sweets','remaining':1}] );
 
@@ -255,7 +255,7 @@ describe("'match' type auction",function() {
             return ['price',{auction:'sweets',stock:'spangles',buy:true,volume:v,user:"Nick Jenkins"},{port:'test://N'}];
         };
         bl.addReturningOneOutputTo('all',['auction',{id:'sweets',state:'run'},{port:'test://N'}] );
-        
+
         bl.addReturningOneOutputTo('all',mkPrice(5));
         bl.addReturningOneOutputTo('all',mkPrice(10));
         bl.addReturningOneOutputTo('all',mkPrice(15)); // only this price should be left
@@ -265,4 +265,3 @@ describe("'match' type auction",function() {
         assert.strictEqual(prices[0][1].volume,15);
     });
 });
-
