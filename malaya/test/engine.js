@@ -381,6 +381,7 @@ describe("Engine",function() {
         });
     });
     describe("#addConnection using `out` function",function() {
+        // !!! these tests use the same chrjs instance !!!
         it("sends input, receives output",function(done) {
             const eng = new Engine({dir:           temp.mkdirSync(),
                                     businessLogic: path.join(__dirname,'bl','out.chrjs') });

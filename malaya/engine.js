@@ -152,7 +152,8 @@ const Engine = exports.Engine = function(options) {
     eng.replicateSock = null;
     eng.active        = null;                    // update being processed
 
-    eng.chrjs.on('error',function(err){eng.emit(new VError(err,"chrjs: "));});
+    eng.chrjs.on('error',function(err)      {eng.emit(new VError(err,"chrjs: "));});
+    eng.chrjs.out = function(d,j) {return eng.out(d,j);};
 
     eng.on('mode',function(mode) {
         eng.broadcast(['mode',mode],'admin');
@@ -925,11 +926,6 @@ Engine.prototype.out = function(dest,json) {
     }
 };
 
-Engine.prototype._callOut = function(d,j) {
-    this.out(d,j);
-    return true;                // else execution will stop
-};
-
 Engine.prototype.update = function(data,fn,cb) {
     const   eng = this;
     let     res;
@@ -956,7 +952,6 @@ Engine.prototype.update = function(data,fn,cb) {
         cb = fn;
     eng.journalise('update',data,done2);
     eng.active = data;
-    GLOBAL.out = eng._callOut.bind(eng);
     res        = eng.chrjs.update(data);
     GLOBAL.out = undefined;
     done2();

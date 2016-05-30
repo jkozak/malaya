@@ -104,6 +104,7 @@ function TEMPLATE_store() {
             get size()    {return Object.keys(facts).length;},
             get queries() {return queries;},
             reset: function(){t=1;index={};facts={};init();},
+            out:   function(dest,data) {ee.emit('out',dest,data);},
 
             // business logic protocol
             tag: null,
@@ -141,12 +142,16 @@ function TEMPLATE_store() {
                     return keys.sort(function(p,q){return p-q;}).map(function(t){return facts[t];});
                 }
             };
-// +++ obj = Object.freeze(obj) if it's not too slow. +++
+
+        // +++ obj = Object.freeze(obj) if it's not too slow. +++
+
+        var out = function(dest,data) {obj.out(dest,data);};
 
         // `rules` is an array [[variant,...],...]
         INSERT_RULES;
 
         // `queries` is an object {name:query,...}
+        // +++ queries should not be able to call `out` +++
         INSERT_QUERIES;
 
         // initial store contents
@@ -245,7 +250,6 @@ var chrGlobalVars = {           // only javascript globals allowed in CHRjs
     require:    {ext:true,mutable:false,type:'function'},
     module:     {ext:true,mutable:false,type:'function'},
     console:    {ext:true,mutable:false,type:'function'},
-    out:        {ext:true,mutable:false,type:'function'},
     __dirname:  {ext:true,mutable:false,type:'string'}
 };
 if (util.env==='test')
@@ -268,8 +272,14 @@ if (util.env==='benchmark')
                                       bench:   {ext:true,mutable:false,type:'function'}
                                   });
 
+var chrLocalVars = {
+    out: {ext:true,mutable:false,type:'function'}
+};
+
 function findVar(v,path) {
-    if (path===null)
+    if (chrLocalVars[v])
+        return chrLocalVars[v];
+    else if (path===null)
         return chrGlobalVars[v];
     else if (path.node.attrs && path.node.attrs.vars && path.node.attrs.vars[v])
         return path.node.attrs.vars[v];
@@ -986,7 +996,7 @@ function generateJS(js,what) {
         var genItem = function(item_id,fixed_item,next) { // >> [Statement,...]
             var    js;
             var next1 = (item_id<chr.items.length-1) ?
-                function(){return genItem(item_id+1,fixed_item,next)} : next;
+                    function(){return genItem(item_id+1,fixed_item,next);} : next;
             var   js1;
             switch (chr.items[item_id].op) {
             case '-':
@@ -1198,7 +1208,7 @@ function generateJS(js,what) {
         // generate a JS `function` to implement a CHRJS `store`
         var  findTag = function(t) {
             return Ref.flatAt(storeJS.callee.body.body,
-                              function(x){return x.type==='ExpressionStatement' && x.expression.name===t} );
+                              function(x){return x.type==='ExpressionStatement' && x.expression.name===t;} );
         };
         assert(['StoreDeclaration','StoreExpression'].indexOf(storeCHR.type)!=-1);
         assert(templates['store'].type=='BlockStatement' && templates['store'].body.length===1);
@@ -1479,7 +1489,7 @@ function generateJS(js,what) {
             if (bindRest.id===null)
                 throw new Error("anonymous ellipsis in value expression");
             this.traverse(path);
-        }
+        },
     });
 
     return js;

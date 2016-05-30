@@ -1,0 +1,9 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Mon, 30 May 2016 19:49:42 +0100
+State: resolved
+Subject: `out` should be usable without an Engine
+Message-Id: <88ac127a066490f2-0-artemis@renn>
+resolution: fixed
+
+And should probably be called `emit`.  Default behaviour is to
+EventEmitter emit.

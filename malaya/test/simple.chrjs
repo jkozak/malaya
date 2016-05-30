@@ -293,6 +293,21 @@ describe("evaluation order",function() {
     });
 });
 
+describe("output function",function(){
+    it("emits events",function(done){
+        var st = store {
+            rule (['a'],
+                  out('nemo',"it's an a!") );
+        };
+        st.on('out',(d,j)=>{
+            assert.equal(d,'nemo');
+            assert.equal(j,"it's an a!");
+            done();
+        });
+        st.add(['a']);
+    });
+});
+
 describe("regression tests",function() {
     it("should have fixed [955dab]",function() {
         var IDB = store {
