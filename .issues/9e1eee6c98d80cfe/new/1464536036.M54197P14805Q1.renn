@@ -1,0 +1,6 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Sun, 29 May 2016 16:33:56 +0100
+Subject: don't recast.parse the whole of compiler.js for templates
+State: new
+Message-Id: <9e1eee6c98d80cfe-0-artemis@renn>
+

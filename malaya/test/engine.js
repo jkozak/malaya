@@ -347,7 +347,7 @@ describe("Engine",function() {
                 io.i.write(['do_summat',{}]);
             });
         });
-        it("multiplexes XXX",function(done) {
+        it("multiplexes",function(done) {
             const eng = new Engine({dir:           temp.mkdirSync(),
                                   businessLogic: path.join(__dirname,'bl','output.chrjs') });
             const io1 = createIO();
@@ -399,7 +399,7 @@ describe("Engine",function() {
                 io.i.write(['do_summat',{}]);
             });
         });
-        it("multiplexes XXX",function(done) {
+        it("multiplexes",function(done) {
             const eng = new Engine({dir:           temp.mkdirSync(),
                                     businessLogic: path.join(__dirname,'bl','out.chrjs') });
             const io1 = createIO();
