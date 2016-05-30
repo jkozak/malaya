@@ -1,6 +1,7 @@
 From: John Kozak <jk@thameslighter.net>
 Date: Sun, 29 May 2016 10:20:04 +0100
 Subject: use ES7ish syntax to replace Object.assign and List.concat in chrjs
-State: new
+State: resolved
 Message-Id: <cc734884b3c38805-0-artemis@renn>
+resolution: fixed
 

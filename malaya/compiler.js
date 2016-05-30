@@ -282,7 +282,7 @@ function annotateParse1(js) {   // poor man's attribute grammar - pass one
     var item = null;    // `op` of active item or `null`
     var stmt = null;
     js = deepClone(js);
-    parser.visit(js,{
+    js = parser.visit(js,{
         markItemsWithId:          function(node) {
             for (var i=0;i<node.items.length;i++)
                 node.items[i].attrs.itemId = i;
@@ -450,7 +450,7 @@ function annotateParse2(chrjs) {        // poor man's attribute grammar - pass t
         });
     };
     var setBoundHereAttr = function(js,vars) {
-        parser.visit(js,{
+        js = parser.visit(js,{
             visitIdentifier:          function(path) {
                 if (path.node.name[0]!=='%' && vars[path.node.name]!==undefined) {
                     if (!vars[path.node.name].bound) {
@@ -484,7 +484,7 @@ function annotateParse2(chrjs) {        // poor man's attribute grammar - pass t
         checkBound(vars);
     };
     chrjs = deepClone(chrjs);
-    parser.visit(chrjs,{
+    chrjs = parser.visit(chrjs,{
         visitRuleStatement:       function(path) {
             this.traverse(path); // may contain SnapExpressions
             setBoundHereAttr(path.node,path.node.attrs.vars);
@@ -520,7 +520,7 @@ function unmangleIdentifier(id) {
 }
 function mangle(js) {           // `js` must have been previously annotated
     js = deepClone(js);
-    parser.visit(js,{
+    js = parser.visit(js,{
         doVars:                   function(path) {
             for (var v in path.node.attrs.vars)
                 path.node.attrs.vars[v].mangled = mangleIdentifier(v);
@@ -570,7 +570,7 @@ function insertCode(chrjs,replaces,opts) {
     var rs = {};
     opts = opts || {};
     opts.strict = opts.strict===undefined ? true : !!opts.strict;
-    parser.visit(js,{
+    js = parser.visit(js,{
         visitExpressionStatement: function(path) {
             var expr = path.node.expression;
             if (expr.type==='Identifier') {
@@ -879,7 +879,7 @@ function generateJS(js,what) {
         if (item.rank) {
             var        bSort = deepClone(templates['sort'].body);
             var bvCandidates = b.identifier(bv.name+'Candidates');
-            parser.visit(bSort,{
+            bSort = parser.visit(bSort,{
                 visitIdentifier: function(path) {
                     switch (path.node.name) {
                     case 'SORTED':
@@ -973,58 +973,7 @@ function generateJS(js,what) {
     };
 
     var genAdd = function(x) {
-        var bindRest = null;
         return parser.visit(deepClone(x),{
-            visitObjectExpression: function(path) {
-                var bRsave = bindRest;
-                bindRest = null;
-                this.traverse(path);
-                if (bindRest!==null) {
-                    path.replace(b.callExpression(b.memberExpression(b.identifier('Object'),
-                                                                     b.identifier('assign'),
-                                                                     false),
-                                                  [b.objectExpression([]),bindRest.value,path.node]) );
-                }
-                bindRest = bRsave;
-            },
-            visitProperty: function(path) {
-                var prop = path.node;
-                if (prop.kind==='bindRest') {
-                    bindRest = prop;
-                    if (bindRest.value===null)
-                        throw new Error("anonymous ellipsis in value expression");
-                    path.replace();
-                }
-                this.traverse(path);
-            },
-            visitArrayExpression: function(path) {
-                var bRsave = bindRest;
-                bindRest = null;
-                this.traverse(path);
-                if (bindRest!==null) {
-                    var before = b.arrayExpression([]);
-                    var  after = b.arrayExpression([]);
-                    var   rest = null;
-                    for (var i=0;i<path.node.elements.length;i++) {
-                        if (path.node.elements[i].type==='BindRest')
-                            rest = path.node.elements[i].id;
-                        else if (rest!==null)
-                            after.elements.push(path.node.elements[i]);
-                        else
-                            before.elements.push(path.node.elements[i]);
-                    }
-                    var rep = b.callExpression(b.memberExpression(before,b.identifier('concat'),false),
-                                               [rest,after]);
-                    path.replace(rep);
-                }
-                bindRest = bRsave;
-            },
-            visitBindRest: function(path) {
-                bindRest = path.node;
-                if (bindRest.id===null)
-                    throw new Error("anonymous ellipsis in value expression");
-                this.traverse(path);
-            },
             visitSnapExpression: visitSnapExpressionAndCompile
         });
     };
@@ -1053,7 +1002,7 @@ function generateJS(js,what) {
                 var expr = chr.items[item_id].expr;
                 if (expr.left.type!=="Identifier")
                     throw new Error(util.format("can't bind to non-variable: %j",expr.left));
-                parser.visit(expr,{visitSnapExpression:visitSnapExpressionAndCompile});
+                expr = parser.visit(expr,{visitSnapExpression:visitSnapExpressionAndCompile});
                 js1 = [b.expressionStatement(expr)].concat(next1());
                 break;
             }
@@ -1152,7 +1101,7 @@ function generateJS(js,what) {
                                           binds.map(function(v) {
                                               return b.variableDeclarator(b.identifier(v),null);
                                           }) ));
-        parser.visit(js,{
+        js = parser.visit(js,{
             visitExpressionStatement: function(path) {
                 var expr = path.node.expression;
                 if (expr.type==='Identifier' && expr.name==='INSERT_MATCH') {
@@ -1185,7 +1134,7 @@ function generateJS(js,what) {
                                  [b.literal('query-done'),b.literal(unmangleIdentifier(chr.id))] ) ));
         }
         rv.body.body.push(b.returnStatement(chr.init.left));
-        parser.visit(rv,{       // remove query args and accum variable from binding site decls
+        rv = parser.visit(rv,{       // remove query args and accum variable from binding site decls
             visitVariableDeclarator: function(path) {
                 var decl = path.node;
                 if (decl.id.name===chr.init.left.name ||
@@ -1209,7 +1158,7 @@ function generateJS(js,what) {
                 throw new util.Fail("for expression must not modify the store");
 
         var rv = genRuleVariant(chr,null,function() {
-            parser.visit(chr.accum,{ // handle nested for-expressions
+            chr.accum = parser.visit(chr.accum,{ // handle nested for-expressions
                 visitSnapExpression: function(path) {
                     var qjs = genSnap(path.node,[]);
                     path.replace(b.callExpression(qjs,[]));
@@ -1229,7 +1178,7 @@ function generateJS(js,what) {
                                  [b.literal('for-done'),b.literal(unmangleIdentifier(chr.id))] ) ));
         }
         rv.body.body.push(b.returnStatement(bVarAccum));
-        parser.visit(rv,{       // remove query args from binding site decls
+        rv = parser.visit(rv,{       // remove query args from binding site decls
             visitVariableDeclarator: function(path) {
                 var decl = path.node;
                 if (_.any(args,function(bId){return bId.name===decl.id.name}))
@@ -1304,7 +1253,7 @@ function generateJS(js,what) {
             case 'FunctionDeclaration': { // never a FunctionExpression (must be top level in `store`, no `var`)
                 var funjs = deepClone(storeCHR.body[i]);
                 var  name = funjs.id.attrs.was;
-                parser.visit(funjs,{
+                funjs = parser.visit(funjs,{
                     visitSnapExpression: function(path) {
                         path.replace(b.callExpression(genSnap(path.node,[]),[]));
                         return false;
@@ -1394,11 +1343,11 @@ function generateJS(js,what) {
             _addSwitch.cases.push(b.switchCase(b.literal(k),brs.concat(b.breakStatement())));
         }
         {
-            var brs = dispatchGeneric.map(function(br){return genInvokeRuleItem(br);})
+            var brs = dispatchGeneric.map(function(br){return genInvokeRuleItem(br);});
             _addSwitch.cases.push(b.switchCase(null,brs.concat(b.breakStatement())));
         }
 
-        parser.visit(storeJS,{  // remove any `var;` that we have generated
+        storeJS = parser.visit(storeJS,{  // remove any `var;` that we have generated
             visitVariableDeclaration: function(path) {
                 this.traverse(path);
                 if (path.node.declarations.length===0)
@@ -1417,24 +1366,12 @@ function generateJS(js,what) {
         js = annotateParse2(annotateParse1(js));
         js = mangle(js);
         parser.namedTypes.Program.assert(js);
-        parser.visit(js,{
+        js = parser.visit(js,{
             visitProgram: function(path) {
-                path.node.body.unshift({
-                    type:        'VariableDeclaration',
-                    declarations:[{
-                        type:     'VariableDeclarator',
-                        id:       {type:'Identifier',name:'_',attrs:{}},
-                        init:     {
-                            type:      'CallExpression',
-                            id:        null,
-                            callee:    {type:'Identifier',name:'require',attrs:{}},
-                            arguments: [{type:'Literal',value:'underscore'}],
-                            defaults:  []
-                        }
-                    }],
-                    kind:        'const',
-                    attrs:       {}
-                });
+                path.node.body.unshift(b.variableDeclaration('var',[
+                    b.variableDeclarator(b.identifier('_'),
+                                         b.callExpression(b.identifier('require'),
+                                                          [b.literal('underscore')] ) ) ]));
                 this.traverse(path);
             },
             visitStoreDeclaration: function(path) {
@@ -1450,21 +1387,6 @@ function generateJS(js,what) {
                 return false;
             }
         });
-        parser.visit(js,{ // post-processing
-            visitBinaryExpression: function(path){
-                // +++ warn user about semantics change for == and != +++
-                if (path.node.operator=='==') {
-                    warnOnce("== and != test for deep equality, not the javascript horror");
-                    path.replace(genEqual(path.node.left,path.node.right));
-                    return false;
-                } else if (path.node.operator=='!=') {
-                    warnOnce("== and != test for deep equality, not the javascript horror");
-                    path.replace(genNotEqual(path.node.left,path.node.right));
-                    return false;
-                } else
-                    this.traverse(path);
-            }
-        });
         break;
     }
     case 'add': {
@@ -1475,6 +1397,90 @@ function generateJS(js,what) {
     default:
         throw new Error(util.format("what?!: %j",what));
     }
+
+    var bindRest = null;
+    js = parser.visit(js,{ // post-processing
+        visitBinaryExpression: function(path){
+            if (path.node.operator=='==') {
+                warnOnce("== and != test for deep equality, not the javascript horror");
+                path.replace(genEqual(path.node.left,path.node.right));
+            } else if (path.node.operator=='!=') {
+                warnOnce("== and != test for deep equality, not the javascript horror");
+                path.replace(genNotEqual(path.node.left,path.node.right));
+            }
+            this.traverse(path);
+        },
+        visitObjectExpression: function(path) {
+            var bRsave = bindRest;
+            bindRest = false;
+            this.traverse(path);
+            if (bindRest){
+                var chunks = [];
+                var  chunk = [];
+                for (var i=0;i<path.node.properties.length;i++) {
+                    var pr = path.node.properties[i];
+                    if (pr.kind==='bindRest') {
+                        if (chunk.length>0) {
+                            chunks.push(b.objectExpression(chunk));
+                            chunk = [];
+                        }
+                        chunks.push(pr.value);
+                    } else
+                        chunk.push(pr);
+                }
+                if (chunk.length>0)
+                    chunks.push(b.objectExpression(chunk));
+                path.replace(b.callExpression(b.memberExpression(b.identifier('Object'),
+                                                                 b.identifier('assign'),
+                                                                 false),
+                                              [b.objectExpression([])].concat(chunks) ) );
+            }
+            bindRest = bRsave;
+        },
+        visitProperty: function(path) {
+            var prop = path.node;
+            if (prop.kind==='bindRest') {
+                if (prop.value===null)
+                    throw new Error("anonymous ellipsis in value expression");
+                bindRest = true;
+            }
+            this.traverse(path);
+        },
+        visitArrayExpression: function(path) {
+            var bRsave = bindRest;
+            bindRest = null;
+            this.traverse(path);
+            if (bindRest!==null) {
+                var chunks = [];
+                var  chunk = [];
+                for (var i=0;i<path.node.elements.length;i++) {
+                    var el = path.node.elements[i];
+                    if (el.type==='BindRest') {
+                        if (chunk.length>0) {
+                            chunks.push(b.arrayExpression(chunk));
+                            chunk = [];
+                        }
+                        chunks.push(el.id);
+                    } else
+                        chunk.push(el);
+                }
+                if (chunk.length>0)
+                    chunks.push(b.arrayExpression(chunk));
+                var rep = b.callExpression(b.memberExpression(b.arrayExpression([]),
+                                                              b.identifier('concat'),
+                                                              false),
+                                           chunks );
+                path.replace(rep);
+            }
+            bindRest = bRsave;
+        },
+        visitBindRest: function(path) {
+            bindRest = path.node;
+            if (bindRest.id===null)
+                throw new Error("anonymous ellipsis in value expression");
+            this.traverse(path);
+        }
+    });
 
     return js;
 }
@@ -1493,7 +1499,7 @@ exports.getRuleMap = function(p) {
 
 function buildRuleMap(parsed) {
     var ruleMap = {};
-    parser.visit(parsed,{
+    parsed = parser.visit(parsed,{
         visitRuleStatement: function(p) {
             ruleMap[p.node.id.name] = p.node.loc;
             this.traverse(p);
@@ -1542,7 +1548,7 @@ function buildStanzas(code,parsed) {
     var   idColours = '0123456';
     var     idAlloc = 0;
     var       isVar = true;
-    parser.visit(parsed,{
+    parsed = parser.visit(parsed,{
         visitRuleStatement: function(path) {
             var node = path.node;
             for (var i=0;i<'rule'.length;i++)
