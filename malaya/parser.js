@@ -172,7 +172,8 @@ const util = require('./util.js');
     PropertyKind = {
         Data: 1,
         Get: 2,
-        Set: 4
+        Set: 4,
+        BindRest: 8             // chrjs
     };
 
     // Error messages should be identical to V8.
@@ -2082,7 +2083,7 @@ const util = require('./util.js');
                 lex();
                 elements.push(null);
             } else {
-                if (state.inStore && match('...')) { // chrjs
+                if (match('...')) { // chrjs
                     expect('...');
                     if (match(']') || match(','))
                         elements.push(delegate.createBindRest(null));
@@ -2141,10 +2142,12 @@ const util = require('./util.js');
         token = lookahead;
         startToken = lookahead;
 
-        if (state.inStore && match('...')) {    // chrjs
+        if (match('...')) {    // chrjs
             expect('...');
             if (match('}') || match(','))
                 value = null;
+            else if (match('{'))
+                value = parseObjectInitialiser();
             else
                 value = parseVariableIdentifier();
             return delegate.markEnd(delegate.createProperty('bindRest', '', value), startToken);
@@ -2218,10 +2221,14 @@ const util = require('./util.js');
             } else {
                 name = toString(property.key.value);
             }
-            kind = (property.kind === 'init') ? PropertyKind.Data : (property.kind === 'get') ? PropertyKind.Get : PropertyKind.Set;
+            kind = (property.kind === 'init') ? PropertyKind.Data :
+                (property.kind === 'bindRest') ? PropertyKind.BindRest :
+                (property.kind === 'get') ? PropertyKind.Get : PropertyKind.Set;
 
             key = '$' + name;
-            if (Object.prototype.hasOwnProperty.call(map, key)) {
+            if (kind === PropertyKind.BindRest) {
+                //console.log("*** 1 %j",properties);
+            } else if (Object.prototype.hasOwnProperty.call(map, key)) {
                 if (map[key] === PropertyKind.Data) {
                     if (strict && kind === PropertyKind.Data) {
                         throwErrorTolerant({}, Messages.StrictDuplicateProperty);

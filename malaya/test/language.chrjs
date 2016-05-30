@@ -180,3 +180,65 @@ describe("deep equality [== and !=]",function() {
         assert(!(o1!=o2));
     });
 });
+
+describe("... spread operator",function(){
+    describe("on arrays",function(){
+        it("inserts var into empty",function(){
+            const a1 = [1];
+            assert.deepEqual([...a1],[1]);
+        });
+        it("inserts into empty",function(){
+            assert.deepEqual([...[1]],[1]);
+        });
+        it("inserts at the beginning",function(){
+            assert.deepEqual([...[1],2],[1,2]);
+        });
+        it("inserts at the end",function(){
+            assert.deepEqual([0,...[1]],[0,1]);
+        });
+        it("inserts in the middle",function(){
+            assert.deepEqual([0,...[1],2],[0,1,2]);
+        });
+        it("inserts [] as a no-op",function(){
+            assert.deepEqual([0,...[],1],[0,1]);
+        });
+        it("inserts multiple items",function(){
+            assert.deepEqual([0,...['quarter','half','three-quarters'],1],
+                             [0,'quarter','half','three-quarters',1]);
+        });
+        it("makes multiple insertions",function(){
+            assert.deepEqual([...[0],...['quarter','half','three-quarters'],...[1]],
+                             [0,'quarter','half','three-quarters',1]);
+        });
+        it("makes multiple mixed insertions",function(){
+            assert.deepEqual([0,...[1],2,3,...[4,5],6],[0,1,2,3,4,5,6]);
+        });
+    });
+    describe("on objects",function(){
+        it("inserts var into empty",function(){
+            var o1 = {a:1};
+            assert.deepEqual({...o1},{a:1});
+        });
+        it("inserts into empty",function(){
+            assert.deepEqual({...{a:1}},{a:1});
+        });
+        it("inserts",function(){
+            assert.deepEqual({a:1,...{b:2}},{a:1,b:2});
+        });
+        it("makes multiple insertions",function(){
+            assert.deepEqual({a:1,...{b:2},...{c:3},...{d:4}},{a:1,b:2,c:3,d:4});
+        });
+        it("inserts in order at the beginning",function(){
+            assert.deepEqual({...{a:3,c:5},a:1,b:2},{a:1,b:2,c:5});
+        });
+        it("inserts in order in the middle",function(){
+            assert.deepEqual({c:4,...{a:3,c:5},a:1,b:2},{a:1,b:2,c:5});
+        });
+        it("inserts in order at the end",function(){
+            assert.deepEqual({a:1,b:2,...{a:3,b:4}},{a:3,b:4});
+        });
+        it("makes multiple insertions in order",function(){
+            assert.deepEqual({a:1,b:2,...{a:3,b:4},...{b:5}},{a:3,b:5});
+        });
+    });
+});
