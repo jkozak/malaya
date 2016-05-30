@@ -1,6 +1,6 @@
 {
   "name": "malaya",
-  "version": "0.4.5",
+  "version": "0.4.6",
   "description": "tiny vegetarian mosquito",
   "dependencies": {
     "argparse": "^1.0.2",
