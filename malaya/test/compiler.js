@@ -606,7 +606,7 @@ describe("compile",function() {
         assert.deepEqual(_.values(st._private.facts),[['c',1],['a',17],['b',19]]);
     });
     it("should handle guards starting with ! [cd50013ab17474a6]",function() {
-        var ast = parse("var st = store {rule(['a',b],!b==0,+['c']);rule(-['a',...]);};");
+        var ast = parse("var st = store {rule(['a',b],!(b===0),+['c']);rule(-['a',...]);};");
         var  js = compiler.compile(ast);
         eval(recast.print(js).code);
         var   st = eval(mangleId('st'));

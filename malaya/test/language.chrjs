@@ -1,0 +1,182 @@
+var assert = require("assert");
+var      _ = require('underscore');
+
+describe("shallow equality [=== and !==]",function() {
+    it("compares numbers",function(){
+        assert(1===1);
+        assert(!(1===2));
+        assert(1!==2);
+        assert(!(1!==1));
+    });
+    it("compares strings",function(){
+        assert("1"==="1");
+        assert(!("1"==="2"));
+        assert("1"!=="2");
+        assert(!("1"!=="1"));
+    });
+    it("compares null",function(){
+        assert(null===null);
+        assert(!(null!==null));
+    });
+    it("compares null to 0",function(){
+        assert(null!==0);
+        assert(0!==null);
+        assert(!(null===0));
+        assert(!(0===null));
+    });
+    it("compares null to empty string",function(){
+        assert(null!=="");
+        assert(""!==null);
+        assert(!(null===""));
+        assert(!(""===null));
+    });
+    it("compares null to false",function(){
+        assert(null!==false);
+        assert(false!==null);
+        assert(!(null===false));
+        assert(!(false===null));
+    });
+    it("compares 0 to false",function(){
+        assert(0!==false);
+        assert(false!==0);
+        assert(!(0===false));
+        assert(!(false===0));
+    });
+    it("compares 0 to empty string",function(){
+        assert(0!=='');
+        assert(''!==0);
+        assert(!(0===''));
+        assert(!(''===0));
+    });
+    it("compares empty arrays",function(){
+        const ea = [];
+        assert(ea===ea);
+        assert(!(ea!==ea));
+    });
+    it("compares non-empty arrays",function(){
+        const a = [1];
+        assert(a===a);
+        assert(!(a!==a));
+    });
+    it("compares unequal arrays",function(){
+        const a1 = [1];
+        const a2 = [2];
+        assert(a1!==a2);
+        assert(!(a1===a2));
+    });
+    it("compares empty objects",function(){
+        const o = {};
+        assert(o===o);
+        assert(!(o!==o));
+    });
+    it("compares non-empty objects",function(){
+        const o = {p:1,q:2};
+        assert(o===o);
+        assert(!(o!==o));
+    });
+    it("compares unequal objects",function(){
+        const o1 = {p:1,q:2};
+        const o2 = {p:1,q:1};
+        assert(o1!==o2);
+        assert(!(o1===o2));
+    });
+});
+
+describe("deep equality [== and !=]",function() {
+    it("compares numbers",function(){
+        assert(1==1);
+        assert(!(1==2));
+        assert(1!=2);
+        assert(!(1!=1));
+    });
+    it("compares strings",function(){
+        assert("1"=="1");
+        assert(!("1"=="2"));
+        assert("1"!="2");
+        assert(!("1"!="1"));
+    });
+    it("compares null",function(){
+        assert(null==null);
+        assert(!(null!=null));
+    });
+    it("compares null to 0",function(){
+        assert(null!=0);
+        assert(0!=null);
+        assert(!(null==0));
+        assert(!(0==null));
+    });
+    it("compares null to empty string",function(){
+        assert(null!="");
+        assert(""!=null);
+        assert(!(null==""));
+        assert(!(""==null));
+    });
+    it("compares null to false",function(){
+        assert(null!=false);
+        assert(false!=null);
+        assert(!(null==false));
+        assert(!(false==null));
+    });
+    it("compares 0 to false",function(){
+        assert(0!=false);
+        assert(false!=0);
+        assert(!(0==false));
+        assert(!(false==0));
+    });
+    it("compares 0 to empty string",function(){
+        assert(0!='');
+        assert(''!=0);
+        assert(!(0==''));
+        assert(!(''==0));
+    });
+    it("compares an empty array to itself",function(){
+        const ea = [];
+        assert(ea==ea);
+        assert(!(ea!=ea));
+    });
+    it("compares an empty array to another",function(){
+        const ea1 = [];
+        const ea2 = [];
+        assert(ea1==ea1);
+        assert(!(ea1!=ea2));
+    });
+    it("compares non-empty arrays",function(){
+        const a = [1];
+        assert(a==a);
+        assert(!(a!=a));
+    });
+    it("compares unequal arrays",function(){
+        const a1 = [1];
+        const a2 = [2];
+        assert(a1!=a2);
+        assert(!(a1==a2));
+    });
+    it("compares equivalent non-identical arrays",function(){
+        const a1 = [1];
+        const a2 = [].concat(1);
+        assert(a1==a2);
+        assert(!(a1!=a2));
+    });
+    it("compares empty objects",function(){
+        const o = {};
+        assert(o==o);
+        assert(!(o!=o));
+    });
+    it("compares non-empty objects",function(){
+        const o = {p:1,q:2};
+        assert(o==o);
+        assert(!(o!=o));
+    });
+    it("compares unequal objects",function(){
+        const o1 = {p:1,q:2};
+        const o2 = {p:1,q:1};
+        assert(o1!=o2);
+        assert(!(o1==o2));
+    });
+    it("compares equivalent non-identical objects",function(){
+        const o1 = {p:1,q:2};
+        const o2 = _.extend({p:1},{q:2});
+        assert(o1==o2);
+        assert(!(o1!=o2));
+    });
+});

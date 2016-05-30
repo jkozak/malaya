@@ -1,6 +1,7 @@
 From: John Kozak <jk@thameslighter.net>
 Date: Sun, 29 May 2016 10:22:57 +0100
 Subject: replace useless == with deep equality in chrjs
-State: new
+State: resolved
 Message-Id: <f0fa70405e66b731-0-artemis@renn>
+resolution: fixed
 

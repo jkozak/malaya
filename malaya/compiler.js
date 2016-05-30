@@ -141,7 +141,7 @@ function TEMPLATE_store() {
                     return keys.sort(function(p,q){return p-q;}).map(function(t){return facts[t];});
                 }
             };
-        // +++ obj = Object.freeze(obj) if it's not too slow. +++
+// +++ obj = Object.freeze(obj) if it's not too slow. +++
 
         // `rules` is an array [[variant,...],...]
         INSERT_RULES;
@@ -212,6 +212,19 @@ for (var i in autoparse.program.body) {
         templates[x.id.name.substr(template_marker.length)] = x.body;
     }
 }
+
+var warnOnce = (function(){
+    var sent = {};
+    return function(w) {
+        if (!sent[w]) {
+            console.warn("warning: "+w);
+            sent[w] = true;
+        }
+    };
+})();
+
+// +++ Here's a hint for a better way to do the above:
+//  console.log("parsed TEMPLATE_indexed_matches: %j",recast.parse(TEMPLATE_indexed_matches.toString()));
 
 var deepClone = util.deepClone;
 
@@ -665,6 +678,13 @@ function genEqual(p,q) {
         return b.callExpression(bIsEqual,[p,q]);
 }
 
+function genNotEqual(p,q) {
+    if (p.type=='Literal' || q.type=='Literal')
+        return b.binaryExpression('!==',p,q);
+    else
+        return b.unaryExpression('!',b.callExpression(bIsEqual,[p,q]));
+}
+
 function bWrapFunction(bid,bargs,fn) {
     return b.functionExpression(null,bargs,b.blockStatement([fn(b.callExpression(bid,bargs))]));
 }
@@ -886,7 +906,7 @@ function generateJS(js,what) {
                                     b.callExpression(b.memberExpression(bvCandidates,
                                                                         b.identifier('push'),
                                                                         false),
-                                                     [b.arrayExpression([item.rank,bv])] ) )]
+                                                     [b.arrayExpression([item.rank,bv])] ) )];
                             }));
                             break;
                         case 'REST':
@@ -1034,7 +1054,7 @@ function generateJS(js,what) {
                 if (expr.left.type!=="Identifier")
                     throw new Error(util.format("can't bind to non-variable: %j",expr.left));
                 parser.visit(expr,{visitSnapExpression:visitSnapExpressionAndCompile});
-                js1 = [b.expressionStatement(expr)].concat(next1())
+                js1 = [b.expressionStatement(expr)].concat(next1());
                 break;
             }
             case '+':
@@ -1260,7 +1280,7 @@ function generateJS(js,what) {
                 });
                 dispatchGeneric.push([r,i]);
             }
-        }
+        };
 
         for (var i=0,r=0;i<storeCHR.body.length;i++) {
             switch (storeCHR.body[i].type) {
@@ -1398,9 +1418,28 @@ function generateJS(js,what) {
         js = mangle(js);
         parser.namedTypes.Program.assert(js);
         parser.visit(js,{
+            visitProgram: function(path) {
+                path.node.body.unshift({
+                    type:        'VariableDeclaration',
+                    declarations:[{
+                        type:     'VariableDeclarator',
+                        id:       {type:'Identifier',name:'_',attrs:{}},
+                        init:     {
+                            type:      'CallExpression',
+                            id:        null,
+                            callee:    {type:'Identifier',name:'require',attrs:{}},
+                            arguments: [{type:'Literal',value:'underscore'}],
+                            defaults:  []
+                        }
+                    }],
+                    kind:        'const',
+                    attrs:       {}
+                });
+                this.traverse(path);
+            },
             visitStoreDeclaration: function(path) {
                 if (path.node.id===null)
-                    path.replace(b.expressionStatement(genStore(path)))
+                    path.replace(b.expressionStatement(genStore(path)));
                 else
                     path.replace(b.variableDeclaration('var',[
                         b.variableDeclarator(path.node.id,genStore(path)) ]));
@@ -1409,6 +1448,21 @@ function generateJS(js,what) {
             visitStoreExpression: function(path) {
                 path.replace(genStore(path));
                 return false;
+            }
+        });
+        parser.visit(js,{ // post-processing
+            visitBinaryExpression: function(path){
+                // +++ warn user about semantics change for == and != +++
+                if (path.node.operator=='==') {
+                    warnOnce("== and != test for deep equality, not the javascript horror");
+                    path.replace(genEqual(path.node.left,path.node.right));
+                    return false;
+                } else if (path.node.operator=='!=') {
+                    warnOnce("== and != test for deep equality, not the javascript horror");
+                    path.replace(genNotEqual(path.node.left,path.node.right));
+                    return false;
+                } else
+                    this.traverse(path);
             }
         });
         break;
@@ -1479,12 +1533,12 @@ function buildStanzas(code,parsed) {
             sources[l][node.loc.start.column] = node1;
             break;              // !!! playing around here
         }
-    }
+    };
 
     if (parsed===undefined)
         parsed = parser.parse(code,{loc:true,attrs:true});
     var currentRule;
-    var ruleColours = {}        // <ruleName> -> <identifier> -> <tag>
+    var ruleColours = {};       // <ruleName> -> <identifier> -> <tag>
     var   idColours = '0123456';
     var     idAlloc = 0;
     var       isVar = true;
