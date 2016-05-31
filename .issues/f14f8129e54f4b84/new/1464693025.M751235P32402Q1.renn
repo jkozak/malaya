@@ -1,0 +1,13 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Tue, 31 May 2016 12:04:22 +0100
+State: new
+Subject: decent query syntax via comprehensions
+Message-Id: <f14f8129e54f4b84-0-artemis@renn>
+
+e.g.
+
+  query getUsers() [[user.name,user.password] where ['user',user]];
+
+  query getSomeUsers(start,len) [[user.name,user.password] where ['user',user]].slice(start,len);
+
+the bit after `where` is a chrjs pattern.
