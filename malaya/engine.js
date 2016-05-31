@@ -953,7 +953,6 @@ Engine.prototype.update = function(data,fn,cb) {
     eng.journalise('update',data,done2);
     eng.active = data;
     res        = eng.chrjs.update(data);
-    GLOBAL.out = undefined;
     done2();
 };
 

@@ -80,9 +80,6 @@ if (util.env==='test')  {
         bl.reset();                 // `bl` is effectively shared by `require`
         for (const i in fixture)
             bl.add(fixture[i]);
-        GLOBAL.out = function(d,j) { // !!! this is not ideal !!!
-            outputs.push(['_output',d,j]);
-        };
         bl.getOutputs = function() {
             const ans = [];
             this._private.orderedFacts.forEach(function(f) {

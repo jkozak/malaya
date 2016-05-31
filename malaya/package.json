@@ -42,9 +42,10 @@
     "resumer": "0.0.0",
     "supertest": "^0.15.0"
   },
-  "engines": [
-    "node >=0.10.0"
-  ],
+  "engineStrict": true,
+  "engines": {
+    "node": ">=4.0.0"
+  },
   "license": "AGPL-1.0",
   "private": true,
   "repository": {
