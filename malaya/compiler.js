@@ -142,8 +142,6 @@ function TEMPLATE_store() {
                 }
             };
 
-        // +++ obj = Object.freeze(obj) if it's not too slow. +++
-
         var out = function(dest,data) {obj.out(dest,data);};
 
         // `rules` is an array [[variant,...],...]
@@ -380,11 +378,11 @@ function annotateParse1(js) {   // poor man's attribute grammar - pass one
         visitSnapExpression:      function(path) {
             if (stmt==='rule') {
                 if ("+=".indexOf(item)===-1)
-                    throw new util.Fail(util.format("snap expression must occur in create or assign item"));
-            } else if (stmt==='function') {
-                // +++ check the function is inside a store +++
+                    throw new util.Fail(util.format("for expression must occur in create or assign item"));
+            } else if (stmt=='function') {
+                // +++ get rid of this +++
             } else
-                throw new util.Fail(util.format("snap expression not in rule or function [%s]",stmt));
+                throw new util.Fail(util.format("for expression not in rule [%s]",stmt));
             if (path.node.id!==null)
                 this.noteDeclaredName(path.node.id.name,'snap',true);
             this.markItemsWithId(path.node);
@@ -1380,14 +1378,16 @@ function generateJS(js,what) {
                     b.variableDeclarator(b.identifier('_'),
                                          b.callExpression(b.identifier('require'),
                                                           [b.literal('underscore')] ) ) ]));
+                path.node.body.unshift(b.expressionStatement(b.literal("use strict")));
                 this.traverse(path);
             },
             visitStoreDeclaration: function(path) {
+                var st = genStore(path);
                 if (path.node.id===null)
-                    path.replace(b.expressionStatement(genStore(path)));
+                    path.replace(b.expressionStatement(st));
                 else
                     path.replace(b.variableDeclaration('var',[
-                        b.variableDeclarator(path.node.id,genStore(path)) ]));
+                        b.variableDeclarator(path.node.id,st) ]));
                 return false;
             },
             visitStoreExpression: function(path) {

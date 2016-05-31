@@ -1,4 +1,6 @@
-/*eslint-disable*/
+/*eslint-disable strict,no-eval,no-var*/
+//N.B. "use strict" breaks the test environment and can't use ES6
+//     stuff without it, so leave this sadly old and under-checked.
 
 var compiler = require("../compiler.js");
 var   parser = require("../parser.js");
@@ -16,21 +18,23 @@ temp.track();
 
 var parse = function(code) {
     return parser.parse(code,{attrs:true});
-}
+};
+
+var mangleId = compiler._private.mangleIdentifier;
 
 function findById(js,name,mangled) {    // find subtree of `js` with id `name`
     var ans = null;
     if (mangled)
         name = mangleId(name);
     parser.visit(js,{
-        visitIdentifier:function(path) {
-            if (path.node.name===name && path.parent.get('id')===path)
-                ans = path.parent.node;
+        visitIdentifier:function(p) {
+            if (p.node.name===name && p.parent.get('id')===p)
+                ans = p.parent.node;
             return false;
         }
     });
     return ans;
-}
+};
 
 var parseItem = function(code) {
     var  ast = compiler._private.annotateParse2(compiler._private.annotateParse1(parse("store{rule RULE1("+code+")}")));
@@ -43,13 +47,7 @@ var compile = function(code) {
     if ((typeof code)==='string')
         code = parse(code);
     return compiler.compile(code);
-}
-
-function equalU(s1,s2) {        // unordered equal (set-like)
-    return _.difference(s1,s2).length===0 && _.difference(s2,s1).length===0;
-}
-
-var mangleId = compiler._private.mangleIdentifier;
+};
 
 describe("Ref",function() {
     var Ref = compiler._private.Ref;
@@ -189,61 +187,59 @@ describe("genMatch",function() {
         var code = (recast.print(b.callExpression(b.functionExpression(null,[b.identifier('fact')],match),
                                                   [fact] )).code);
         return eval(code);
-    }
+    };
     it("should generate match code for simple array patterns",function() {
         var match = genMatch(parseItem("['a','b',c]"),
-                             function(){return [b.returnStatement(b.identifier('c'))]} );
+                             function(){return [b.returnStatement(b.identifier('c'))];} );
         assert.equal(17,evalMatch(match,parseItem("['a','b',17]") ) );
     });
     it("should generate match code for final ... array patterns",function() {
         var match = genMatch(parseItem("['a','b',...c]"),
-                             function(){return [b.returnStatement(b.identifier('c'))]} );
+                             function(){return [b.returnStatement(b.identifier('c'))];} );
         assert.deepEqual([21,22],evalMatch(match,parseItem("['a','b',21,22]")));
     });
     it("should generate match code for simple object patterns",function() {
         var match = genMatch(parseItem("{a:1, b:2, c}"),
-                             function(){return [b.returnStatement(b.identifier('c'))]} );
+                             function(){return [b.returnStatement(b.identifier('c'))];} );
         assert.equal(117,evalMatch(match,parseItem("{a:1,b:2,c:117}")));
     });
     it("should not over-match",function() {
         var match = genMatch(parseItem("{a:1, b:2, c}"),
-                             function(){return [b.returnStatement(b.identifier('c'))]} );
+                             function(){return [b.returnStatement(b.identifier('c'))];} );
         assert.equal(undefined,evalMatch(match,parseItem("{a:2,b:2,c:117}")));
     });
     it("should generate match code for ... object patterns",function() {
         var match = genMatch(parseItem("{a:1, b:2, ...c}"),
-                             function(){return [b.returnStatement(b.identifier('c'))]} );
+                             function(){return [b.returnStatement(b.identifier('c'))];} );
         assert.deepEqual({c:117,d:118},evalMatch(match,parseItem("{a:1,b:2,c:117,d:118}")));
     });
     it("should generate match code for medial ... array patterns",function() {
         var match = genMatch(parseItem("['a','b',...c,d]"),
-                             function(){return [b.returnStatement(b.identifier('c'))]} );
+                             function(){return [b.returnStatement(b.identifier('c'))];} );
         assert.deepEqual([21],evalMatch(match,parseItem("['a','b',21,22]")));
     });
     it("should generate match code for nested array pattern",function() {
         var match = genMatch(parseItem("[[a]]"),
-                             function(){return [b.returnStatement(b.identifier('a'))]} );
+                             function(){return [b.returnStatement(b.identifier('a'))];} );
         assert.deepEqual(26,evalMatch(match,parseItem("[[26]]")));
     });
     it("should generate match code for array pattern in object expression",function() {
         var match = genMatch(parseItem("{p:[a],...q}"),
-                             function(){return [b.returnStatement(b.identifier('a'))]} );
+                             function(){return [b.returnStatement(b.identifier('a'))];} );
         assert.deepEqual(23,evalMatch(match,parseItem("{\"p\":[23]}")));
     });
     it("should generate match code for ... array pattern in object expression",function() {
         var match = genMatch(parseItem("{p:['a','b',...c],...q}"),
-                             function(){return [b.returnStatement(b.identifier('c'))]} );
+                             function(){return [b.returnStatement(b.identifier('c'))];} );
         assert.deepEqual([23],evalMatch(match,parseItem("{\"p\":['a','b',23]}")));
     });
 });
 
 describe("EventEmitter",function() {
     it("should emit `fire` event to `once`",function(){
-        var js = compile("var st = store {rule(-['user',{name:a}]);};");
-        //console.log(recast.print(js).code);
-        eval(recast.print(js).code);
+        var    js = compile("store {rule(-['user',{name:a}]);};");
+        var    st = eval(recast.print(js).code);
         var fired = false;
-        var    st = eval(mangleId('st'));
         st.once('fire',function(store,fact,adds,dels){
             fired = true;
             assert.deepEqual(fact,['user',{'name':'sid'}]);
@@ -258,11 +254,9 @@ describe("EventEmitter",function() {
         assert(!fired);
     });
     it("should emit `fire` event to `on`",function(){
-        var js = compile("var st = store {rule(-['user',{name:a}]);};");
-        //console.log(recast.print(js).code);
-        eval(recast.print(js).code);
+        var    js = compile("store {rule(-['user',{name:a}]);};");
+        var    st = eval(recast.print(js).code);
         var fired = false;
-        var    st = eval(mangleId('st'));
         st.on('fire',function(store,fact,adds,dels){
             fired = true;
             assert.equal(fact[0],'user');
@@ -280,10 +274,9 @@ describe("EventEmitter",function() {
         var cDsave = compiler.debug;
         compiler.debug = true;
         try {
-            var js = compile("var st = store {rule R(-['user',{name:a}]);};");
-            eval(recast.print(js).code);
+            var    js = compile("store {rule R(-['user',{name:a}]);};");
+            var    st = eval(recast.print(js).code);
             var fired = false;
-            var    st = eval(mangleId('st'));
             st.on('queue-rule',function(ruleName,facts){
                 assert.strictEqual(ruleName,'R');
                 fired = true;
@@ -348,6 +341,7 @@ describe("parse tree editing",function() {
 });
 
 describe("first pass of new compiler",function() {
+    /*eslint-disable dot-notation*/ // vars['a'] makes much more sense than vars.a here
     var pass1 = compiler._private.annotateParse1;
     it("should find variables in simple rule",function() {
         var prs0 = parse("store {rule R (['a',b,{p:c,d,...rs}]);}");
@@ -526,7 +520,7 @@ describe("mangle",function() {
         assert.strictEqual(ast.body[0].declarations[0].init.params[0].name,mangleId('f'));
     });
     it("should translate nested function expression args",function() {
-        var ast = mangle(parse("[].map(function (f){return f[0];}).sort();"));
+        //var ast = mangle(parse("[].map(function (f){return f[0];}).sort();"));
         // +++
     });
     it("should not translate known global names",function() {
@@ -572,9 +566,9 @@ describe("mangle",function() {
 
 describe("compile",function() {
     it("should generate JS for trivial store via var",function() {
-        var js = compile("var st = store {['user',{name:'sid'}];rule(['user',{name:a}]);rule(['company',{user:a,name:b}]);};");
-        eval(recast.print(js).code);
-        assert.deepEqual(eval(mangleId('st'))._private.facts,{"1":['user',{name:'sid'}]});
+        var js = compile("store {['user',{name:'sid'}];rule(['user',{name:a}]);rule(['company',{user:a,name:b}]);};");
+        var st = eval(recast.print(js).code);
+        assert.deepEqual(st._private.facts,{"1":['user',{name:'sid'}]});
     });
     it("should generate JS for trivial store via const",function() {
         var js = compile("const st = store {['user',{name:'sid'}];rule(['user',{name:a}]);rule(['company',{user:a,name:b}]);};\n"+
@@ -583,10 +577,9 @@ describe("compile",function() {
     });
     // ??? what about 'let' declarations? ???
     it("should handle store containing `for`",function() {
-        var  ast = parse("var st = store {rule(-['a',p],+['b',for(0;['c',q];a=>a+p+q+1)]);};");
+        var  ast = parse("store {rule(-['a',p],+['b',for(0;['c',q];a=>a+p+q+1)]);};");
         var   js = compiler.compile(ast);
-        eval(recast.print(js).code);
-        var   st = eval(mangleId('st'));
+        var   st = eval(recast.print(js).code);
         st.add(['a',17]);
         assert.deepEqual(_.values(st._private.facts),[['b',0]]);
         st.reset();
@@ -597,55 +590,48 @@ describe("compile",function() {
         assert.deepEqual(st.get(ans.adds[0]),['b',19]);
     });
     it("should handle store containing `for` (non-deleting variant)",function() {
-        var  ast = parse("var st = store {rule(['a',p],+['b',for(0;['c',q];a=>a+p+q+1)]);};");
+        var  ast = parse("store {rule(['a',p],+['b',for(0;['c',q];a=>a+p+q+1)]);};");
         var   js = compiler.compile(ast);
-        eval(recast.print(js).code);
-        var   st = eval(mangleId('st'));
+        var   st = eval(recast.print(js).code);
         st.add(['c',1]);
         st.add(['a',17]);
         assert.deepEqual(_.values(st._private.facts),[['c',1],['a',17],['b',19]]);
     });
     it("should handle guards starting with ! [cd50013ab17474a6]",function() {
-        var ast = parse("var st = store {rule(['a',b],!(b===0),+['c']);rule(-['a',...]);};");
+        var ast = parse("store {rule(['a',b],!(b===0),+['c']);rule(-['a',...]);};");
         var  js = compiler.compile(ast);
-        eval(recast.print(js).code);
-        var   st = eval(mangleId('st'));
+        var  st = eval(recast.print(js).code);
         st.add(['a',0]);
         assert.deepEqual(_.values(st._private.facts),[]);
         st.add(['a',1]);
         assert.deepEqual(_.values(st._private.facts),[['c']]);
     });
     it("should handle nuladic arrow functions",function() {
-        var js = compiler.compile(parse("var fn = ()=>23;"));
-        eval(recast.print(js).code);
-        var fn = eval(mangleId('fn'));
+        var js = compiler.compile(parse("()=>23;"));
+        var fn = eval(recast.print(js).code);
         assert.strictEqual(fn(),23);
     });
     it("should handle monadic arrow functions",function() {
-        var js = compiler.compile(parse("var fn = x=>x+1;"));
-        eval(recast.print(js).code);
-        var fn = eval(mangleId('fn'));
+        var js = compiler.compile(parse("x=>x+1;"));
+        var fn = eval(recast.print(js).code);
         assert.strictEqual(fn(1),2);
         assert.strictEqual(fn(2),3);
     });
     it("should handle bracketed monadic arrow functions",function() {
-        var js = compiler.compile(parse("var fn = (x)=>x+1;"));
-        eval(recast.print(js).code);
-        var fn = eval(mangleId('fn'));
+        var js = compiler.compile(parse("(x)=>x+1;"));
+        var fn = eval(recast.print(js).code);
         assert.strictEqual(fn(1),2);
         assert.strictEqual(fn(2),3);
     });
     it("should handle dyadic arrow functions",function() {
-        var js = compiler.compile(parse("var fn = (x,y)=>x+y+1;"));
-        eval(recast.print(js).code);
-        var fn = eval(mangleId('fn'));
+        var js = compiler.compile(parse("(x,y)=>x+y+1;"));
+        var fn = eval(recast.print(js).code);
         assert.strictEqual(fn(1,2),4);
         assert.strictEqual(fn(2,3),6);
     });
     it("should handle dyadic arrow functions in a store",function() {
-        var js = compiler.compile(parse("var t=fn=>fn(2,3);store st {rule (-['a'],+['b',t((x,y)=>x+y+1)]);};"));
-        eval(recast.print(js).code);
-        var st = eval(mangleId('st'));
+        var js = compiler.compile(parse("var t=fn=>fn(2,3);store {rule (-['a'],+['b',t((x,y)=>x+y+1)]);};"));
+        var st = eval(recast.print(js).code);
         st.add(['a']);
         assert.deepEqual(_.values(st._private.facts),[['b',6]]);
     });
@@ -653,39 +639,37 @@ describe("compile",function() {
         compile("store{rule(['a'],+['b',for(0;['p'];a=>a+for(0;['q'];b=>b+1))]);}");
     });
     it("should handle object expression extensions on 'RHS'",function() {
-        var js = compile("var st = store{rule(-['a',{p,...qs}],+['b',{p,...qs}]);}");
-        eval(recast.print(js).code);
-        var st = eval(mangleId('st'));
+        var js = compile("store{rule(-['a',{p,...qs}],+['b',{p,...qs}]);}");
+        var st = eval(recast.print(js).code);
         st.add(['a',{p:67,a:'a',b:23}]);
         assert.deepEqual(st._private.orderedFacts,[['b',{p:67,a:'a',b:23}]]);
     });
 });
 
 describe("function/for style query",function() {
+    // !!! for some reason, these tests don't work unless the odd !!!
+    // !!! definition for is used.  Don't care because they're on the way out !!!
     it("should compile and run a simple query",function() {
-        var js = compile("var st = store {function q1(){return for([];['user',{name:n}];$=>$.concat(n));}};");
-        eval(recast.print(js).code);
-        var st = eval(mangleId('st'));
+        var js = compile("var st = store {function q1(){return for([];['user',{name:n}];$=>$.concat(n));}};st;");
+        var st = eval(recast.print(js).code);
         assert.equal(st.queries.q1().result.length,0);
         st.add(['user',{name:'tyson'}]);
         assert.equal(st.queries.q1().result.length,1);
     });
-    it("should compile and run a parameterized query",function() {
-        var js = compile("var st = store {function q2(p){return for([];['user',{name:n}],n.length===p;a=>a.concat(n));}};");
-        eval(recast.print(js).code);
-        var st = eval(mangleId('st'));
+    it("should compile and run a parameterised query",function() {
+        var js = compile("var st = store {function q2(p){return for([];['user',{name:n}],n.length===p;a=>a.concat(n));}};st;");
+        var st = eval(recast.print(js).code);
         st.add(['user',{name:'tyson'}]);
-        var qr1 = st.queries.q2(1)
-        var qr5 = st.queries.q2(5)
+        var qr1 = st.queries.q2(1);
+        var qr5 = st.queries.q2(5);
         assert.equal(qr1.result.length,0);
         assert.equal(qr5.result.length,1);
         assert.equal(typeof qr1.t,'number');
         assert.equal(qr1.t,qr5.t); // store has not been updated by queries
     });
     it("should run the 3-head benchmark",function() {
-        var js = compile("var st = store {function q3(){return for(0;['X',x,p],['X',x,q],['X',x,r],p>q && q>r;a=>a+p+q+r);};}");
-        eval(recast.print(js).code);
-        var st = eval(mangleId('st'));
+        var js = compile("var st=store {function q3(){return for(0;['X',x,p],['X',x,q],['X',x,r],p>q && q>r;a=>a+p+q+r);};};st;");
+        var st = eval(recast.print(js).code);
         var n = 100;
         for (var i=0;i<n/3;i++) {
             st.add(["X",i,10]);
@@ -695,9 +679,8 @@ describe("function/for style query",function() {
         st.queries.q3();
     });
     it("should work in nested function",function() {
-        var js = compile("var st = store {function q4(){return function(){return for([];['user',{name:n}];a=>a.concat(n));}();}};");
-        eval(recast.print(js).code);
-        var st = eval(mangleId('st'));
+        var js = compile("var st = store {function q4(){return function(){return for([];['user',{name:n}];a=>a.concat(n));}();}};st;");
+        var st = eval(recast.print(js).code);
         assert.equal(st.queries.q4().result.length,0);
         st.add(['user',{name:'tyson'}]);
         assert.equal(st.queries.q4().result.length,1);
@@ -706,29 +689,26 @@ describe("function/for style query",function() {
 
 describe("query statement",function() {
     it("should compile and run a simple query",function() {
-        var js = compile("var st = store {query q1(;['user',{name:n}];a=[]) a.concat(n);};");
-        eval(recast.print(js).code);
-        var st = eval(mangleId('st'));
+        var js = compile("store {query q1(;['user',{name:n}];a=[]) a.concat(n);};");
+        var st = eval(recast.print(js).code);
         assert.equal(st.queries.q1().result.length,0);
         st.add(['user',{name:'tyson'}]);
         assert.equal(st.queries.q1().result.length,1);
     });
     it("should compile and run a parameterized query",function() {
-        var js = compile("var st = store {query q2(p;['user',{name:n}],n.length===p;a=[]) a.concat(n);};");
-        eval(recast.print(js).code);
-        var st = eval(mangleId('st'));
+        var js = compile("store {query q2(p;['user',{name:n}],n.length===p;a=[]) a.concat(n);};");
+        var st = eval(recast.print(js).code);
         st.add(['user',{name:'tyson'}]);
-        var qr1 = st.queries.q2(1)
-        var qr5 = st.queries.q2(5)
+        var qr1 = st.queries.q2(1);
+        var qr5 = st.queries.q2(5);
         assert.equal(qr1.result.length,0);
         assert.equal(qr5.result.length,1);
         assert.equal(typeof qr1.t,'number');
         assert.equal(qr1.t,qr5.t); // store has not been updated by queries
     });
     it("should run the 3-head benchmark",function() {
-        var js = compile("var st = store {query q3(;['X',x,p],['X',x,q],['X',x,r],p>q && q>r;a=0) a+p+q+r};");
-        eval(recast.print(js).code);
-        var st = eval(mangleId('st'));
+        var js = compile("store {query q3(;['X',x,p],['X',x,q],['X',x,r],p>q && q>r;a=0) a+p+q+r};");
+        var st = eval(recast.print(js).code);
         var n = 100;
         for (var i=0;i<n/3;i++) {
             st.add(["X",i,10]);
@@ -738,10 +718,9 @@ describe("query statement",function() {
         st.queries.q3();
     });
     it("should compile multiple queries",function() {
-        var chrjs = "store st {query q1(;['X',x,p];a=0) a+p;query q2(;['X',x,p],['X',x,q],p>q;a=0) a+p+q;query q3(;['X',x,p],['X',x,q],['X',x,r],p>q && q>r;a=0) a+p+q+r;}";
-        var js = compile(chrjs)
-        eval(recast.print(js).code);
-        var st = eval(mangleId('st'));
+        var chrjs = "store {query q1(;['X',x,p];a=0) a+p;query q2(;['X',x,p],['X',x,q],p>q;a=0) a+p+q;query q3(;['X',x,p],['X',x,q],['X',x,r],p>q && q>r;a=0) a+p+q+r;}";
+        var js = compile(chrjs);
+        var st = eval(recast.print(js).code);
         assert.equal(Object.keys(st.queries).length,3);
     });
 });
@@ -785,7 +764,7 @@ describe("rule maps",function() {
         fs.writeFileSync(fn,"store {\nrule (['1']);}");
         require.extensions['.chrjs'](module,fn);
         assert.throws(function() {
-            compiler.getRuleMap(filename)
+            compiler.getRuleMap(fn);
         });
     });
 });
