@@ -31,7 +31,6 @@ const b = (function() {
 function TEMPLATE_store() {
     (function() {
         var  store = this;
-        var      _ = require('underscore');
         var assert = require('assert');
         var     ee = new (require('events').EventEmitter)();
         var      t = 1;              // must be > 0 always?
