@@ -1298,27 +1298,26 @@ function generateJS(js,what) {
             b.variableDeclarator(b.identifier('rules'),
                                  b.arrayExpression(code.rules))
         ] ));
-        if (Object.keys(code.queries).length>0)
-            findTag('INSERT_QUERIES').insertAfter(b.variableDeclaration('var',[
-                b.variableDeclarator(b.identifier('queries'),
-                                     b.callExpression(b.functionExpression(
-                                         null,
-                                         [],
-                                         b.blockStatement([
-                                             b.variableDeclaration('var',
-                                                                   Object.keys(code.queries).map(function(k) {
-                                                                       return b.variableDeclarator(
-                                                                           b.identifier(k),
-                                                                           code.queries[k]); }) ),
-                                             b.returnStatement(b.objectExpression(
-                                                 Object.keys(code.queries).map(function(k) {
-                                                     return b.property(
-                                                         'init',
-                                                         b.identifier(k),
-                                                         bWrapFunction(b.identifier(k),
-                                                                       code.queries[k].params,
-                                                                       bQueryReturn) ); }) )) ]) ),
-                                                      []) ) ]));
+        findTag('INSERT_QUERIES').insertAfter(b.variableDeclaration('var',[
+            b.variableDeclarator(b.identifier('queries'),
+                                 b.callExpression(b.functionExpression(
+                                     null,
+                                     [],
+                                     b.blockStatement([
+                                         b.variableDeclaration('var',
+                                                               Object.keys(code.queries).map(function(k) {
+                                                                   return b.variableDeclarator(
+                                                                       b.identifier(k),
+                                                                       code.queries[k]); }) ),
+                                         b.returnStatement(b.objectExpression(
+                                             Object.keys(code.queries).map(function(k) {
+                                                 return b.property(
+                                                     'init',
+                                                     b.identifier(k),
+                                                     bWrapFunction(b.identifier(k),
+                                                                   code.queries[k].params,
+                                                                   bQueryReturn) ); }) )) ]) ),
+                                                  []) ) ]));
         findTag('INSERT_INIT').insertAfter(b.variableDeclaration('var',[
             b.variableDeclarator(b.identifier('init'),
                                  b.functionExpression(null,[],b.blockStatement(code.inits)) ) ]));

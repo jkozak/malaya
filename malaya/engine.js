@@ -136,7 +136,7 @@ const Engine = exports.Engine = function(options) {
 
     eng.prevalenceDir = options.prevalenceDir || path.join(options.dir,'.prevalence');
     eng.syshash       = null;
-    eng.chrjs         = compile(options.businessLogic) || exports.makeInertChrjs();
+    eng.chrjs         = options.chrjs || compile(options.businessLogic) || exports.makeInertChrjs();
     eng.hashes        = null;                    // hash store
     eng.options       = options;
     eng.mode          = 'idle';                  // 'master' | 'slave' | 'idle'

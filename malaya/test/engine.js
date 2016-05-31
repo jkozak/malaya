@@ -381,10 +381,10 @@ describe("Engine",function() {
         });
     });
     describe("#addConnection using `out` function",function() {
-        // !!! these tests use the same chrjs instance !!!
+        const mkOutChrjs = require(path.join(__dirname,'bl','out.chrjs'));
         it("sends input, receives output",function(done) {
-            const eng = new Engine({dir:           temp.mkdirSync(),
-                                    businessLogic: path.join(__dirname,'bl','out.chrjs') });
+            const eng = new Engine({dir:   temp.mkdirSync(),
+                                    chrjs: mkOutChrjs() });
             const  io = createIO();
             eng.init();
             eng.start();
@@ -401,8 +401,8 @@ describe("Engine",function() {
             });
         });
         it("multiplexes",function(done) {
-            const eng = new Engine({dir:           temp.mkdirSync(),
-                                    businessLogic: path.join(__dirname,'bl','out.chrjs') });
+            const eng = new Engine({dir:   temp.mkdirSync(),
+                                    chrjs: mkOutChrjs() });
             const io1 = createIO();
             const io2 = createIO();
             const io3 = createIO();
