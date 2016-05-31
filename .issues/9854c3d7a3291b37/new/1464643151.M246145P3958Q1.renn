@@ -1,0 +1,23 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Mon, 30 May 2016 22:18:12 +0100
+State: new
+Subject: Bug: chrjs doesn't know about try-catch binding error var
+Message-Id: <9854c3d7a3291b37-0-artemis@renn>
+
+e.g.:
+
+describe("output function",function(){
+    it("emits events",function(done){
+        var st = store {
+            rule (['a'],
+                  out('nemo',"it's an a!") );
+        };
+        st.on('out',(d,j)=>{
+            try {
+                assert.equal(d,'nemo');
+                assert.equal(j,"it's an a!");
+                done();
+            } catch (e) {done(e);}
+        });
+    });
+});

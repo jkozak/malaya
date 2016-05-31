@@ -1,0 +1,9 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Tue, 31 May 2016 08:35:02 +0100
+Subject: Re: Use `Object.freeze` on facts when performance issue fixed in v8
+Message-Id: <95a0130389e14a3d-aaa6a393a95ee685-artemis@renn>
+References: <95a0130389e14a3d-0-artemis@renn>
+In-Reply-To: <95a0130389e14a3d-0-artemis@renn>
+
+Could freeze store.obj too, but would need to move tag into outer
+store object.
