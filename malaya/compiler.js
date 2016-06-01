@@ -377,8 +377,8 @@ function annotateParse1(js) {   // poor man's attribute grammar - pass one
         },
         visitSnapExpression:      function(path) {
             if (stmt==='rule') {
-                if ("+=".indexOf(item)===-1)
-                    throw new util.Fail(util.format("for expression must occur in create or assign item"));
+                if ("+=O".indexOf(item)===-1)
+                    throw new util.Fail(util.format("for expression must occur in create, assign or out item"));
             } else if (stmt=='function') {
                 // +++ get rid of this +++
             } else
@@ -401,6 +401,21 @@ function annotateParse1(js) {   // poor man's attribute grammar - pass one
             stmt = save.stmt;
             item = save.item;
             return false;
+        },
+        visitWhereExpression:     function(path) { // !!! hack !!!
+            var bArg = b.identifier('arg1');
+            var body = b.callExpression(b.memberExpression(bArg,b.identifier('concat'),false),
+                                        [path.node.element]);
+            var  blk = b.blockStatement([b.returnStatement(body)]);
+            var  acc = b.functionExpression(null,[bArg],blk);
+            var snap = b.snapExpression(path.node.id,
+                                        b.arrayExpression([]),
+                                        path.node.items,
+                                        acc);
+            snap.attrs = {};
+            acc.attrs  = {};
+            path.replace(snap);
+            return this.visitSnapExpression(path);
         },
         visitItemExpression:      function(path) {
             if (stmt!=='rule' && _.contains(['+','-'],path.node.op))
@@ -436,6 +451,8 @@ function annotateParse1(js) {   // poor man's attribute grammar - pass one
             }
         },
         doCall:                   function(path) {
+            if (path.node.callee.type==='Identifier' && path.node.callee.name==='out' && item!=='O')
+                throw new util.Fail("`out` not at top level in chrjs clause");
             this.traverse(path);
         },
         visitCallExpression:      function(path){return this.doCall(path);},
@@ -548,14 +565,14 @@ function mangle(js) {           // `js` must have been previously annotated
             }
             return false;
         },
-        visitProgram:             function(path) {return this.doVars(path)},
-        visitRuleStatement:       function(path) {return this.doVars(path)},
-        visitQueryStatement:      function(path) {return this.doVars(path)},
-        visitSnapExpression:      function(path) {return this.doVars(path)},
-        visitFunctionExpression:  function(path) {return this.doVars(path)},
-        visitFunctionDeclaration: function(path) {return this.doVars(path)},
-        visitStoreExpression:     function(path) {return this.doVars(path)},
-        visitStoreDeclaration:    function(path) {return this.doVars(path)},
+        visitProgram:             function(path) {return this.doVars(path);},
+        visitRuleStatement:       function(path) {return this.doVars(path);},
+        visitQueryStatement:      function(path) {return this.doVars(path);},
+        visitSnapExpression:      function(path) {return this.doVars(path);},
+        visitFunctionExpression:  function(path) {return this.doVars(path);},
+        visitFunctionDeclaration: function(path) {return this.doVars(path);},
+        visitStoreExpression:     function(path) {return this.doVars(path);},
+        visitStoreDeclaration:    function(path) {return this.doVars(path);},
         visitProperty:            function(path) {
             this.visit(path.get('value'));
             return false;
@@ -1005,12 +1022,17 @@ function generateJS(js,what) {
             case '?':
                 js1 = [b.ifStatement(chr.items[item_id].expr,b.blockStatement(next1()),null)];
                 break;
+            case 'O':
+                var expr = chr.items[item_id].expr;
+                expr = parser.visit(expr,{visitSnapExpression:visitSnapExpressionAndCompile});
+                js1  = [b.expressionStatement(expr)].concat(next1());
+                break;
             case '=': {
                 var expr = chr.items[item_id].expr;
                 if (expr.left.type!=="Identifier")
                     throw new Error(util.format("can't bind to non-variable: %j",expr.left));
                 expr = parser.visit(expr,{visitSnapExpression:visitSnapExpressionAndCompile});
-                js1 = [b.expressionStatement(expr)].concat(next1());
+                js1  = [b.expressionStatement(expr)].concat(next1());
                 break;
             }
             case '+':

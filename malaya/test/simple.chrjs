@@ -308,6 +308,65 @@ describe("output function",function(){
     });
 });
 
+describe("where expression",function() {
+    var st = store {
+        ['a',{p:1,q:22}];
+        ['a',{p:1,q:33}];
+        ['b',{p:2,q:44}];
+        ['b',{p:1,q:55}];
+        rule (-['qa',...],
+              out('me',[q where ['a',{q,...}]]) );
+        rule (-['qal',...],
+              out('me',[q where ['a',{q,...}]].length) );
+        rule (-['qar',...],
+              out('me',[q where ['a',{q,...}]].reduce((a,i)=>a+i)) );
+        rule (-['qa>',...],
+              out('me',[q where ['a',{q,...}],q>23]) );
+        rule (-['qab',...],
+              out('me',[q2-q1 where ['a',{p:p1,q:q1}],['b',{p:p2,q:q2}],p2>p1]) );
+    };
+    it("sweeps",function(done){
+        st.once('out',(d,j)=>{
+            assert.strictEqual(d,'me');
+            assert.deepEqual(  j,[22,33]);
+            done();
+        });
+        st.add(['qa',{}]);
+    });
+    it("counts",function(done){
+        st.once('out',(d,j)=>{
+            assert.strictEqual(d,'me');
+            assert.deepEqual(  j,2);
+            done();
+        });
+        st.add(['qal',{}]);
+    });
+    it("reduces",function(done){
+        st.once('out',(d,j)=>{
+            assert.strictEqual(d,'me');
+            assert.deepEqual(  j,55);
+            done();
+        });
+        st.add(['qar',{}]);
+    });
+    it("filters",function(done){
+        st.once('out',(d,j)=>{
+            assert.strictEqual(d,'me');
+            assert.deepEqual(  j,[33]);
+            done();
+        });
+        st.add(['qa>',{}]);
+    });
+    it("joins",function(done){
+        st.once('out',(d,j)=>{
+            assert.strictEqual(d,'me');
+            assert.deepEqual(  j,[22,11]);
+            done();
+        });
+        st.add(['qab',{}]);
+    });
+});
+
 describe("regression tests",function() {
     it("should have fixed [955dab]",function() {
         var IDB = store {

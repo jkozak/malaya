@@ -1,0 +1,33 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Tue, 31 May 2016 12:22:31 +0100
+Subject: another (real) example
+Message-Id: <f14f8129e54f4b84-b8b7ef85cfe997c9-artemis@renn>
+References: <f14f8129e54f4b84-0-artemis@renn>
+In-Reply-To: <f14f8129e54f4b84-0-artemis@renn>
+
+[...[{counterparty:{app:appId,team:teamId,Name:team}}
+     where
+     ['Permissions',{ApplicationID:appId,TeamID:teamId,CompanyID:companyId,...}],
+     ['Team',{TeamID:teamId,TeamName:team,...}] ],
+ ...[{instrument:{ID:               inst.InstID,
+                  Name:             inst.InstName,
+                  SubClass:         inst.InstSubClassID,
+                  Maturity:         dateToYYYYMMDD(inst.MaturityDate),
+                  'new':            0,
+                  Visible:          inst.VisibleFlag,
+                  Description:      inst.InstDesc,
+                  AuctionInstTitle: inst.AuctionInstTitle,
+                  PriceTick:        inst.PriceTick}}
+     where ['Instrument',inst] ],
+ ...[data where ['FEConfig',{TabID,data,CookieData,ConfigID,...}]^ConfigID],
+ ...[{SubClass:{ID:                sc.InstSubClassID,
+                Name:              sc.InstSubClassName,
+                AssociatedTitleID: sc.AssociatedTitle,
+                Title:             sc.Title,
+                DefltVol:          sc.DefaultVolume,
+                PriceTick:         sc.PriceTick,
+                ShowSign:          sc.Display_ShowPlusMinus,
+                xBidMinus1:        sc.Match_xBidMinus1,
+                AuctionVolumes:    sc.AuctionVolumes}}
+     where ['InstrumentClass',sc] ],
+]

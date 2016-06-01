@@ -644,6 +644,15 @@ describe("compile",function() {
         st.add(['a',{p:67,a:'a',b:23}]);
         assert.deepEqual(st._private.orderedFacts,[['b',{p:67,a:'a',b:23}]]);
     });
+    it("should accept decent `out`s",function(){
+        compile("store{rule(['p'],out('a','b'));}");
+    });
+    it("should detect misplaced `out`s",function(){
+        assert.throws(()=>{compile("store{rule(['p'],out('a','b')+1);}");});
+    });
+    it("should detect non top-level `out`s",function(){
+        assert.throws(()=>{compile("store{rule(['p'],(out('a','b')));}");});
+    });
 });
 
 describe("function/for style query",function() {

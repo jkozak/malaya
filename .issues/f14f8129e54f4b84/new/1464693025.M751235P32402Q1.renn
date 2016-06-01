@@ -1,8 +1,9 @@
 From: John Kozak <jk@thameslighter.net>
 Date: Tue, 31 May 2016 12:04:22 +0100
-State: new
+State: resolved
 Subject: decent query syntax via comprehensions
 Message-Id: <f14f8129e54f4b84-0-artemis@renn>
+resolution: fixed
 
 e.g.
 

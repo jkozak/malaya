@@ -5,6 +5,6 @@
 (define-derived-mode chrjs-mode js-mode
   "chrjs-mode"
   "chrjs mode is a major mode for editing chrjs files"
-  (font-lock-add-keywords nil '(("\\_<\\(store\\|query\\|rule\\)\\_>" . 'font-lock-keyword-face))) )
+  (font-lock-add-keywords nil '(("\\_<\\(store\\|query\\|where\\|rule\\)\\_>" . 'font-lock-keyword-face))) )
 
 (provide 'chrjs-mode)

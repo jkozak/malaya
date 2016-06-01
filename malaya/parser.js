@@ -166,6 +166,7 @@ const util = require('./util.js');
         RuleStatement: 'RuleStatement',
         QueryStatement: 'QueryStatement',
         SnapExpression: 'SnapExpression',
+        WhereExpression: 'WhereExpression',
         ItemExpression: 'ItemExpression'
     };
 
@@ -341,7 +342,7 @@ const util = require('./util.js');
             return (id === 'while') || (id === 'break') || (id === 'catch') ||
                 (id === 'throw') || (id === 'const') || (id === 'yield') ||
                 (id === 'class') || (id === 'super') ||
-                (id === 'store') || (id === 'query'); // chrjs
+                (id === 'store') || (id === 'query') || (id === 'where'); // chrjs
         case 6:
             return (id === 'return') || (id === 'typeof') || (id === 'delete') ||
                 (id === 'switch') || (id === 'export') || (id === 'import');
@@ -1894,6 +1895,15 @@ const util = require('./util.js');
                 items: items,
                 accum: accum
             };
+        },
+
+        createWhereExpression: function(id, element, items) {
+            return {
+                type: Syntax.WhereExpression,
+                id: id,
+                element: element,
+                items: items
+            };
         }
     };
 
@@ -2089,8 +2099,28 @@ const util = require('./util.js');
                         elements.push(delegate.createBindRest(null));
                     else
                         elements.push(delegate.createBindRest(parseAssignmentExpression()));
-                } else
+                } else {
                     elements.push(parseAssignmentExpression());
+                    if (state.inStore && matchKeyword('where')) {
+                        const items = [];
+                        var      id = delegate.createIdentifier('%for-'+ruleGenId++);
+                        expectKeyword('where');
+                        if (elements.length!==1)
+                            throw new Error("exactly one element required before `where`");
+                        const el = elements[elements.length-1];
+                        if (el.type===Syntax.BindRest)
+                            throw new Error("no `...` before `where`, please");
+                        while (true) {                   // gather up chrjs clauses
+                            items.push(parseChrjsItem());
+                            if (match(']'))
+                                break;
+                            expect(',');
+                        }
+                        lex();
+                        return delegate.markEnd(delegate.createWhereExpression(id,el,items),
+                                                startToken);
+                    }
+                }
                 if (!match(']')) {
                     expect(',');
                 }
@@ -2308,7 +2338,7 @@ const util = require('./util.js');
             if (matchKeyword('function')) {
                 return parseFunctionExpression();
             }
-            if (state.inStore && matchKeyword('for')) {          // chrjs
+            if (state.inStore && matchKeyword('for')) {           // chrjs
                 return parseSnapExpression();
             }
             if (matchKeyword('store')) {                          // chrjs
@@ -3839,7 +3869,8 @@ const util = require('./util.js');
             inFunctionBody: false,
             inIteration: false,
             inSwitch: false,
-            lastCommentStart: -1
+            lastCommentStart: -1,
+            inStore: false
         };
 
         extra = {};
@@ -3991,11 +4022,16 @@ const util = require('./util.js');
         } else if (match('[') || match('{')) {
             ans = parseChrjsFullTermItemExpression('M');
         } else if (match('(')) {
+            // !!! this would be fooled by `(out('blah','blah'))` !!!
             ans = delegate.createItemExpression('?',parseAssignmentExpression()); // guard
         } else {
             var expr = parseAssignmentExpression();
-            if (expr.type=='AssignmentExpression')
+            if (expr.type==Syntax.AssignmentExpression)
                 ans = delegate.createItemExpression('=',expr);                    // bind
+            else if (expr.type===Syntax.CallExpression &&
+                     expr.callee.type==='Identifier' &&
+                     expr.callee.name==='out')
+                ans = delegate.createItemExpression('O',expr);                    // output
             else
                 ans = delegate.createItemExpression('?',expr);                    // guard
         }
@@ -4068,7 +4104,7 @@ const util = require('./util.js');
         var         id = delegate.createIdentifier('%for-'+ruleGenId++);
         expectKeyword('for');
         if (!match('('))
-            id = parseVariableIdentifier() // only for testing?
+            id = parseVariableIdentifier(); // only for testing?
         expect('(');
         init = parseConditionalExpression();
         expect(';');
@@ -4083,7 +4119,7 @@ const util = require('./util.js');
         expect(';');
         accum = parseAssignmentExpression();
         expect(')');
-        if (accum.type !== 'FunctionExpression')
+        if (accum.type !== Syntax.FunctionExpression)
             throwError({}, Messages.FunctionExpressionExpected);
         return delegate.markEnd(delegate.createSnapExpression(id,init,items,accum),startToken);
     }
@@ -4137,9 +4173,15 @@ const util = require('./util.js');
             .bases('Expression')
             .build('id','init','items','accum')
             .field('id',   def('Identifier'))
-            .field('init', def('AssignmentExpression'))
+            .field('init', def('Expression'))
             .field('items',[def('ItemExpression')])
             .field('accum',def('Expression'));
+        def('WhereExpression')
+            .bases('Expression')
+            .build('id','element','items')
+            .field('id',     def('Identifier'))
+            .field('element',def('Expression'))
+            .field('items',  [def('ItemExpression')]);
         types.finalize();
         return function(ast,methods) {
             return types.visit(ast,methods);
@@ -4186,7 +4228,8 @@ const util = require('./util.js');
                     inFunctionBody: false,
                     inIteration: false,
                     inSwitch: false,
-                    lastCommentStart: -1
+                    lastCommentStart: -1,
+                    inStore: false
                 };
                 extra = {};
                 skipComment();
