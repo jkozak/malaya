@@ -745,6 +745,16 @@ function genMatch(term,genRest,bIdFact) { // genRest() >> [stmt,...]; returns Bl
             }
             if (rest!==null)
                 rest._leave_names = non_rests.map(function(p){return p.key.name;});
+            else {
+                var ks = b.callExpression(b.memberExpression(b.identifier('Object'),
+                                                             b.identifier('keys'),
+                                                             false),
+                                          [genAccessor(bIdFact,path)] );
+                bools.push(genEqual(b.memberExpression(ks,
+                                                       b.identifier('length'),
+                                                       false),
+                                    b.literal(non_rests.length) ));
+            }
             for (var p in term.properties) {
                 var prop = term.properties[p];
                 if (prop.key==='' && prop.value===null) {

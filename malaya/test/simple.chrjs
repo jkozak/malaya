@@ -20,7 +20,7 @@ describe("match example",function() {
 
             ['instrument',{name:"IL21"}];
 
-            rule (-['match-price', {volume:0}]);
+            rule (-['match-price', {volume:0,...}]);
             rule (-['match-price', {user:uB, instrument, volume:vB, isBuy:true,  ...rB}]^rB.t,
                   -['match-price', {user:uS, instrument, volume:vS, isBuy:false, ...rS}]^rS.t,
                   ["user", {name:uB, company:cB}],
@@ -127,7 +127,7 @@ describe("query",function() {
         var st = store {
             ['Cookies',{ApplicationID:51,CookieID:0,Cookie:"with jam"}];
             query cookie(appId,id;
-                         ['Cookies',{ApplicationID:appId,CookieID:id}];
+                         ['Cookies',{ApplicationID:appId,CookieID:id,...}];
                          a=[]) a.concat([[appId,id]]);
         };
         assert.deepEqual(st.queries.cookie(51,0).result,[[51,0]]);
@@ -180,7 +180,7 @@ describe("ellipsis bindings",function() {
     });
 });
 
-describe("matching",function() {
+describe("matching XXX",function() {
     it("should not match unequal length arrays",function() {
         var st = store {
             rule (-['a']);
@@ -209,7 +209,7 @@ describe("matching",function() {
         st.add(['a',{p:29}]);
         assert.equal(st.size,1); // not matched, retained
     });
-    it("should match correctly given of t_fact deletion during iteration",function() {
+    it("should match correctly given t_fact deletion during iteration",function() {
         var st = store {
             ['b'];
             ['b'];
@@ -233,6 +233,70 @@ describe("matching",function() {
         assert.equal(st.size,4);
         st.add(['c']);
         assert.deepEqual(_.values(st._private.facts),[['c']]);
+    });
+    it("does not match nothing to something in object",function(){
+        var st = store {
+            rule (-['a',{b}]);
+        };
+        st.add(['a',{b:1}]);
+        assert.equal(st.size,0);
+        st.add(['a',{b:null}]);
+        assert.equal(st.size,0);
+        st.add(['a',{}]);
+        assert.equal(st.size,1); // not deleted
+    });
+    it("does not match something to nothing in object",function(){
+        var st = store {
+            rule (-['a',{}]);
+        };
+        st.add(['a',{}]);
+        assert.equal(st.size,0);
+        st.add(['a',{b:null}]);
+        assert.equal(st.size,1); // not deleted
+    });
+    it("matches nothing to `...` in object",function(){
+        var st = store {
+            rule (-['a',{...}]);
+        };
+        st.add(['a',{}]);
+        assert.equal(st.size,0);
+    });
+    it("matches something to `...` in object",function(){
+        var st = store {
+            rule (-['a',{...}]);
+        };
+        st.add(['a',{b:1}]);
+        assert.equal(st.size,0);
+    });
+    it("does not match something to nothing in array",function(){
+        var st = store {
+            rule (-['a',[]]);
+        };
+        st.add(['a',[]]);
+        assert.equal(st.size,0);
+        st.add(['a',[null]]);
+        assert.equal(st.size,1); // not deleted
+    });
+    it("does not match nothing to something in array",function(){
+        var st = store {
+            rule (-['a',[null]]);
+        };
+        st.add(['a',[]]);
+        assert.equal(st.size,1); // not deleted
+    });
+    it("matches nothing to `...` in array",function(){
+        var st = store {
+            rule (-['a',[...]]);
+        };
+        st.add(['a',[]]);
+        assert.equal(st.size,0);
+    });
+    it("matches something to `...` in object",function(){
+        var st = store {
+            rule (-['a',[...]]);
+        };
+        st.add(['a',[null]]);
+        assert.equal(st.size,0);
     });
 });
 
