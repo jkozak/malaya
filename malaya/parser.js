@@ -166,6 +166,7 @@ const util = require('./util.js');
         RuleStatement: 'RuleStatement',
         QueryStatement: 'QueryStatement',
         SnapExpression: 'SnapExpression',
+        QueryWhereStatement: 'QueryWhereStatement',
         WhereExpression: 'WhereExpression',
         ItemExpression: 'ItemExpression'
     };
@@ -1894,6 +1895,15 @@ const util = require('./util.js');
                 init: init,
                 items: items,
                 accum: accum
+            };
+        },
+
+        createQueryWhereStatement: function(id, args, body) {
+            return {
+                type: Syntax.QueryWhereStatement,
+                id: id,
+                args: args,
+                body: body
             };
         },
 
@@ -4083,17 +4093,29 @@ const util = require('./util.js');
         expectKeyword('query');
         var id = parseVariableIdentifier();
         expect('(');
-        if (!match(';')) {
+        if (!match(';') && !match(')')) {
             while (index<length) {
                 args.push(parseAssignmentExpression());
-                if (match(';'))
+                if (match(';') || match(')'))
                     break;
                 expect(',');
             }
         }
-        expect(';');
-        var qsb = parseQuerySnapBackend();
-        return delegate.markEnd(delegate.createQueryStatement(id,args,qsb.items,qsb.init,qsb.accum),startToken);
+        if (match(';')) {
+            expect(';');
+            var qsb = parseQuerySnapBackend();
+            return delegate.markEnd(delegate.createQueryStatement(id,
+                                                                  args,
+                                                                  qsb.items,
+                                                                  qsb.init,
+                                                                  qsb.accum),
+                                    startToken);
+        } else {
+            expect(')');
+            var arr = parseConditionalExpression();
+            return delegate.markEnd(delegate.createQueryWhereStatement(id,args,arr),
+                                    startToken);
+        }
     }
 
     function parseSnapExpression() {
@@ -4182,6 +4204,12 @@ const util = require('./util.js');
             .field('id',     def('Identifier'))
             .field('element',def('Expression'))
             .field('items',  [def('ItemExpression')]);
+        def('QueryWhereStatement')
+            .bases('Expression')
+            .build('id','args','value')
+            .field('id',     def('Identifier'))
+            .field('args',   [def('Identifier')])
+            .field('body',   def('ConditionalExpression'));
         types.finalize();
         return function(ast,methods) {
             return types.visit(ast,methods);

@@ -381,6 +381,8 @@ function annotateParse1(js) {   // poor man's attribute grammar - pass one
                     throw new util.Fail(util.format("for expression must occur in create, assign or out item"));
             } else if (stmt=='function') {
                 // +++ get rid of this +++
+            }  else if (stmt=='query') {
+                // only applies to where
             } else
                 throw new util.Fail(util.format("for expression not in rule [%s]",stmt));
             if (path.node.id!==null)
@@ -405,7 +407,7 @@ function annotateParse1(js) {   // poor man's attribute grammar - pass one
         visitWhereExpression:     function(path) { // !!! hack !!!
             var bArg = b.identifier('arg1');
             var body = b.callExpression(b.memberExpression(bArg,b.identifier('concat'),false),
-                                        [path.node.element]);
+                                        [b.arrayExpression([path.node.element])] );
             var  blk = b.blockStatement([b.returnStatement(body)]);
             var  acc = b.functionExpression(null,[bArg],blk);
             var snap = b.snapExpression(path.node.id,
@@ -416,6 +418,13 @@ function annotateParse1(js) {   // poor man's attribute grammar - pass one
             acc.attrs  = {};
             path.replace(snap);
             return this.visitSnapExpression(path);
+        },
+        visitQueryWhereStatement:      function(path) {
+            var bBody = b.blockStatement([b.returnStatement(path.node.body)]);
+            var bCode = b.functionDeclaration(path.node.id,path.node.args,bBody);
+            bCode.attrs = {};
+            path.replace(bCode);
+            return this.visitFunctionDeclaration(path);
         },
         visitItemExpression:      function(path) {
             if (stmt!=='rule' && _.contains(['+','-'],path.node.op))
@@ -517,6 +526,10 @@ function annotateParse2(chrjs) {        // poor man's attribute grammar - pass t
             setBoundHereAttr(path.node,path.node.attrs.vars);
             return false;
         },
+        visitQueryWhereStatement:      function(path) {
+            setBoundHereAttr(path.node,path.node.attrs.vars);
+            this.traverse(path.get('body'));
+        },
         visitSnapExpression:      function(path) {
             setBoundHereAttr(path.node,path.node.attrs.vars);
             this.traverse(path.get('accum')); // snap expressions can nest here
@@ -568,7 +581,9 @@ function mangle(js) {           // `js` must have been previously annotated
         visitProgram:             function(path) {return this.doVars(path);},
         visitRuleStatement:       function(path) {return this.doVars(path);},
         visitQueryStatement:      function(path) {return this.doVars(path);},
+        visitQueryWhereStatement: function(path) {return this.doVars(path);},
         visitSnapExpression:      function(path) {return this.doVars(path);},
+        visitWhereExpression:     function(path) {return this.doVars(path);}, // not used yet
         visitFunctionExpression:  function(path) {return this.doVars(path);},
         visitFunctionDeclaration: function(path) {return this.doVars(path);},
         visitStoreExpression:     function(path) {return this.doVars(path);},
@@ -1607,6 +1622,9 @@ function buildStanzas(code,parsed) {
             currentRule = node;
             this.traverse(path);
             currentRule = null;
+        },
+        visitQueryWhereStatement: function(path) {
+            return visitQueryStatement(path);
         },
         visitItemExpression: function(path) {
             var node = path.node;

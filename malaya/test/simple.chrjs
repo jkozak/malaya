@@ -135,6 +135,50 @@ describe("query",function() {
     // !!! nested queries are broken but will be replaced by simpler function+forexpr notation !!!
 });
 
+describe("query/where XXX",function() {
+    it("should be able to add up",function(){
+        var st = store {
+            query q() [x where ['x',{x}]].reduce((p,q)=>p+q,0);
+        };
+        assert.equal(st.queries.q().result,0);
+        st.add(['x',{x:1}]);
+        assert.equal(st.queries.q().result,1);
+        st.add(['x',{x:1}]);
+        assert.equal(st.queries.q().result,2);
+    });
+    it("should sort as needed",function(){
+        var st = store {
+            ['x',{x:1}];
+            ['x',{x:2}];
+            query qu() [x where ['x',{x}]].reduce(   (a,x)=>a===0?x:a);
+            query qa() [x where ['x',{x}]^x].reduce( (a,x)=>a===0?x:a);
+            query qd() [x where ['x',{x}]^-x].reduce((a,x)=>a===0?x:a);
+        };
+        assert.equal(st.queries.qa().result,1);
+        assert.equal(st.queries.qd().result,2);
+    });
+    it("should use parameters",function(){
+        var st = store {
+            ['Cookies',{ApplicationID:51,CookieID:0,Cookie:"with jam"}];
+            query cookie(appId,id) [Cookie
+                                    where
+                                    ['Cookies',{ApplicationID:appId,CookieID:id,Cookie}] ];
+        };
+        assert.deepEqual(st.queries.cookie(51,0).result,["with jam"]);
+    });
+    it("should generate even silly code",function(){
+        // this cropped up while testing nested queries
+        var st = store {
+            ['Cookies',{ApplicationID:51,CookieID:0,Cookie:"with jam"}];
+            query cookie(appId,id) [[appId,id]
+                                    where
+                                    ['Cookies',{ApplicationID:appId,CookieID:id,...}] ];
+        };
+        assert.deepEqual(st.queries.cookie(51,0).result,[[51,0]]);
+    });
+});
+
+
 describe("store generic operations",function() {
     it("should reset",function() {
         var st = store {
