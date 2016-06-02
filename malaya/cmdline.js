@@ -87,6 +87,25 @@ subcommands.compile.addArgument(
     }
 );
 
+addSubcommand('exec',{addHelp:true});
+subcommands.exec.addArgument(
+    ['-D','--debug'],
+    {
+        action:       'storeTrue',
+        defaultValue: false,
+        help:         "generate debug code",
+        dest:         'debug'
+    }
+);
+subcommands.exec.addArgument(
+    ['source'],
+    {
+        action:       'store',
+        help:         "chrjs source file to exec",
+        defaultValue: 'bl.chrjs'
+    }
+);
+
 addSubcommand('init',{addHelp:true});
 subcommands.init.addArgument(
     ['-d','--data'],
@@ -469,6 +488,13 @@ exports.run = function(opts0) {
 
     subcommands.compile.exec = function() {
         fs.writeFileSync(args.source+'.js',compile(args.source));
+    };
+
+    subcommands.exec.exec = function() {
+        const vm = require('vm');
+        vm.runInNewContext(compile(args.source),{
+            require:require,
+            console:console});
     };
 
     subcommands.init.exec = function() {
