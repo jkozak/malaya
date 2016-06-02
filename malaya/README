@@ -7,20 +7,20 @@ How to get started
 Use linux.  The core stuff should work on windows, but the Makefile at
 least is linux specific. 
 
-Install `nodejs`.  I've run the tests against 0.10.29,0.10.36,0.12.0
-io.js 1.4.3 and 1.5.0.  Probably won't work with earlier versions.
-Most distributions have a nodejs package: _but_ you need `npm` as
-well.  You may shortly be placing your immortal soul in jeopardy by
-installing `npm` from outside the distribution, so you may as well
-install `nvm` which manages multiple parallel versions of node+tools.
+Install `nodejs`.  I've run the tests against versions 4,5 and 6.
+Probably won't work with earlier versions.  Most distributions have a
+nodejs package: _but_ you need `npm` as well.  You may shortly be
+placing your immortal soul in jeopardy by installing `npm` from
+outside the distribution, so you may as well install `nvm` which
+manages multiple parallel versions of node+tools.
 
 Given you've installed it at ~/malaya and have GNU make and a C
 compiler installed you should be able to do this:
 
  $ cd ~/malaya
- $ make tests
+ $ make test
 
-All 250+ tests should pass.
+All 350+ tests should pass.
 
 
 What else can I do with it?
@@ -46,6 +46,8 @@ multiple client  running for extra excitement.
 Also, can compile `chrjs` files with `~/malaya/malaya compile`:
 resulting `.chrjs.js` files can be `require`d and used elsewhere,
 nothing else from malaya should be needed (does need `underscore`).
+
+You can run chrjs without any server with `./malaya exec`.
 
 
 Hollywood interface
