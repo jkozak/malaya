@@ -395,6 +395,11 @@ describe("first pass of new compiler",function() {
             pass1(parse("1+();"));
         });
     });
+    it("should do `out`s after generators and tests",function(){
+        var prs1 = pass1(parse("store {rule R (out('haha'),['a']);};"));
+        assert.strictEqual(findById(prs1,'R').items[0].op,'M'); // items...
+        assert.strictEqual(findById(prs1,'R').items[1].op,'O'); // ...reversed
+    });
 });
 
 describe("second pass of new compiler",function() {

@@ -1,6 +1,7 @@
 From: John Kozak <jk@thameslighter.net>
 Date: Sat, 09 Apr 2016 17:21:39 +0100
 Subject: compiler should ensure that `out` is called last and top level
-State: new
+State: resolved
 Message-Id: <a1a4d0855cc4a3c2-0-artemis@renn>
+resolution: fixed
 

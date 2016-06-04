@@ -255,6 +255,7 @@ if (util.env==='test')
                                       // general testing stuff
                                       console: {ext:true,mutable:false,type:'function'},
                                       process: {ext:true,mutable:false,type:'function'},
+                                      Error:   {ext:true,mutable:false,type:'function'},
                                       // the `mocha` globals
                                       before:  {ext:true,mutable:false,type:'function'},
                                       after:   {ext:true,mutable:false,type:'function'},
@@ -290,9 +291,20 @@ function annotateParse1(js) {   // poor man's attribute grammar - pass one
     var stmt = null;
     js = deepClone(js);
     js = parser.visit(js,{
-        markItemsWithId:          function(node) {
+        markItemsWithIdAndSort:   function(node) {
             for (var i=0;i<node.items.length;i++)
                 node.items[i].attrs.itemId = i;
+            // do `out`s after all generators and tests
+            //N.B. + and - ops are only effected at end of rule processing
+            node.items.sort(function(p,q){
+                var p0 = p.op==='O';
+                var q0 = q.op==='O';
+                var  r = p0-q0;
+                if (r!==0)
+                    return r;
+                else
+                    return p.attrs.itemId-q.attrs.itemId;
+            });
         },
         noteDeclaredName:         function(name,type,bound) {
             if (vars[name])
@@ -353,7 +365,7 @@ function annotateParse1(js) {   // poor man's attribute grammar - pass one
         visitRuleStatement:       function(path) {
             if (path.node.id!==null)
                 this.noteDeclaredName(path.node.id.name,'store');
-            this.markItemsWithId(path.node);
+            this.markItemsWithIdAndSort(path.node);
             var save = {vars:vars,stmt:stmt};
             path.node.attrs.vars = vars = {};
             stmt = 'rule';
@@ -363,7 +375,7 @@ function annotateParse1(js) {   // poor man's attribute grammar - pass one
         },
         visitQueryStatement:      function(path) {
             this.noteDeclaredName(path.node.id.name,'function');
-            this.markItemsWithId(path.node);
+            this.markItemsWithIdAndSort(path.node);
             var save = {vars:vars,stmt:stmt};
             path.node.attrs.vars = vars = {};
             stmt = 'query';
@@ -387,7 +399,7 @@ function annotateParse1(js) {   // poor man's attribute grammar - pass one
                 throw new util.Fail(util.format("for expression not in rule [%s]",stmt));
             if (path.node.id!==null)
                 this.noteDeclaredName(path.node.id.name,'snap',true);
-            this.markItemsWithId(path.node);
+            this.markItemsWithIdAndSort(path.node);
             var save = {vars:vars,stmt:stmt,item:item};
             path.node.attrs.vars = vars = {};
             Object.keys(save.vars).forEach(function(k){ // copy over bound vars from container

@@ -576,4 +576,32 @@ describe("regression tests",function() {
         st.add(['c']);
         assert.equal(st.size,3);
     });
+    describe("should do items with side effects last",function(){
+        it("'+' item",function(){
+            var st = store {
+                ['p',{b:0}];
+                rule (-['p',{b}],
+                      -['a'],
+                      b>0);
+            };
+            assert.equal(st.size,1);
+            st.add(['a']);
+            assert.equal(st.size,2);
+        });
+        it("`out` item",function(){
+            var st = store {
+                ['p',{b:0}];
+                rule (-['p',{b}],
+                      out("oops"),
+                      -['a'],
+                      b>0);
+            };
+            st.on('out',function(x){
+                throw new Error("no output expected, got: "+x);
+            });
+            assert.equal(st.size,1);
+            st.add(['a']);
+            assert.equal(st.size,2);
+        });
+    });
 });
