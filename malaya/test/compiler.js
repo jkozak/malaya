@@ -658,6 +658,9 @@ describe("compile",function() {
     it("should detect non top-level `out`s",function(){
         assert.throws(()=>{compile("store{rule(['p'],(out('a','b')));}");});
     });
+    it("should handle try/catch (if only for testing) [9854c3d7a3291b37]",function(){
+        compile("try {console.log('blah');} catch (e) {console.log(e);}");
+    });
 });
 
 describe("function/for style query",function() {

@@ -346,6 +346,16 @@ function annotateParse1(js) {   // poor man's attribute grammar - pass one
             if (!_.contains(['program','function'],stmt)) // !!! null is for TESTING !!!
                 throw new util.Fail(util.format("variable %s declared in inappropriate context %s",name,stmt));
         },
+        visitCatchClause:         function(path) {
+            var save = {vars:vars,stmt:stmt};
+            path.node.attrs.vars = vars = {};
+            stmt = 'catch';
+            assert.strictEqual(path.node.param.type,'Identifier');
+            vars[path.node.param.name] = {bound:true,declared:true};
+            this.traverse(path);
+            stmt = save.stmt;
+            vars = save.vars;
+        },
         doStore:                  function(path) {
             var save = {vars:vars,stmt:stmt};
             path.node.attrs.vars = vars = {};
@@ -591,6 +601,7 @@ function mangle(js) {           // `js` must have been previously annotated
             return false;
         },
         visitProgram:             function(path) {return this.doVars(path);},
+        visitCatchClause:         function(path) {return this.doVars(path);},
         visitRuleStatement:       function(path) {return this.doVars(path);},
         visitQueryStatement:      function(path) {return this.doVars(path);},
         visitQueryWhereStatement: function(path) {return this.doVars(path);},

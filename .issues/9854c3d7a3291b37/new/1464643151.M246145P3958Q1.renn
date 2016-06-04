@@ -1,8 +1,9 @@
 From: John Kozak <jk@thameslighter.net>
 Date: Mon, 30 May 2016 22:18:12 +0100
-State: new
+State: resolved
 Subject: Bug: chrjs doesn't know about try-catch binding error var
 Message-Id: <9854c3d7a3291b37-0-artemis@renn>
+resolution: fixed
 
 e.g.:
 

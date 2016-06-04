@@ -135,7 +135,7 @@ describe("query",function() {
     // !!! nested queries are broken but will be replaced by simpler function+forexpr notation !!!
 });
 
-describe("query/where XXX",function() {
+describe("query/where",function() {
     it("should be able to add up",function(){
         var st = store {
             query q() [x where ['x',{x}]].reduce((p,q)=>p+q,0);
@@ -224,7 +224,7 @@ describe("ellipsis bindings",function() {
     });
 });
 
-describe("matching XXX",function() {
+describe("matching",function() {
     it("should not match unequal length arrays",function() {
         var st = store {
             rule (-['a']);
@@ -408,9 +408,13 @@ describe("output function",function(){
                   out('nemo',"it's an a!") );
         };
         st.on('out',(d,j)=>{
-            assert.equal(d,'nemo');
-            assert.equal(j,"it's an a!");
-            done();
+            try {
+                assert.strictEqual(d,'nemo');
+                assert.strictEqual(j,"it's an a!");
+                done();
+            } catch (e) {
+                done(e);
+            }
         });
         st.add(['a']);
     });
