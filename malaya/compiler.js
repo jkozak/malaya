@@ -242,8 +242,8 @@ var chrGlobalVars = {           // only javascript globals allowed in CHRjs
     Number:     {ext:true,mutable:false,type:'function'},
     Object:     {ext:true,mutable:false,type:'function'},
     JSON:       {ext:true,mutable:false,type:'function'},
-    Math:       {ext:true,mutable:false,type:'function'},
-    Date:       {ext:true,mutable:false,type:'function'},
+    Math:       {ext:true,mutable:false,type:'function',mangle:'MalayaMath'},
+    Date:       {ext:true,mutable:false,type:'function',mangle:'MalayaDate'},
     require:    {ext:true,mutable:false,type:'function'},
     module:     {ext:true,mutable:false,type:'function'},
     console:    {ext:true,mutable:false,type:'function'},
@@ -260,7 +260,7 @@ if (util.env==='test')
                                       before:  {ext:true,mutable:false,type:'function'},
                                       after:   {ext:true,mutable:false,type:'function'},
                                       describe:{ext:true,mutable:false,type:'function'},
-                                      it:      {ext:true,mutable:false,type:'function'},
+                                      it:      {ext:true,mutable:false,type:'function'}
                                   });
 if (util.env==='benchmark')
     chrGlobalVars = Object.assign(chrGlobalVars,
@@ -273,6 +273,13 @@ if (util.env==='benchmark')
 var chrLocalVars = {
     out: {ext:true,mutable:false,type:'function'}
 };
+
+global.MalayaDate = global.Date;
+global.MalayaMath = {};
+Object.getOwnPropertyNames(Math).forEach(function(n){
+    MalayaMath[n] = Math[n];
+});
+MalayaMath.random = function(){throw new Error("malaya does not play dice");};
 
 function findVar(v,path) {
     if (chrLocalVars[v])
@@ -592,7 +599,12 @@ function mangle(js) {           // `js` must have been previously annotated
                     throw new util.Fail(util.format("var %s not found",path.node.name));
                 if (!vattrs.bound && !vattrs.declared && !vattrs.ext)
                     throw new util.Fail(util.format("var %s gets no value",path.node.name));
-                if (!vattrs.ext) {
+                if (vattrs.ext) {
+                    if (vattrs.mangle) {
+                        path.node.attrs.was = path.node.name;
+                        path.node.name      = vattrs.mangle;
+                    }
+                } else {
                     path.node.attrs.was = path.node.name;
                     path.node.name      = mangleIdentifier(path.node.name);
                     assert.strictEqual(path.node.name,vattrs.mangled);

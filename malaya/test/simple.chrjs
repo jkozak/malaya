@@ -608,4 +608,7 @@ describe("regression tests",function() {
             assert.equal(st.size,2);
         });
     });
+    it("should have no truck with indeterminacy [9712887252654d96]",function(){
+        assert.throws(function(){Math.random();});
+    });
 });
