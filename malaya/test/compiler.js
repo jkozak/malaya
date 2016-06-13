@@ -10,7 +10,7 @@ var     util = require('../util.js');
 var     temp = require('temp');
 var     path = require('path');
 var       fs = require('fs');
-var        _ = require('underscore');
+var        _ = require('underscore'); // eslint-disable-line no-unused-vars
 
 var        b = recast.types.builders;
 
@@ -96,9 +96,9 @@ describe("genAccessor",function() {
 });
 
 function literalise(x) {
-    if (_.isArray(x))
+    if (Array.isArray(x))
         return b.arrayExpression(x.map(literalise));
-    else if (_.isObject(x))
+    else if ((typeof x)==='object' && x!==null)
         return b.objectExpression(Object.keys(x).map(function(k) {
             return b.property('init',
                               b.identifier(k),
@@ -586,7 +586,7 @@ describe("compile",function() {
         var   js = compiler.compile(ast);
         var   st = eval(recast.print(js).code);
         st.add(['a',17]);
-        assert.deepEqual(_.values(st._private.facts),[['b',0]]);
+        assert.deepEqual(st._private.orderedFacts,[['b',0]]);
         st.reset();
         assert.deepEqual(st._private.facts,{});
         st.add(['c',1]);
@@ -594,22 +594,40 @@ describe("compile",function() {
         assert.strictEqual(ans.adds.length,1);
         assert.deepEqual(st.get(ans.adds[0]),['b',19]);
     });
+    it("should restore initial contents",function() {
+        var  ast = parse("store {['b',0];};");
+        var   js = compiler.compile(ast);
+        var   st = eval(recast.print(js).code);
+        assert.deepEqual(st._private.orderedFacts,[['b',0]]);
+        st.reset();
+        assert.deepEqual(st._private.orderedFacts,[['b',0]]);
+    });
+    it("should restore initial contents after update",function() {
+        var  ast = parse("store {['b',0];};");
+        var   js = compiler.compile(ast);
+        var   st = eval(recast.print(js).code);
+        assert.deepEqual(st._private.orderedFacts,[['b',0]]);
+        st.add(['c',1]);
+        assert.deepEqual(st._private.orderedFacts,[['b',0],['c',1]]);
+        st.reset();
+        assert.deepEqual(st._private.orderedFacts,[['b',0]]);
+    });
     it("should handle store containing `for` (non-deleting variant)",function() {
         var  ast = parse("store {rule(['a',p],+['b',for(0;['c',q];a=>a+p+q+1)]);};");
         var   js = compiler.compile(ast);
         var   st = eval(recast.print(js).code);
         st.add(['c',1]);
         st.add(['a',17]);
-        assert.deepEqual(_.values(st._private.facts),[['c',1],['a',17],['b',19]]);
+        assert.deepEqual(st._private.orderedFacts,[['c',1],['a',17],['b',19]]);
     });
     it("should handle guards starting with ! [cd50013ab17474a6]",function() {
         var ast = parse("store {rule(['a',b],!(b===0),+['c']);rule(-['a',...]);};");
         var  js = compiler.compile(ast);
         var  st = eval(recast.print(js).code);
         st.add(['a',0]);
-        assert.deepEqual(_.values(st._private.facts),[]);
+        assert.deepEqual(st._private.orderedFacts,[]);
         st.add(['a',1]);
-        assert.deepEqual(_.values(st._private.facts),[['c']]);
+        assert.deepEqual(st._private.orderedFacts,[['c']]);
     });
     it("should handle nuladic arrow functions",function() {
         var js = compiler.compile(parse("()=>23;"));
@@ -638,7 +656,7 @@ describe("compile",function() {
         var js = compiler.compile(parse("var t=fn=>fn(2,3);store {rule (-['a'],+['b',t((x,y)=>x+y+1)]);};"));
         var st = eval(recast.print(js).code);
         st.add(['a']);
-        assert.deepEqual(_.values(st._private.facts),[['b',6]]);
+        assert.deepEqual(st._private.orderedFacts,[['b',6]]);
     });
     it("should handle nested for-expressions",function() {
         compile("store{rule(['a'],+['b',for(0;['p'];a=>a+for(0;['q'];b=>b+1))]);}");
