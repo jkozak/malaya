@@ -1,0 +1,6 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Fri, 10 Jun 2016 09:17:18 +0100
+Subject: store.reset should reset to specified initial contents, not empty
+State: new
+Message-Id: <b9fa3c6880287c26-0-artemis@renn>
+
