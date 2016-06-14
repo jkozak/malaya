@@ -1,0 +1,27 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Thu, 09 Jun 2016 07:55:45 +0100
+State: resolved
+Subject: more, better engine -> chrjs msging
+Message-Id: <d06c57e3a5390c51-0-artemis@renn>
+resolution: fixed
+
+_connect, _disconnect msgs
+
+_tick moves to engine
+
+controlled by:
+
+  engine.options = {
+    _tick:1000,
+    _connect:true,
+    _disconnect:true,
+    _restart:true,
+    _take-outputs:false
+  }
+
+
+Can send `out` control msgs to `server:`, e.g.:
+
+  out('server:',[_disconnect,{port:'fe3://:55789'}])
+  out('server:',[_schedule,  {after:1,message:[_alarm,{}]}])
+

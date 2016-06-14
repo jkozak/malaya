@@ -433,6 +433,79 @@ describe("Engine",function() {
             });
         });
     });
+    describe("magic facts",function(){
+        let eng;
+        const factChecker = (facts,done) => {
+            setImmediate(()=> {
+                try {
+                    assert.deepEqual(eng.chrjs._private.orderedFacts,facts);
+                    done();
+                } catch (e) {
+                    done(e);
+                }
+            });
+        };
+        const mkMagicEngineStarter = (magic) => (done) => {
+            eng = new Engine({dir:   temp.mkdirSync(),
+                              ports: {},
+                              magic: magic});
+            eng.init();
+            eng.start();
+            eng.startPrevalence(function(err) {
+                assert.deepEqual(eng.chrjs.size,0);
+                done(err);
+            });
+        };
+        describe("_restart when requested",function(){
+            before(mkMagicEngineStarter({_restart:true}));
+            it("learns about rebirth",function(done){
+                eng.on('mode',(mode)=>{
+                    if (mode==='master')
+                        factChecker([['_restart',{},{port:'server:'}]],done);
+                });
+                eng.become('master');
+            });
+        });
+        describe("_connect and _disconnects when requested",function(){
+            before(mkMagicEngineStarter({_connect:true,_disconnect:true}));
+            beforeEach(function(){eng.chrjs.reset();});
+            it("learn about a new connection",function(done){
+                factChecker([['_connect',{port:'test://1',type:'data'},{port:'server:'}]],done);
+                eng.addConnection('test://1',createIO());
+            });
+            it("learn about another new connection",function(done){
+                factChecker([['_connect',{port:'test://2',type:'data'},{port:'server:'}]],done);
+                eng.addConnection('test://2',createIO());
+            });
+            it("learn about a lost connection",function(done){
+                factChecker([['_disconnect',{port:'test://1',type:'data'},{port:'server:'}]],done);
+                eng.closeConnection('test://1');
+            });
+            it("learn about another lost connection",function(done){
+                factChecker([['_disconnect',{port:'test://2',type:'data'},{port:'server:'}]],done);
+                eng.closeConnection('test://2');
+            });
+        });
+        describe("when not requested",function(){
+            before(mkMagicEngineStarter({}));
+            beforeEach(function(){eng.chrjs.reset();});
+            it("remain ignorant about rebirth",function(done){
+                eng.on('mode',(mode)=>{
+                    if (mode==='master')
+                        factChecker([],done);
+                });
+                eng.become('master');
+            });
+            it("doesn't learn about a new connection",function(done){
+                factChecker([],done);
+                eng.addConnection('test://1',createIO());
+            });
+            it("doesn't learn about a lost connection",function(done){
+                factChecker([],done);
+                eng.closeConnection('test://1');
+            });
+        });
+    });
     describe("replication",function() {
         it("streams out the journal",function(done) {
             const eng = new Engine({dir:           temp.mkdirSync(),
@@ -482,54 +555,6 @@ describe("Engine",function() {
                 } catch (e) {done(e);}
             });
             eng.addConnection('test://admin',io);
-        });
-    });
-    describe("magic outputs",function() {
-        it("are just removed from the store with no callback",function(done) {
-            const dir = temp.mkdirSync();
-            const eng = new Engine({dir:dir});
-            eng.init();
-            eng.addMagicOutput('_trevor');
-            eng.start();
-            assert.strictEqual(eng.chrjs.size,0);
-            eng.startPrevalence(function(err) {
-                if (err)
-                    done(err);
-                else
-                    eng.update(['_trevor',{},{}],null,function() {
-                        assert.strictEqual(eng.chrjs.size,0);
-                        eng.stopPrevalence(true,function(err1) {
-                            if (err1)
-                                done(err1);
-                            else
-                                eng.stop(true,done);
-                        });
-                    });
-            });
-        });
-        it("are removed from the store and callback done",function(done) {
-            const dir = temp.mkdirSync();
-            const eng = new Engine({dir:dir});
-            let     n = 0;
-            eng.init();
-            eng.addMagicOutput('_trevor');
-            eng.start();
-            assert.strictEqual(eng.chrjs.size,0);
-            eng.startPrevalence(function(err) {
-                if (err)
-                    done(err);
-                else
-                    eng.update(['_trevor',{},{}],function(x){n+=1;},function() {
-                        assert.strictEqual(eng.chrjs.size,0);
-                        assert.strictEqual(n,1);
-                        eng.stopPrevalence(true,function(err1) {
-                            if (err1)
-                                done(err1);
-                            else
-                                eng.stop(true,done);
-                        });
-                    });
-            });
         });
     });
     describe("web server",function() {

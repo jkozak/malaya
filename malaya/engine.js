@@ -46,6 +46,7 @@ const        http = require('http');
 const      sockjs = require('sockjs');
 const          ip = require('ip');
 const      minify = require('express-minify');
+const          vm = require('vm');
 
 const      parser = require('./parser.js');
 const    compiler = require('./compiler.js');
@@ -103,22 +104,6 @@ exports.makeInertChrjs = function(opts) {
     return obj;
 };
 
-let   sources = {};
-const compile = exports.compile = function(source) {
-    if (source) {
-        const children = module.children.slice(0);
-        const    chrjs = require(path.resolve(source));
-        const    loads = _.difference(module.children,children);
-        if (loads.length>1)
-            throw new VError("compiling %s added %s modules",source,loads.length);
-        for (const i in loads)
-            sources[loads[i].filename] = null;
-        chrjs.reset();          // because `require` caches values
-        return chrjs;
-    } else
-        return null;
-};
-
 const Engine = exports.Engine = function(options) {
     events.EventEmitter.call(this);
 
@@ -131,12 +116,15 @@ const Engine = exports.Engine = function(options) {
     options.ports     = options.ports || {http:3000};
     options.bundles   = options.bundles || {};
     options.minify    = options.minify===undefined ? util.env!=='test' : options.minify;
+    options.magic     = options.magic || {_tick:1000,_restart:true,'_take-outputs':true};
 
     compiler.debug    = options.debug;
 
     eng.prevalenceDir = options.prevalenceDir || path.join(options.dir,'.prevalence');
     eng.syshash       = null;
-    eng.chrjs         = options.chrjs || compile(options.businessLogic) || exports.makeInertChrjs();
+    eng.sources       = {};
+    eng.sandbox       = null;
+    eng.chrjs         = options.chrjs || eng.compile(options.businessLogic) || exports.makeInertChrjs();
     eng.hashes        = null;                    // hash store
     eng.options       = options;
     eng.mode          = 'idle';                  // 'master' | 'slave' | 'idle'
@@ -145,17 +133,19 @@ const Engine = exports.Engine = function(options) {
     eng.http          = null;                    // express http server
     eng.journal       = null;                    // journal write stream
     eng.timestamp     = options.timestamp || require('monotonic-timestamp');
-    eng.magicOutputs  = {};                      // <headTag> -> fn|null
     eng.journalFlush  = function(cb){cb(null);}; // flush journal
     eng.chrjs.tag     = options.tag;
     eng.masterUrl     = eng.options.masterUrl;
     eng.replicateSock = null;
     eng.active        = null;                    // update being processed
+    eng.tickInterval  = null;                    // for magic ticks
 
     eng.chrjs.on('error',function(err)      {eng.emit(new VError(err,"chrjs: "));});
     eng.chrjs.out = function(d,j) {return eng.out(d,j);};
 
     eng.on('mode',function(mode) {
+        if (eng.options.magic._restart && mode==='master')
+            eng.update(['_restart',{},{port:'server:'}]);
         eng.broadcast(['mode',mode],'admin');
     });
     eng.on('connection',function(portName,type) {
@@ -164,12 +154,55 @@ const Engine = exports.Engine = function(options) {
     eng.on('connectionClose',function(portName,type) {
         eng.broadcast(['connection',portName,type,false],'admin');
     });
+    eng.on('become',function(mode) {
+        if (eng.tickInterval)
+            clearInterval(eng.tickInterval);
+        if ((eng.options['_take-outputs'] || eng.options._tick) && mode==='master') {
+            eng.tickInterval = setInterval(function() {
+                if (eng.options._tick)
+                    eng.update(['_tick',{date:new Date()},{port:'server:'}]);
+                if (eng.options['_take-outputs'])
+                    eng.update(['_take-outputs',{},{port:'server:'}]);
+            },1000);
+        } else
+            eng.tickInterval = null;
+    });
+    if (eng.options.magic._connect) {
+        eng.on('connection',function(port,type) {
+            eng.update(['_connect',{port:port,type:type},{port:'server:'}]);
+        });
+    }
+    if (eng.options.magic._disconnect) {
+        eng.on('connectionClose',function(port,type) {
+            eng.update(['_disconnect',{port:port,type:type},{port:'server:'}]);
+        });
+    }
 
     return eng;
 };
 
 
 util.inherits(Engine,events.EventEmitter);
+
+Engine.prototype.compile = function(source) {
+    const eng = this;
+    if (eng.sandbox===null) {
+        eng.sandbox = _.extend({},global,{require:require});
+        vm.createContext(eng.sandbox);
+    }
+    if (source) {
+        const children = module.children.slice(0);
+        const    chrjs = require(path.resolve(source));
+        const    loads = _.difference(module.children,children);
+        if (loads.length>1)
+            throw new VError("compiling %s added %s modules",source,loads.length);
+        for (const i in loads)
+            eng.sources[loads[i].filename] = null;
+        chrjs.reset();          // because `require` caches values
+        return chrjs;
+    } else
+        return null;
+};
 
 Engine.prototype._saveWorld = function() {
     // +++ prevalence.batch (i.e. we are currently using `state-NEW`) +++
@@ -761,9 +794,10 @@ Engine.prototype.listenHttp = function(mode,port,done) {
 };
 
 Engine.prototype.journaliseCodeSources = function(type,item2,always,cb) {
-    const srcs = sources;
-    if (always || Object.keys(sources).length>0) {
-        sources = {};
+    const  eng = this;
+    const srcs = eng.sources;
+    if (always || Object.keys(eng.sources).length>0) {
+        eng.sources = {};
         for (const fn in srcs)
             srcs[fn] = this.hashes.putFileSync(fn);
         this.journalise(type,[util.sourceVersion,item2,srcs],cb);
@@ -776,52 +810,52 @@ Engine.prototype._become = function(mode,cb) {
     if (mode===eng.mode)
         cb();
     else switch (mode) {
+    case 'master': {
+        eng.startPrevalence(function(err) {
+            if (err)
+                cb(err);
+            else
+                eng.journaliseCodeSources('code',eng.options.businessLogic,false,cb);
+        });
+        break;
+    }
+    case 'slave': {
+        if (eng.masterUrl) {
+            eng.on('ready',function(err) {
+                cb(err);
+            });
+            eng.replicateFrom(eng.masterUrl); // `startPrevalence` done in here
+        } else
+            cb(new VError("no replication URL specified"));
+        break;
+    }
+    case 'idle':
+        switch (eng.mode) {
         case 'master': {
-            eng.startPrevalence(function(err) {
+            const done = _.after(2,function(err) {
                 if (err)
                     cb(err);
                 else
-                    eng.journaliseCodeSources('code',eng.options.businessLogic,false,cb);
+                    eng.stopPrevalence(true,cb);
             });
-            break;
-        }
-        case 'slave': {
-            if (eng.masterUrl) {
-                eng.on('ready',function(err) {
-                    cb(err);
-                });
-                eng.replicateFrom(eng.masterUrl); // `startPrevalence` done in here
-            } else
-                cb(new VError("no replication URL specified"));
-            break;
-        }
-        case 'idle':
-            switch (eng.mode) {
-            case 'master': {
-                const done = _.after(2,function(err) {
-                    if (err)
-                        cb(err);
-                    else
-                        eng.stopPrevalence(true,cb);
-                });
-                eng.closeAllConnections('data',done);
-                eng.closeAllConnections('replication',done);
+            eng.closeAllConnections('data',done);
+            eng.closeAllConnections('replication',done);
                 break;
-            }
-            case 'slave':
-                // `stopPrevalence` is done in replication code
-                if (eng.replicateSock) {
-                    eng.replicateSock.close();
-                    eng.replicateSock = null;
-                }
-                cb();
-                break;
-            }
-            break;
-        default:
-            eng.emit('error',new VError("bad engine mode: %j",mode));
-            return;
         }
+        case 'slave':
+            // `stopPrevalence` is done in replication code
+            if (eng.replicateSock) {
+                eng.replicateSock.close();
+                eng.replicateSock = null;
+            }
+            cb();
+                break;
+        }
+        break;
+    default:
+        eng.emit('error',new VError("bad engine mode: %j",mode));
+        return;
+    }
 };
 
 Engine.prototype.become = function(mode) {
@@ -893,31 +927,36 @@ Engine.prototype.broadcast = function(js,type,cb) {
     done();                     // for when ports.length===0 as _.after won't callback then
 };
 
-Engine.prototype.addMagicOutput = function(tag) {
-    const eng = this;
-    // Automatically remove anything called [tag,...] at end of each
-    // update, optionally calling `fn` on it
-    // This subsumes the `_output` mechanism.
-    // +++ it should move to the compiler to avoid exporting
-    // +++ store-damaging primitives
-    eng.magicOutputs[tag] = true;
-};
-
 Engine.prototype.out = function(dest,json) {
     const eng = this;
     if (json===null)
         ;           // discard
-    else if (dest==='all')
+    else if (dest==='all') {
         eng.broadcast(json,'data');
-    else if (dest==='self') {
+    } else if (dest==='self') {
         const port = eng.active[2].port;
         const io = eng.conns[port];
         if (io)
             io.o.write(json);
         else
             console.log("self gone away: %j",eng.active);
-    }
-    else {
+    } else if (dest==='server:') {
+        if (Array.isArray(json) && json.length===2)
+            switch (json[0]) {
+            case '_disconnect':
+                eng.closeConnection(json[1].port);
+                break;
+            case '_schedule':
+                setTimeout(()=>{
+                    eng.update(json.message);
+                },json.after);
+                break;
+            default:
+                console.log("bad admin msg: %j",json);
+            }
+        else
+            console.log("bad admin msg: %j",json);
+    } else {
         const d = eng.conns[dest];
         if (d)
             d.o.write(json);
@@ -926,19 +965,13 @@ Engine.prototype.out = function(dest,json) {
     }
 };
 
-Engine.prototype.update = function(data,fn,cb) {
+Engine.prototype.update = function(data,cb) {
     const   eng = this;
     let     res;
     const done2 = _.after(2,function() {
         res.adds.forEach(function(t) {
             const add = res.refs[t];
-            if (Object.keys(eng.magicOutputs).length>0) {
-                if (eng.magicOutputs[add[0]]) {
-                    eng.chrjs._del(t);
-                    if (fn)
-                        fn(add);
-                }
-            } else if (add[0]==='_output') {
+            if (add[0]==='_output') {
                 if (add.length!==3)
                     eng.emit('error',util.format("bad _output: %j",add));
                 else
@@ -948,8 +981,6 @@ Engine.prototype.update = function(data,fn,cb) {
         eng.active = null;
         if (cb) cb(null,res);
     });
-    if (Object.keys(eng.magicOutputs).length===0) // trad style only has two args
-        cb = fn;
     eng.journalise('update',data,done2);
     eng.active = data;
     res        = eng.chrjs.update(data);
@@ -1286,7 +1317,6 @@ Engine.prototype.administer = function(port) {
     io.i.on('readable',function() {
         let js;
         while ((js=io.i.read())!==null) {
-            console.log("*** admin: %j",js);
             try {
                 switch (js[0]){
                 case 'mode':

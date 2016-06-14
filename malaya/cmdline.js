@@ -453,10 +453,6 @@ exports.run = function(opts0) {
                 console.log("slave online at: %j",where);
             else
                 console.log("slave offline");
-            if (args.auto) {
-                const sp = where===null ? {} : {port:where.ports.http,server:where.host};
-                eng.broadcast({'_spare':sp});
-            }
         });
         return eng;
     };
@@ -519,14 +515,13 @@ exports.run = function(opts0) {
         }
     };
 
-    let tickInterval = null;
     subcommands.run.exec = function() {
         checkDirectoriesExist();
-        const     auto = args.auto;
         const   source = path.resolve(args.source);
         const  options = {businessLogic: source,
                           debug:         args.debug,
                           ports:         {http:args.webPort},
+                          magic:         args.auto ? null : {},
                           masterUrl:     args.masterUrl};
         const      eng = createEngine(options);
         eng.on('listen',function(protocol,port) {
@@ -559,23 +554,8 @@ exports.run = function(opts0) {
             console.log("loaded: %s",syshash);
         });
         eng.start();
-        eng.on('become',function(mode) {
-            if (tickInterval)
-                clearInterval(tickInterval);
-            if (auto && mode==='master') {
-                tickInterval = setInterval(function() {
-                    eng.update(['_tick',{date:new Date()},{port:'server:'}]);
-                    eng.update(['_take-outputs',{},{port:'server:'}]);
-                },1000);
-            } else
-                tickInterval = null;
-        });
         if (args.debug)
             traceChrjs(eng.chrjs,source);
-        eng.on('mode',function(mode) {
-            if (auto && mode==='master')
-                eng.update(['_restart',{},{port:'system://'}]);
-        });
         installSignalHandlers(eng);
         eng.become(args.mode);
     };
