@@ -1,0 +1,13 @@
+From: John Kozak <jk@thameslighter.net>
+Date: Thu, 16 Jun 2016 17:46:27 +0100
+State: new
+Subject: Make prevalence optionally git aware
+Message-Id: <fd6127941fd8bc5c-0-artemis@renn>
+
+Can do this trivially by adding `git commit`s at world save:
+ * git commit .prevalence/state
+ * world save
+ * git commit .prevalence/state
+
+Can then dispense with hash store, but need some way of navigating the
+git archive.
