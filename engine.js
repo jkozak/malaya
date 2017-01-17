@@ -120,6 +120,7 @@ const Engine = exports.Engine = function(options) {
 
     compiler.debug    = options.debug;
 
+    eng.connTypes     = {};                      // name -> methodName -> code
     eng.prevalenceDir = options.prevalenceDir || path.join(options.dir,'.prevalence');
     eng.syshash       = null;
     eng.sources       = {};
@@ -139,6 +140,7 @@ const Engine = exports.Engine = function(options) {
     eng.replicateSock = null;
     eng.active        = null;                    // update being processed
     eng.tickInterval  = null;                    // for magic ticks
+    eng.raft          = null;
 
     eng.chrjs.on('error',function(err)      {eng.emit(new VError(err,"chrjs: "));});
     eng.chrjs.out = function(d,j) {return eng.out(d,j);};
@@ -671,7 +673,7 @@ Engine.prototype.addConnection = function(portName,io) {
         break;
     case 'replication': {
         const st = fs.statSync(path.join(eng.prevalenceDir,'state','journal'));
-        io = eng.conns[portName];
+        io = eng.conns[portName]; // ??? what is this for ???
         io.o.write(['open',{journalSize:st.size}]);
         io.i.on('readable',function() {
             let js;
@@ -695,7 +697,7 @@ Engine.prototype.addConnection = function(portName,io) {
     }
     case 'data': {
         let throttled = false;      // use this to ensure fairness
-        io = eng.conns[portName];
+        io = eng.conns[portName];   // ??? what is this for ???
         io.i.on('readable',function() {
             let js;
             while (!throttled && (js=io.i.read())!==null) {
@@ -713,6 +715,12 @@ Engine.prototype.addConnection = function(portName,io) {
                 break;
             }
         });
+    }
+    default: {
+        const connMethods = eng.connTypes[io.type];
+        if (connMethods) {
+            connMethods.connectionAdd(portName,io);
+        }
     }
     }
     eng.emit('connection',portName,io.type);
@@ -737,15 +745,19 @@ Engine.prototype.listenHttp = function(mode,port,done) {
         let         io = {i:null,o:null,type:null};
         switch (conn.prefix) {
         case '/data':
-            io.type = 'data';
-            io.i    = new whiskey.JSONParseStream();
-            io.o    = new whiskey.StringifyJSONStream();
+            if (eng.mode==='master') {
+                io.type = 'data';
+                io.i    = new whiskey.JSONParseStream();
+                io.o    = new whiskey.StringifyJSONStream();
+            }
             break;
         case '/replication/journal':
-            io.type = 'replication';
-            io.i    = new whiskey.LineStream(util.deserialise);
-            io.o    = new whiskey.StringifyObjectStream(util.serialise);
-            io.host = conn.remoteAddress;
+            if (eng.mode==='master') {
+                io.type = 'replication';
+                io.i    = new whiskey.LineStream(util.deserialise);
+                io.o    = new whiskey.StringifyObjectStream(util.serialise);
+                io.host = conn.remoteAddress;
+            }
             break;
         case '/admin':
             if (conn.remoteAddress==='127.0.0.1') {
@@ -758,11 +770,15 @@ Engine.prototype.listenHttp = function(mode,port,done) {
                 conn.end();
             }
             break;
-        default:
-            // +++ jump around breaking things +++
+        default: {
+            const connMethods = eng.connTypes[conn.prefix.slice(1)];
+            if (conn.prefix[0]==='/' && connMethods) {
+                connMethods.makeIO(conn,io);
+            } else {
+                // +++ jump around breaking things +++
+            }
         }
-        if (eng.mode!=='master' && io && io.type!=='admin')
-            io = null;
+        }
         if (io) {
             conn.pipe(io.i);
             io.o.pipe(conn);
@@ -787,8 +803,10 @@ Engine.prototype.listenHttp = function(mode,port,done) {
     sock.installHandlers(eng.http,{prefix:'/replication/journal'});
     if (eng.options.admin)
         sock.installHandlers(eng.http,{prefix:'/admin'});
+    for (const c in eng.connTypes)
+        sock.installHandlers(eng.http,{prefix:util.format('/%s',c)});
 
-    eng.http.listen(port,function() {
+    eng.http.listen(port,ip.address(),function() {
         eng.emit('listen','http',eng.http.address().port);
         done();
     });
@@ -985,25 +1003,29 @@ Engine.prototype.out = function(dest,json) {
 };
 
 Engine.prototype.update = function(data,cb) {
-    const   eng = this;
-    let     res;
-    const done2 = _.after(2,function() {
-        res.adds.forEach(function(t) {
-            const add = res.refs[t];
-            if (add[0]==='_output') {
-                if (add.length!==3)
-                    eng.emit('error',util.format("bad _output: %j",add));
-                else
-                    eng.out(add[1],add[2]);
-            }
+    const eng = this;
+    if (eng.raft) {
+        eng.raft.update(data,cb);
+    } else {
+        let     res;
+        const done2 = _.after(2,function() {
+            res.adds.forEach(function(t) {
+                const add = res.refs[t];
+                if (add[0]==='_output') {
+                    if (add.length!==3)
+                        eng.emit('error',util.format("bad _output: %j",add));
+                    else
+                        eng.out(add[1],add[2]);
+                }
+            });
+            eng.active = null;
+            if (cb) cb(null,res);
         });
-        eng.active = null;
-        if (cb) cb(null,res);
-    });
-    eng.journalise('update',data,done2);
-    eng.active = data;
-    res        = eng.chrjs.update(data);
-    done2();
+        eng.journalise('update',data,done2);
+        eng.active = data;
+        res        = eng.chrjs.update(data);
+        done2();
+    }
 };
 
 Engine.prototype.createUpdateStream = function() {

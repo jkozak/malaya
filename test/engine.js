@@ -13,6 +13,7 @@ const testutil = require('../testutil.js');
 const   VError = require('verror');
 const     rmRF = require('rimraf');
 const  request = require('request');
+const       ip = require("ip");
 
 describe("makeInertChrjs",function() {
     it("behaves somewhat like a chrjs store with no rules",function() {
@@ -562,6 +563,7 @@ describe("Engine",function() {
         const wdir = path.join(dir,'www');
         const text = "What! Dead? and never called me Mother!";
         const file = "EastLynne.txt";
+        const addr = ip.address();
         let   port;
         it("starts",function(done) {
             fs.mkdirSync(wdir);
@@ -577,7 +579,7 @@ describe("Engine",function() {
             eng.become('master');
         });
         it("serves static content",function(done){
-            request(util.format('http://localhost:%d/%s',port,file),
+            request(util.format('http://%s:%d/%s',addr,port,file),
                     (err,resp,body) => {
                         if (err)
                             done(err);
@@ -592,7 +594,7 @@ describe("Engine",function() {
                     } );
         });
         it("handles requests for non-existent files graciously",function(done){
-            request(util.format('http://localhost:%d/%s',port,'there-is-no-file-called-this'),
+            request(util.format('http://%s:%d/%s',addr,port,'there-is-no-file-called-this'),
                     (err,resp,body) => {
                         if (err)
                             done(err);
@@ -608,7 +610,7 @@ describe("Engine",function() {
             const filej = "test.chrjs";
             const chrjs = "module.exports = store {};";
             fs.writeFileSync(path.join(wdir,filej),chrjs);
-            request(util.format('http://localhost:%d/%s',port,filej),
+            request(util.format('http://%s:%d/%s',addr,port,filej),
                     (err,resp,body) => {
                         if (err)
                             done(err);

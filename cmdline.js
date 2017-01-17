@@ -189,6 +189,13 @@ subcommands.run.addArgument(
     }
 );
 subcommands.run.addArgument(
+    ['-P','--peers'],
+    {
+        action:       'store',
+        help:         "comma-separated list of peers"
+    }
+);
+subcommands.run.addArgument(
     ['-w','--web-port'],
     {
         action:       'store',
@@ -445,7 +452,7 @@ exports.run = function(opts0) {
     };
 
     const _createEngine = opts.createEngine || function(options) {
-        const engine = require('./engine.js');
+        const engine = require(args.peers ? './raft.js' : './engine.js');
         const    eng = new engine.Engine(options);
         return eng;
     };
@@ -459,6 +466,10 @@ exports.run = function(opts0) {
             if (mode==='broken' && args.admin)
                 process.exit(1);
         });
+        if (args.peers)
+            eng.raft.on('mode',function(mode) {
+                console.log("raft mode now: %s",mode);
+            });
         eng.on('slave',function(where) {
             if (where)
                 console.log("slave online at: %j",where);
@@ -536,7 +547,8 @@ exports.run = function(opts0) {
                           debug:         args.debug,
                           ports:         {http:args.webPort},
                           magic:         args.auto ? null : {},
-                          masterUrl:     args.masterUrl};
+                          masterUrl:     args.masterUrl,
+                          peers:         args.peers && args.peers.split(',') };
         const      eng = createEngine(options);
         eng.on('listen',function(protocol,port) {
             console.log("%s listening on *:%s",protocol,port);
