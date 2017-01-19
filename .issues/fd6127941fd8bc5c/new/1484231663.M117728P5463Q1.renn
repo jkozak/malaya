@@ -1,0 +1,16 @@
+From: John Kozak
+Date: Thu, 12 Jan 2017 14:32:41 +0000
+Subject: Re: Make prevalence optionally git aware
+Message-Id: <fd6127941fd8bc5c-cc80a8a27d35a8a0-artemis@renn>
+References: <fd6127941fd8bc5c-0-artemis@renn>
+In-Reply-To: <fd6127941fd8bc5c-0-artemis@renn>
+
+More git-savvy style:
+
+Have a live branch containing code and db and history.
+
+System always runs in live branch:
+ - at startup, check code is the same between live and master
+   (if production).
+ - at world-save, commit.
+ - pulling from origin/master can cause a transform to be run

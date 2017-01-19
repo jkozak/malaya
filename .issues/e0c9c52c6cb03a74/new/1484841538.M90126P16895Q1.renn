@@ -1,0 +1,9 @@
+From: John Kozak
+Date: Thu, 19 Jan 2017 15:54:44 +0000
+State: new
+Subject: add new engine state `broken`
+Message-Id: <e0c9c52c6cb03a74-0-artemis@renn>
+
+`broken` denotes a state from the engine cannot safely proceed and
+will require manual intervention to fix - for example the failure of a
+write to the transaction log.
