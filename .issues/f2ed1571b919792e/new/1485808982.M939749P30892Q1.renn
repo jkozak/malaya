@@ -1,0 +1,8 @@
+From: John Kozak
+Date: Mon, 30 Jan 2017 20:41:57 +0000
+Subject: Re: live queries
+Message-Id: <f2ed1571b919792e-ba02f33d0788ddf1-artemis@renn>
+References: <f2ed1571b919792e-0-artemis@renn>
+In-Reply-To: <f2ed1571b919792e-0-artemis@renn>
+
+Ship updates as deltas on serialised JSON
