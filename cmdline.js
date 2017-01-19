@@ -153,12 +153,21 @@ subcommands.run.addArgument(
     }
 );
 subcommands.run.addArgument(
-    ['-A','--admin-ui'],
+    ['-U','--admin-ui'],
+    {
+        action:       'storeTrue',
+        defaultValue: false,
+        help:         "start an admin UI browser session (implies --admin)",
+        dest:         'adminUI'
+    }
+);
+subcommands.run.addArgument(
+    ['-a','--admin'],
     {
         action:       'storeTrue',
         defaultValue: false,
         help:         "start an admin UI browser session",
-        dest:         'adminUI'
+        dest:         'admin'
     }
 );
 subcommands.run.addArgument(
@@ -447,6 +456,8 @@ exports.run = function(opts0) {
         const eng = _createEngine(options);
         eng.on('mode',function(mode) {
             console.log("mode now: %s",mode);
+            if (mode==='broken' && args.admin)
+                process.exit(1);
         });
         eng.on('slave',function(where) {
             if (where)
@@ -517,8 +528,11 @@ exports.run = function(opts0) {
 
     subcommands.run.exec = function() {
         checkDirectoriesExist();
+        if (args.adminUI)
+            args.admin = true;
         const   source = path.resolve(args.source);
         const  options = {businessLogic: source,
+                          admin:         args.admin,
                           debug:         args.debug,
                           ports:         {http:args.webPort},
                           magic:         args.auto ? null : {},

@@ -785,7 +785,8 @@ Engine.prototype.listenHttp = function(mode,port,done) {
 
     sock.installHandlers(eng.http,{prefix:'/data'});
     sock.installHandlers(eng.http,{prefix:'/replication/journal'});
-    sock.installHandlers(eng.http,{prefix:'/admin'});
+    if (eng.options.admin)
+        sock.installHandlers(eng.http,{prefix:'/admin'});
 
     eng.http.listen(port,function() {
         eng.emit('listen','http',eng.http.address().port);
@@ -810,51 +811,57 @@ Engine.prototype._become = function(mode,cb) {
     if (mode===eng.mode)
         cb();
     else switch (mode) {
-    case 'master': {
-        eng.startPrevalence(function(err) {
-            if (err)
-                cb(err);
-            else
-                eng.journaliseCodeSources('code',eng.options.businessLogic,false,cb);
-        });
-        break;
-    }
-    case 'slave': {
-        if (eng.masterUrl) {
-            eng.on('ready',function(err) {
-                cb(err);
-            });
-            eng.replicateFrom(eng.masterUrl); // `startPrevalence` done in here
-        } else
-            cb(new VError("no replication URL specified"));
-        break;
-    }
-    case 'idle':
-        switch (eng.mode) {
         case 'master': {
-            const done = _.after(2,function(err) {
+            eng.startPrevalence(function(err) {
                 if (err)
                     cb(err);
                 else
-                    eng.stopPrevalence(true,cb);
+                    eng.journaliseCodeSources('code',eng.options.businessLogic,false,cb);
             });
-            eng.closeAllConnections('data',done);
-            eng.closeAllConnections('replication',done);
-                break;
+            break;
         }
-        case 'slave':
-            // `stopPrevalence` is done in replication code
-            if (eng.replicateSock) {
-                eng.replicateSock.close();
-                eng.replicateSock = null;
+        case 'slave': {
+            if (eng.masterUrl) {
+                eng.on('ready',function(err) {
+                    cb(err);
+                });
+                eng.replicateFrom(eng.masterUrl); // `startPrevalence` done in here
+            } else
+                cb(new VError("no replication URL specified"));
+            break;
+        }
+        case 'idle': {
+            switch (eng.mode) {
+            case 'master': {
+                const done = _.after(2,function(err) {
+                    if (err)
+                        cb(err);
+                    else
+                        eng.stopPrevalence(true,cb);
+                });
+                eng.closeAllConnections('data',done);
+                eng.closeAllConnections('replication',done);
+                break;
             }
-            cb();
+            case 'slave':
+                // `stopPrevalence` is done in replication code
+                if (eng.replicateSock) {
+                    eng.replicateSock.close();
+                    eng.replicateSock = null;
+                }
+                cb();
                 break;
+            }
+            break;
         }
-        break;
-    default:
-        eng.emit('error',new VError("bad engine mode: %j",mode));
-        return;
+        case 'broken': {
+            cb();
+            break;
+        }
+        default: {
+            eng.emit('error',new VError("bad engine mode: %j",mode));
+            return;
+        }
     }
 };
 
@@ -882,15 +889,25 @@ Engine.prototype.become = function(mode) {
                 }
             });
     };
-    eng.emit('become',mode);
-    if (eng.http===null && (port || port===0)) {
-        eng.listenHttp(mode,port,function(err) {
-            if (err)
-                eng.emit('error',err);
+    if (eng.mode==='broken')
+        eng.emit(new VError("can't do anything, broken"));
+    else {
+        eng.emit('become',mode);
+        if (eng.http===null && (port || port===0)) {
+            eng.listenHttp(mode,port,function(err) {
+                if (err)
+                    eng.emit('error',err);
+                main();
+            });
+        } else
             main();
-        });
-    } else
-        main();
+    }
+};
+
+Engine.prototype.breaks = function(err) {
+    const eng = this;
+    console.log(err);
+    eng.become('broken');
 };
 
 Engine.prototype.journalise = function(type,data,cb) {
@@ -900,6 +917,8 @@ Engine.prototype.journalise = function(type,data,cb) {
         console.log("discarded idle log item: %j",data);
     else {
         const done = _.after(2,function() {
+            if (err)
+                eng.breaks(new VError(err,"journal write fails: "));
             if (cb) cb(err);
         });
         const  jit = [eng.timestamp(),type,data];

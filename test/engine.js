@@ -538,7 +538,7 @@ describe("Engine",function() {
     describe("administration",function() {
         it("supplies handy info on connect",function(done) {
             const eng = new Engine({dir:           temp.mkdirSync(),
-                                  businessLogic: path.join(__dirname,'bl','null.chrjs') });
+                                    businessLogic: path.join(__dirname,'bl','null.chrjs') });
             const  io = createIO('admin');
             let    ok = false;
             eng.init();
