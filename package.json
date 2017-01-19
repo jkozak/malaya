@@ -41,6 +41,7 @@
     "prettyjson": "^1.0.0",
     "request": "^2.69.0",
     "resumer": "0.0.0",
+    "sinon": "^1.17.7",
     "supertest": "^0.15.0"
   },
   "engineStrict": true,
@@ -61,7 +62,7 @@
     "test:js": "cross-env NODE_ENV=test mocha -R mocha-tldr-reporter -C test/*.js",
     "test:chrjs": "cross-env NODE_ENV=test mocha -R mocha-tldr-reporter --compilers chrjs:compiler -C test/*.chrjs",
     "test": "npm run test:js --silent && npm run test:chrjs --silent",
-    "test:XXX": "cross-env NODE_ENV=test mocha -R mocha-tldr-reporter --compilers chrjs:compiler -C test --grep XXX",
+    "test:XXX": "npm run pretest && cross-env NODE_ENV=test mocha -R mocha-tldr-reporter --compilers chrjs:compiler -C test --grep XXX --silent",
     "test:quick": "cross-env NODE_ENV=test mocha -R mocha-tldr-reporter --compilers chrjs:compiler -C -if [slow] test",
     "init": "node malaya init",
     "start": "node malaya run"

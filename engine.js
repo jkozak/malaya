@@ -183,7 +183,6 @@ const Engine = exports.Engine = function(options) {
     return eng;
 };
 
-
 util.inherits(Engine,events.EventEmitter);
 
 Engine.prototype.compile = function(source) {
@@ -206,21 +205,25 @@ Engine.prototype.compile = function(source) {
         return null;
 };
 
+Engine.prototype._saveWorldInitJournal = function(jfn) {};
+
 Engine.prototype._saveWorld = function() {
+    const eng = this;
     // +++ prevalence.batch (i.e. we are currently using `state-NEW`) +++
-    const  dirCur = path.join(this.prevalenceDir,"state");
-    const  dirNew = path.join(this.prevalenceDir,"state-NEW");
-    const  dirOld = path.join(this.prevalenceDir,"state-OLD");
-    const syshash = this.hashes.putFileSync(path.join(dirCur,"/journal"));
+    const  dirCur = path.join(eng.prevalenceDir,"state");
+    const  dirNew = path.join(eng.prevalenceDir,"state-NEW");
+    const  dirOld = path.join(eng.prevalenceDir,"state-OLD");
+    const syshash = eng.hashes.putFileSync(path.join(dirCur,"/journal"));
     rmRF.sync(dirNew);
     fs.mkdirSync(dirNew);
     fs.writeFileSync( path.join(dirNew,"world"),  util.serialise(syshash)+'\n');
-    fs.appendFileSync(path.join(dirNew,"world"),  util.serialise(this.chrjs.getRoot())+'\n');
-    fs.writeFileSync( path.join(dirNew,"journal"),util.serialise([this.timestamp(),'previous',syshash])+'\n');
+    fs.appendFileSync(path.join(dirNew,"world"),  util.serialise(eng.chrjs.getRoot())+'\n');
+    fs.writeFileSync( path.join(dirNew,"journal"),util.serialise([eng.timestamp(),'previous',syshash])+'\n');
+    eng._saveWorldInitJournal(path.join(dirNew,"journal"));
     rmRF.sync(dirOld);
     fs.renameSync(dirCur,dirOld);
     fs.renameSync(dirNew,dirCur);
-    this.emit('saved',syshash);
+    eng.emit('saved',syshash);
     return syshash;
 };
 
@@ -358,6 +361,8 @@ Engine.prototype.start = function(cb) {
     if (cb) cb();
 };
 
+Engine.prototype._startPrevalenceJournalItem = function(js) {};
+
 Engine.prototype.startPrevalence = function(opts,cb) {
     if ((typeof opts)==='function' && cb===undefined) {
         cb   = opts;
@@ -377,6 +382,9 @@ Engine.prototype.startPrevalence = function(opts,cb) {
         case 'previous':
             if (js[2]!==eng.syshash)
                 throw new VError("syshash  wanted: %s  got: %s",eng.syshash,js[2]);
+            break;
+        default:
+            eng._startPrevalenceJournalItem(js);
             break;
         }
         return true;

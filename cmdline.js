@@ -466,10 +466,17 @@ exports.run = function(opts0) {
             if (mode==='broken' && args.admin)
                 process.exit(1);
         });
-        if (args.peers)
-            eng.raft.on('mode',function(mode) {
-                console.log("raft mode now: %s",mode);
+        if (args.peers) {
+            eng.raft.on('mode',(mode)=>{
+                console.log("raft now: %d/%d, %s",
+                            eng.raft.activeCount(),
+                            eng.raft.clusterSize(),
+                            mode);
             });
+            eng.raft.on('cluster',(active,size)=>{
+                console.log("raft now: %d/%d, %s",active,size,eng.raft.mode);
+            });
+        }
         eng.on('slave',function(where) {
             if (where)
                 console.log("slave online at: %j",where);
