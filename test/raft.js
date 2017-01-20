@@ -2,6 +2,7 @@
 
 const     raft = require('../raft.js');
 const     Raft = raft.Raft;
+const   engine = require('../engine.js');
 
 const   assert = require("assert");
 const     util = require('../util.js');
@@ -10,8 +11,12 @@ const   events = require('events');
 const    sinon = require('sinon');
 const       ip = require('ip');
 
-describe("engine.Raft",function() {
-
+describe("engine.Raft XXX",function() {
+    it("customises timestamps",function(){
+        const eng = new raft.Engine({chrjs:engine.makeInertChrjs()});
+        const  ts = eng.timestamp();
+        assert.strictEqual(ts[0],eng.raft.currentTerm);
+    });
 });
 
 const          host = ip.address();

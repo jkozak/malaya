@@ -25,15 +25,10 @@ const Peer = exports.Peer = function(raft) {
 };
 
 Peer.prototype.close = function(cb) {
-    //const peer = this;
-    // +++
-    cb(new VError("NYI"));
-};
-
-Peer.prototype.forget = function(cb) {
     const peer = this;
-    assert.strictEqual(peer.raft.peers[peer.name],undefined);
-    cb(null);
+    peer.io.i.end();
+    peer.io.o.end();
+    cb();
 };
 
 const Raft = exports.Raft = function(eng) {
@@ -48,6 +43,7 @@ const Raft = exports.Raft = function(eng) {
     raft.currentTerm       = 0;             // persistent
     raft.votedFor          = null;          // persistent
     raft.votesWon          = new Set();     // a count when I am a candidate
+    raft.timestamp         = null;          // set journal timestamp from this
     raft.commitIndex       = 0;
     raft.lastApplied       = 0;
     raft.rpcSeen           = false;
@@ -56,10 +52,10 @@ const Raft = exports.Raft = function(eng) {
     raft.heartbeatNeeded   = null;          // only meaningful if leader
     raft.reconnInterval    = null;
     raft.timeouts          = {
-        election:    [1500,3000], // !!! s/be [150,300] !!!
+        election:    [150,300],
         connectRetry:5000,
         connectFail: 1000,
-        heartbeat:   null         // filled in below
+        heartbeat:   null                   // filled in below
     };
     raft.timeouts.heartbeat = raft.timeouts.election[0]/2;
 };
@@ -90,7 +86,7 @@ Raft.prototype._installPeer = function(io,portName) {
         io.i.end();
     },raft.timeouts.connectFail);
     io.i.once('data',(js0)=>{
-        console.log("*** reading 1: %j",js0);
+        //console.log("*** reading 1: %j",js0);
         io.i.once('end',()=>{
             console.log("peer %s disconnected",peerName);
             if (peerName) {
@@ -107,13 +103,13 @@ Raft.prototype._installPeer = function(io,portName) {
             console.log("peer %s connected",peerName);
             raft.emit('cluster',raft.activeCount(),raft.clusterSize());
             io.i.on('data',function(js) {
-                console.log("*** reading 2..n: %j",js);
+                //console.log("*** reading 2..n: %j",js);
                 if (js!==null)
                     raft.command(js,(err,ans)=>{ /* eslint no-loop-func:0 */
                         if (err) {
                             if (portName)
                                 raft.engine.closeConnection(portName);
-                            raft.peers[peerName].forget();
+                            raft.peers[peerName].close();
                         } else if (js.type!=='REPLY') {
                             io.o.write({type:   'REPLY',
                                         id:     peerName,
@@ -182,6 +178,7 @@ Raft.prototype.connectToPeer = function(peerName,cb) {
     const sock = new SockJS(url);
     sock.onerror = (err)=>{
         console.log("!!! websock err: %j",err);
+        sock.close();           // what else to do?
     };
     sock.onopen = ()=>{
         const io = {
@@ -190,7 +187,6 @@ Raft.prototype.connectToPeer = function(peerName,cb) {
             o:    new stream.PassThrough({objectMode:true})
         };
         sock.onmessage = (msg)=>{
-            //console.log("*** SockJS.msg: %j",msg);
             io.i.write(JSON.parse(msg.data));
         };
         io.o.on('data',(js)=>{
@@ -414,6 +410,7 @@ Raft.prototype.update  = function(js,cb) { // CHRJS
     cb = cb || (()=>{});
     switch (eng.mode) {
     case 'leader':
+        // +++ engine.update(js,cb);
         cb(new VError("NYI: raft update: %s",eng.mode));
         break;
     case 'follower':
@@ -429,9 +426,10 @@ Raft.prototype.update  = function(js,cb) { // CHRJS
 };
 
 const Engine = exports.Engine = function(options) {
-    engine.Engine.call(this,options);
-
     const eng = this;
+
+    engine.Engine.call(eng,options);
+
     eng.raft           = new Raft(eng);
     eng.connTypes.raft = {
         makeIO:        (conn,io)=>{
@@ -449,6 +447,8 @@ const Engine = exports.Engine = function(options) {
             eng.raft.start();
             break;
         case 'idle':
+        case 'slave':           // is this ever useful?
+        case 'broken':
             eng.raft.stop();
         }
     });
@@ -458,7 +458,7 @@ util.inherits(Engine,engine.Engine);
 
 Engine.prototype._saveWorldInitJournal = function(jfn) {
     const  eng = this;
-    const item = [this.timestamp(),'raft',eng.raft.getState()];
+    const item = [eng.timestamp(),'raft',eng.raft.getState()];
     fs.appendFileSync(jfn,util.serialise(item)+'\n');
 };
 
@@ -469,4 +469,12 @@ Engine.prototype._startPrevalenceJournalItem = function(js) {
         eng.raft.currentTerm = js[2].currentTerm;
         eng.raft.votedFor    = js[2].votedFor;
     }
+};
+
+Engine.prototype.timestamp = function() {
+    const eng = this;
+    return [eng.raft.currentTerm,
+            eng.raft.commitIndex, // ??? is this right? ???
+            Object.getPrototypeOf(Engine.prototype).timestamp.call(eng)
+           ];
 };

@@ -47,6 +47,7 @@ const      sockjs = require('sockjs');
 const          ip = require('ip');
 const      minify = require('express-minify');
 const          vm = require('vm');
+const      monoTS = require('monotonic-timestamp');
 
 const      parser = require('./parser.js');
 const    compiler = require('./compiler.js');
@@ -133,14 +134,12 @@ const Engine = exports.Engine = function(options) {
     eng.connIndex     = {};                      // <type> -> [<port>,...]
     eng.http          = null;                    // express http server
     eng.journal       = null;                    // journal write stream
-    eng.timestamp     = options.timestamp || require('monotonic-timestamp');
     eng.journalFlush  = function(cb){cb(null);}; // flush journal
     eng.chrjs.tag     = options.tag;
     eng.masterUrl     = eng.options.masterUrl;
     eng.replicateSock = null;
     eng.active        = null;                    // update being processed
     eng.tickInterval  = null;                    // for magic ticks
-    eng.raft          = null;
 
     eng.chrjs.on('error',function(err)      {eng.emit(new VError(err,"chrjs: "));});
     eng.chrjs.out = function(d,j) {return eng.out(d,j);};
@@ -203,6 +202,11 @@ Engine.prototype.compile = function(source) {
         return chrjs;
     } else
         return null;
+};
+
+Engine.prototype.timestamp = function() {
+    const eng = this;
+    return eng.options.timestamp ? eng.options.timestamp() : monoTS();
 };
 
 Engine.prototype._saveWorldInitJournal = function(jfn) {};
@@ -1012,28 +1016,24 @@ Engine.prototype.out = function(dest,json) {
 
 Engine.prototype.update = function(data,cb) {
     const eng = this;
-    if (eng.raft) {
-        eng.raft.update(data,cb);
-    } else {
-        let     res;
-        const done2 = _.after(2,function() {
-            res.adds.forEach(function(t) {
-                const add = res.refs[t];
-                if (add[0]==='_output') {
-                    if (add.length!==3)
-                        eng.emit('error',util.format("bad _output: %j",add));
-                    else
-                        eng.out(add[1],add[2]);
-                }
-            });
-            eng.active = null;
-            if (cb) cb(null,res);
+    let     res;
+    const done2 = _.after(2,function() {
+        res.adds.forEach(function(t) {
+            const add = res.refs[t];
+            if (add[0]==='_output') {
+                if (add.length!==3)
+                    eng.emit('error',util.format("bad _output: %j",add));
+                else
+                    eng.out(add[1],add[2]);
+            }
         });
-        eng.journalise('update',data,done2);
-        eng.active = data;
-        res        = eng.chrjs.update(data);
-        done2();
-    }
+        eng.active = null;
+        if (cb) cb(null,res);
+    });
+    eng.journalise('update',data,done2);
+    eng.active = data;
+    res        = eng.chrjs.update(data);
+    done2();
 };
 
 Engine.prototype.createUpdateStream = function() {
