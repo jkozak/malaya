@@ -38,26 +38,30 @@ Peer.prototype.forget = function(cb) {
 
 const Raft = exports.Raft = function(eng) {
     const raft = this;
-    raft.engine          = eng;
-    raft.protocol        = 'http';        // || 'https'
-    raft.wsSuffix        = '';
-    raft.mode            = 'follower';    // || 'candidate' || 'leader'
-    raft.id              = util.format("%s:%d",ip.address(),eng.options.ports.http);
-    raft.peers           = {};            // peerName -> Peer
-    raft.leader          = null;
-    raft.currentTerm     = 0;             // persistent
-    raft.votedFor        = null;          // persistent
-    raft.votesWon        = new Set();     // a count when I am a candidate
-    raft.commitIndex     = 0;
-    raft.lastApplied     = 0;
-    raft.leaderSeen      = false;
-    raft.electionTimeout = null;
-    raft.reconnInterval  = null;
-    raft.timeouts        = {
+    raft.engine            = eng;
+    raft.protocol          = 'http';        // || 'https'
+    raft.wsSuffix          = '';
+    raft.mode              = 'follower';    // || 'candidate' || 'leader'
+    raft.id                = util.format("%s:%d",ip.address(),eng.options.ports.http);
+    raft.peers             = {};            // peerName -> Peer
+    raft.leader            = null;
+    raft.currentTerm       = 0;             // persistent
+    raft.votedFor          = null;          // persistent
+    raft.votesWon          = new Set();     // a count when I am a candidate
+    raft.commitIndex       = 0;
+    raft.lastApplied       = 0;
+    raft.rpcSeen           = false;
+    raft.electionTimeout   = null;
+    raft.heartbeatInterval = null;
+    raft.heartbeatNeeded   = null;          // only meaningful if leader
+    raft.reconnInterval    = null;
+    raft.timeouts          = {
         election:    [1500,3000], // !!! s/be [150,300] !!!
         connectRetry:5000,
-        connectFail: 1000
+        connectFail: 1000,
+        heartbeat:   null         // filled in below
     };
+    raft.timeouts.heartbeat = raft.timeouts.election[0]/2;
 };
 
 util.inherits(Raft,events.EventEmitter);
@@ -89,11 +93,11 @@ Raft.prototype._installPeer = function(io,portName) {
         console.log("*** reading 1: %j",js0);
         io.i.once('end',()=>{
             console.log("peer %s disconnected",peerName);
-            raft.emit('cluster',raft.activeCount(),raft.clusterSize());
             if (peerName) {
                 raft.peers[peerName].io       = null;
                 raft.peers[peerName].portName = null;
             }
+            raft.emit('cluster',raft.activeCount(),raft.clusterSize());
         });
         if (js0!==null && js0.type==='HELLO' && raft.peers[js0.id]) {
             peerName                      = js0.id;
@@ -202,7 +206,6 @@ Raft.prototype.connectToPeer = function(peerName,cb) {
         cb(null,io);
     };
     sock.onclose = ()=>{
-        // +++
         if (raft.peers[peerName].io) {
             raft.peers[peerName].io.i.end();
             raft.peers[peerName].io.o.end();
@@ -235,6 +238,44 @@ Raft.prototype.stopElection = function(restart) {
     raft.persistState();        // !!!
 };
 
+Raft.prototype.sendAppendEntriesToAll = function(entries) {
+    const raft = this;
+    raft.heartbeatNeeded = false;
+    Object.keys(raft.peers).forEach((name)=>{
+        const peer = raft.peers[name];
+        if (peer.io)
+            peer.io.o.write({
+                type:         'AppendEntries',
+                term:         raft.currentTerm,
+                leaderId:     raft.id,
+                prevLogIndex: null, // !!!
+                prevLogTerm:  null, // !!!
+                entries:      entries,
+                commitIndex:  raft.commitIndex
+            });
+    });
+};
+
+Raft.prototype.startHeartbeat = function() {
+    const raft = this;
+    const send = ()=>{
+        if (raft.heartbeatNeeded)
+            raft.sendAppendEntriesToAll([]);
+        raft.heartbeatNeeded = true;
+    };
+    if (raft.heartbeatInterval)
+        raft.clearInterval(raft.heartbeatInterval);
+    raft.heartbeatNeeded = true;
+    send();
+    raft.heartbeatInterval = setInterval(send,raft.timeouts.heartbeat);
+};
+Raft.prototype.stopHeartbeat = function() {
+    const raft = this;
+    clearInterval(raft.heartbeatInterval);
+    raft.heartbeatInterval = null;
+    raft.heartbeatNeeded   = null;
+};
+
 Raft.prototype.become = function(mode) {
     const raft = this;
     const prev = raft.mode;
@@ -264,15 +305,16 @@ Raft.prototype.setElectionTimeout = function() {
     const tOuts = raft.timeouts.election;
     if (raft.electionTimeout!==null)
         raft.clearTimeout(raft.electionTimeout);
-    raft.leaderSeen      = false;
+    raft.rpcSeen      = false;
     raft.electionTimeout = raft.setTimeout(()=>{
         raft.electionTimeout = null;
-        if (raft.mode==='follower' && !raft.leaderSeen) {
+        if (raft.mode==='follower' && !raft.rpcSeen) {
             raft.become('candidate');
             raft.startElection();
         } else if (raft.mode==='candidate') {
             if (raft.votesWon.size>raft.clusterSize()/2) {
                 raft.become('leader');
+                raft.startHeartbeat();
             } else                                    // election over, no winner
                 raft.become('candidate');
                 raft.startElection();
@@ -306,12 +348,14 @@ Raft.prototype.command = function(js,cb) { // RAFT protocol command
     }
     switch (js.type) {
     case 'AppendEntries':
-        raft.leaderSeen = true;
-        cb(new VError("NYI: raft AppendEntries"));
+        raft.rpcSeen = true;
+        //cb(new VError("NYI: raft AppendEntries"));
+        // +++
+        cb(null,{term:raft.currentTerm,success:true}); // !!! true is wrong !!!
         break;
     case 'RequestVote':
         if (raft.votedFor===null || raft.votedFor===js.candidateId) {
-            raft.leaderSeen = true;
+            raft.rpcSeen = true;
             if (raft.currentTerm===js.lastLogTerm &&
                 raft.commitIndex<=js.lastLogIndex) {
                 raft.votedFor = js.candidateId;
@@ -333,7 +377,8 @@ Raft.prototype.command = function(js,cb) { // RAFT protocol command
         cb(new VError("NYI RAFT msg type: %s"%js.type));
         break;
     case 'REPLY':
-        if (js.call==='RequestVote') {
+        switch (js.call) {
+        case 'RequestVote':
             if (js.result) {
                 if (js.result.term>raft.currentTerm) {
                     raft.currentTerm = js.result.term;
@@ -344,12 +389,18 @@ Raft.prototype.command = function(js,cb) { // RAFT protocol command
                     if (raft.votesWon.size>raft.clusterSize()/2) {
                         raft.become('leader');
                         raft.stopElection();
+                        raft.startHeartbeat();
                     }
                 }
             }
             cb();
-        } else
+            break;
+        case 'AppendEntries':
+            cb();
+            break;
+        default:
             cb(new VError("NYI RAFT msg type: %s %s",js.type,js.call));
+        }
         break;
     default:
         cb(new VError("unknown RAFT msg: %s",js));
