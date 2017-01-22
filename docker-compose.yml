@@ -1,0 +1,20 @@
+version: '2'
+services:
+  node1:
+    build: .
+    ports:
+      - "13001:3000"
+    command: >
+      /bin/sh -c 'cd /var/lib/malaya &&
+      rm -rf .prevalence &&
+      ./malaya init &&
+      ./malaya run -P node2:3000'
+  node2:
+    build: .
+    ports:
+      - "13002:3000"
+    command: >
+      /bin/sh -c 'cd /var/lib/malaya &&
+      rm -rf .prevalence &&
+      ./malaya init &&
+      ./malaya run -P node1:3000'

@@ -10,6 +10,7 @@ const      SockJS = require('node-sockjs-client');
 const      stream = require('stream');
 const          ip = require('ip');
 const          fs = require('fs');
+const         dns = require('dns');
 
 const      engine = require('./engine.js');
 const     whiskey = require('./whiskey.js');
@@ -148,9 +149,16 @@ Raft.prototype.start = function() {
         }
     };
     for (const i in raft.engine.options.peers) {
-        const p = raft.engine.options.peers[i];
-        // +++ canonicalise `p` +++
-        raft.peers[p] = new Peer(raft);
+        const  p = raft.engine.options.peers[i];
+        const hp = p.split(':');
+        dns.lookup(hp[0],(err,address,family)=>{
+            if (err)
+                console.log(new VError(err,"lookup of %s failed",hp[0]));
+            else {
+                const peerName = util.format("%s:%s",address,hp[1]);
+                raft.peers[peerName] = new Peer(raft);
+            }
+        });
     }
     reconn();
     raft.reconnInterval = raft.setInterval(reconn,raft.timeouts.connectRetry);
