@@ -772,7 +772,7 @@ Engine.prototype.listenHttp = function(mode,port,done) {
             }
             break;
         case '/admin':
-            if (conn.remoteAddress==='127.0.0.1') {
+            if ([ip.address(),'127.0.0.1'].indexOf(conn.remoteAddress)!==-1) {
                 io.type = 'admin';
                 io.i    = new whiskey.JSONParseStream();
                 io.o    = new whiskey.StringifyJSONStream();
@@ -1354,35 +1354,48 @@ Engine.prototype.replicateFrom = function(url) { // `url` is base e.g. http://lo
     };
 };
 
+Engine.prototype._getAdminStatus = function() {
+    const eng = this;
+    return ['engine',{syshash:   eng.syshash,
+                      mode:      eng.mode,
+                      masterUrl: eng.masterUrl,
+                      connects:  eng.connectionSummary(),
+                      ip:        ip.address(),
+                      tag:       eng.tag}];
+};
+
+Engine.prototype._doAdminCommand = function(io,js) {
+    const eng = this;
+    switch (js[0]){
+    case 'mode':
+        eng.become(js[1]);
+        break;
+    case 'engine':
+        for (const k in js[1]) {
+            switch (k) {
+            case 'mode':
+                eng.become(js[1][k]);
+                break;
+            case 'masterUrl':
+                eng.masterUrl = js[1][k];
+                break;
+            case 'status':
+                io.o.write(eng._getAdminStatus());
+                break;
+            }
+        }
+    }
+};
+
 Engine.prototype.administer = function(port) {
     const eng = this;
     const  io = eng.conns[port];
-    io.o.write(['engine',{syshash:   eng.syshash,
-                          mode:      eng.mode,
-                          masterUrl: eng.masterUrl,
-                          connects:  eng.connectionSummary(),
-                          ip:        ip.address(),
-                          tag:       eng.tag}]);
+    io.o.write(eng._getAdminStatus());
     io.i.on('readable',function() {
         let js;
         while ((js=io.i.read())!==null) {
             try {
-                switch (js[0]){
-                case 'mode':
-                    eng.become(js[1]);
-                    break;
-                case 'engine':
-                    for (const k in js[1]) {
-                        switch (k) {
-                        case 'mode':
-                            eng.become(js[1][k]);
-                            break;
-                        case 'masterUrl':
-                            eng.masterUrl = js[1][k];
-                            break;
-                        }
-                    }
-                }
+                eng._doAdminCommand(io,js);
             } catch (e) {
                 console.log(e);
                 eng.closeConnection(port);
@@ -1390,7 +1403,6 @@ Engine.prototype.administer = function(port) {
         }
     });
 };
-
 
 exports.Engine  = Engine;
 exports.express = express;

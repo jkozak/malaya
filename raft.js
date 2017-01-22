@@ -320,6 +320,16 @@ Raft.prototype.setElectionTimeout = function() {
     },tOuts[0]+Math.random()*(tOuts[1]-tOuts[0]));
 };
 
+Raft.prototype.getStatus = function() {
+    const  raft = this;
+    return {
+        mode:        raft.mode,
+        activeCount: raft.activeCount(),
+        clusterSize: raft.clusterSize(),
+        leader:      raft.leaderId
+    };
+};
+
 Raft.prototype.getState = function() {
     const raft = this;
     return {currentTerm:raft.currentTerm,
@@ -452,6 +462,9 @@ const Engine = exports.Engine = function(options) {
             eng.raft.stop();
         }
     });
+    eng.raft.on('mode',(mode)=>{
+        eng.broadcast(['raft',eng.raft.getStatus()],'admin');
+    });
 };
 
 util.inherits(Engine,engine.Engine);
@@ -477,4 +490,15 @@ Engine.prototype.timestamp = function() {
             eng.raft.commitIndex, // ??? is this right? ???
             Object.getPrototypeOf(Engine.prototype).timestamp.call(eng)
            ];
+};
+
+Engine.prototype._getAdminStatus = function() {
+    const eng = this;
+    const  st = Object.getPrototypeOf(Engine.prototype)._getAdminStatus.call(eng);
+    st[1].raft = eng.raft.getStatus();
+    return st;
+};
+Engine.prototype._doAdminCommand = function(io,js) {
+    const eng = this;
+    Object.getPrototypeOf(Engine.prototype)._doAdminCommand.call(eng,io,js);
 };

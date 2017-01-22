@@ -63,7 +63,8 @@ exports.repl = function(url) {
     sock.onopen = function() {
         repl();
     };
-    sock.onerror = function() {
+    sock.onerror = function(err) {
+        console.log("websocket failed: %j",err);
         sock.close();
     };
     sock.onclose = function() {
