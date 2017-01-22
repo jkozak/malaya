@@ -140,6 +140,18 @@ exports.endsWith = function(str,suffix) {
 
 // environmental stuff
 
+exports.isAddressLocal = function(addr) {
+    const nis = os.networkInterfaces();
+    let   ans = false;
+    Object.keys(nis).forEach((inf)=>{
+        nis[inf].forEach((a)=>{
+            if (a.address===addr)
+                ans = true;
+        });
+    });
+    return ans;
+};
+
 exports.sourceVersion = (function() {
     let cmd;
     let out;

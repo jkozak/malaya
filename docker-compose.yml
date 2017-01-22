@@ -8,7 +8,7 @@ services:
       /bin/sh -c 'cd /var/lib/malaya &&
       rm -rf .prevalence &&
       ./malaya init &&
-      ./malaya run -P node2:3000'
+      ./malaya run -P node2:3000,node3:3000,node4:3000,node5:3000 --admin'
   node2:
     build: .
     ports:
@@ -17,4 +17,31 @@ services:
       /bin/sh -c 'cd /var/lib/malaya &&
       rm -rf .prevalence &&
       ./malaya init &&
-      ./malaya run -P node1:3000'
+      ./malaya run -P node1:3000,node3:3000,node4:3000,node5:3000 --admin'
+  node3:
+    build: .
+    ports:
+      - "13003:3000"
+    command: >
+      /bin/sh -c 'cd /var/lib/malaya &&
+      rm -rf .prevalence &&
+      ./malaya init &&
+      ./malaya run -P node1:3000,node2:3000,node4:3000,node5:3000 --admin'
+  node4:
+    build: .
+    ports:
+      - "13004:3000"
+    command: >
+      /bin/sh -c 'cd /var/lib/malaya &&
+      rm -rf .prevalence &&
+      ./malaya init &&
+      ./malaya run -P node1:3000,node2:3000,node3:3000,node5:3000 --admin'
+  node5:
+    build: .
+    ports:
+      - "13005:3000"
+    command: >
+      /bin/sh -c 'cd /var/lib/malaya &&
+      rm -rf .prevalence &&
+      ./malaya init &&
+      ./malaya run -P node1:3000,node2:3000,node3:3000,node4:3000 --admin'

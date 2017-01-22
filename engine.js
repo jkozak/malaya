@@ -772,7 +772,7 @@ Engine.prototype.listenHttp = function(mode,port,done) {
             }
             break;
         case '/admin':
-            if ([ip.address(),'127.0.0.1'].indexOf(conn.remoteAddress)!==-1) {
+            if (util.isAddressLocal(conn.remoteAddress)) {
                 io.type = 'admin';
                 io.i    = new whiskey.JSONParseStream();
                 io.o    = new whiskey.StringifyJSONStream();
