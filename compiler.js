@@ -1796,7 +1796,7 @@ exports.once = function(what,handler) {
     ee.once(what,handler);
 };
 
-require.extensions['.chrjs'] = function(module,filename) {
+require.extensions['.malaya'] = require.extensions['.chrjs'] = function(module,filename) {
     filename = path.resolve(filename);
     var content = fs.readFileSync(filename,'utf8').replace(/\t/g,'        '); // remove tabs
     var   chrjs = parser.parse(content,{loc:exports.debug,attrs:true});
