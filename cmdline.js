@@ -13,7 +13,7 @@ const execCP = require('child_process').exec;
 
 const argparse = new (require('argparse').ArgumentParser)({
     addHelp:     true,
-    description: "tiny vegetarian mosquito"
+    description: require('./package.json').description
 });
 argparse.addArgument(['-p','--prevalence-directory'],
                      {
@@ -82,8 +82,7 @@ subcommands.compile.addArgument(
     ['source'],
     {
         action:       'store',
-        help:         "chrjs source file to compile",
-        defaultValue: 'bl.chrjs'
+        help:         "chrjs source file to compile"
     }
 );
 
@@ -101,8 +100,7 @@ subcommands.exec.addArgument(
     ['source'],
     {
         action:       'store',
-        help:         "chrjs source file to exec",
-        defaultValue: 'bl.chrjs'
+        help:         "chrjs source file to exec"
     }
 );
 
@@ -119,8 +117,18 @@ subcommands.init.addArgument(
     {
         action:       'store',
         nargs:        '?',
-        help:         "business logic source file",
-        defaultValue: 'bl.chrjs'
+        help:         "business logic source file"
+    }
+);
+
+addSubcommand('kill',{addHelp:true});
+subcommands.kill.addArgument(
+    ['signal'],
+    {
+        action:       'store',
+        nargs:        '?',
+        help:         "signal to send",
+        defaultValue: 'SIGQUIT'
     }
 );
 
@@ -212,8 +220,7 @@ subcommands.run.addArgument(
     {
         action:       'store',
         nargs:        '?',
-        help:         "business logic source file",
-        defaultValue: 'bl.chrjs'
+        help:         "business logic source file"
     }
 );
 
@@ -311,9 +318,9 @@ process.on('uncaughtException',function(err) {
     /*eslint-enable no-process-exit*/
 });
 
-exports.run = function(opts0) {
+exports.run = function(opts0,argv2) {
     const          opts = opts0 || {};
-    const          args = argparse.parseArgs();
+    const          args = argparse.parseArgs(argv2);
     const prevalenceDir = path.resolve(args.prevalence_directory);
     const hashAlgorithm = opts.hashAlgorithm || util.hashAlgorithm;
 
@@ -347,6 +354,12 @@ exports.run = function(opts0) {
         });
         process.on('SIGQUIT',function() {
             process.stderr.write(' quit\n');
+            if (eng)
+                eng.stopPrevalence(false,function(){eng.stop();});
+            process.exit(1);
+        });
+        process.on('SIGTERM',function() {
+            process.stderr.write(' term\n');
             process.exit(1);
         });
         process.on('SIGHUP',function() {
@@ -468,6 +481,24 @@ exports.run = function(opts0) {
         return eng;
     };
 
+    const kill = function(sig) {
+        checkDirectoriesExist();
+        const lock = require("./lock.js");
+        const data = lock.lockDataSync(path.join(prevalenceDir,'lock'));
+        if (data===null || data.pid===null)
+            console.log("not running");
+        else
+            process.kill(data.pid,sig);
+    };
+
+    const findSource = function(){
+        const possibilities = ['bl.chrjs','index.malaya'];
+        for (const p of possibilities)
+            if (fs.existsSync(p))
+                return p;
+        throw new VError("can't find a default malaya source file");
+    };
+
     subcommands.cat.exec = function() {
         checkDirectoriesExist();
         switch (args.what) {
@@ -494,17 +525,20 @@ exports.run = function(opts0) {
     };
 
     subcommands.compile.exec = function() {
+        args.source = args.source || findSource();
         fs.writeFileSync(args.source+'.js',compile(args.source));
     };
 
     subcommands.exec.exec = function() {
         const vm = require('vm');
+        args.source = args.source || findSource();
         vm.runInNewContext(compile(args.source),{
             require:require,
             console:console});
     };
 
     subcommands.init.exec = function() {
+        args.source = args.source || findSource();
         const eng = createEngine({businessLogic:path.resolve(args.source)});
         const  cb = findCallback();
         eng.init();
@@ -526,10 +560,21 @@ exports.run = function(opts0) {
         }
     };
 
+    subcommands.kill.exec = function() {
+        let sig = parseInt(args.signal);
+        if (isNaN(sig)) {
+            sig = args.signal.toUpperCase();
+            if (!sig.startsWith('SIG'))
+                sig = 'SIG'+sig;
+        }
+        kill(sig);
+    };
+
     subcommands.run.exec = function() {
         checkDirectoriesExist();
         if (args.adminUI)
             args.admin = true;
+        args.source = args.source || findSource();
         const   source = path.resolve(args.source);
         const  options = {businessLogic: source,
                           admin:         args.admin,
@@ -634,13 +679,7 @@ exports.run = function(opts0) {
     };
 
     subcommands.save.exec = function() {
-        checkDirectoriesExist();
-        const lock = require("./lock.js");
-        const data = lock.lockDataSync(path.join(prevalenceDir,'lock'));
-        if (data===null || data.pid===null)
-            console.log("not running");
-        else
-            process.kill(data.pid,'SIGHUP');
+        kill('SIGHUP');
     };
 
     subcommands.status.exec = function() {

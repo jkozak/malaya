@@ -967,8 +967,8 @@ Engine.prototype.out = function(dest,json) {
                 break;
             case '_schedule':
                 setTimeout(()=>{
-                    eng.update(json.message);
-                },json.after);
+                    eng.update(json[1].message);
+                },json[1].after);
                 break;
             default:
                 console.log("bad admin msg: %j",json);

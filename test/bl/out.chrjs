@@ -4,5 +4,10 @@ module.exports = function() {
               out('self',{msg:"did you like that?"}) );
         rule (-['do_em_all',...],
               out('all',{msg:"shame... that's all there is..."}) );
+        rule (-['disconnect_me',...,{port}],
+              out('server:',['_disconnect',{port}]) );
+        rule (-['schedule_me',...,{port}],
+              out('server:',['_schedule',{message:['scheduled',{}],
+                                          after:  10000}]) );
     };
 };

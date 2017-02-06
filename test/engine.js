@@ -4,7 +4,8 @@ const   engine = require('../engine.js');
 const   Engine = engine.Engine;
 
 const        _ = require("underscore");
-const   assert = require("assert");
+const   assert = require("chai").assert;
+const    sinon = require("sinon");
 const     temp = require('temp').track();
 const       fs = require('fs');
 const     path = require('path');
@@ -381,6 +382,9 @@ describe("Engine",function() {
         });
     });
     describe("#addConnection using `out` function",function() {
+        let clock;
+        before(()=>{clock=sinon.useFakeTimers();});
+        after(()=>{clock.restore();});
         const mkOutChrjs = require(path.join(__dirname,'bl','out.chrjs'));
         it("sends input, receives output",function(done) {
             const eng = new Engine({dir:   temp.mkdirSync(),
@@ -430,6 +434,41 @@ describe("Engine",function() {
                     });
                 });
                 io1.i.write(['do_em_all',{}]);
+            });
+        });
+        it("disconnects",function(done){
+            const eng = new Engine({dir:   temp.mkdirSync(),
+                                    chrjs: mkOutChrjs() });
+            const  io = createIO();
+            eng.init();
+            eng.start();
+            eng.startPrevalence(function(err) {
+                assert(!err);
+                eng.addConnection('test://1',io);
+                eng.once('connectionClose',function(portName,type) {
+                    assert.strictEqual(portName,'test://1');
+                    assert.strictEqual(type,    'data');
+                    done();
+                });
+                io.i.write(['disconnect_me',{}]);
+            });
+        });
+        it("schedules",function(done){
+            const   eng = new Engine({dir:   temp.mkdirSync(),
+                                      chrjs: mkOutChrjs() });
+            const    io = createIO();
+            eng.init();
+            eng.start();
+            eng.startPrevalence(function(err) {
+                assert(!err);
+                eng.addConnection('test://1',io);
+                io.i.write(['schedule_me',{}]);
+                assert.strictEqual(Object.keys(eng.chrjs._private.orderedFacts).length,0);
+                clock.tick(9999);
+                assert.strictEqual(Object.keys(eng.chrjs._private.orderedFacts).length,0);
+                clock.tick(1);
+                assert.strictEqual(Object.keys(eng.chrjs._private.orderedFacts).length,1);
+                done();
             });
         });
     });

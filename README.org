@@ -1,0 +1,14 @@
+* Introduction
+
+Malaya is a logic-based relational data manipulation and storage system.
+
+It consists of:
+ - JSON pattern matching
+ - a logic programming system based on CHR
+ - a persistence layer based on prevalence
+ - a web/websocket server
+
+It is designed for concise and rapid expression, implementation and
+deployment of business rules.
+
+Examples and documentation to come.
