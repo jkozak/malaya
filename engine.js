@@ -36,20 +36,14 @@ const          fs = require('fs');
 const        rmRF = require('rimraf');
 const    through2 = require('through2');
 const multistream = require('multistream');
-const   basicAuth = require('basic-auth');
 const     express = require('express');
-const  browserify = require('browserify');
-const    reactify = require('reactify');
-const      morgan = require('morgan');
-const      recast = require('recast');
 const        http = require('http');
 const      sockjs = require('sockjs');
 const          ip = require('ip');
-const      minify = require('express-minify');
 const          vm = require('vm');
 
-const      parser = require('./parser.js');
 const    compiler = require('./compiler.js');
+const         www = require('./www.js');
 const     whiskey = require('./whiskey.js');
 const        hash = require('./hash.js');
 const        lock = require('./lock.js');
@@ -109,36 +103,38 @@ const Engine = exports.Engine = function(options) {
 
     const eng = this;
 
-    options           = options || {};
-    options.dir       = options.dir || process.cwd();
-    options.webDir    = options.webDir || path.join(options.dir,'www');
-    options.tag       = options.tag;
-    options.ports     = options.ports || {http:3000};
-    options.bundles   = options.bundles || {};
-    options.minify    = options.minify===undefined ? util.env!=='test' : options.minify;
-    options.magic     = options.magic || {_tick:1000,_restart:true,'_take-outputs':true};
+    options            = options || {};
+    options.dir        = options.dir || process.cwd();
+    options.webDir     = options.webDir || path.join(options.dir,'www');
+    options.tag        = options.tag;
+    options.ports      = options.ports || {http:3000};
+    options.bundles    = options.bundles || {};
+    options.minify     = options.minify===undefined ? util.env!=='test' : options.minify;
+    options.magic      = options.magic || {_tick:1000,_restart:true,'_take-outputs':true};
 
-    compiler.debug    = options.debug;
+    options.createHttp = options.createHttpServer || www.createServer;
 
-    eng.prevalenceDir = options.prevalenceDir || path.join(options.dir,'.prevalence');
-    eng.syshash       = null;
-    eng.sources       = {};
-    eng.sandbox       = null;
-    eng.chrjs         = options.chrjs || eng.compile(options.businessLogic) || exports.makeInertChrjs();
-    eng.hashes        = null;                    // hash store
-    eng.options       = options;
-    eng.mode          = 'idle';                  // 'master' | 'slave' | 'idle'
-    eng.conns         = {};                      // <port> -> {i:<in-stream>,o:<out-stream>,type:<type>}
-    eng.connIndex     = {};                      // <type> -> [<port>,...]
-    eng.http          = null;                    // express http server
-    eng.journal       = null;                    // journal write stream
-    eng.timestamp     = options.timestamp || require('monotonic-timestamp');
-    eng.journalFlush  = function(cb){cb(null);}; // flush journal
-    eng.chrjs.tag     = options.tag;
-    eng.masterUrl     = eng.options.masterUrl;
-    eng.replicateSock = null;
-    eng.active        = null;                    // update being processed
-    eng.tickInterval  = null;                    // for magic ticks
+    compiler.debug     = options.debug;
+
+    eng.prevalenceDir  = options.prevalenceDir || path.join(options.dir,'.prevalence');
+    eng.syshash        = null;
+    eng.sources        = {};
+    eng.sandbox        = null;
+    eng.chrjs          = options.chrjs || eng.compile(options.businessLogic) || exports.makeInertChrjs();
+    eng.hashes         = null;                   // hash store
+    eng.options        = options;
+    eng.mode           = 'idle';                 // 'master' | 'slave' | 'idle'
+    eng.conns          = {};                     // <port> -> {i:<in-stream>,o:<out-stream>,type:<type>}
+    eng.connIndex      = {};                     // <type> -> [<port>,...]
+    eng.http           = null;                   // express http server
+    eng.journal        = null;                   // journal write stream
+    eng.timestamp      = options.timestamp || require('monotonic-timestamp');
+    eng.journalFlush   = (cb)=>cb(null);         // flush journal
+    eng.chrjs.tag      = options.tag;
+    eng.masterUrl      = eng.options.masterUrl;
+    eng.replicateSock  = null;
+    eng.active         = null;                   // update being processed
+    eng.tickInterval   = null;                   // for magic ticks
 
     eng.chrjs.on('error',function(err)      {eng.emit(new VError(err,"chrjs: "));});
     eng.chrjs.out = function(d,j) {return eng.out(d,j);};
@@ -430,183 +426,6 @@ Engine.prototype._loadWorld = function() {
     eng.emit('loaded',eng.syshash);
 };
 
-Engine.prototype._logon = null;
-
-Engine.prototype.express = function() {
-    return express();
-};
-
-Engine.prototype.createExpressApp = function() {
-    const     eng = this;
-    const     app = eng.express();
-    const jscache = {};   // req.path -> [compiled,stat]
-    const  webDir = eng.options.webDir;
-
-    const viaJSCache = function(build) {
-        return function(req,res) { // +++ eventually use disk cache +++
-            const filename = path.join(webDir,req.path.substr(1));
-            try {
-                const entry = jscache[req.path];
-                if (entry) {
-                    let clean = true;
-                    for (const fn in entry[1]) {
-                        const stat1 = fs.statSync(fn);
-                        const stat2 = entry[1][fn];
-                        if (stat1.size!==stat2.size || stat1.mtime.getTime()!==stat2.mtime.getTime() ) {
-                            clean = false;
-                            break;
-                        }
-                    }
-                    if (clean) {
-                        res.setHeader("Content-Type","application/javascript");
-                        res.status(200).send(entry[0]);
-                        return;
-                    }
-                }
-            } catch (e) {
-                if (e.code==='ENOENT') {
-                    delete jscache[req.path];
-                    res.status(404).send();
-                } else
-                    eng.emit('error',new VError(e,"compile of %s failed",filename));
-                return;
-            }
-            build(filename,function(err,en) {
-                if (err)
-                    res.status(500).send(err);
-                else {
-                    jscache[req.path] = en;
-                    res.setHeader("Content-Type","application/javascript");
-                    res.status(200).send(en[0]);
-                }
-            });
-        };
-    };
-
-    const doBrowserify = function(files) {
-        files = Array.isArray(files) ? files : [files];
-        return viaJSCache(function(_fn,cb) {
-            let          js = '';
-            const filesRead = [];
-            const         b = browserify(files,{
-                extensions:['.jsx','.chrjs','.malaya'],
-                transform: [reactify],
-                debug:     eng.options.debug
-            });
-            b.on('file',function(f,id,parent){
-                if (!/node_modules/.test(f)) // presume node_module contents are stable
-                    filesRead.push(f);
-            });
-            b.bundle()
-                .on('error',function(err) {
-                    console.log("!!! bundle fail: %s",err);
-                    cb(err);
-                })
-                .on('data',function(chunk) {
-                    js += chunk.toString();
-                })
-                .on('end',function() {
-                    const deps = {};
-                    filesRead.forEach(function(f) {
-                        deps[f] = fs.statSync(f);
-                        eng.cacheFile(f);
-                    });
-                    cb(null,[js,deps]);
-                });
-        });
-    };
-
-    if (eng.options.logging)
-        app.use(morgan('dev'));
-
-    if (eng.options.minify)
-        app.use(minify());
-
-    app.get('/replication/hashes',function(req,res) {
-        fs.readdir(eng.prevalenceDir+'/hashes',function(err,files) {
-            if (err) {
-                res.writeHead(500,"can't list hashes directory");
-            } else {
-                res.writeHead(200,{'Content-Type':'application/json'});
-                res.write(JSON.stringify(files));
-            }
-            res.end();
-        });
-    });
-    app.use('/replication/hash', express.static(path.join(eng.prevalenceDir,'/hashes')));
-    app.use('/replication/state',express.static(path.join(eng.prevalenceDir,'/state')));
-
-    if (eng._logon)             // ??? does this work? ???
-        app.use('/data',function(req,res,next) {
-            const creds = basicAuth(req);
-            const  port = eng.makeHttpPortName(req.connection,'/data');
-            const  conn = eng.conns[port];
-            if (!creds) {
-                res.writeHead(401,{'WWW-Authenticate':'Basic realm="example"'});
-                res.end();
-            } else if (!conn || !conn.logon)
-                eng._logon(creds,port,function(err,ok) {
-                    if (err) {
-                        res.status(500); // !!! check this !!!
-                        res.end();
-                    } else if (ok) {
-                        eng.conns[port].logon = true;
-                        next();
-                    }
-                    else {
-                        res.writeHead(401,{'WWW-Authenticate':'Basic realm="example"'});
-                        res.end();
-                    }
-                });
-        });
-
-    app.get('/',function(req,res) {
-        res.redirect('/index.html');
-    });
-
-    for (const k in eng.options.bundles)
-        app.get(k,doBrowserify(eng.options.bundles[k]));
-
-    app.get('/*.chrjs',viaJSCache(function(filename,cb) {
-        try {
-            const chrjs = fs.readFileSync(filename);
-            const    js = recast.print(compiler.compile(parser.parse(chrjs,{attrs:true}))).code;
-            const  deps = {};
-            deps[filename] = fs.statSync(filename);
-            eng.cacheFile(filename);
-            cb(null,[js,deps]);
-        } catch(e) {
-            cb(e);
-        }
-    }));
-
-    app.get('/*.jsx',function(req,res) {
-        return doBrowserify(path.join(webDir,req.path.substr(1)))(req,res);
-    });
-
-    app.use(function(req,res,next) {
-        if (req.method==='GET' || req.method==='HEAD') {
-            try {
-                const fn = path.join(webDir,req.path);
-                eng.cacheFile(fn,function(h) {
-                    res.setHeader("Content-Type",express.static.mime.lookup(fn));
-                    res.setHeader("ETag",        h);
-                    res.status(200);
-                    if (req.method==='GET')
-                        res.sendFile(eng.hashes.makeFilename(h));
-                });
-                return;
-            } catch (e) {
-                if (e.code!=='ENOENT')
-                    eng.emit('error',new VError(e,"hash read failed"));
-            }
-        }
-        next();
-    });
-
-    return app;
-};
-
 Engine.prototype.closeConnection = function(portName) {
     const eng = this;
     const  io = eng.conns[portName];
@@ -730,7 +549,7 @@ Engine.prototype.listenHttp = function(mode,port,done) {
             util.error(text);
     }});
 
-    eng.http = http.Server(eng.createExpressApp());
+    eng.http = eng.options.createHttp(eng);
 
     sock.on('connection',function(conn) {
         const portName = eng.makeHttpPortName(conn);
@@ -954,7 +773,7 @@ Engine.prototype.out = function(dest,json) {
         eng.broadcast(json,'data');
     } else if (dest==='self') {
         const port = eng.active[2].port;
-        const io = eng.conns[port];
+        const   io = eng.conns[port];
         if (io)
             io.o.write(json);
         else
@@ -1360,7 +1179,6 @@ Engine.prototype.administer = function(port) {
         }
     });
 };
-
 
 exports.Engine  = Engine;
 exports.express = express;
