@@ -9,7 +9,7 @@
     "esprima": "=1.2.2",
     "express": "^4.6.1",
     "express-minify": "^0.2.0",
-    "ip": "^0.3.3",
+    "ip": "^1.1.4",
     "minimist": "^1.1.1",
     "moment": "^2.11.2",
     "monotonic-timestamp": "0.0.9",
@@ -27,6 +27,7 @@
     "verror": "^1.6.0"
   },
   "devDependencies": {
+    "byline": "^5.0.0",
     "chai": "^3.5.0",
     "cross-env": "^1.0.7",
     "eslint": "^1.4.3",

@@ -5,16 +5,21 @@
 const util = require('./util.js');
 
 if (util.env==='test')  {
+    const   whiskey = require("./whiskey.js");
+    const    byline = require('byline');
     const    VError = require('verror');
     const    engine = require('./engine.js');
     const    Engine = engine.Engine;
     const    assert = require("assert");
     const    events = require("events");
     const    stream = require("stream");
+    const    SockJS = require('node-sockjs-client');
     const     jsdom = require('jsdom');
+    const      http = require('http');
     const      path = require('path');
     const      temp = require('temp').track();
     const        fs = require('fs');
+    const        cp = require('child_process');
 
     const runInEngine = exports.runInEngine = function(source,opts) {
         if ((typeof opts)==='function')
@@ -188,5 +193,228 @@ if (util.env==='test')  {
                 },
                 ws: null
             }));
+    };
+
+    const ExtServer = function(serverJs,opts) {
+        const srv = this;
+        opts = opts || {};
+        srv.serverJs      = serverJs;
+        srv.prevalenceDir = opts.prevalenceDir || path.join(temp.mkdirSync(),'.prevalence');
+        srv.git           = opts.git;
+        srv.noisy         = opts.noisy;
+        srv.proc          = null;
+        srv.port          = null;
+    };
+    ExtServer.prototype._spawn = function(subcommand,args) {
+        const srv = this;
+        return cp.spawn("/usr/bin/node",
+                        [srv.serverJs,
+                         '-p',srv.prevalenceDir
+                        ].concat(
+                            srv.git ? ['--git'] : [],
+                            [subcommand],
+                            args
+                        ) );
+    };
+    ExtServer.prototype.init = function(args,done) {
+        const srv = this;
+        if (done===undefined) {
+            done = args;
+            args = [];
+        }
+        const proc = srv._spawn('init',args);
+        proc
+            .once('error',done)
+            .once('exit',done);
+    };
+    ExtServer.prototype.run = function(args,cb) {
+        const srv = this;
+        if (cb===undefined) {
+            cb   = args;
+            args = [];
+        }
+        srv.proc = srv._spawn('run',
+                              ['--private-test-urls',
+                               '-w','0'].concat(args) );
+        srv.proc.once('error',(err)=>{
+            cb(err);
+        });
+        srv.proc.once('exit',(err)=>{
+            srv.proc = null;
+        });
+        byline(srv.proc.stdout).on('data',(line)=>{
+            line = line.toString();
+            let m = /http listening on \*:([0-9]+)/.exec(line);
+            if (m)
+                srv.port = parseInt(m[1]);
+            m = /^mode now: ([a-z]+)$/.exec(line);
+            if (m && m[1]==='master')
+                cb();
+            if (srv.noisy)
+                console.log("ExtServer: %j",line);
+        });
+    };
+    ExtServer.prototype.kill = function(sig) {
+        const srv = this;
+        if (srv.proc)
+            srv.proc.kill(sig);
+    };
+    ExtServer.prototype._getFacts = function(cb) {
+        const srv = this;
+        http.get(`http://localhost:${srv.port}/_private/facts`,res=>{
+            if (res.statusCode!==200) {
+                cb(new Error(`_getFacts fails: ${res.statusCode}`));
+                res.resume();
+            } else {
+                res.setEncoding('utf8');
+                let data = '';
+                res.on('data',chunk=>data+=chunk);
+                res.on('end',()=>cb(null,util.deserialise(data)));
+            }
+        });
+    };
+    ExtServer.prototype.call = function(fn,cb) {
+        const srv = this;
+        srv._getFacts((err,facts)=>{
+            if (err)
+                cb(err);
+            else try {
+                cb(null,fn(facts));
+            } catch (e) {
+                cb(e);
+            }
+        });
+    };
+    exports.ExtServer = ExtServer;
+
+    const WS = function(url) {
+        const ws = this;
+        if (url instanceof ExtServer) {
+            ws.srv = url;
+            url = `http://localhost:${url.port}/data`;
+        } else
+            ws.srv = null;
+        ws.queue = [];
+        ws.sock  = new SockJS(url);
+        ws.jps   = new whiskey.JSONParseStream();
+        ws.sock.onmessage = (e)=>{
+            ws.jps.write(e.data);
+        };
+        ws.sock.onopen = ()=>{
+            ws._next();
+        };
+        ws.closehandler = ()=>{
+        };
+        ws.sock.onclose = ws.closehandler;
+    };
+    WS.prototype._next = function() {
+        const ws = this;
+        if (ws.queue.length>0)
+            ws.queue.shift()();
+    };
+    WS.prototype.xmit = function(js) {
+        const ws = this;
+        ws.queue.push(()=>{
+            if (js instanceof Function)
+                js = js();
+            ws.sock.send(JSON.stringify(js)+'\n');
+            ws._next();
+        });
+        return ws;
+    };
+    WS.prototype.rcve = function(fn) {
+        const ws = this;
+        ws.queue.push(()=>{
+            ws.jps.once('data',(js)=>{
+                fn(js);
+                ws._next();
+            });
+        });
+        return ws;
+    };
+    WS.prototype.close = function(fn) {
+        const ws = this;
+        ws.queue.push(()=>{
+            if (fn) fn();
+            ws.sock.close();
+            ws._next();
+        });
+        return ws;
+    };
+    WS.prototype.opened = function(fn) {
+        const ws = this;
+        ws.queue.push(()=>{
+            if (ws.sock.readyState===1) {
+                if (fn) fn();
+                ws._next();
+            } else
+                ws.sock.onopen = ()=>{
+                    ws.sock.onopen = null;
+                    if (fn) fn();
+                    ws._next();
+                };
+        });
+        return ws;
+    };
+    WS.prototype.closed = function(fn) {
+        const ws = this;
+        ws.queue.push(()=>{
+            if (ws.sock.readyState===3) {
+                if (fn) fn();
+                ws._next();
+            } else
+                ws.sock.onclose = ()=>{
+                    ws.sock.onclose = ws.closehandler;
+                    if (fn) fn();
+                    ws._next();
+                };
+        });
+        return ws;
+    };
+    WS.prototype.call = function(fn) {
+        const ws = this;
+        if (ws.srv===null)
+            throw new Error("can't do `call`, server unknown");
+        ws.queue.push(()=>{
+            ws.srv.call(fn,(err)=>{
+                if (err)
+                    throw err;
+                else
+                    ws._next();
+            });
+        });
+        return ws;
+    };
+    WS.prototype.assert = function(fn) {
+        const ws = this;
+        if (ws.srv===null)
+            throw new Error("can't do `call`, server unknown");
+        ws.queue.push(()=>{
+            ws.srv.call((facts)=>assert(fn(facts)),(err)=>{
+                if (err)
+                    throw err;
+                else
+                    ws._next();
+            });
+        });
+        return ws;
+    };
+    WS.prototype.end = function(fn) {
+        const ws = this;
+        ws.queue.push(()=>{
+            if (fn) fn();
+            ws._next();
+        });
+        ws._next();
+    };
+    exports.WS = WS;
+
+    exports.makeConnection = (srv)=>{
+        if (srv instanceof ExtServer)
+            return new WS(srv);
+        else if (srv instanceof Engine)
+            return new WS(srv);
+        else
+            throw new VError("can't find a connector for %j",srv);
     };
 }

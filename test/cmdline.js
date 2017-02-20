@@ -60,6 +60,35 @@ describe("cmdline",function() {
     after(function() {
         process.argv = saveArgv;
     });
+    describe("argTypeMagicSpec",function(){
+        const argTypeMagicSpec = cmdline._private.argTypeMagicSpec;
+        it("handles an empty string",function(){
+            assert.deepEqual(argTypeMagicSpec(''),{});
+        });
+        it("handles a single item",function(){
+            assert.deepEqual(argTypeMagicSpec('_connect'),{_connect:true});
+        });
+        it("handles multiple items",function(){
+            assert.deepEqual(argTypeMagicSpec('_connect,_disconnect'),
+                             {_connect:true,_disconnect:true});
+        });
+        it("handles explicit values",function(){
+            assert.deepEqual(argTypeMagicSpec('_tick:99'),{_tick:99});
+        });
+        it("handles explicit values in combination",function(){
+            assert.deepEqual(argTypeMagicSpec('_tick:99,_restart'),
+                             {_tick:99,_restart:true});
+        });
+        it("supplies leading underscores as needed",function(){
+            assert.deepEqual(argTypeMagicSpec('_tick:99,restart'),
+                             {_tick:99,_restart:true});
+        });
+        it("savages bad items",function(){
+            assert.throws(()=>{
+                argTypeMagicSpec('1:2:3');
+            });
+        });
+    });
     describe("init",function() {
         it("builds the prevalence directory structure",function() {
             const dir = temp.mkdirSync();

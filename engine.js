@@ -98,6 +98,8 @@ exports.makeInertChrjs = function(opts) {
     return obj;
 };
 
+const knownMagic = ['_tick','_restart','_take-output','_connect','_disconnect'];
+
 const Engine = exports.Engine = function(options) {
     events.EventEmitter.call(this);
 
@@ -110,7 +112,7 @@ const Engine = exports.Engine = function(options) {
     options.ports      = options.ports || {http:3000};
     options.bundles    = options.bundles || {};
     options.minify     = options.minify===undefined ? util.env!=='test' : options.minify;
-    options.magic      = options.magic || {_tick:1000,_restart:true,'_take-outputs':true};
+    options.magic      = options.magic || {_tick:1000,_restart:true,'_take-output':true};
 
     options.createHttp = options.createHttpServer || www.createServer;
 
@@ -139,8 +141,13 @@ const Engine = exports.Engine = function(options) {
     eng.chrjs.on('error',function(err)      {eng.emit(new VError(err,"chrjs: "));});
     eng.chrjs.out = function(d,j) {return eng.out(d,j);};
 
+    const magic = eng.options.magic;
+    Object.keys(magic).forEach((m)=>{
+        if (knownMagic.indexOf(m)===-1)
+            throw new VError("unknown magic: %j",m);
+    });
     eng.on('mode',function(mode) {
-        if (eng.options.magic._restart && mode==='master')
+        if (magic._restart && mode==='master')
             eng.update(['_restart',{},{port:'server:'}]);
         eng.broadcast(['mode',mode],'admin');
     });
@@ -153,22 +160,24 @@ const Engine = exports.Engine = function(options) {
     eng.on('become',function(mode) {
         if (eng.tickInterval)
             clearInterval(eng.tickInterval);
-        if ((eng.options['_take-outputs'] || eng.options._tick) && mode==='master') {
-            eng.tickInterval = setInterval(function() {
-                if (eng.options._tick)
+        if ((magic['_take-outputs'] || magic._tick) && mode==='master') {
+            if (magic._tick===true)
+                magic._tick = 1000;
+            eng.tickInterval = setInterval(()=>{
+                if (magic._tick)
                     eng.update(['_tick',{date:new Date()},{port:'server:'}]);
-                if (eng.options['_take-outputs'])
+                if (magic['_take-outputs'])
                     eng.update(['_take-outputs',{},{port:'server:'}]);
-            },1000);
+            },magic._tick);
         } else
             eng.tickInterval = null;
     });
-    if (eng.options.magic._connect) {
+    if (magic._connect) {
         eng.on('connection',function(port,type) {
             eng.update(['_connect',{port:port,type:type},{port:'server:'}]);
         });
     }
-    if (eng.options.magic._disconnect) {
+    if (magic._disconnect) {
         eng.on('connectionClose',function(port,type) {
             eng.update(['_disconnect',{port:port,type:type},{port:'server:'}]);
         });

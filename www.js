@@ -3,6 +3,7 @@
 const      VError = require('verror');
 const        path = require('path');
 const          fs = require('fs');
+const          ip = require('ip');
 const     express = require('express');
 const  browserify = require('browserify');
 const    reactify = require('reactify');
@@ -11,6 +12,7 @@ const      recast = require('recast');
 const        http = require('http');
 const      minify = require('express-minify');
 
+const        util = require('./util.js');
 const      parser = require('./parser.js');
 const    compiler = require('./compiler.js');
 
@@ -138,6 +140,20 @@ const addStandardExpressRoutes = exports.addStandardExpressRoutes = function(eng
     app.get('/*.jsx',function(req,res) {
         return doBrowserify(path.join(webDir,req.path.substr(1)))(req,res);
     });
+
+    // only for use in testing
+    if (eng.options.privateTestUrls && util.env==='test') {
+        // +++ safer to have a POST which dumps to disk then returns
+        // +++ the filename
+        app.get('/_private/facts',(req,res)=>{
+            if (ip.isPrivate(req.ip)) {
+                res.writeHead(200,{'Content-Type':'application/json'});
+                res.write(util.serialise(eng.chrjs._private.orderedFacts));
+            } else
+                res.writeHead(404,{'Content-Type':'text/plain'});
+            res.end();
+        });
+    }
 
     app.use(function(req,res,next) {
         if (req.method==='GET' || req.method==='HEAD') {

@@ -1,9 +1,13 @@
 "use strict";
 
 const      testutil = require('../testutil.js');
-const        assert = require('assert');
+
+const        assert = require('chai').assert;
+const          path = require('path');
+const            fs = require('fs');
 
 const makeTimestamp = testutil.makeTimestamp;
+//const    mkOutChrjs = require(path.join(__dirname,'bl','out.chrjs'));
 
 describe("testutil",function() {
 
@@ -48,6 +52,57 @@ describe("testutil",function() {
             assert.strictEqual(ts1(),4);
             assert.strictEqual(ts2(),3);
             assert.strictEqual(ts2(),4);
+        });
+    });
+
+    describe("ExtServer/WS",function(){
+        const srv = new testutil.ExtServer('malaya');
+        it("inits a server",function(done){
+            this.timeout(10000);
+            srv.init(['test/bl/null.chrjs'],(err)=>{
+                if (err)
+                    done(err);
+                else {
+                    assert(fs.existsSync(srv.prevalenceDir));
+                    assert(fs.existsSync(path.join(srv.prevalenceDir,'state')));
+                    done();
+                }
+            });
+        });
+        it("starts a server",function(done){
+            this.timeout(10000);
+            srv.run(['--auto',"_connect,_disconnect,_restart",
+                     'test/bl/null.chrjs'],(err)=>{
+                if (err)
+                    done(err);
+                else {
+                    assert.strictEqual(typeof srv.port,'number');
+                    done();
+                }
+            });
+        });
+        it("is tested with a monad via server object",function(done){
+            new testutil.WS(srv)
+                .opened()
+                .call(facts=>assert.deepEqual(facts.map(f=>f[0]),
+                                              ['_restart','_connect'] ))
+                .close()
+                .closed()
+                .call(facts=>assert.deepEqual(facts.map(f=>f[0]),
+                                              ['_restart','_connect','_disconnect'] ))
+                .assert(facts=>facts.length===3)
+                .end(done);
+        });
+        it("is tested with a monad via url",function(done){
+            new testutil.WS(`http://localhost:${srv.port}/data`)
+                .opened()
+                .close()
+                .closed()
+                .end(done);
+        });
+        it("closes down nicely",function(done){
+            srv.proc.once('exit',()=>done());
+            srv.kill();
         });
     });
 

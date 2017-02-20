@@ -50,6 +50,26 @@ const addSubcommand = exports.addSubcommand = function(name,opts) {
     return subcommands[name];
 };
 
+const argTypeMagicSpec = arg=>{
+    const   ans = {};
+    const items = arg.split(',');
+    if (items.length===1 && items[0]==='')
+        items.length = 0;
+    items.forEach(it=>{
+        const kv = it.split(':');
+        if (kv.length===1)
+            kv.push(true);
+        else if (kv.length===2) {
+            kv[1] = JSON.parse(kv[1]);
+        } else
+            throw new Error(`bad --auto spec item: ${it}`);
+        if (!kv[0].startsWith('_'))
+            kv[0] = '_'+kv[0];
+        ans[kv[0]] = kv[1];
+    });
+    return ans;
+};
+
 addSubcommand('browse',{addHelp:true});
 subcommands.browse.addArgument(
     ['what'],
@@ -134,11 +154,12 @@ subcommands.kill.addArgument(
 
 addSubcommand('run',{addHelp:true});
 subcommands.run.addArgument(
-    ['--no-auto'],
+    ['--auto'],
     {
-        action:       'storeFalse',
-        defaultValue: true,
-        help:         "no _tick &c magic",
+        action:       'store',
+        defaultValue: null,
+        type:         argTypeMagicSpec,
+        help:         "magic events",
         dest:         'auto'
     }
 );
@@ -215,6 +236,16 @@ subcommands.run.addArgument(
         metavar:      'url'
     }
 );
+if (util.env==='test')
+    subcommands.run.addArgument(
+        ['--private-test-urls'],
+        {
+            action:       'storeTrue',
+            defaultValue: false,
+            dest:         'privateTestUrls',
+            help:         "not for you"
+        }
+    );
 subcommands.run.addArgument(
     ['source'],
     {
@@ -576,12 +607,13 @@ exports.run = function(opts0,argv2) {
             args.admin = true;
         args.source = args.source || findSource();
         const   source = path.resolve(args.source);
-        const  options = {businessLogic: source,
-                          admin:         args.admin,
-                          debug:         args.debug,
-                          ports:         {http:args.webPort},
-                          magic:         args.auto ? null : {},
-                          masterUrl:     args.masterUrl};
+        const  options = {businessLogic:   source,
+                          admin:           args.admin,
+                          debug:           args.debug,
+                          ports:           {http:args.webPort},
+                          magic:           args.auto,
+                          masterUrl:       args.masterUrl,
+                          privateTestUrls: args.privateTestUrls};
         const      eng = createEngine(options);
         eng.on('listen',function(protocol,port) {
             console.log("%s listening on *:%s",protocol,port);
@@ -765,3 +797,7 @@ exports.run = function(opts0,argv2) {
 
     findCallback()(null);
 };
+
+if (util.env==='test') {
+    exports._private = {argTypeMagicSpec:argTypeMagicSpec};
+}
