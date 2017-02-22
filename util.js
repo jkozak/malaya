@@ -5,7 +5,6 @@ const _util = require('util');
 const shell = require('shelljs');
 const    os = require('os');
 const    fs = require('fs');
-const  path = require('path');
 
 exports.verbosity     = 3;
 exports.hashAlgorithm = 'sha1';
@@ -141,18 +140,20 @@ exports.endsWith = function(str,suffix) {
 // environmental stuff
 
 exports.sourceVersion = (function() {
-    let   cmd = shell.exec("hg id -t",{silent:true});
-    const out = cmd.stdout.trim();
-    if (cmd.code===0 && out!=='' && out!=='tip')
-        return out;
-    cmd = shell.exec("hg id -i",{silent:true});
-    if (cmd.code===0)
-        return cmd.output.trim();
-    try {
-        return JSON.parse(fs.readFileSync(path.resolve(__dirname,'./package.json'))).version;
-    } catch (e) {
-        return "???";
-    }
+    let   ans = '';
+    const com = shell.exec("git status --porcelain",{silent:true});
+    const tag = shell.exec("git describe --tags",{silent:true});
+    const rev = shell.exec("git rev-parse HEAD",{silent:true});
+    const ver = require('./package.json').version;
+    if (tag.code===0)
+        ans = tag.stdout.trim();
+    else if (rev.code===0)
+        ans = rev.stdout.trim();
+    else
+        ans = ver;
+    if (com.code!==0 || com.stdout.trim()!=='')
+        ans += '?';
+    return ans;
 })();
 
 exports.onWindows = /^win/.test(os.platform());
@@ -175,5 +176,5 @@ if (exports.env==='test')
         deserialise: deserialise
     };
 
-if (exports.env==='prod' && exports.source_version.slice(-1)==='+')
+if (exports.env==='prod' && exports.sourceVersion().slice(-1)==='?')
     throw new exports.Fail("must run registered code in production");
