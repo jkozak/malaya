@@ -1,0 +1,14 @@
+From: John Kozak
+Date: Tue, 21 Feb 2017 21:48:57 +0000
+State: resolved
+Subject: Better _schedule: cancellable, optionally repeating
+Message-Id: <f6761867d442fff6-0-artemis@renn>
+resolution: fixed
+
+User does =out('server:',['_schedule',{after:<time>,repeating:<bool>,...}])=
+
+engine sends the update =['_scheduled',{_id:<int>,...fields}]= where
+=fields= are copied from above.  User can have an extra field to
+identify the timer.
+
+User can cancel the timer by doing =out('server:',['_cancelScheduled',{_id:<int>}])=

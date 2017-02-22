@@ -1,0 +1,8 @@
+From: John Kozak
+Date: Wed, 22 Feb 2017 11:06:48 +0000
+Subject: Re: Better _schedule: cancellable, optionally repeating
+Message-Id: <f6761867d442fff6-f24650fa663482aa-artemis@renn>
+References: <f6761867d442fff6-0-artemis@renn>
+In-Reply-To: <f6761867d442fff6-0-artemis@renn>
+
+Done, but with explicit `named` for confirmation/cancellation.

@@ -9,5 +9,21 @@ module.exports = function() {
         rule (-['schedule_me',...,{port}],
               out('server:',['_schedule',{message:['scheduled',{}],
                                           after:  10000}]) );
+        rule (-['schedule_me_named',{named},{port}],
+              out('server:',['_schedule',{message:['scheduled',{}],
+                                          named,
+                                          after:  10000}]) );
+        rule (-['schedule_me_lots',...,{port}],
+              out('server:',['_schedule',{message:['muchScheduled',{}],
+                                          repeat: true,
+                                          after:  1000}]) );
+        rule (-['schedule_me_named_lots',{named},{port}],
+              out('server:',['_schedule',{message:['muchScheduled',{}],
+                                          repeat: true,
+                                          named,
+                                          after:  1000}]) );
+        rule (-['cancel_me',{named},{port}],
+              -['_scheduled',{named,_id,repeat,...},{port:'server:'}],
+              out('server:',['_deschedule',{_id,repeat}]) );
     };
 };
