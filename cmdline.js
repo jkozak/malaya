@@ -704,9 +704,11 @@ exports.run = function(opts0,argv2) {
                             }
                         }
                     }
+                    return null;
                 });
             }
             eng.stopPrevalence(false,cb);
+            return null;
         });
     };
 

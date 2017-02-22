@@ -54,6 +54,7 @@ function TEMPLATE_store() {
                 return t_fact;
             } else
                 ee.emit('error',new Error("unloved fact format: "+JSON.stringify(fact)));
+            return null;
         };
         var   _del = function(t) {
             var   ti = parseInt(t);  // use this in indices

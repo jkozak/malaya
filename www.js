@@ -132,7 +132,7 @@ const addStandardExpressRoutes = exports.addStandardExpressRoutes = function(eng
             deps[filename] = fs.statSync(filename);
             eng.cacheFile(filename);
             cb(null,[js,deps]);
-        } catch(e) {
+        } catch (e) {
             cb(e);
         }
     }));

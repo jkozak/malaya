@@ -430,6 +430,7 @@ Engine.prototype._loadWorld = function() {
             return false;
         default:
             eng.emit('error',new VError("bad number of lines in world file for: %s",eng.prevalenceDir));
+            return false;
         }
     });
     eng.emit('loaded',eng.syshash);
@@ -1011,7 +1012,7 @@ Engine.prototype.replicateHashes = function(url,callback) {
         try {
             fs.statSync(filename);
             cb(null);
-        } catch(e) {
+        } catch (e) {
             if (e.code==='ENOENT') {
                 eng.replicateFile(filename,url+'replication/hash/'+hash0,{},cb);
             } else

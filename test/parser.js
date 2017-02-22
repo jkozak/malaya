@@ -198,7 +198,7 @@ const chrjsTestFixture = {      // see esprima/test/test.js for format
 
 describe("esprima-based parser",function() {
     it("should pass original javascript tests [slow]",function() {
-        let   total    = 0;
+        let      total = 0;             // eslint-disable-line no-unused-vars
         const failures = [];
         this.timeout(5000);
         vm.runInThisContext(fs.readFileSync(path.join(__dirname,'../node_modules/esprima/test/test.js'),'utf-8'));
@@ -272,12 +272,11 @@ describe("esprima-based parser",function() {
             return false;
         };
         const testParse = function(esprima,code,syntax) {
-            let expected, tree, actual, options, StringObject, i, len;
+            let expected, tree, actual, i, len;
 
-            // alias, so that JSLint does not complain.
-            StringObject = String;
+            const StringObject = String;
 
-            options = {
+            const options = {
                 comment: (typeof syntax.comments !== 'undefined'),
                 range: true,
                 loc: true,
@@ -375,16 +374,16 @@ describe("esprima-based parser",function() {
         };
 
         const testTokenize = function(esprima,code,tokens) {
-            let options, expected, actual, tree;
+            let actual, tree;
 
-            options = {
+            const options = {
                 comment: true,
                 tolerant: true,
                 loc: true,
                 range: true
             };
 
-            expected = JSON.stringify(tokens, null, 4);
+            const expected = JSON.stringify(tokens, null, 4);
 
             try {
                 tree = esprima.tokenize(code, options);
@@ -398,10 +397,10 @@ describe("esprima-based parser",function() {
         };
 
         const testError = function(esprima,code,exception) {
-            let options, expected, actual, err, handleInvalidRegexFlag, tokenize;
+            let actual, err, tokenize;
 
             // Different parsing options should give the same error.
-            options = [
+            const options = [
                 {},
                 { comment: true },
                 { raw: true },
@@ -419,7 +418,7 @@ describe("esprima-based parser",function() {
             // }
             //JK: we are now using modern V8 so the above test is unneeded
             //    (also eslint check fails)
-            handleInvalidRegexFlag = true;
+            const handleInvalidRegexFlag = true;
 
             exception.description = exception.message.replace(/Error: Line [0-9]+: /, '');
 
@@ -427,7 +426,7 @@ describe("esprima-based parser",function() {
                 tokenize = true;
                 exception.tokenize = undefined;
             }
-            expected = JSON.stringify(exception);
+            const expected = JSON.stringify(exception);
 
             for (let i = 0; i < options.length; i += 1) {
 
@@ -458,8 +457,8 @@ describe("esprima-based parser",function() {
             }
         };
         const testAPI = function(esprima,code,result) {
-            let expected, res, actual;
-            expected = JSON.stringify(result.result, null, 4);
+            let res, actual;
+            const expected = JSON.stringify(result.result, null, 4);
             try {
                 if (typeof result.property !== 'undefined') {
                     res = esprima[result.property];

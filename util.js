@@ -141,10 +141,8 @@ exports.endsWith = function(str,suffix) {
 // environmental stuff
 
 exports.sourceVersion = (function() {
-    let cmd;
-    let out;
-    cmd = shell.exec("hg id -t",{silent:true});
-    out = cmd.output.trim();
+    let   cmd = shell.exec("hg id -t",{silent:true});
+    const out = cmd.stdout.trim();
     if (cmd.code===0 && out!=='' && out!=='tip')
         return out;
     cmd = shell.exec("hg id -i",{silent:true});
