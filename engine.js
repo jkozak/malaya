@@ -139,7 +139,6 @@ const Engine = exports.Engine = function(options) {
     eng.tickInterval   = null;                   // for magic ticks
 
     eng.chrjs.on('error',function(err)      {eng.emit(new VError(err,"chrjs: "));});
-    eng.chrjs.out = function(d,j) {return eng.out(d,j);};
 
     const magic = eng.options.magic;
     Object.keys(magic).forEach((m)=>{
@@ -240,6 +239,7 @@ Engine.prototype.stopPrevalence = function(quick,cb) {
             if (cb) cb();
         });
         journal.end();
+        eng.chrjs.out = ()=>{};
     }
 };
 
@@ -389,7 +389,8 @@ Engine.prototype.startPrevalence = function(opts,cb) {
         console.log("truncating journal file to lose junk: %j",residue);
         fs.truncateSync(jrnlFile,jrnlSize-residue.length);
     }
-    eng.journal = opts.readonly ? null : fs.createWriteStream(jrnlFile,{flags:'a'});
+    eng.journal   = opts.readonly ? null : fs.createWriteStream(jrnlFile,{flags:'a'});
+    eng.chrjs.out = function(d,j) {return eng.out(d,j);};
     if (cb) cb();
 };
 

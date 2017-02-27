@@ -386,7 +386,7 @@ exports.run = function(opts0,argv2) {
         process.on('SIGQUIT',function() {
             process.stderr.write(' quit\n');
             if (eng)
-                eng.stopPrevalence(false,function(){eng.stop();});
+                eng.stopPrevalence(true,function(){eng.stop();});
             process.exit(1);
         });
         process.on('SIGTERM',function() {
