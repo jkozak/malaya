@@ -211,7 +211,6 @@ if (util.env==='test')  {
                         [srv.serverJs,
                          '-p',srv.prevalenceDir
                         ].concat(
-                            srv.git ? ['--git'] : [],
                             [subcommand],
                             args
                         ) );

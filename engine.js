@@ -41,6 +41,7 @@ const        http = require('http');
 const      sockjs = require('sockjs');
 const          ip = require('ip');
 const          vm = require('vm');
+const       shell = require('shelljs');
 
 const    compiler = require('./compiler.js');
 const         www = require('./www.js');
@@ -137,6 +138,7 @@ const Engine = exports.Engine = function(options) {
     eng.replicateSock  = null;
     eng.active         = null;                   // update being processed
     eng.tickInterval   = null;                   // for magic ticks
+    eng.git            = options.git==='none' ? null : options.git;
 
     eng.chrjs.on('error',function(err)      {eng.emit(new VError(err,"chrjs: "));});
 
@@ -188,6 +190,22 @@ const Engine = exports.Engine = function(options) {
 
 util.inherits(Engine,events.EventEmitter);
 
+Engine.prototype.sanityCheck = function() { // performed just before starting
+    const eng = this;
+    if (eng.git) {
+        const branch = shell.exec(`git branch`,{cwd:eng.prevalenceDir,silent:true});
+        let       ok = false;
+        if (branch.code!==0)
+            throw new VError("prevalence dir %s is not in a repo",eng.prevalenceDir);
+        branch.stdout.split('\n').forEach((l)=>{
+            if (l==="* prevalence")
+                ok = true;
+        });
+        if (!ok)
+            throw new VError("git repo not in prevalence branch");
+    }
+};
+
 Engine.prototype.compile = function(source) {
     const eng = this;
     if (eng.sandbox===null) {
@@ -209,20 +227,32 @@ Engine.prototype.compile = function(source) {
 };
 
 Engine.prototype._saveWorld = function() {
+    const eng = this;
     // +++ prevalence.batch (i.e. we are currently using `state-NEW`) +++
-    const  dirCur = path.join(this.prevalenceDir,"state");
-    const  dirNew = path.join(this.prevalenceDir,"state-NEW");
-    const  dirOld = path.join(this.prevalenceDir,"state-OLD");
-    const syshash = this.hashes.putFileSync(path.join(dirCur,"/journal"));
+    const  dirCur = path.join(eng.prevalenceDir,"state");
+    const  dirNew = path.join(eng.prevalenceDir,"state-NEW");
+    const  dirOld = path.join(eng.prevalenceDir,"state-OLD");
+    const syshash = eng.hashes.putFileSync(path.join(dirCur,"/journal"));
+    const    root = {chrjs:eng.chrjs.getRoot(),git:eng.git};
     rmRF.sync(dirNew);
     fs.mkdirSync(dirNew);
     fs.writeFileSync( path.join(dirNew,"world"),  util.serialise(syshash)+'\n');
-    fs.appendFileSync(path.join(dirNew,"world"),  util.serialise(this.chrjs.getRoot())+'\n');
-    fs.writeFileSync( path.join(dirNew,"journal"),util.serialise([this.timestamp(),'previous',syshash])+'\n');
+    fs.appendFileSync(path.join(dirNew,"world"),  util.serialise(root)+'\n');
+    fs.writeFileSync( path.join(dirNew,"journal"),util.serialise([eng.timestamp(),'previous',syshash])+'\n');
     rmRF.sync(dirOld);
     fs.renameSync(dirCur,dirOld);
     fs.renameSync(dirNew,dirCur);
-    this.emit('saved',syshash);
+    if (eng.git) {
+        shell.exec("git add .",{cwd:eng.prevalenceDir});
+        shell.exec(`git commit -m "prevalence world save: ${syshash}"`,{cwd:eng.prevalenceDir});
+        if (eng.git==='push')
+            try {
+                shell.exec(`git push origin prevalence`,{cwd:eng.prevalenceDir});
+            } catch (err) {
+                console.log("failed to push changes",err);
+            }
+    }
+    eng.emit('saved',syshash);
     return syshash;
 };
 
@@ -318,6 +348,15 @@ Engine.prototype._init = function() {
         else
             throw err;
     }
+    if (eng.git) {
+        const exec = (cmd)=>shell.exec(cmd,{cwd:eng.prevalenceDir});
+        if (exec(`git rev-parse`).code===0)
+            throw new VError("prevalence dir %s is already in a repo",eng.prevalenceDir);
+        if (exec(`git init`).code!==0)
+            throw new VError("can't make prevalence dir %s a repo",eng.prevalenceDir);
+        if (exec(`git checkout -b prevalence`).code!==0)
+            throw new VError("can't make prevalence dir %s branch",eng.prevalenceDir);
+    }
 };
 
 Engine.prototype._ensureStateDir = function() { // after calling successfully, `state` might be loadable
@@ -354,8 +393,38 @@ Engine.prototype.init = function(data) {
     eng.syshash = eng._saveWorld();
 };
 
+Engine.prototype.initFromRepo = function(repo) {
+    const eng = this;
+    try {
+        fs.statSync(eng.prevalenceDir);
+        throw new VError("prevalence dir %s already exists, won't init",eng.prevalenceDir);
+    } catch (err) {
+        if (err.code!=='ENOENT') {
+            if (err.code!==undefined)
+                throw new VError(err,"prevalence dir %s odd, won't init",eng.prevalenceDir);
+            else
+                throw err;
+        }
+    }
+    const pbr = shell.exec("git rev-parse --quiet --verify prevalence",{silent:true});
+    if (pbr.code!==0)
+        throw new Error("can't find a prevalence branch");
+    fs.mkdirSync(eng.prevalenceDir);
+    if (shell.exec("git rev-parse",{cwd:eng.prevalenceDir,silent:true}).code===0)
+        throw new Error("prevalence dir %s already in a repo",eng.prevalenceDir);
+    const commit = pbr.stdout.trim();
+    console.log("initting from prevalence commit: %s",commit);
+    const    res = shell.exec("git clone "+
+                              "--branch prevalence "+
+                              "--single-branch "+
+                              `${repo} ${eng.prevalenceDir}`);
+    if (res.code!==0)
+        throw new VError("!!! failed:\n%s%s",res.stdout,res.stderr);
+};
+
 Engine.prototype.start = function(cb) {
     const eng = this;
+    eng.sanityCheck();
     lock.lockSync(path.join(eng.prevalenceDir,'lock'),eng.options);
     eng._makeHashes();
     if (cb) cb();
@@ -426,9 +495,12 @@ Engine.prototype._loadWorld = function() {
         case 1:
             eng.syshash = util.deserialise(line);
             return true;
-        case 2:
-            eng.chrjs.setRoot(util.deserialise(line));
+        case 2: {
+            const root = util.deserialise(line);
+            eng.chrjs.setRoot(root.chrjs);
+            eng.git = root.git;
             return false;
+        }
         default:
             eng.emit('error',new VError("bad number of lines in world file for: %s",eng.prevalenceDir));
             return false;

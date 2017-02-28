@@ -6,6 +6,7 @@ const   Engine = engine.Engine;
 const        _ = require("underscore");
 const   assert = require("chai").assert;
 const    sinon = require("sinon");
+const    shell = require("shelljs");
 const     temp = require('temp').track();
 const       fs = require('fs');
 const     path = require('path');
@@ -452,7 +453,7 @@ describe("Engine",function() {
                 io.i.write(['disconnect_me',{}]);
             });
         });
-        describe("schedules XXX",function(){
+        describe("schedules",function(){
             let eng,io,facts;
             before((done)=>{
                 eng = new Engine({dir:   temp.mkdirSync(),
@@ -688,6 +689,70 @@ describe("Engine",function() {
                 } catch (e) {done(e);}
             });
             eng.addConnection('test://admin',io);
+        });
+    });
+    describe("git prevalence backup",function(){
+        let   dir;
+        let   srv;
+        const git = (args,opts)=>shell.exec("git "+args,
+                                            _.extend({cwd:   srv.prevalenceDir,
+                                                      silent:true},
+                                                     opts));
+        after(()=>{
+            if (srv)
+                srv.kill();
+        });
+        it("won't init into an existing repo",function(done){
+            dir = temp.mkdirSync();
+            srv = new testutil.ExtServer('malaya',{prevalenceDir:path.join(dir,'.prevalence')});
+            this.timeout(10000);
+            assert.strictEqual(git("init",{cwd:dir}).code,0);
+            srv.init(['--git','commit','test/bl/null.chrjs'],(err)=>{
+                if (err)
+                    done();
+                else
+                    done(new Error(`--git init should fail against an existing repo`));
+            });
+        });
+        it("git inits a repo at init time",function(done){
+            dir = temp.mkdirSync();
+            srv = new testutil.ExtServer('malaya',{prevalenceDir:path.join(dir,'.prevalence')});
+            this.timeout(10000);
+            srv.init(['--git','commit','test/bl/null.chrjs'],done);
+        });
+        it("has an initial commit...",function(){
+            const log = git("log --oneline");
+            assert.strictEqual(log.code,0);
+            const lines = log.stdout.trim().split('\n');
+            assert.strictEqual(lines.length,1);
+            assert(/^[0-9a-f]+ prevalence world save: [0-9a-f]+$/.exec(lines[0]));
+        });
+        it("...in special branch",function(){
+            const branch = git("branch");
+            assert.strictEqual(branch.code,0);
+            const lines = branch.stdout.trim().split('\n');
+            assert.strictEqual(lines.length,1);
+            assert.strictEqual(lines[0],"* prevalence");
+        });
+        it("commits again when engine cycled",function(done){
+            this.timeout(10000);
+            srv.run(['test/bl/null.chrjs'],(err)=>{
+                if (err)
+                    done(err);
+                else {
+                    srv.proc.once('exit',()=>{
+                        const log = git("log --oneline");
+                        assert.strictEqual(log.code,0);
+                        const lines = log.stdout.trim().split('\n');
+                        assert.strictEqual(lines.length,2);
+                        lines.forEach((l)=>{
+                            assert(/^[0-9a-f]+ prevalence world save: [0-9a-f]+$/.exec(l));
+                        });
+                        done();
+                    });
+                    srv.kill('SIGINT');
+                }
+            });
         });
     });
 });

@@ -133,6 +133,22 @@ subcommands.init.addArgument(
     }
 );
 subcommands.init.addArgument(
+    ['--git'],
+    {
+        action:       'store',
+        choices:      ['commit','push'],
+        defaultValue: null,
+        help:         "git action on world save"
+    }
+);
+subcommands.init.addArgument(
+    ['--clone'],
+    {
+        action:       'store',
+        help:         "use the prevalence branch of named repo"
+    }
+);
+subcommands.init.addArgument(
     ['source'],
     {
         action:       'store',
@@ -206,6 +222,15 @@ subcommands.run.addArgument(
         defaultValue: false,
         help:         "run in debug mode",
         dest:         'debug'
+    }
+);
+subcommands.run.addArgument(
+    ['--git'],
+    {
+        action:       'store',
+        choices:      ['commit','push'],
+        defaultValue: null,
+        help:         "git action on world save"
     }
 );
 subcommands.run.addArgument(
@@ -570,24 +595,30 @@ exports.run = function(opts0,argv2) {
 
     subcommands.init.exec = function() {
         args.source = args.source || findSource();
-        const eng = createEngine({businessLogic:path.resolve(args.source)});
+        const eng = createEngine({
+            businessLogic:path.resolve(args.source),
+            git:          args.git});
         const  cb = findCallback();
-        eng.init();
-        eng.start();
-        if (args.data) {
-            eng.startPrevalence(function(err1) {
-                if (err1)
-                    cb(err1);
-                else
-                    eng.loadData(args.data,function(err2) {
-                        if (err2)
-                            cb(err2);
-                        else
-                            eng.stopPrevalence(false,function(err3) {
-                                cb(err3);
-                            });
-                    });
-            });
+        if (args.clone)
+            eng.initFromRepo(args.clone);
+        else {
+            eng.init();
+            eng.start();
+            if (args.data) {
+                eng.startPrevalence(function(err1) {
+                    if (err1)
+                        cb(err1);
+                    else
+                        eng.loadData(args.data,function(err2) {
+                            if (err2)
+                                cb(err2);
+                            else
+                                eng.stopPrevalence(false,function(err3) {
+                                    cb(err3);
+                                });
+                        });
+                });
+            }
         }
     };
 
@@ -610,6 +641,7 @@ exports.run = function(opts0,argv2) {
         const  options = {businessLogic:   source,
                           admin:           args.admin,
                           debug:           args.debug,
+                          git:             args.git,
                           ports:           {http:args.webPort},
                           magic:           args.auto,
                           masterUrl:       args.masterUrl,
