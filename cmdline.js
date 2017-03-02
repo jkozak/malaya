@@ -677,8 +677,12 @@ exports.run = function(opts0,argv2) {
             console.log("loaded: %s",syshash);
         });
         eng.start();
-        if (args.debug)
+        if (args.debug) {
             traceChrjs(eng.chrjs,source);
+            eng.on('out',(dest,data)=>{
+                console.log("< %j %j",dest,data);
+            });
+        }
         installSignalHandlers(eng);
         eng.become(args.mode);
     };

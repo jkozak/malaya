@@ -850,6 +850,8 @@ Engine.prototype.broadcast = function(js,type,cb) {
 
 Engine.prototype.out = function(dest,json) {
     const eng = this;
+    if (eng.options.debug)
+        eng.emit('out',dest,json);
     if (json===null)
         ;           // discard
     else if (dest==='all') {

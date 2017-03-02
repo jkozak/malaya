@@ -250,7 +250,7 @@ if (util.env==='test')  {
             if (m && m[1]==='master')
                 cb();
             if (srv.noisy)
-                console.log("ExtServer: %j",line);
+                console.log(line);
         });
     };
     ExtServer.prototype.kill = function(sig) {
