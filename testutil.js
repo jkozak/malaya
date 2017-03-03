@@ -207,7 +207,7 @@ if (util.env==='test')  {
     };
     ExtServer.prototype._spawn = function(subcommand,args) {
         const srv = this;
-        return cp.spawn("/usr/bin/node",
+        return cp.spawn("node",
                         [srv.serverJs,
                          '-p',srv.prevalenceDir
                         ].concat(
