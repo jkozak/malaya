@@ -1,0 +1,21 @@
+From: John Kozak
+Date: Mon, 06 Mar 2017 13:13:39 +0000
+State: resolved
+Subject: free head rules not being scheduled correctly
+Message-Id: <d39b9ba62abfac87-0-artemis@renn>
+resolution: fixed
+
+e.g.
+#+BEGIN_SRC malaya
+ rule (-[head,{...fields},{port}],
+        ['session',{port,user,...}],
+       +[head,{...fields},{port,user}] );
+ rule (-[head,{...},{port}]);
+
+ rule (-['idea',{...},{port,user}],
+        ['account',{name:user,roles,...}],
+        roles.indexOf('submitter')===-1,
+        out(port,['error',{msg:"we don't want your idea"}]) );
+#+END_SRC
+
+doesn't work because the first two rules don't get scheduled for head 'idea'.

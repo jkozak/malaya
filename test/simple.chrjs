@@ -611,4 +611,14 @@ describe("regression tests",function() {
     it("should have no truck with indeterminacy [9712887252654d96]",function(){
         assert.throws(function(){Math.random();});
     });
+    it("should schedule free heads correctly [d39b9ba62abfac87] XXX",function(){
+        const st = store {
+            rule (-[head,{...xs},{port}],
+                  +[head,{...xs},{port,user:'???'}]);
+            rule (-['test',{...},{user:'???',...}]);
+        };
+        assert.strictEqual(st._private.orderedFacts.length,0);
+        st.add(['test',{},{port:'t://2'}]);
+        assert.strictEqual(st._private.orderedFacts.length,0);
+    });
 });

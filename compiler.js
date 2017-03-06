@@ -1304,13 +1304,16 @@ function generateJS(js,what) {
         },
                              {strict:false});
 
+        // `dispatchGeneric` will match any unseen heads (and so will
+        // be used to build the `default:` case) but also to initialise a newly
+        // seen head as previous free heads must be tried first.
         var dispatchBranches = {};                    // used to build the `_add` function below
         var  dispatchGeneric = [];
         var     noteDispatch = function(item,r,i) {
             if (item.type==='ArrayExpression' && item.elements.length>0 && item.elements[0].type=='Literal') {
                 assert.equal(typeof item.elements[0].value,'string'); // +++ think about numbers here +++
                 if (dispatchBranches[item.elements[0].value]===undefined)
-                    dispatchBranches[item.elements[0].value] = [[r,i]];
+                    dispatchBranches[item.elements[0].value] = dispatchGeneric.concat([[r,i]]);
                 else
                     dispatchBranches[item.elements[0].value].push([r,i]);
             } else {
