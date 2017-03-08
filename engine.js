@@ -99,7 +99,7 @@ exports.makeInertChrjs = function(opts) {
     return obj;
 };
 
-const knownMagic = ['_tick','_restart','_take-output','_connect','_disconnect'];
+const knownMagic = ['_tick','_restart','_take-outputs','_connect','_disconnect'];
 
 const Engine = exports.Engine = function(options) {
     events.EventEmitter.call(this);
@@ -113,7 +113,7 @@ const Engine = exports.Engine = function(options) {
     options.ports      = options.ports || {http:3000};
     options.bundles    = options.bundles || {};
     options.minify     = options.minify===undefined ? util.env!=='test' : options.minify;
-    options.magic      = options.magic || {_tick:1000,_restart:true,'_take-output':true};
+    options.magic      = options.magic || {_tick:1000,_restart:true,'_take-outputs':true};
 
     options.createHttp = options.createHttpServer || www.createServer;
 
@@ -905,7 +905,7 @@ Engine.prototype.update = function(data,cb) {
     const done2 = _.after(2,function() {
         res.adds.forEach(function(t) {
             const add = res.refs[t];
-            if (add[0]==='_output') {
+            if (eng.options.magic['_take-outputs'] && add[0]==='_output') {
                 if (add.length!==3)
                     eng.emit('error',util.format("bad _output: %j",add));
                 else
@@ -918,6 +918,8 @@ Engine.prototype.update = function(data,cb) {
     eng.journalise('update',data,done2);
     eng.active = data;
     res        = eng.chrjs.update(data);
+    // +++ we don't need to journalise if no changes!
+    // +++ extend `res` to track non-deterministic calls
     done2();
 };
 

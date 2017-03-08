@@ -332,7 +332,7 @@ describe("Engine",function() {
     describe("#addConnection using `_output` pseudo-fact",function() {
         it("sends input, receives output",function(done) {
             const eng = new Engine({dir:           temp.mkdirSync(),
-                                  businessLogic: path.join(__dirname,'bl','output.chrjs') });
+                                    businessLogic: path.join(__dirname,'bl','output.chrjs') });
             const  io = createIO();
             eng.init();
             eng.start();
