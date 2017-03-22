@@ -1,0 +1,10 @@
+From: John Kozak
+Date: Wed, 01 Mar 2017 09:34:38 +0000
+Subject: Re: if --git push, always try to set origin
+Message-Id: <80dd67340503fea4-a9f37e2596e80c6e-artemis@renn>
+References: <80dd67340503fea4-0-artemis@renn>
+In-Reply-To: <80dd67340503fea4-0-artemis@renn>
+
+Also. should do `git push origin prevalence:<remote>/prevalence` if pushing
+
+Whence remote names?

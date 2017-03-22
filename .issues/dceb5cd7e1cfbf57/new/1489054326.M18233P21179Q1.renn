@@ -1,0 +1,19 @@
+From: John Kozak
+Date: Thu, 09 Mar 2017 09:57:31 +0000
+State: new
+Subject: mechanism to add new out port to engine
+Message-Id: <dceb5cd7e1cfbf57-0-artemis@renn>
+
+An output port, sql: for executing SQL statements
+
+e.g.:
+
+#+BEGIN_SRC malaya
+   out('sql:',{sql:"INSERT ideas VALUES($user,$title)",user:'jim',title:"bigger teeth"})
+#+END_SRC
+
+Make this a general mechanism on engine:
+#+BEGIN_SRC javascript
+   eng.addOutPort(port,fn);   // fn(<json>)
+   // +++ or just override eng.out? +++
+#+END_SRC

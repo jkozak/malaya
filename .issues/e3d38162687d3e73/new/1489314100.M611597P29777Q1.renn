@@ -1,0 +1,12 @@
+From: John Kozak
+Date: Sun, 12 Mar 2017 10:18:11 +0000
+State: new
+Subject: add mechanism for saving links in hash stores
+Message-Id: <e3d38162687d3e73-0-artemis@renn>
+
+filesystem-friendly way for adding type info to a hash store:
+ - add file
+ - create link to file with extension
+
+Needs a commitment to make it continue working if (as we should) we
+add multi-level directory stores.

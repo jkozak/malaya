@@ -1,0 +1,7 @@
+From: John Kozak
+Date: Sat, 18 Mar 2017 13:27:46 +0000
+State: new
+Subject: matching [...first,middle,...last] doesn't work
+Message-Id: <e137f66b1ee0ae3c-0-artemis@renn>
+
+Should generate all possible candidate matches for first,middle,last.

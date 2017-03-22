@@ -1,0 +1,8 @@
+From: John Kozak
+Date: Tue, 28 Feb 2017 17:30:41 +0000
+Subject: --inert option to init
+State: new
+Message-Id: <ac93bdbc99baaa4e-0-artemis@renn>
+
+To just use a null malaya program and save the cost of compilign when testing.
+
