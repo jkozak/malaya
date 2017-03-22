@@ -866,7 +866,7 @@ function genMatch(term,genRest,bIdFact) { // genRest() >> [stmt,...]; returns Bl
             break;
         case 'MemberExpression': {
             if (term.computed)
-                throw new Error("NYI: computed member: %j",term);
+                throw new VError("NYI: computed member: %j",term);
             var root;
             for (root=term;root.type==='MemberExpression';root=root.object)
                 ;

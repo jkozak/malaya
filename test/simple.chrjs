@@ -611,7 +611,7 @@ describe("regression tests",function() {
     it("should have no truck with indeterminacy [9712887252654d96]",function(){
         assert.throws(function(){Math.random();});
     });
-    it("should schedule free heads correctly [d39b9ba62abfac87] XXX",function(){
+    it("should schedule free heads correctly [d39b9ba62abfac87]",function(){
         const st = store {
             rule (-[head,{...xs},{port}],
                   +[head,{...xs},{port,user:'???'}]);

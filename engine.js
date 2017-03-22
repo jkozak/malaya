@@ -919,6 +919,7 @@ Engine.prototype.update = function(data,cb) {
     eng.active = data;
     res        = eng.chrjs.update(data);
     // +++ we don't need to journalise if no changes!
+    // +++ i.e. only one deletion, the incoming item
     // +++ extend `res` to track non-deterministic calls
     done2();
 };
