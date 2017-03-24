@@ -1,0 +1,14 @@
+From: John Kozak
+Date: Fri, 24 Mar 2017 16:31:55 +0000
+Subject: Re: mechanism to add new out port to engine
+Message-Id: <dceb5cd7e1cfbf57-c2fee6bbd0b87da2-artemis@renn>
+References: <dceb5cd7e1cfbf57-0-artemis@renn>
+In-Reply-To: <dceb5cd7e1cfbf57-0-artemis@renn>
+
+Actually went with the start of a plugin architecture:
+
+#+BEGIN_SRC javascript
+   eng.addPlugin('twiddle',{out:(js)=>{
+       // +++
+       }});
+#+END_SRC

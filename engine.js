@@ -139,8 +139,9 @@ const Engine = exports.Engine = function(options) {
     eng.active         = null;                   // update being processed
     eng.tickInterval   = null;                   // for magic ticks
     eng.git            = options.git==='none' ? null : options.git;
+    eng.plugins        = {};
 
-    eng.chrjs.on('error',function(err)      {eng.emit(new VError(err,"chrjs: "));});
+    eng.chrjs.on('error',(err)=>eng.emit('error',new VError(err,"chrjs: ")));
 
     const magic = eng.options.magic;
     Object.keys(magic).forEach((m)=>{
@@ -357,6 +358,7 @@ Engine.prototype._init = function() {
         if (exec(`git checkout -b prevalence`).code!==0)
             throw new VError("can't make prevalence dir %s branch",eng.prevalenceDir);
     }
+    eng.emit('init');
 };
 
 Engine.prototype._ensureStateDir = function() { // after calling successfully, `state` might be loadable
@@ -849,7 +851,8 @@ Engine.prototype.broadcast = function(js,type,cb) {
 };
 
 Engine.prototype.out = function(dest,json) {
-    const eng = this;
+    const        eng = this;
+    const pluginPort = 'plugin:';
     if (eng.options.debug)
         eng.emit('out',dest,json);
     if (json===null)
@@ -890,6 +893,13 @@ Engine.prototype.out = function(dest,json) {
             }
         else
             console.log("bad server _msg: %j",json);
+    } else if (dest.startsWith(pluginPort)) {
+        const name   = dest.slice(pluginPort.length);
+        const plugin = eng.plugins[name];
+        if (!plugin)
+            eng.emit('error',`unknown plugin: ${name}`);
+        else
+            plugin.out(json);
     } else {
         const d = eng.conns[dest];
         if (d)
@@ -1277,6 +1287,16 @@ Engine.prototype.administer = function(port) {
             }
         }
     });
+};
+
+Engine.prototype.addPlugin = function(name,opts) {
+    const eng = this;
+    if (!opts)
+        opts = require(`./plugins/${name}`);
+    if (typeof opts.out!=='function')
+        eng.emit('error',`plugin ${name} does not define an out handler`);
+    eng.plugins[name] = opts;
+    opts.update       = (js,cb)=>eng.update([js[0],js[1],{port:`plugin:${name}`}],cb);
 };
 
 exports.Engine  = Engine;

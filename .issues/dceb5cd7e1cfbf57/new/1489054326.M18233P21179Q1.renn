@@ -1,8 +1,9 @@
 From: John Kozak
 Date: Thu, 09 Mar 2017 09:57:31 +0000
-State: new
+State: resolved
 Subject: mechanism to add new out port to engine
 Message-Id: <dceb5cd7e1cfbf57-0-artemis@renn>
+resolution: fixed
 
 An output port, sql: for executing SQL statements
 

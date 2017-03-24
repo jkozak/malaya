@@ -755,4 +755,26 @@ describe("Engine",function() {
             });
         });
     });
+    describe("plugin",function(){
+        const opts = {};
+        let    eng;
+        before(()=>{
+            eng = new Engine({dir:           temp.mkdirSync(),
+                              businessLogic: path.join(__dirname,'bl','null.chrjs') });
+        });
+        it("provides special out destination",function(done) {
+            const jsOut = {op:'munge',data:[3,4,5]};
+            opts.out = (js)=>{
+                assert.deepEqual(js,jsOut);
+                done();
+            };
+            eng.addPlugin('twiddle',opts);
+            eng.init();
+            eng.start();
+            eng.out('plugin:twiddle',jsOut);
+        });
+        it("installs an update function",function(){
+            assert.strictEqual(typeof opts.update,'function');
+        });
+    });
 });
