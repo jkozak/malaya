@@ -328,6 +328,27 @@ describe("Engine",function() {
                 });
             });
         });
+        it("loads many items from a jsonl file",function(done) {
+            const   dir = temp.mkdirSync();
+            const   eng = new Engine({dir:dir});
+            const  data = [['abc',{a:1}],['def',{d:4}]];
+            const   dfn = path.join(dir,'data.jsonl');
+            const     n = 60;
+            for (let i=0;i<60;i++)
+                fs.writeFileSync(dfn,JSON.stringify([data,{value:i}])+'\n',{flag:'a'});
+            eng.init();
+            eng.start();
+            eng.startPrevalence(function(err) {
+                assert(!err);
+                assert.strictEqual(eng.chrjs._private.orderedFacts.length,0);
+                eng.loadData(dfn,function(err1) {
+                    if (err1)
+                        throw err1;
+                    assert.strictEqual(eng.chrjs._private.orderedFacts.length,n);
+                    eng.stopPrevalence(true,done);
+                });
+            });
+        });
     });
     describe("#addConnection using `_output` pseudo-fact",function() {
         it("sends input, receives output",function(done) {

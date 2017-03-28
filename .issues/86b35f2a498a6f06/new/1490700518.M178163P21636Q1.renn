@@ -1,0 +1,7 @@
+From: John Kozak
+Date: Tue, 28 Mar 2017 12:28:38 +0100
+Subject: init from stdin gives up prematurely
+State: resolved
+Message-Id: <86b35f2a498a6f06-0-artemis@renn>
+resolution: fixed
+
