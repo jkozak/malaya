@@ -1,8 +1,9 @@
 From: John Kozak
 Date: Tue, 21 Mar 2017 10:48:07 +0000
-State: new
+State: resolved
 Subject: pattern match doesn't check for list before destructuring
 Message-Id: <bc841c0252655e1c-0-artemis@renn>
+resolution: fixed
 
 e.g.:
 

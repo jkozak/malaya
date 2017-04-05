@@ -816,6 +816,10 @@ function genMatch(term,genRest,bIdFact) { // genRest() >> [stmt,...]; returns Bl
                     visit(prop,path.concat(prop.key.name));
                 }
             }
+            // check that this actually is an object (see note about order below)
+            // +++ what about null? +++
+            bools.push(genEqual(b.unaryExpression('typeof',genAccessor(bIdFact,path)),
+                                b.literal('object')) );
             break;
         }
         case 'ArrayExpression': {
@@ -832,12 +836,18 @@ function genMatch(term,genRest,bIdFact) { // genRest() >> [stmt,...]; returns Bl
                 }
                 visit(term.elements[i],path.concat(i));
             }
+            //N.B. `bools` are generated in reverse order
             // gen check that enough elements are offered
             bools.push(b.binaryExpression(rest_bound ? '>=' : '===',
                                           b.memberExpression(genAccessor(bIdFact,path),
                                                              b.identifier('length'),
                                                              false),
                                           b.literal(min_size) ));
+            // check is actually an array [bc841c0252655e1c]
+            bools.push(b.callExpression(b.memberExpression(b.identifier('Array'),
+                                                           b.identifier('isArray'),
+                                                           false),
+                                        [genAccessor(bIdFact,path)] ));
             break;
         }
         case 'Literal':

@@ -1,0 +1,8 @@
+From: John Kozak
+Date: Wed, 05 Apr 2017 14:46:31 +0100
+Subject: Re: pattern match doesn't check for list before destructuring
+Message-Id: <bc841c0252655e1c-9eeb55cd6cd89642-artemis@renn>
+References: <bc841c0252655e1c-0-artemis@renn>
+In-Reply-To: <bc841c0252655e1c-0-artemis@renn>
+
+Also applied to objects, also fixed

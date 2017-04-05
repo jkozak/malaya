@@ -621,4 +621,28 @@ describe("regression tests",function() {
         st.add(['test',{},{port:'t://2'}]);
         assert.strictEqual(st._private.orderedFacts.length,0);
     });
+    it("should handle array destructuring in match safely [bc841c0252655e1c] XXX",function(){
+        var st = store {
+            rule (-['p',{b:[...bs]}]);
+        };
+        assert.strictEqual(st._private.orderedFacts.length,0);
+        st.add(['p',{b:[1]}]);
+        assert.strictEqual(st._private.orderedFacts.length,0);
+        st.add(['p',{b:[1]}]);
+        assert.strictEqual(st._private.orderedFacts.length,0);
+        st.add(['p',{}]);
+        assert.strictEqual(st._private.orderedFacts.length,1);
+    });
+    it("should handle object destructuring in match safely [bc841c0252655e1c] XXX",function(){
+        var st = store {
+            rule (-['p',{b:{}}]);
+        };
+        assert.strictEqual(st._private.orderedFacts.length,0);
+        st.add(['p',{b:{}}]);
+        assert.strictEqual(st._private.orderedFacts.length,0);
+        st.add(['p',{b:{a:1}}]);
+        assert.strictEqual(st._private.orderedFacts.length,1);
+        st.add(['p',{b:0}]);
+        assert.strictEqual(st._private.orderedFacts.length,2);
+    });
 });
