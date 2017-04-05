@@ -621,7 +621,7 @@ describe("regression tests",function() {
         st.add(['test',{},{port:'t://2'}]);
         assert.strictEqual(st._private.orderedFacts.length,0);
     });
-    it("should handle array destructuring in match safely [bc841c0252655e1c] XXX",function(){
+    it("should handle array destructuring in match safely [bc841c0252655e1c]",function(){
         var st = store {
             rule (-['p',{b:[...bs]}]);
         };
@@ -633,7 +633,7 @@ describe("regression tests",function() {
         st.add(['p',{}]);
         assert.strictEqual(st._private.orderedFacts.length,1);
     });
-    it("should handle object destructuring in match safely [bc841c0252655e1c] XXX",function(){
+    it("should handle object destructuring in match safely [bc841c0252655e1c]",function(){
         var st = store {
             rule (-['p',{b:{}}]);
         };
