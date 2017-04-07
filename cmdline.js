@@ -680,7 +680,10 @@ exports.run = function(opts0,argv2) {
         if (args.debug) {
             traceChrjs(eng.chrjs,source);
             eng.on('out',(dest,data)=>{
-                console.log("< %j %j",dest,data);
+                const n = 80;   // max length of output to show
+                const s = JSON.stringify(data);
+                const r = s.length>n ? '...' : '';
+                console.log("< %j %s%s",dest,s.slice(0,n),r);
             });
         }
         installSignalHandlers(eng);
