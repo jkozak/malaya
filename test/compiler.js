@@ -474,9 +474,7 @@ describe("second pass of new compiler",function() {
 });
 
 describe("mangle",function() {
-    var    pass1 = compiler._private.annotateParse1;
-    var    pass2 = compiler._private.annotateParse2;
-    var   mangle = function(js) {return compiler._private.mangle(pass2(pass1(js)));};
+    var  mangle = compiler.annotate;
     it("should translate user variable names to something safe",function() {
         var  ast = parse("var a;");
         var ast1 = mangle(ast);

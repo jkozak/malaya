@@ -633,12 +633,20 @@ function mangle(js) {           // `js` must have been previously annotated
                 this.traverse(path);
             else {
                 this.visit(path.get('object'));
-                return false
+                return false;
             }
         }
     });
     return js;
 }
+
+exports.annotate = function(ast){
+    return mangle(annotateParse2(annotateParse1(ast)));
+};
+exports.parseFile = function(fn){
+    return exports.annotate(parse(fn));
+};
+exports.visit = parser.visit;
 
 function insertCode(chrjs,replaces,opts) {
     var js = deepClone(chrjs);
