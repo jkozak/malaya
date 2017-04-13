@@ -6,6 +6,7 @@
 .bash_history
 
 *.chrjs.js
+*.chrjs.json
 
 node_modules/
 .prevalence/

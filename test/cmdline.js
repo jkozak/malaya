@@ -89,6 +89,10 @@ describe("cmdline",function() {
             });
         });
     });
+    describe("compile",function() {
+    });
+    describe("parse",function() {
+    });
     describe("init",function() {
         it("builds the prevalence directory structure",function() {
             const dir = temp.mkdirSync();
@@ -196,6 +200,22 @@ describe("cmd line interface [slow]",function() {
     const ports = {};
     //N.B. use "node malaya" in these tests (rather than ./malaya) to
     //     get something that should work on linux and windows.
+    it("parses to stdout",function(done) {
+        child.exec("node malaya parse -c test/bl/count.chrjs",
+                   {},
+                   (code,stdout,stderr)=>{
+                       if (code!==null)
+                           done(new VError("`malaya parse` failed code: %j",code));
+                       else {
+                           try {
+                               JSON.parse(stdout);
+                               done();
+                           } catch (e) {
+                               done(e);
+                           }
+                       }
+                   });
+    });
     it("inits prevalence store",function(done) {
         this.timeout(10000);
         child.exec(util.format("node malaya -p %j init",pdir),
@@ -203,8 +223,6 @@ describe("cmd line interface [slow]",function() {
                    (code,stdout,stderr)=>{
                        if (code!==null)
                            done(new VError("`malaya init` failed code: %j",code));
-                       else if (code!==null)
-                           done(new VError("failed code: %j",code));
                        else if (!fs.statSync(pdir).isDirectory())
                            done(new VError("prevalence dir not created"));
                        else

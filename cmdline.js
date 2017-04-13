@@ -106,6 +106,51 @@ subcommands.compile.addArgument(
     }
 );
 
+addSubcommand('client',{addHelp:true});
+subcommands.client.addArgument(
+    ['-a','--admin'],
+    {
+        action:       'storeConst',
+        constant:     'admin',
+        dest:         'urlPath',
+        help:         "connect to an admin stream"
+    }
+);
+subcommands.client.addArgument(
+    ['-n','--noninteractive'],
+    {
+        action:       'store',
+        nargs:        0,
+        help:         "just stream the output, ignore input"
+    }
+);
+subcommands.client.addArgument(
+    ['-r','--replication'],
+    {
+        action:       'storeConst',
+        constant:     'replication/journal',
+        dest:         'urlPath',
+        help:         "connect to a replication stream"
+    }
+);
+subcommands.client.addArgument(
+    ['url'],
+    {
+        action:       'store',
+        nargs:        '?',
+        help:         "URL to connect to: `ws://<host>:<port>/<path>`"
+    }
+);
+
+addSubcommand('dump',{addHelp:true});
+subcommands.dump.addArgument(
+    ['-s','--serialise'],
+    {
+        action:       'storeTrue',
+        help:         "use malaya extended JSON serialisation format"
+    }
+);
+
 addSubcommand('exec',{addHelp:true});
 subcommands.exec.addArgument(
     ['-D','--debug'],
@@ -165,6 +210,26 @@ subcommands.kill.addArgument(
         nargs:        '?',
         help:         "signal to send",
         defaultValue: 'SIGQUIT'
+    }
+);
+
+addSubcommand('logs',{addHelp:true});
+
+addSubcommand('parse',{addHelp:true});
+subcommands.parse.addArgument(
+    ['-c','--stdout'],
+    {
+        action:       'storeTrue',
+        defaultValue: false,
+        help:         "output to stdout",
+        dest:         'stdout'
+    }
+);
+subcommands.parse.addArgument(
+    ['source'],
+    {
+        action:       'store',
+        help:         "chrjs source file to parse"
     }
 );
 
@@ -282,6 +347,8 @@ subcommands.run.addArgument(
 
 addSubcommand('save',{addHelp:true});
 
+addSubcommand('status',{addHelp:true});
+
 addSubcommand('transform',{addHelp:true});
 subcommands.transform.addArgument(
     ['-D','--debug'],
@@ -307,56 +374,6 @@ subcommands.transform.addArgument(
         help:         "chrjs source file for transform"
     }
 );
-
-addSubcommand('status',{addHelp:true});
-
-addSubcommand('dump',{addHelp:true});
-subcommands.dump.addArgument(
-    ['-s','--serialise'],
-    {
-        action:       'storeTrue',
-        help:         "use malaya extended JSON serialisation format"
-    }
-);
-
-addSubcommand('client',{addHelp:true});
-subcommands.client.addArgument(
-    ['-a','--admin'],
-    {
-        action:       'storeConst',
-        constant:     'admin',
-        dest:         'urlPath',
-        help:         "connect to an admin stream"
-    }
-);
-subcommands.client.addArgument(
-    ['-n','--noninteractive'],
-    {
-        action:       'store',
-        nargs:        0,
-        help:         "just stream the output, ignore input"
-    }
-);
-subcommands.client.addArgument(
-    ['-r','--replication'],
-    {
-        action:       'storeConst',
-        constant:     'replication/journal',
-        dest:         'urlPath',
-        help:         "connect to a replication stream"
-    }
-);
-subcommands.client.addArgument(
-    ['url'],
-    {
-        action:       'store',
-        nargs:        '?',
-        help:         "URL to connect to: `ws://<host>:<port>/<path>`"
-    }
-);
-
-
-addSubcommand('logs',{addHelp:true});
 
 
 // now dispatch the subcommand
@@ -630,6 +647,16 @@ exports.run = function(opts0,argv2) {
                 sig = 'SIG'+sig;
         }
         kill(sig);
+    };
+
+    subcommands.parse.exec = function() {
+        const compiler = require('./compiler.js');
+        args.source = args.source || findSource();
+        const out = JSON.stringify(compiler.parseFile(args.source));
+        if (args.stdout)
+            process.stdout.write(out);
+        else
+            fs.writeFileSync(args.source+'.json',out);
     };
 
     subcommands.run.exec = function() {

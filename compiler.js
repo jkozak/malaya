@@ -643,8 +643,9 @@ function mangle(js) {           // `js` must have been previously annotated
 exports.annotate = function(ast){
     return mangle(annotateParse2(annotateParse1(ast)));
 };
-exports.parseFile = function(fn){
-    return exports.annotate(parse(fn));
+exports.parseFile = function(filename){
+    var code = fs.readFileSync(filename,'utf8').replace(/\t/g,'        ');
+    return exports.annotate(parser.parse(code,{loc:true,attrs:true}));
 };
 exports.visit = parser.visit;
 
@@ -668,7 +669,7 @@ function insertCode(chrjs,replaces,opts) {
                 }
             }
             return false;
-        },
+        }
     });
     if (opts.strict) {
         var ds = _.difference(Object.keys(replaces),Object.keys(rs));
