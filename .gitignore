@@ -18,3 +18,5 @@ doc/*.png
 doc/*.html
 
 npm-debug.log
+
+.tern-port
