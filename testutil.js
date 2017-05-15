@@ -389,7 +389,8 @@ if (util.env==='test')  {
         if (ws.srv===null)
             throw new Error("can't do `call`, server unknown");
         ws.queue.push(()=>{
-            ws.srv.call((facts)=>assert(fn(facts)),(err)=>{
+            ws.srv.call((facts)=>assert(fn(facts),util.format("assert failed, facts: %j",facts)),
+                        (err)=>{
                 if (err)
                     throw err;
                 else
