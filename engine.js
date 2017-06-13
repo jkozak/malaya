@@ -282,25 +282,6 @@ Engine.prototype.stop = function(unlock,cb) {
     if (cb) cb();
 };
 
-Engine.prototype._ensureStateDirectory = function() {
-    try {
-        fs.statSync(path.join(this.prevalenceDir,'state'));
-    } catch (err1) {
-        try {
-            fs.renameSync(path.join(this.prevalenceDir,'state-NEW'),path.join(this.prevalenceDir,'state'));
-            return true;
-        } catch (err2) {
-            try {
-                fs.renameSync(path.join(this.prevalenceDir,'state-OLD'),path.join(this.prevalenceDir,'state'));
-                return true;
-            } catch (err3) {
-                this.emit('error',new Error("can't find a state dir to open"));
-            }
-        }
-    }
-    return false;
-};
-
 Engine.prototype.loadData = function(data,cb) {
     const eng = this;
     if (/.json$/.test(data)) {      // single json array-of-arrays
@@ -391,10 +372,46 @@ Engine.prototype._makeHashes = function() {
     this.hashes = hash(util.hashAlgorithm).makeStore(path.join(this.prevalenceDir,'hashes'));
 };
 
+Engine.prototype._overwriteExisting = function() {
+    const eng = this;
+    if (eng.options.overwrite) {
+        const jrnlFile = path.join(eng.prevalenceDir,'state','journal');
+        try {
+            fs.statSync(eng.prevalenceDir);
+        } catch (err) {
+            if (err.code!=='ENOENT')
+                throw new VError(err,"trouble with prevalence dir");
+            return false;
+        }
+        try {
+            eng._ensureStateDir();
+            eng._makeHashes();
+            fs.writeFileSync(jrnlFile,util.serialise([eng.timestamp(),'term',{}])+'\n');
+            eng.hashes.putFileSync(jrnlFile);
+        } catch (err) {
+            if (err.code!=='ENOENT')
+                throw new VError(err,"trouble with state dir");
+        }
+        try {
+            rmRF.sync(path.join(eng.prevalenceDir,'state-OLD'));
+        } catch (e) {/* eslint no-empty:0 */}
+        try {
+            rmRF.sync(path.join(eng.prevalenceDir,'state-NEW'));
+        } catch (e) {/* eslint no-empty:0 */}
+        try {
+            rmRF.sync(path.join(eng.prevalenceDir,'state'));
+        } catch (e) {/* eslint no-empty:0 */}
+        fs.mkdirSync(path.join(eng.prevalenceDir,'state'));
+        return true;
+    }
+    return false;
+};
+
 Engine.prototype.init = function(data) {
     const      eng = this;
     const jrnlFile = path.join(eng.prevalenceDir,'state','journal');
-    eng._init();
+    if (!eng._overwriteExisting())
+        eng._init();
     eng._ensureStateDir();
     eng._makeHashes();
     fs.writeFileSync(jrnlFile,util.serialise([eng.timestamp(),'init',eng.options])+'\n');

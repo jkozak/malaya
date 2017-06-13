@@ -44,13 +44,24 @@ describe("Engine",function() {
             fs.statSync(path.join(dir,'.prevalence','state','journal'));
             fs.statSync(path.join(dir,'.prevalence','state','world'));
         });
-        it("won't initialise over existing dir",function() {
+        it("won't initialise over existing dir by default",function() {
             const  dir = temp.mkdirSync();
             const  eng = new Engine({dir:dir});
             fs.mkdirSync(path.join(dir,'.prevalence'));
             assert.throws(function() {
                 eng.init();
             });
+        });
+        it("will initialise over existing dir if asked",function() {
+            const  dir = temp.mkdirSync();
+            const hdir = path.join(dir,'.prevalence','hashes');
+            let    eng = new Engine({dir:dir});
+            eng.init();
+            fs.statSync(path.join(dir,'.prevalence'));
+            assert.strictEqual(fs.readdirSync(hdir).length,1); // init saves world
+            eng = new Engine({dir:dir,overwrite:true});
+            eng.init();
+            assert.strictEqual(fs.readdirSync(hdir).length,3); // 2 init saves and the term journal
         });
         it("won't start without initialising",function() {
             const dir = temp.mkdirSync();

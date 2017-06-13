@@ -194,6 +194,14 @@ subcommands.init.addArgument(
     }
 );
 subcommands.init.addArgument(
+    ['--overwrite'],
+    {
+        action:       'storeTrue',
+        defaultValue: false,
+        help:         "reinit an existing prevalence directory"
+    }
+);
+subcommands.init.addArgument(
     ['source'],
     {
         action:       'store',
@@ -612,9 +620,12 @@ exports.run = function(opts0,argv2) {
 
     subcommands.init.exec = function() {
         args.source = args.source || findSource();
+        if ((args.git || args.clone) && args.overwrite)
+            throw new VError("git/clone and overwrite don't mix");
         const eng = createEngine({
             businessLogic:path.resolve(args.source),
-            git:          args.git});
+            git:          args.git,
+            overwrite:    args.overwrite});
         const  cb = findCallback();
         if (args.clone)
             eng.initFromRepo(args.clone);
