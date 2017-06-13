@@ -1,0 +1,7 @@
+From: John Kozak
+Date: Mon, 12 Jun 2017 20:59:42 +0100
+State: new
+Subject: Add system state to bitcoin blockchain at world save
+Message-Id: <e7535bbe48df2f18-0-artemis@renn>
+
+keybase.io do this: https://keybase.io/docs/server_security/merkle_root_in_bitcoin_blockchain
