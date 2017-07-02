@@ -1,7 +1,4 @@
 {
-    "ecmaFeatures": {
-        "jsx":true
-    },
     "parser": "espree",
     "env": {
         "browser": false,
@@ -11,11 +8,6 @@
         "jasmine": false,
         "es6":true
     },
-
-    "plugins": [
-        "react"
-    ],
-
     "rules": {
         "no-alert": 2,
         "no-array-constructor": 2,

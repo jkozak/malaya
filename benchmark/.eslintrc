@@ -1,0 +1,15 @@
+// -*- mode: json -*-
+{
+    "env": {
+        "mocha":true
+    },
+    "globals":{
+        "bench":false,
+        "set":false
+        "suite":false,
+    },
+    "rules": {
+        "no-unused-vars":1,
+        "no-constant-condition":0
+    }
+}

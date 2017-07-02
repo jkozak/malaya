@@ -1,3 +1,8 @@
+"use strict";
+/*eslint-env browser */
+/*eslint no-var:0 */
+/*eslint no-unused-vars:0 */
+
 var ws = new WebSocket('ws://localhost:3001', 'echo-protocol');
 
 function sendMessage(){
@@ -6,18 +11,18 @@ function sendMessage(){
 }
 
 function startKernel(){
- 	var message = 'start-kernel';
- 	ws.send(message);
+    var message = 'start-kernel';
+    ws.send(message);
 }
 function stopKernel(){
-	var message = 'stop-kernel';
- 	ws.send(message);
+    var message = 'stop-kernel';
+    ws.send(message);
 }
 
 ws.addEventListener("message", function(e) {
     // The data is simply the message that we're sending back
     var msg = e.data;
-    var json = json.parse(e);
+    var json = JSON.parse(e);
     // Append the message
     document.getElementById('factlog').innerHTML += '<br> <p>' + msg;
 });

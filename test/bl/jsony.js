@@ -1,4 +1,6 @@
-var root;
+"use strict";
+
+let root;
 
 exports.init = function() {
     root = [];

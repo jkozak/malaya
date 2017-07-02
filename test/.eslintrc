@@ -1,0 +1,10 @@
+// -*- mode: json -*-
+{
+    "env": {
+        "mocha": true
+    },
+    "rules": {
+        "no-unused-vars":1,
+        "no-constant-condition":1
+    }
+}

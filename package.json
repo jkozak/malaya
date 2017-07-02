@@ -66,9 +66,8 @@
   },
   "scripts": {
     "benchmark": "matcha -R plain benchmark/*.js",
-    "eslint": "eslint -c test/eslint.conf -f compact --env node *.js",
-    "eslint:test": "eslint -c test/eslint.conf -f compact --env mocha test/*.js",
-    "pretest": "npm run eslint --silent && npm run eslint:test --silent",
+    "eslint": "eslint -f compact .",
+    "pretest": "npm run eslint --silent",
     "test:js": "cross-env NODE_ENV=test mocha -R mocha-tldr-reporter -C test/*.js",
     "test:chrjs": "cross-env NODE_ENV=test mocha -R mocha-tldr-reporter --compilers chrjs:compiler -C test/*.chrjs",
     "test": "npm run test:js --silent && npm run test:chrjs --silent",
