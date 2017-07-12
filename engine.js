@@ -88,7 +88,7 @@ exports.makeInertChrjs = function(opts) {
         on: function(w,h) {},   // it's inert
         get size()    {return Object.keys(this.facts).length;}
     };
-    if (util.env==='test')
+    if (util.env!=='prod')
         obj._private = {
             get facts() {return obj.facts;},   // be compatible with real chrjs
             get orderedFacts() {
@@ -630,7 +630,7 @@ Engine.prototype.addConnection = function(portName,io) {
                     js.push({port:portName});
                     eng.update(js,function() {
                         throttled = false;
-                        setInterval(function() {
+                        setImmediate(()=>{
                             io.i.emit('readable');
                         });
                     });

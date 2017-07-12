@@ -1,0 +1,9 @@
+From: John Kozak
+Date: Wed, 12 Jul 2017 20:54:57 +0100
+State: resolved
+Subject: Bug: locks up after lots of connect/disconnects
+Message-Id: <acdefa1344583d97-0-artemis@renn>
+resolution: fixed
+
+This was due to use of `setInterval` instead of `setImmediate` in the
+throttling code in ~engine.js~.  Wonder what the default interval is?
