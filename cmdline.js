@@ -334,7 +334,7 @@ subcommands.run.addArgument(
         metavar:      'url'
     }
 );
-if (util.env==='test')
+if (util.env!=='prod')
     subcommands.run.addArgument(
         ['--private-test-urls'],
         {

@@ -142,7 +142,7 @@ const addStandardExpressRoutes = exports.addStandardExpressRoutes = function(eng
     });
 
     // only for use in testing
-    if (eng.options.privateTestUrls && util.env==='test') {
+    if (eng.options.privateTestUrls && util.env!=='prod') {
         // +++ safer to have a POST which dumps to disk then returns
         // +++ the filename
         app.get('/_private/facts',(req,res)=>{
@@ -151,6 +151,11 @@ const addStandardExpressRoutes = exports.addStandardExpressRoutes = function(eng
                 res.write(util.serialise(eng.chrjs._private.orderedFacts));
             } else
                 res.writeHead(404,{'Content-Type':'text/plain'});
+            res.end();
+        });
+        app.get('/_private/counts',(req,res)=>{
+            res.writeHead(200,{'Content-Type':'application/json'});
+            res.write(JSON.stringify(eng.getCounts()));
             res.end();
         });
     }

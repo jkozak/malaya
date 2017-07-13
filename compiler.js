@@ -134,7 +134,7 @@ function TEMPLATE_store() {
                 return res;
             }
         };
-        if (process.env.NODE_ENV==='test')
+        if (!process.env.NODE_ENV || !process.env.NODE_ENV.startsWith('prod'))
             obj._private = {
                 get facts()   {return facts;},
                 get orderedFacts() {

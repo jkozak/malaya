@@ -1322,5 +1322,13 @@ Engine.prototype.addPlugin = function(name,opts) {
     opts.update       = (js,cb)=>eng.update([js[0],js[1],{port:`plugin:${name}`}],cb);
 };
 
+Engine.prototype.getCounts = function() {
+    const eng = this;
+    return {
+        facts:       eng.chrjs._private.orderedFacts.length,
+        connections: eng.connectionSummary()
+    };
+};
+
 exports.Engine  = Engine;
 exports.express = express;
