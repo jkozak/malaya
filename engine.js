@@ -267,10 +267,10 @@ Engine.prototype.stopPrevalence = function(quick,cb) {
         journal.on(util.onWindows ? 'close' : 'finish',function() {
             if (!quick)
                 eng._saveWorld();
+            eng.chrjs.out = ()=>{};
             if (cb) cb();
         });
         journal.end();
-        eng.chrjs.out = ()=>{};
     }
 };
 
