@@ -279,6 +279,88 @@ describe("Engine",function() {
                 }
             });
         });
+        describe("Math.random determinism",function(){
+            this.bail(true);
+            const dir = temp.mkdirSync();
+            let   r1,r2,r3;
+            let   d2;
+            it("sanity tests for (my understanding of) mt",function(){
+                const random = require('random-js');
+                const    rng = {
+                    engine: random.engines.mt19937(),
+                    dist:   random.real(0,1,false)
+                };
+                rng.engine.seed(0);
+                r1 = rng.dist(rng.engine);
+                r2 = rng.dist(rng.engine);
+                r3 = rng.dist(rng.engine);
+                rng.engine.seed(0);
+                assert.strictEqual(r1,rng.dist(rng.engine)); d2 = rng.engine.getUseCount();
+                assert.strictEqual(r2,rng.dist(rng.engine));
+                assert.strictEqual(r3,rng.dist(rng.engine));
+                rng.engine.seed(0);
+                rng.engine.discard(0);
+                assert.strictEqual(r1,rng.dist(rng.engine));
+                assert.strictEqual(r2,rng.dist(rng.engine));
+                assert.strictEqual(r3,rng.dist(rng.engine));
+                rng.engine.seed(0);
+                rng.engine.discard(d2);
+                assert.strictEqual(r2,rng.dist(rng.engine));
+                assert.strictEqual(r3,rng.dist(rng.engine));
+            });
+            it("runs and stops quickly",function(done) {
+                runInEngine(path.join(__dirname,'bl/rando.malaya'),{
+                    dir:  dir,
+                    bind: true,
+                    init: function(eng) {
+                        appendToJournal(eng,'update',['r',{}]);
+                    },
+                    main: function(eng) {
+                        assert.strictEqual(eng.chrjs._private.orderedFacts.length,1);
+                        assert.strictEqual(r1,eng.chrjs._private.orderedFacts[0][1].random);
+                        eng.stopPrevalence(true,done);
+                    }
+                });
+            });
+            it("reloads from journal",function(done) {
+                runInEngine(path.join(__dirname,'bl/rando.malaya'),{
+                    dir:  dir,
+                    bind: true,
+                    init: false,
+                    main: function(eng) {
+                        assert.strictEqual(eng.chrjs._private.orderedFacts.length,1);
+                        assert.strictEqual(r1,eng.chrjs._private.orderedFacts[0][1].random);
+                        eng.update(['r',{}],(err)=>{
+                            if (err)
+                                done(err);
+                            else {
+                                assert.strictEqual(r2,eng.chrjs._private.orderedFacts[0][1].random);
+                                eng.stopPrevalence(false,done);
+                            }
+                        });
+                    }
+                });
+            });
+            it("reloads from world",function(done) {
+                runInEngine(path.join(__dirname,'bl/rando.malaya'),{
+                    dir:  dir,
+                    bind: true,
+                    init: false,
+                    main: function(eng) {
+                        assert.strictEqual(eng.chrjs._private.orderedFacts.length,1);
+                        assert.strictEqual(r2,eng.chrjs._private.orderedFacts[0][1].random);
+                        eng.update(['r',{}],(err)=>{
+                            if (err)
+                                done(err);
+                            else {
+                                assert.strictEqual(r3,eng.chrjs._private.orderedFacts[0][1].random);
+                                eng.stopPrevalence(true,done);
+                            }
+                        });
+                    }
+                });
+            });
+        });
         // +++
     });
     describe("walking utilities",function() {
@@ -815,6 +897,24 @@ describe("Engine",function() {
                         done();
                     });
                     srv.kill('SIGINT');
+                }
+            });
+        });
+    });
+    describe("MalayaMath.randBits",function(){
+        after(()=>compiler._bindGlobals());
+        it("is a sneaky extra function",function(done) {
+            runInCountEngine({
+                bind:true,
+                main:eng=>{
+                    const r1 = global.MalayaMath.randBits(128);
+                    assert(Buffer.isBuffer(r1));
+                    assert.deepEqual(r1.length,16);
+                    const r2 = global.MalayaMath.randBits(128);
+                    assert(Buffer.isBuffer(r1));
+                    assert.deepEqual(r2.length,16);
+                    assert.notDeepEqual(r1,r2);
+                    eng.stopPrevalence(true,done);
                 }
             });
         });

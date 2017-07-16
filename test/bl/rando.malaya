@@ -1,0 +1,6 @@
+module.exports = store {
+    ['t',{random:null}];
+    rule(-['r',...],
+         -['t',...],
+         +['t',{random:Math.random()}] );
+};

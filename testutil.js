@@ -20,6 +20,7 @@ if (util.env==='test')  {
     const      temp = require('temp').track();
     const        fs = require('fs');
     const        cp = require('child_process');
+    let          id = 0;
 
     const runInEngine = exports.runInEngine = function(source,opts) {
         if ((typeof opts)==='function')
@@ -28,7 +29,11 @@ if (util.env==='test')  {
             opts = opts || {};
         const dir = opts.dir || temp.mkdirSync();
         const eng = new Engine({dir:dir,businessLogic:source});
-        eng.init();
+        eng.__id = id++;
+        if (opts.bind)
+            eng._bindGlobals();
+        if (opts.init!==false)
+            eng.init();
         eng.start();
         if (opts.init)
             opts.init(eng);

@@ -531,7 +531,7 @@ Engine.prototype.cacheFile = function(fn,cb) {
 };
 
 Engine.prototype._loadWorld = function() {
-    const   eng = this;
+    const  eng = this;
     let lineNo = 1;
     util.readFileLinesSync(path.join(eng.prevalenceDir,'state','world'),function(line) {
         switch (lineNo++) {
@@ -542,6 +542,7 @@ Engine.prototype._loadWorld = function() {
             const root = util.deserialise(line);
             eng.chrjs.setRoot(root.chrjs);
             eng.git = root.git;
+            eng._rng.seed = root.rng.seed;
             eng._rng.engine.seed(root.rng.seed);
             eng._rng.engine.discard(root.rng.useCount);
             return false;
@@ -1359,13 +1360,18 @@ Engine.prototype._dateNow = function() {    // intercept for Date.now
 
 Engine.prototype._mathRandom = function() { // intercept for Math.random
     const eng = this;
-    return eng._rngDist(eng._rngEngine);
+    const ans = eng._rng.dist(eng._rng.engine);
+    return ans;
 };
 
 Engine.prototype._bindGlobals = function() { // !!! CBB
     const eng = this;
-    global.MalayaDate.now    = eng._dateNow.bind(eng);
-    global.MalayaMath.random = eng._mathRandom.bind(eng);
+    const hex = random.hex();
+    global.MalayaDate.now      = eng._dateNow.bind(eng);
+    global.MalayaMath.random   = eng._mathRandom.bind(eng);
+    global.MalayaMath.randBits = n=>{
+        return Buffer.from(hex(eng._rng.engine,n/4),'hex');
+    };
 };
 
 exports.Engine  = Engine;
