@@ -42,6 +42,7 @@ const      sockjs = require('sockjs');
 const          ip = require('ip');
 const          vm = require('vm');
 const       shell = require('shelljs');
+const      random = require('random-js');
 
 const    compiler = require('./compiler.js');
 const         www = require('./www.js');
@@ -131,7 +132,8 @@ const Engine = exports.Engine = function(options) {
     eng.connIndex      = {};                     // <type> -> [<port>,...]
     eng.http           = null;                   // express http server
     eng.journal        = null;                   // journal write stream
-    eng.timestamp      = options.timestamp || require('monotonic-timestamp');
+    eng._timestamp     = options.timestamp || require('monotonic-timestamp');
+    eng._nextTimestamp = null;                   // to force next timestamp to known value
     eng.journalFlush   = (cb)=>cb(null);         // flush journal
     eng.chrjs.tag      = options.tag;
     eng.masterUrl      = eng.options.masterUrl;
@@ -140,6 +142,11 @@ const Engine = exports.Engine = function(options) {
     eng.tickInterval   = null;                   // for magic ticks
     eng.git            = options.git==='none' ? null : options.git;
     eng.plugins        = {};
+    eng._rng           = {
+        engine: random.engines.mt19937(),
+        dist:   random.real(0,1,false),
+        seed:   null
+    };
 
     eng.chrjs.on('error',(err)=>eng.emit('error',new VError(err,"chrjs: ")));
 
@@ -227,6 +234,11 @@ Engine.prototype.compile = function(source) {
         return null;
 };
 
+Engine.prototype.timestamp = function() {
+    const eng = this;
+    return eng._nextTimestamp || eng._timestamp();
+};
+
 Engine.prototype._saveWorld = function() {
     const eng = this;
     // +++ prevalence.batch (i.e. we are currently using `state-NEW`) +++
@@ -234,7 +246,9 @@ Engine.prototype._saveWorld = function() {
     const  dirNew = path.join(eng.prevalenceDir,"state-NEW");
     const  dirOld = path.join(eng.prevalenceDir,"state-OLD");
     const syshash = eng.hashes.putFileSync(path.join(dirCur,"/journal"));
-    const    root = {chrjs:eng.chrjs.getRoot(),git:eng.git};
+    const    root = {chrjs: eng.chrjs.getRoot(),
+                     git:   eng.git,
+                     rng:   {seed:eng._rng.seed,useCount:eng._rng.engine.getUseCount()} };
     rmRF.sync(dirNew);
     fs.mkdirSync(dirNew);
     fs.writeFileSync( path.join(dirNew,"world"),  util.serialise(syshash)+'\n');
@@ -414,6 +428,8 @@ Engine.prototype.init = function(data) {
         eng._init();
     eng._ensureStateDir();
     eng._makeHashes();
+    eng._rng.seed = eng.options.rngSeed || 0;
+    eng._rng.engine.seed(eng._rng.seed);
     fs.writeFileSync(jrnlFile,util.serialise([eng.timestamp(),'init',eng.options])+'\n');
     eng.syshash = eng._saveWorld();
 };
@@ -469,7 +485,9 @@ Engine.prototype.startPrevalence = function(opts,cb) {
         const js = util.deserialise(l);
         switch (js[1]) {
         case 'update':
+            eng._nextTimestamp = js[0];
             eng.chrjs.update(js[2]);
+            eng._nextTimestamp = null;
             break;
         case 'previous':
             if (js[2]!==eng.syshash)
@@ -524,6 +542,8 @@ Engine.prototype._loadWorld = function() {
             const root = util.deserialise(line);
             eng.chrjs.setRoot(root.chrjs);
             eng.git = root.git;
+            eng._rng.engine.seed(root.rng.seed);
+            eng._rng.engine.discard(root.rng.useCount);
             return false;
         }
         default:
@@ -936,6 +956,7 @@ Engine.prototype.update = function(data,cb) {
     const   eng = this;
     let     res;
     const done2 = _.after(2,function() {
+        eng._nextTimestamp = null;
         res.adds.forEach(function(t) {
             const add = res.refs[t];
             if (eng.options.magic['_take-outputs'] && add[0]==='_output') {
@@ -948,6 +969,7 @@ Engine.prototype.update = function(data,cb) {
         eng.active = null;
         if (cb) cb(null,res);
     });
+    eng._nextTimestamp = eng._timestamp();
     eng.journalise('update',data,done2);
     eng.active = data;
     res        = eng.chrjs.update(data);
@@ -1328,6 +1350,22 @@ Engine.prototype.getCounts = function() {
         facts:       eng.chrjs._private.orderedFacts.length,
         connections: eng.connectionSummary()
     };
+};
+
+Engine.prototype._dateNow = function() {    // intercept for Date.now
+    const eng = this;
+    return eng._nextTimestamp;
+};
+
+Engine.prototype._mathRandom = function() { // intercept for Math.random
+    const eng = this;
+    return eng._rngDist(eng._rngEngine);
+};
+
+Engine.prototype._bindGlobals = function() { // !!! CBB
+    const eng = this;
+    global.MalayaDate.now    = eng._dateNow.bind(eng);
+    global.MalayaMath.random = eng._mathRandom.bind(eng);
 };
 
 exports.Engine  = Engine;

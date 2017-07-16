@@ -608,8 +608,19 @@ describe("regression tests",function() {
             assert.equal(st.size,2);
         });
     });
-    it("should have no truck with indeterminacy [9712887252654d96]",function(){
-        assert.throws(function(){Math.random();});
+    describe("determinism [9712887252654d96]",function(){
+        it("Math.random() proscribed",function(){
+            assert.throws(function(){Math.random();});
+        });
+        it("Date.now() proscribed",function(){
+            assert.throws(function(){Date.now();});
+        });
+        it("new Date() proscribed",function(){
+            assert.throws(function(){new Date();});
+        });
+        it("new Date(D) allowed",function(){
+            new Date('2017-07-16');
+        });
     });
     it("should schedule free heads correctly [d39b9ba62abfac87]",function(){
         const st = store {

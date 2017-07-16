@@ -1,0 +1,6 @@
+module.exports = store {
+    ['t',{date:0}];
+    rule(-['x',...],
+         -['t',...],
+         +['t',{date:Date.now()}] );
+};

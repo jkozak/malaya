@@ -672,6 +672,7 @@ exports.run = function(opts0,argv2) {
 
     subcommands.run.exec = function() {
         checkDirectoriesExist();
+        require('./compiler.js'); // for Malaya* globals
         if (args.adminUI)
             args.admin = true;
         args.source = args.source || findSource();
@@ -685,6 +686,7 @@ exports.run = function(opts0,argv2) {
                           masterUrl:       args.masterUrl,
                           privateTestUrls: args.privateTestUrls};
         const      eng = createEngine(options);
+        eng._bindGlobals();
         eng.on('listen',function(protocol,port) {
             console.log("%s listening on *:%s",protocol,port);
             if (args.adminUI && protocol==='http') {

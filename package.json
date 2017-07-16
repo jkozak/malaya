@@ -19,6 +19,7 @@
     "morgan": "^1.8.1",
     "multistream": "^2.1.0",
     "node-sockjs-client": "^1.0.7",
+    "random-js": "^1.0.8",
     "reactify": "^1.1.1",
     "recast": "=0.9.5",
     "rimraf": "^2.6.0",

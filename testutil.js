@@ -26,7 +26,7 @@ if (util.env==='test')  {
             opts = {main:opts};
         else
             opts = opts || {};
-        const dir = temp.mkdirSync();
+        const dir = opts.dir || temp.mkdirSync();
         const eng = new Engine({dir:dir,businessLogic:source});
         eng.init();
         eng.start();
@@ -64,7 +64,11 @@ if (util.env==='test')  {
     };
 
     exports.appendToJournal = function(eng,type,entry) {
-        exports.appendStringToJournal(eng,util.serialise([eng.timestamp(),type,entry])+'\n');
+        exports.appendToJournalWithTimestamp(eng,eng._timestamp(),type,entry);
+    };
+
+    exports.appendToJournalWithTimestamp = function(eng,ts,type,entry) {
+        exports.appendStringToJournal(eng,util.serialise([ts,type,entry])+'\n');
     };
 
     exports.appendStringToJournal = function(eng,s) {

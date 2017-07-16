@@ -275,12 +275,26 @@ var chrLocalVars = {
     out: {ext:true,mutable:false,type:'function'}
 };
 
-global.MalayaDate = global.Date;
+// +++ CBB - don't (ab)use global scope +++
+global.MalayaDate = function(){
+    if (arguments.length===0)
+        return new Date(MalayaDate.now());
+    else
+        return new (Function.prototype.bind.apply(Date,arguments));
+};
+Object.getOwnPropertyNames(Date).forEach(function(n){
+    if (typeof Date[n]==='function')
+        MalayaDate[n] = Date[n];
+});
 global.MalayaMath = {};
 Object.getOwnPropertyNames(Math).forEach(function(n){
     MalayaMath[n] = Math[n];
 });
-MalayaMath.random = function(){throw new Error("malaya does not play dice");};
+exports._bindGlobals = function(){
+    MalayaDate.now = function(){throw new Error("malaya is timeless");};
+    MalayaMath.random = function(){throw new Error("malaya does not play dice");};
+};
+exports._bindGlobals();
 
 function findVar(v,path) {
     if (chrLocalVars[v])
@@ -1843,6 +1857,7 @@ if (util.env==='test') {
         buildStanzas:      buildStanzas,
         insertCode:        insertCode,
         annotateParse1:    annotateParse1,
-        annotateParse2:    annotateParse2
+        annotateParse2:    annotateParse2,
+        unsafeDates:       function(){MalayaDate.now=Date.now;}
     };
 }

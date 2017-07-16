@@ -2,6 +2,7 @@
 
 const   engine = require('../engine.js');
 const   Engine = engine.Engine;
+const compiler = require('../compiler.js');
 
 const        _ = require("underscore");
 const   assert = require("chai").assert;
@@ -26,10 +27,12 @@ describe("makeInertChrjs",function() {
     });
 });
 
-const runInCountEngine      = testutil.runInCountEngine;
-const createIO              = testutil.createIO;
-const appendToJournal       = testutil.appendToJournal;
-const appendStringToJournal = testutil.appendStringToJournal;
+const runInCountEngine             = testutil.runInCountEngine;
+const runInEngine                  = testutil.runInEngine;
+const createIO                     = testutil.createIO;
+const appendToJournal              = testutil.appendToJournal;
+const appendToJournalWithTimestamp = testutil.appendToJournalWithTimestamp;
+const appendStringToJournal        = testutil.appendStringToJournal;
 
 describe("Engine",function() {
     describe("initialisation",function() {
@@ -82,6 +85,20 @@ describe("Engine",function() {
             const h = eng.hashes.putSync(x);
             assert.strictEqual(eng.hashes.getHashes().length,cHashes+1);
             assert.strictEqual(eng.hashes.getSync(h,{encoding:'utf8'}),x);
+        });
+    });
+    describe("rng",function(){
+        it("rng created, seeded with zero by default",function(){
+            const eng = new Engine({dir:temp.mkdirSync()});
+            eng.init();
+            assert.strictEqual(eng._rng.seed,0);
+        });
+        it("rng created, seeded from options where present",function(){
+            const seed = 9982918;
+            const  eng = new Engine({dir:temp.mkdirSync(),
+                                     rngSeed:seed});
+            eng.init();
+            assert.strictEqual(eng._rng.seed,seed);
         });
     });
     describe("#update",function() {
@@ -162,6 +179,7 @@ describe("Engine",function() {
         });
     });
     describe("prevalence",function() {
+        after(()=>compiler._bindGlobals());
         it("loads from newly initted state directory",function(done) {
             runInCountEngine(function(eng) {
                 assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:0}]]);
@@ -244,6 +262,20 @@ describe("Engine",function() {
                             eng.stopPrevalence(true,done);
                         });
                     });
+                }
+            });
+        });
+        it("sets Date.now from journal timestamp",function(done) {
+            const  ts = 12345678;
+            runInEngine(path.join(__dirname,'bl/timely.malaya'),{
+                init: function(eng) {
+                    eng._bindGlobals();
+                    appendToJournalWithTimestamp(eng,12345678,'update',['x',{}]);
+                },
+                main: function(eng) {
+                    assert.strictEqual(eng.chrjs._private.orderedFacts.length,1);
+                    assert.strictEqual(ts,eng.chrjs._private.orderedFacts[0][1].date);
+                    done();
                 }
             });
         });
@@ -675,7 +707,7 @@ describe("Engine",function() {
     describe("replication",function() {
         it("streams out the journal",function(done) {
             const eng = new Engine({dir:           temp.mkdirSync(),
-                                  businessLogic: path.join(__dirname,'bl','null.chrjs') });
+                                    businessLogic: path.join(__dirname,'bl','null.chrjs') });
             const io = createIO('replication');
             eng.init();
             eng.start();
