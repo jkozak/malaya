@@ -16,6 +16,7 @@ describe("web server",function() {
     const wdir = path.join(dir,'www');
     const text = "What! Dead? and never called me Mother!";
     const file = "EastLynne.txt";
+    const xdir = 'Ellen';
     let    eng;
     let   port;
     it("starts",function(done) {
@@ -26,6 +27,8 @@ describe("web server",function() {
         eng.init();
         eng.start();
         fs.writeFileSync(path.join(wdir,file),text);
+        fs.mkdirSync(path.join(wdir,xdir));
+        fs.writeFileSync(path.join(wdir,xdir,'Wood'),text);
         eng.on('listen',(type,port0)=>{
             port = port0;
             done();
@@ -55,6 +58,32 @@ describe("web server",function() {
                     else {
                         if (resp.statusCode!==404)
                             done(new VError("expected status 404, got %j",resp.statusCode));
+                        else
+                            done();
+                    }
+                } );
+    });
+    it("handles requests for missing directories graciously",function(done){
+        request(util.format('http://localhost:%d/%s',port,'this-is-not-a-directory'),
+                (err,resp,body) => {
+                    if (err)
+                        done(err);
+                    else {
+                        if (resp.statusCode!==404)
+                            done(new VError("expected status 404, got %j",resp.statusCode));
+                        else
+                            done();
+                    }
+                } );
+    });
+    it("handles requests for existing directories graciously",function(done){
+        request(util.format('http://localhost:%d/%s',port,xdir),
+                (err,resp,body) => {
+                    if (err)
+                        done(err);
+                    else {
+                        if (resp.statusCode!==403)
+                            done(new VError("expected status 403, got %j",resp.statusCode));
                         else
                             done();
                     }

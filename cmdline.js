@@ -388,7 +388,7 @@ subcommands.transform.addArgument(
 
 process.on('uncaughtException',function(err) {
     /*eslint-disable no-process-exit*/
-    if (err instanceof exports.Fail) {
+    if (err instanceof util.Fail) {
         util.error(err.message);
         process.exit(100);
     } else {

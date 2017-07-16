@@ -164,13 +164,17 @@ const addStandardExpressRoutes = exports.addStandardExpressRoutes = function(eng
         if (req.method==='GET' || req.method==='HEAD') {
             try {
                 const fn = path.join(webDir,req.path);
-                eng.cacheFile(fn,function(h) {
-                    res.setHeader("Content-Type",express.static.mime.lookup(fn));
-                    res.setHeader("ETag",        h);
-                    res.status(200);
-                    if (req.method==='GET')
-                        res.sendFile(eng.hashes.makeFilename(h));
-                });
+                if (fs.statSync(fn).isFile()) {
+                    eng.cacheFile(fn,function(h) {
+                        res.setHeader("Content-Type",express.static.mime.lookup(fn));
+                        res.setHeader("ETag",        h);
+                        res.status(200);
+                        if (req.method==='GET')
+                            res.sendFile(eng.hashes.makeFilename(h));
+                    });
+                } else {
+                    res.status(403).end();
+                }
                 return;
             } catch (e) {
                 if (e.code!=='ENOENT')

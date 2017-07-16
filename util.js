@@ -96,18 +96,6 @@ exports.Fail = function(msg) {
 exports.Fail.prototype             = Object.create(Error.prototype);
 exports.Fail.prototype.constructor = exports.Fail;
 
-process.on('uncaughtException', function(err) {
-    /*eslint-disable no-process-exit*/
-    if (err instanceof exports.Fail) {
-        console.log(err.message);
-        process.exit(100);
-    } else {
-        console.error(err.stack);
-        process.exit(101);
-    }
-    /*eslint-enable no-process-exit*/
-});
-
 exports.serialise = function(v) {
     // disable standard `toJSON` processing which we replace above
     const saveDate = Date.prototype.toJSON;
