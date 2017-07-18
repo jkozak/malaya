@@ -1353,25 +1353,10 @@ Engine.prototype.getCounts = function() {
     };
 };
 
-Engine.prototype._dateNow = function() {    // intercept for Date.now
-    const eng = this;
-    return eng._nextTimestamp;
-};
-
-Engine.prototype._mathRandom = function() { // intercept for Math.random
-    const eng = this;
-    const ans = eng._rng.dist(eng._rng.engine);
-    return ans;
-};
-
 Engine.prototype._bindGlobals = function() { // !!! CBB
     const eng = this;
-    const hex = random.hex();
-    global.MalayaDate.now      = eng._dateNow.bind(eng);
-    global.MalayaMath.random   = eng._mathRandom.bind(eng);
-    global.MalayaMath.randBits = n=>{
-        return Buffer.from(hex(eng._rng.engine,n/4),'hex');
-    };
+    global.MalayaDate.now    = ()=>eng._nextTimestamp;
+    global.MalayaMath.random = ()=>eng._rng.dist(eng._rng.engine);
 };
 
 exports.Engine  = Engine;

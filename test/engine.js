@@ -901,24 +901,6 @@ describe("Engine",function() {
             });
         });
     });
-    describe("MalayaMath.randBits",function(){
-        after(()=>compiler._bindGlobals());
-        it("is a sneaky extra function",function(done) {
-            runInCountEngine({
-                bind:true,
-                main:eng=>{
-                    const r1 = global.MalayaMath.randBits(128);
-                    assert(Buffer.isBuffer(r1));
-                    assert.deepEqual(r1.length,16);
-                    const r2 = global.MalayaMath.randBits(128);
-                    assert(Buffer.isBuffer(r1));
-                    assert.deepEqual(r2.length,16);
-                    assert.notDeepEqual(r1,r2);
-                    eng.stopPrevalence(true,done);
-                }
-            });
-        });
-    });
     describe("plugin",function(){
         const opts = {};
         let    eng;
