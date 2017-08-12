@@ -609,8 +609,12 @@ Engine.prototype.addConnection = function(portName,io) {
     const eng = this;
     if (eng.conns[portName]!==undefined)
         throw new VError("already have connection for %j",portName);
+    if (io.headers && io.headers.port!==portName)
+        throw new VError("misnamed port in headers: %j %j",portName,io.headers);
     if (!this.connIndex[io.type])
         this.connIndex[io.type] = [];
+    if (!io.headers)
+        io.headers = {port:portName}; // can happen if using `createIO`
     eng.conns[portName] = io;
     eng.connIndex[io.type].push(portName);
     switch (io.type) {
@@ -648,7 +652,7 @@ Engine.prototype.addConnection = function(portName,io) {
             let js;
             while (!throttled && (js=io.i.read())!==null) {
                 if (js instanceof Array && js.length===2) {
-                    js.push({port:portName});
+                    js.push(io.headers);
                     eng.update(js,function() {
                         throttled = false;
                         setImmediate(()=>{
@@ -671,6 +675,10 @@ Engine.prototype.makeHttpPortName = function(conn,prefix) { // nodejs http conne
     return util.format("ws://%s:%s%s",conn.remoteAddress,conn.remotePort,prefix);
 };
 
+Engine.prototype._importConnectionHeaders = function(portName,conn) {
+    return {port:portName};
+};
+
 Engine.prototype.listenHttp = function(mode,port,done) {
     const  eng = this;
     const sock = sockjs.createServer({log:function(severity,text) {
@@ -682,7 +690,12 @@ Engine.prototype.listenHttp = function(mode,port,done) {
 
     sock.on('connection',function(conn) {
         const portName = eng.makeHttpPortName(conn);
-        let         io = {i:null,o:null,type:null};
+        let         io = {
+            i:       null,
+            o:       null,
+            type:    null,
+            headers: eng._importConnectionHeaders(portName,conn)
+        };
         switch (conn.prefix) {
         case '/data':
             io.type = 'data';
