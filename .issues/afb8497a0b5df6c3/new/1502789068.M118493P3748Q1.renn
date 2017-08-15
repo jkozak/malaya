@@ -1,0 +1,16 @@
+From: John Kozak
+Date: Tue, 15 Aug 2017 10:18:51 +0100
+State: new
+Subject: code generated for match is confusing given {xxx:undefined,...}
+Message-Id: <afb8497a0b5df6c3-0-artemis@renn>
+
+e.g.
+
+    rule (-['socialLogin',{emails:[{value:name,...},...],...socialGuff},{port:'auth:'}],
+          +['authentication',{email:name,...socialGuff}] );
+
+with realIP tracking will fail confusingly because actually and invisibly coming in is:
+
+    [...,{port:'auth:',realIP:undefined}]
+
+realIP counts for Object(f[2]).length (which is 2), but doesn't display.

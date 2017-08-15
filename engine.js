@@ -609,8 +609,6 @@ Engine.prototype.addConnection = function(portName,io) {
     const eng = this;
     if (eng.conns[portName]!==undefined)
         throw new VError("already have connection for %j",portName);
-    if (io.headers && io.headers.port!==portName)
-        throw new VError("misnamed port in headers: %j %j",portName,io.headers);
     if (!this.connIndex[io.type])
         this.connIndex[io.type] = [];
     if (!io.headers)
@@ -645,6 +643,7 @@ Engine.prototype.addConnection = function(portName,io) {
         });
         break;
     }
+    case 'auth':
     case 'data': {
         let throttled = false;      // use this to ensure fairness
         io = eng.conns[portName];
@@ -675,8 +674,11 @@ Engine.prototype.makeHttpPortName = function(conn,prefix) { // nodejs http conne
     return util.format("ws://%s:%s%s",conn.remoteAddress,conn.remotePort,prefix);
 };
 
-Engine.prototype._importConnectionHeaders = function(portName,conn) {
-    return {port:portName};
+Engine.prototype._importConnection = function(portName,conn) {
+    if (conn.prefix==='/admin' && !ip.isPrivate(conn.remoteAddress))
+        return null;
+    else
+        return {port:portName};
 };
 
 Engine.prototype.listenHttp = function(mode,port,done) {
@@ -694,33 +696,32 @@ Engine.prototype.listenHttp = function(mode,port,done) {
             i:       null,
             o:       null,
             type:    null,
-            headers: eng._importConnectionHeaders(portName,conn)
+            headers: eng._importConnection(portName,conn)
         };
-        switch (conn.prefix) {
-        case '/data':
-            io.type = 'data';
-            io.i    = new whiskey.JSONParseStream();
-            io.o    = new whiskey.StringifyJSONStream();
-            break;
-        case '/replication/journal':
-            io.type = 'replication';
-            io.i    = new whiskey.LineStream(util.deserialise);
-            io.o    = new whiskey.StringifyObjectStream(util.serialise);
-            io.host = conn.remoteAddress;
-            break;
-        case '/admin':
-            if (conn.remoteAddress==='127.0.0.1') {
-                io.type = 'admin';
+        if (io.headers===null) {
+            io = null;
+            conn.end();
+        } else if (typeof io.headers!=='object') {
+            throw new VError("bad headers object: %j",io.headers);
+        } else {
+            io.headers = _.pick(io.headers,v=>!_.isUndefined(v));
+            switch (conn.prefix) {
+            case '/admin':
+            case '/auth':
+            case '/data':
+                io.type = conn.prefix.slice(1);
                 io.i    = new whiskey.JSONParseStream();
                 io.o    = new whiskey.StringifyJSONStream();
+                break;
+            case '/replication/journal':
+                io.type = 'replication';
+                io.i    = new whiskey.LineStream(util.deserialise);
+                io.o    = new whiskey.StringifyObjectStream(util.serialise);
+                io.host = conn.remoteAddress;
+                break;
+            default:
+                // +++ jump around breaking things +++
             }
-            else {
-                io = null;
-                conn.end();
-            }
-            break;
-        default:
-            // +++ jump around breaking things +++
         }
         if (eng.mode!=='master' && io && io.type!=='admin')
             io = null;
@@ -748,6 +749,8 @@ Engine.prototype.listenHttp = function(mode,port,done) {
     sock.installHandlers(eng.http,{prefix:'/replication/journal'});
     if (eng.options.admin)
         sock.installHandlers(eng.http,{prefix:'/admin'});
+    if (eng.options.auth)
+        sock.installHandlers(eng.http,{prefix:'/auth'});
 
     eng.http.listen(port,function() {
         eng.emit('listen','http',eng.http.address().port);
@@ -794,13 +797,14 @@ Engine.prototype._become = function(mode,cb) {
         case 'idle': {
             switch (eng.mode) {
             case 'master': {
-                const done = _.after(2,function(err) {
+                const done = _.after(3,function(err) {
                     if (err)
                         cb(err);
                     else
                         eng.stopPrevalence(true,cb);
                 });
                 eng.closeAllConnections('data',done);
+                eng.closeAllConnections('auth',done);
                 eng.closeAllConnections('replication',done);
                 break;
             }
