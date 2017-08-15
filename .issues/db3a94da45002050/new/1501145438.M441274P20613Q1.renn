@@ -1,0 +1,17 @@
+From: John Kozak
+Date: Thu, 27 Jul 2017 09:45:49 +0100
+State: new
+Subject: `out` should take another `store` as a destination
+Message-Id: <db3a94da45002050-0-artemis@renn>
+
+```malaya
+const st1 = store {
+};
+
+const st2 = store {
+    rule (['test',{},{port,...}],
+          out(st1,['test2',{}] );
+};
+```
+
+Does `st1` see the out as `['test2',{},{port:st2}]`?
