@@ -5,6 +5,7 @@
 const util = require('./util.js');
 
 if (util.env==='test')  {
+    const WebSocket = require('ws');
     const   whiskey = require("./whiskey.js");
     const    byline = require('byline');
     const    VError = require('verror');
@@ -13,7 +14,6 @@ if (util.env==='test')  {
     const    assert = require("assert");
     const    events = require("events");
     const    stream = require("stream");
-    const    SockJS = require('node-sockjs-client');
     const     jsdom = require('jsdom');
     const      http = require('http');
     const      path = require('path');
@@ -303,7 +303,7 @@ if (util.env==='test')  {
         } else
             ws.srv = null;
         ws.queue = [];
-        ws.sock  = new SockJS(url);
+        ws.sock  = new WebSocket(url);
         ws.jps   = new whiskey.JSONParseStream();
         ws.sock.onmessage = (e)=>{
             ws.jps.write(e.data);

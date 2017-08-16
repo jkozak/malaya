@@ -1,31 +1,33 @@
 "use strict";
 
-const      VError = require('verror');
-const        path = require('path');
-const          fs = require('fs');
-const          ip = require('ip');
-const     express = require('express');
-const  browserify = require('browserify');
-const    reactify = require('reactify');
-const      morgan = require('morgan');
-const      recast = require('recast');
-const        http = require('http');
-const      minify = require('express-minify');
+const       VError = require('verror');
+const         path = require('path');
+const           fs = require('fs');
+const           ip = require('ip');
+const      express = require('express');
+const   browserify = require('browserify');
+const     reactify = require('reactify');
+const       morgan = require('morgan');
+const       recast = require('recast');
+const         http = require('http');
+const       minify = require('express-minify');
+const cookieParser = require('cookie-parser');
 
-const        util = require('./util.js');
-const      parser = require('./parser.js');
-const    compiler = require('./compiler.js');
+const         util = require('./util.js');
+const       parser = require('./parser.js');
+const     compiler = require('./compiler.js');
 
-const createExpressApp = exports.createExpressApp = function(eng) {
+const createEmptyApp = exports.createEmptyApp = function(eng) {
     const app = express();
     if (eng.options.logging)
         app.use(morgan('dev'));
     if (eng.options.minify)
         app.use(minify());
+    app.use(cookieParser());
     return app;
 };
 
-const addStandardExpressRoutes = exports.addStandardExpressRoutes = function(eng,app) {
+const populateApp = exports.populateApp = function(eng,app) {
     const jscache = {};   // req.path -> [compiled,stat]
     const  webDir = eng.options.webDir;
 
@@ -188,7 +190,12 @@ const addStandardExpressRoutes = exports.addStandardExpressRoutes = function(eng
 };
 
 exports.createServer = function(eng) {
-    return http.createServer(addStandardExpressRoutes(eng,createExpressApp(eng)));
+    const  app = eng.options.populateHttpApp(eng,createEmptyApp(eng));
+    const srvr = http.createServer(app);
+
+    eng._addToExpressApp(app,srvr);
+
+    return srvr;
 };
 
 exports.express = express;

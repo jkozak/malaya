@@ -38,11 +38,11 @@ const    through2 = require('through2');
 const multistream = require('multistream');
 const     express = require('express');
 const        http = require('http');
-const      sockjs = require('sockjs');
 const          ip = require('ip');
 const          vm = require('vm');
 const       shell = require('shelljs');
 const      random = require('random-js');
+const   expressWS = require('express-ws');
 
 const    compiler = require('./compiler.js');
 const         www = require('./www.js');
@@ -107,17 +107,17 @@ const Engine = exports.Engine = function(options) {
 
     const eng = this;
 
-    options            = options || {};
-    options.dir        = options.dir || process.cwd();
-    options.webDir     = options.webDir || path.join(options.dir,'www');
-    options.tag        = options.tag;
-    options.ports      = options.ports || {http:3000};
-    options.bundles    = options.bundles || {};
-    options.minify     = options.minify===undefined ? util.env!=='test' : options.minify;
-    options.magic      = options.magic || {_tick:1000,_restart:true,'_take-outputs':true};
-    options.endpoints  = options.endpoints || ['data'];
-
-    options.createHttp = options.createHttpServer || www.createServer;
+    options                  = options || {};
+    options.dir              = options.dir || process.cwd();
+    options.webDir           = options.webDir || path.join(options.dir,'www');
+    options.tag              = options.tag;
+    options.ports            = options.ports || {http:3000};
+    options.bundles          = options.bundles || {};
+    options.minify           = options.minify===undefined ? util.env!=='test' : options.minify;
+    options.magic            = options.magic || {_tick:1000,_restart:true,'_take-outputs':true};
+    options.endpoints        = options.endpoints || ['data'];
+    options.createHttpServer = options.createHttpServer || www.createServer;
+    options.populateHttpApp  = options.populateHttpApp || www.populateApp;
 
     compiler.debug     = options.debug;
 
@@ -671,9 +671,13 @@ Engine.prototype.addConnection = function(portName,io) {
     eng.emit('connection',portName,io.type);
 };
 
-Engine.prototype.makeHttpPortName = function(conn,prefix) { // nodejs http connection here
-    prefix = prefix || conn.prefix;
-    return util.format("ws://%s:%s%s",conn.remoteAddress,conn.remotePort,prefix);
+Engine.prototype.makeHttpPortName = function(req,prefix) { // nodejs http connection here
+    const sock = req.socket;
+    const prot = req.protocol==='https' ? 'wss' : 'ws';
+    prefix = prefix || req.path;
+
+    console.log("*** makeHttpPortName cookies %j",req.cookies);
+    return util.format("%s://%s:%s%s",prot,sock.remoteAddress,sock.remotePort,prefix);
 };
 
 Engine.prototype._importConnection = function(portName,conn) {
@@ -683,73 +687,78 @@ Engine.prototype._importConnection = function(portName,conn) {
         return {port:portName};
 };
 
-Engine.prototype.listenHttp = function(mode,port,done) {
-    const  eng = this;
-    const sock = sockjs.createServer({log:function(severity,text) {
-        if (['error','info'].indexOf(severity)!==-1)
-            util.error(text);
-    }});
-
-    eng.http = eng.options.createHttp(eng);
-
-    sock.on('connection',function(conn) {
-        const portName = eng.makeHttpPortName(conn);
+Engine.prototype._addToExpressApp = function(app,server) {
+    const      eng = this;
+    const createIO = (ws,req,setup)=>{
+        const portName = eng.makeHttpPortName(req);
         let         io = {
             i:       null,
             o:       null,
             type:    null,
-            headers: eng._importConnection(portName,conn)
+            headers: eng._importConnection(portName,req)
         };
-        if (io.headers===null) {
+        setup(io);
+        if (io.headers===null)
             io = null;
-            conn.end();
-        } else if (typeof io.headers!=='object') {
+        else if (typeof io.headers!=='object')
             throw new VError("bad headers object: %j",io.headers);
-        } else {
-            io.headers = _.pick(io.headers,v=>!_.isUndefined(v));
-            switch (conn.prefix) {
-            case '/replication/journal':
-                io.type = 'replication';
-                io.i    = new whiskey.LineStream(util.deserialise);
-                io.o    = new whiskey.StringifyObjectStream(util.serialise);
-                io.host = conn.remoteAddress;
-                break;
-            default:
-                io.type = conn.prefix.slice(1);
-                io.i    = new whiskey.JSONParseStream();
-                io.o    = new whiskey.StringifyJSONStream();
-                break;
-                // +++ jump around breaking things +++
-            }
-        }
-        if (eng.mode!=='master' && io && io.type!=='admin')
-            io = null;
-        if (io) {
-            conn.pipe(io.i);
-            io.o.pipe(conn);
-            io.i.on('error',function() {        // +++ this should be in addConnection
+        if (io!==null) {
+            ws.on('message',msg=>{
+                io.i.write(msg);
+            });
+            io.o.on('data',chunk=>{
+                ws.send(chunk);
+            });
+            io.i.on('error',()=>{               // +++ this should be in addConnection
                 io.i.end();
             });
-            io.i.on('end',function() {
+            io.i.on('end',()=>{
                 eng.closeConnection(portName);
             });
-            io.o.on('error',function() {
+            io.o.on('error',()=>{
                 io.o.end();
             });                                 // +++ to here
-            conn.on('close',function() {
+            ws.on('close',()=>{
                 eng.closeConnection(portName);
             });
             eng.addConnection(portName,io);
         } else
-            conn.end();
+            ws.close();
+        return io;
+    };
+    expressWS(app,server);
+    app.ws('/admin',(ws,req)=>{
+        createIO(ws,req,io=>{
+            io.type = 'admin';
+            io.i    = new whiskey.JSONParseStream();
+            io.o    = new whiskey.StringifyJSONStream();
+        });
     });
+    app.ws('/replication/journal',(ws,req)=>{
+        createIO(ws,req,io=>{
+            io.type = 'replication';
+            io.i    = new whiskey.LineStream(util.deserialise);
+            io.o    = new whiskey.StringifyObjectStream(util.serialise);
+            io.host = req.remoteAddress;
+        });
+    });
+    eng.options.endpoints.forEach(ep=>{
+        app.ws('/'+ep,(ws,req)=>{
+            createIO(ws,req,io=>{
+                io.type = ep;
+                io.i    = new whiskey.JSONParseStream();
+                io.o    = new whiskey.StringifyJSONStream();
+            });
+        });
+    });
+};
 
-    sock.installHandlers(eng.http,{prefix:'/replication/journal'});
-    if (eng.options.admin)
-        sock.installHandlers(eng.http,{prefix:'/admin'});
-    eng.options.endpoints.forEach(n=>sock.installHandlers(eng.http,{prefix:'/'+n}));
+Engine.prototype.listenHttp = function(mode,port,done) {
+    const  eng = this;
 
-    eng.http.listen(port,function() {
+    eng.http = eng.options.createHttpServer(eng);
+
+    eng.http.listen(port,()=>{
         eng.emit('listen','http',eng.http.address().port);
         done();
     });
