@@ -115,6 +115,7 @@ const Engine = exports.Engine = function(options) {
     options.bundles    = options.bundles || {};
     options.minify     = options.minify===undefined ? util.env!=='test' : options.minify;
     options.magic      = options.magic || {_tick:1000,_restart:true,'_take-outputs':true};
+    options.endpoints  = options.endpoints || ['data'];
 
     options.createHttp = options.createHttpServer || www.createServer;
 
@@ -155,6 +156,8 @@ const Engine = exports.Engine = function(options) {
         if (knownMagic.indexOf(m)===-1)
             throw new VError("unknown magic: %j",m);
     });
+    if (options.endpoints.includes('admin') || options.endpoints.includes('replication/journal'))
+        throw new VError("reserved endpoint used");
     eng.on('mode',function(mode) {
         if (magic._restart && mode==='master')
             eng.update(['_restart',{},{port:'server:'}]);
@@ -643,8 +646,7 @@ Engine.prototype.addConnection = function(portName,io) {
         });
         break;
     }
-    case 'auth':
-    case 'data': {
+    default: {
         let throttled = false;      // use this to ensure fairness
         io = eng.conns[portName];
         io.i.on('readable',function() {
@@ -706,13 +708,6 @@ Engine.prototype.listenHttp = function(mode,port,done) {
         } else {
             io.headers = _.pick(io.headers,v=>!_.isUndefined(v));
             switch (conn.prefix) {
-            case '/admin':
-            case '/auth':
-            case '/data':
-                io.type = conn.prefix.slice(1);
-                io.i    = new whiskey.JSONParseStream();
-                io.o    = new whiskey.StringifyJSONStream();
-                break;
             case '/replication/journal':
                 io.type = 'replication';
                 io.i    = new whiskey.LineStream(util.deserialise);
@@ -720,6 +715,10 @@ Engine.prototype.listenHttp = function(mode,port,done) {
                 io.host = conn.remoteAddress;
                 break;
             default:
+                io.type = conn.prefix.slice(1);
+                io.i    = new whiskey.JSONParseStream();
+                io.o    = new whiskey.StringifyJSONStream();
+                break;
                 // +++ jump around breaking things +++
             }
         }
@@ -745,12 +744,10 @@ Engine.prototype.listenHttp = function(mode,port,done) {
             conn.end();
     });
 
-    sock.installHandlers(eng.http,{prefix:'/data'});
     sock.installHandlers(eng.http,{prefix:'/replication/journal'});
     if (eng.options.admin)
         sock.installHandlers(eng.http,{prefix:'/admin'});
-    if (eng.options.auth)
-        sock.installHandlers(eng.http,{prefix:'/auth'});
+    eng.options.endpoints.forEach(n=>sock.installHandlers(eng.http,{prefix:'/'+n}));
 
     eng.http.listen(port,function() {
         eng.emit('listen','http',eng.http.address().port);
@@ -797,15 +794,14 @@ Engine.prototype._become = function(mode,cb) {
         case 'idle': {
             switch (eng.mode) {
             case 'master': {
-                const done = _.after(3,function(err) {
+                const done = _.after(1+eng.options.endpoints.length,function(err) {
                     if (err)
                         cb(err);
                     else
                         eng.stopPrevalence(true,cb);
                 });
-                eng.closeAllConnections('data',done);
-                eng.closeAllConnections('auth',done);
                 eng.closeAllConnections('replication',done);
+                eng.options.endpoints.forEach(ep=>eng.closeAllConnections(ep,done));
                 break;
             }
             case 'slave':
