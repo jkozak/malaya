@@ -27,7 +27,7 @@ const createEmptyApp = exports.createEmptyApp = function(eng) {
     return app;
 };
 
-const populateApp = exports.populateApp = function(eng,app) {
+exports.populateApp = function(eng,app) {
     const jscache = {};   // req.path -> [compiled,stat]
     const  webDir = eng.options.webDir;
 

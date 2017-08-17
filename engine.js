@@ -185,8 +185,8 @@ const Engine = exports.Engine = function(options) {
             eng.tickInterval = null;
     });
     if (magic._connect) {
-        eng.on('connection',function(port,type) {
-            eng.update(['_connect',{port:port,type:type},{port:'server:'}]);
+        eng.on('connection',function(port,type,cookies) {
+            eng.update(['_connect',{port:port,type:type,cookies:cookies},{port:'server:'}]);
         });
     }
     if (magic._disconnect) {
@@ -608,8 +608,10 @@ Engine.prototype.connectionSummary = function() {
     return ans;
 };
 
-Engine.prototype.addConnection = function(portName,io) {
+Engine.prototype.addConnection = function(portName,io,cookies) {
     const eng = this;
+    if (!cookies)
+        cookies = {};
     if (eng.conns[portName]!==undefined)
         throw new VError("already have connection for %j",portName);
     if (!this.connIndex[io.type])
@@ -668,7 +670,7 @@ Engine.prototype.addConnection = function(portName,io) {
         });
     }
     }
-    eng.emit('connection',portName,io.type);
+    eng.emit('connection',portName,io.type,cookies);
 };
 
 Engine.prototype.makeHttpPortName = function(req,prefix) { // nodejs http connection here
@@ -676,12 +678,11 @@ Engine.prototype.makeHttpPortName = function(req,prefix) { // nodejs http connec
     const prot = req.protocol==='https' ? 'wss' : 'ws';
     prefix = prefix || req.path;
 
-    console.log("*** makeHttpPortName cookies %j",req.cookies);
     return util.format("%s://%s:%s%s",prot,sock.remoteAddress,sock.remotePort,prefix);
 };
 
-Engine.prototype._importConnection = function(portName,conn) {
-    if (conn.prefix==='/admin' && !ip.isPrivate(conn.remoteAddress))
+Engine.prototype._importConnection = function(portName,req) {
+    if (req.path==='/admin' && !ip.isPrivate(req.socket.remoteAddress))
         return null;
     else
         return {port:portName};
@@ -695,7 +696,7 @@ Engine.prototype._addToExpressApp = function(app,server) {
             i:       null,
             o:       null,
             type:    null,
-            headers: eng._importConnection(portName,req)
+            headers: _.omit(eng._importConnection(portName,req),_.isUndefined)
         };
         setup(io);
         if (io.headers===null)
@@ -718,10 +719,13 @@ Engine.prototype._addToExpressApp = function(app,server) {
             io.o.on('error',()=>{
                 io.o.end();
             });                                 // +++ to here
+            io.o.on('end',()=>{
+                ws.close();
+            });
             ws.on('close',()=>{
                 eng.closeConnection(portName);
             });
-            eng.addConnection(portName,io);
+            eng.addConnection(portName,io,req.cookies);
         } else
             ws.close();
         return io;

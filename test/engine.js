@@ -750,11 +750,11 @@ describe("Engine",function() {
             before(mkMagicEngineStarter({_connect:true,_disconnect:true}));
             beforeEach(function(){eng.chrjs.reset();});
             it("learn about a new connection",function(done){
-                factChecker([['_connect',{port:'test://1',type:'data'},{port:'server:'}]],done);
+                factChecker([['_connect',{port:'test://1',type:'data',cookies:{}},{port:'server:'}]],done);
                 eng.addConnection('test://1',createIO());
             });
             it("learn about another new connection",function(done){
-                factChecker([['_connect',{port:'test://2',type:'data'},{port:'server:'}]],done);
+                factChecker([['_connect',{port:'test://2',type:'data',cookies:{}},{port:'server:'}]],done);
                 eng.addConnection('test://2',createIO());
             });
             it("learn about a lost connection",function(done){
