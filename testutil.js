@@ -308,17 +308,21 @@ if (util.env==='test')  {
         ws.sock.onmessage = (e)=>{
             ws.jps.write(e.data);
         };
-        ws.sock.onopen = ()=>{
-            ws._next();
+        ws.sock.onopen = ()=>{};
+        ws._closehandler = ()=>{};    // internal
+        ws.onclose       = ()=>{};    // for the user
+        ws.sock.onclose  = ()=>{
+            ws._closehandler();
+            if (ws.onclose)
+                ws.onclose();
         };
-        ws.closehandler = ()=>{
-        };
-        ws.sock.onclose = ws.closehandler;
     };
     WS.prototype._next = function() {
         const ws = this;
-        if (ws.queue.length>0)
-            ws.queue.shift()();
+        if (ws.queue.length>0) {
+            const fn = ws.queue.shift();
+            fn();
+        }
     };
     WS.prototype.xmit = function(js) {
         const ws = this;
@@ -371,8 +375,7 @@ if (util.env==='test')  {
                 if (fn) fn();
                 ws._next();
             } else
-                ws.sock.onclose = ()=>{
-                    ws.sock.onclose = ws.closehandler;
+                ws._closehandler = ()=>{
                     if (fn) fn();
                     ws._next();
                 };
@@ -381,16 +384,23 @@ if (util.env==='test')  {
     };
     WS.prototype.call = function(fn) {
         const ws = this;
-        if (ws.srv===null)
-            throw new Error("can't do `call`, server unknown");
-        ws.queue.push(()=>{
-            ws.srv.call(fn,(err)=>{
-                if (err)
-                    throw err;
-                else
-                    ws._next();
+        if (fn.length===0) {
+            ws.queue.push(()=>{
+                fn();
+                ws._next();
             });
-        });
+        } else {
+            if (ws.srv===null)
+                throw new Error("can't do `call`, server unknown");
+            ws.queue.push(()=>{
+                ws.srv.call(fn,(err)=>{
+                    if (err)
+                        throw err;
+                    else
+                        ws._next();
+                });
+            });
+        }
         return ws;
     };
     WS.prototype.assert = function(fn) {
@@ -412,7 +422,8 @@ if (util.env==='test')  {
         const ws = this;
         ws.queue.push(()=>{
             if (fn) fn();
-            ws._next();
+            if (ws.queue.length>0)
+                throw new VError("WS: end not final item: %j",ws.queue.map(fn1=>fn1.toString().slice(0,40)));
         });
         ws._next();
     };
