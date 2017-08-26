@@ -16,6 +16,7 @@ const  events = require('events');
 const    util = require('./util.js');
 const    path = require('path');
 const       _ = require('underscore');
+const  crypto = require('crypto');
 
 const templates       = {};
 const template_marker = 'TEMPLATE_';
@@ -1833,15 +1834,36 @@ exports.once = function(what,handler) {
     ee.once(what,handler);
 };
 
+var mkCachePrefix = exports.mkCachePrefix = function(opts) {
+    var version = require('./package.json').version;
+    return '// '+version+' '+JSON.stringify(opts)+' '+JSON.stringify(exports.debug)+'\n';
+};
+
 require.extensions['.malaya'] = require.extensions['.chrjs'] = function(module,filename) {
     filename = path.resolve(filename);
     var content = fs.readFileSync(filename,'utf8').replace(/\t/g,'        '); // remove tabs
-    var   chrjs = parser.parse(content,{loc:exports.debug,attrs:true});
-    if (exports.debug) {
-        //stanzas[filename] = buildStanzas(content,chrjs); // +++ clone the parse! +++
-        ruleMaps[filename] = buildRuleMap(chrjs);
+    {
+        var    hasher = crypto.createHash('sha1');
+        var parseOpts = {loc:exports.debug,attrs:true};
+        hasher.write(mkCachePrefix(parseOpts));
+        hasher.write(content);
+        var         h = hasher.digest('hex');
+        var   ccached = path.join(process.cwd(),'.ccache',h);
+        try {
+            module._compile(fs.readFileSync(ccached,'utf8'),filename);
+            if (exports.debug)
+                ruleMaps[filename] = JSON.parse(fs.readFileSync(ccached+'.map','utf8'));
+        } catch(e1) {
+            var chrjs = parser.parse(content,parseOpts);
+            var  code = recast.print(generateJS(chrjs)).code;
+            ruleMaps[filename] = buildRuleMap(chrjs);
+            module._compile(code,filename);
+            try {
+                fs.writeFileSync(ccached,       code);
+                fs.writeFileSync(ccached+'.map',JSON.stringify(ruleMaps[filename]));
+            } catch (e2) {}
+        }
     }
-    module._compile(recast.print(generateJS(chrjs)).code,filename);
     ee.emit('compile',filename);
 };
 

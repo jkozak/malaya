@@ -801,3 +801,74 @@ describe("rule maps",function() {
         });
     });
 });
+
+describe("caching",function(){
+    const cwd = process.cwd();
+    after(()=>{process.chdir(cwd);});
+    describe("mkCachePrefix",function(){
+        const compilerDebug = compiler.debug;
+        after(()=>{compiler.debug=compilerDebug;});
+        it("builds a string",function(){
+            assert.strictEqual(typeof compiler.mkCachePrefix({}),'string');
+        });
+        it("value depends upon arg",function(){
+            assert.notStrictEqual(compiler.mkCachePrefix({}),   compiler.mkCachePrefix({a:1}));
+            assert.notStrictEqual(compiler.mkCachePrefix({a:1}),compiler.mkCachePrefix({b:1}));
+            assert.notStrictEqual(compiler.mkCachePrefix({a:1}),compiler.mkCachePrefix({a:2}));
+        });
+        it("value depends upon compiler debug",function(){
+            compiler.debug = true;
+            const pfx1 =  compiler.mkCachePrefix({});
+            compiler.debug = false;
+            const pfx0 =  compiler.mkCachePrefix({});
+            assert.notStrictEqual(pfx0,pfx1);
+        });
+    });
+    describe("implicit compilation",function(){
+        this.bail(true);
+        const tdir = temp.mkdirSync();
+        const  fn1 = path.join(tdir,'a.chrjs');
+        const  fn2 = path.join(tdir,'b.chrjs');
+        let     js1;
+        let     js2;
+        fs.mkdirSync(path.join(tdir,'.ccache'));
+        fs.writeFileSync(fn1,"store {\nrule (['1'],+['2',{}]);}");
+        fs.writeFileSync(fn2,"store {\nrule (['2'],+['2',{}]);}");
+        before(()=>{
+            process.chdir(tdir);
+            assert.strictEqual(fs.readdirSync(path.join(tdir,'.ccache')).length,0);
+        });
+        it("places entry in cache",function(){
+            require.extensions['.chrjs']({_compile:(code,filename)=>{js1=code;}},fn1);
+            assert.strictEqual(fs.readdirSync(path.join(tdir,'.ccache')).length,2); // js and map
+
+        });
+        it("fetches from cache",function(){
+            require.extensions['.chrjs']({_compile:(code,filename)=>{assert.strictEqual(code,js1);}},fn1);
+            assert.strictEqual(fs.readdirSync(path.join(tdir,'.ccache')).length,2); // js and map
+
+        });
+        it("fetches from cache by content",function(){
+            require.extensions['.malaya']({_compile:(code,filename)=>{assert.strictEqual(code,js1);}},fn1);
+            assert.strictEqual(fs.readdirSync(path.join(tdir,'.ccache')).length,2); // js and map
+
+        });
+        it("places another entry in cache",function(){
+            require.extensions['.chrjs']({_compile:(code,filename)=>{js2=code;}},fn2);
+            assert.strictEqual(fs.readdirSync(path.join(tdir,'.ccache')).length,4); // js and map
+        });
+        it("emitted code differs",function(){
+            assert.notStrictEqual(js1,js2);
+        });
+        it("fetches other from cache",function(){
+            require.extensions['.chrjs']({_compile:(code,filename)=>{assert.strictEqual(code,js2);}},fn2);
+            assert.strictEqual(fs.readdirSync(path.join(tdir,'.ccache')).length,4); // js and map
+
+        });
+        it("fetches other from cache by content",function(){
+            require.extensions['.malaya']({_compile:(code,filename)=>{assert.strictEqual(code,js2);}},fn2);
+            assert.strictEqual(fs.readdirSync(path.join(tdir,'.ccache')).length,4); // js and map
+
+        });
+    });
+});

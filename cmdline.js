@@ -460,9 +460,27 @@ exports.run = function(opts0,argv2) {
         const    parse = require('./parser.js').parse;
         const compiler = require('./compiler.js');
         const   recast = require('recast');
-        options        = options || {attrs:true};
+        const   crypto = require('crypto');
+        const  content = fs.readFileSync(source,'utf8');
+        const   hasher = crypto.createHash('sha1');
         compiler.debug = args.debug;
-        return recast.print(compiler.compile(parse(fs.readFileSync(source),options))).code;
+        options        = options || {loc:compiler.debug,attrs:true};
+        hasher.write(compiler.mkCachePrefix(options));
+        hasher.write(content);
+        const        h = hasher.digest('hex');
+        const  ccached = path.join(process.cwd(),'.ccache',h);
+        try {
+            return fs.readFileSync(ccached,'utf8');
+        } catch (e1) {
+            const chrjs = parse(content,options);
+            const  code = recast.print(compiler.compile(chrjs)).code;
+            try {
+                fs.writeFileSync(ccached,code);
+            } catch (e2) {
+                // empty
+            }
+            return code;
+        }
     };
 
     // basic tracing facility
