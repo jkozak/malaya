@@ -295,7 +295,7 @@ if (util.env==='test')  {
     };
     exports.ExtServer = ExtServer;
 
-    const WS = function(url) {
+    const WS = function(url,options) {
         const ws = this;
         if (url instanceof ExtServer) {
             ws.srv = url;
@@ -303,7 +303,7 @@ if (util.env==='test')  {
         } else
             ws.srv = null;
         ws.queue = [];
-        ws.sock  = new WebSocket(url);
+        ws.sock  = new WebSocket(url,options);
         ws.jps   = new whiskey.JSONParseStream();
         ws.sock.onmessage = (e)=>{
             ws.jps.write(e.data);
