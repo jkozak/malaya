@@ -361,6 +361,17 @@ describe("Engine",function() {
                 });
             });
         });
+        it("handles journal item causing `fail`",function(done){
+            runInEngine(path.join(__dirname,'bl/fail.malaya'),{
+                init: function(eng) {
+                    appendToJournal(eng,'update',['fail',{}]);
+                },
+                main: function(eng) {
+                    assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{failCount:1}]]);
+                    done();
+                }
+            });
+        });
         // +++
     });
     describe("walking utilities",function() {

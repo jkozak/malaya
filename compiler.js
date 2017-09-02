@@ -1101,6 +1101,7 @@ function generateJS(js,what) {
         var bIdFact = b.identifier('fact');
         var addenda = [];
         var delenda = [];
+        var    fail = null;
         var      bv = function(item_id) {return b.identifier('t'+item_id);};
         var genItem = function(item_id,fixed_item,next) { // >> [Statement,...]
             var    js;
@@ -1130,6 +1131,12 @@ function generateJS(js,what) {
                 js1  = [b.expressionStatement(expr)].concat(next1());
                 break;
             }
+            case 'F':
+                if (fail!==null)
+                    throw new Error("multiple fail expressions in one rule");
+                fail = item_id;
+                js1  = next1();
+                break;
             case '+':
                 addenda.push(item_id);
                 js1 = next1();
@@ -1196,6 +1203,11 @@ function generateJS(js,what) {
                 payload.push(b.expressionStatement(
                     b.callExpression(b.identifier('_add'),[genAdd(chr.items[j].expr)]) ) );
             });
+            if (fail!==null) {
+                payload.push(b.expressionStatement(
+                    b.callExpression(b.identifier('out'),
+                                     [b.literal('fail:'),chr.items[fail].expr] ) ));
+            }
             if (exports.debug) // mark the effective end of this rule's processing
                 payload.push(b.expressionStatement(
                     b.callExpression(b.memberExpression(b.identifier('ee'),
@@ -1218,7 +1230,7 @@ function generateJS(js,what) {
         assert.strictEqual(templates['rule'].body.length,1);
         var    js = deepClone(templates['rule'].body[0].declarations[0].init);
         var binds = Object.keys(chr.attrs.vars)
-            .filter(function(k){return !chr.attrs.vars[k].inherited && k[0]!=='%'})
+            .filter(function(k){return !chr.attrs.vars[k].inherited && k[0]!=='%';})
             .map(function(k){return chr.attrs.vars[k].mangled;});
         var js1 = genItem(0,i,genPayload);
         js1.unshift(b.variableDeclaration('var',

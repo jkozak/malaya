@@ -1,0 +1,7 @@
+module.exports = store {
+    ['stats',{failCount:0}]
+    rule (-['fail',...],
+          -['stats',{failCount}],
+          +['stats',{failCount:failCount+1}],
+           fail "bad one");
+};

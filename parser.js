@@ -116,7 +116,8 @@ const util = require('./util.js');
                     '+', '-', '*', '/', '%', '++', '--', '<<', '>>', '>>>', '&',
                     '|', '^', '!', '~', '&&', '||', '?', ':', '===', '==', '>=',
                     '<=', '<', '>', '!=', '!==',
-                    '#'];       // chrjs
+                    // malaya
+                    '#','fail'];
 
     Syntax = {
         AssignmentExpression: 'AssignmentExpression',
@@ -338,7 +339,7 @@ const util = require('./util.js');
         case 4:
             return (id === 'this') || (id === 'else') || (id === 'case') ||
                 (id === 'void') || (id === 'with') || (id === 'enum') ||
-                (id === 'rule');                      // chrjs
+                (id === 'rule') || (id === 'fail');                      // chrjs
         case 5:
             return (id === 'while') || (id === 'break') || (id === 'catch') ||
                 (id === 'throw') || (id === 'const') || (id === 'yield') ||
@@ -4034,6 +4035,9 @@ const util = require('./util.js');
         } else if (match('(')) {
             // !!! this would be fooled by `(out('blah','blah'))` !!!
             ans = delegate.createItemExpression('?',parseAssignmentExpression()); // guard
+        } else if (matchKeyword('fail')) {
+            expectKeyword('fail');
+            ans = delegate.createItemExpression('F',parseAssignmentExpression()); // fail
         } else {
             var expr = parseAssignmentExpression();
             if (expr.type==Syntax.AssignmentExpression)

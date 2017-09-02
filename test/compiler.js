@@ -758,6 +758,19 @@ describe("query statement",function() {
     });
 });
 
+describe("fail statement",function(){
+    it("should compile and emit error event",function(done){
+        var js = compile("store {rule(['bollocks',{}],fail \"that's bollocks\");};");
+        var st = eval(recast.print(js).code);
+        st.out = (port,msg)=>{
+            assert.strictEqual(port,"fail:");
+            assert.strictEqual(msg,"that's bollocks");
+            done();
+        };
+        st.add(['bollocks',{}]);
+    });
+});
+
 describe("compile hook",function() {
     var tdir = temp.mkdirSync();
     it("should be run when a chrjs file is compiled",function() {
