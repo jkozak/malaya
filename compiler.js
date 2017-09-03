@@ -207,6 +207,12 @@ function TEMPLATE_sort() {
     }
 }
 
+function TEMPLATE_type() {
+    ({}).toString.call(OBJ).slice(8,-1)===TYPE;
+}
+
+var primitiveTypes = [];
+
 //??? why isn't `sourceFileName` doing anything? ???
 var autoparse = recast.parse(fs.readFileSync(__filename),{esprima:       require('esprima'),
                                                           sourceFileName:__filename});
@@ -405,6 +411,10 @@ function annotateParse1(js) {   // poor man's attribute grammar - pass one
             this.traverse(path.get('items'));
             vars = save.vars;
             stmt = save.stmt;
+        },
+        visitTypeSpecifier:   function(path){
+            this.visit(path.get('id'));
+            return false;
         },
         visitQueryStatement:      function(path) {
             this.noteDeclaredName(path.node.id.name,'function');
@@ -650,6 +660,10 @@ function mangle(js) {           // `js` must have been previously annotated
                 this.visit(path.get('object'));
                 return false;
             }
+        },
+        visitTypeSpecifier:       function(path) {
+            this.visit(path.get('id'));
+            return false;
         }
     });
     return js;
@@ -1118,6 +1132,32 @@ function generateJS(js,what) {
             case '?':
                 js1 = [b.ifStatement(chr.items[item_id].expr,b.blockStatement(next1()),null)];
                 break;
+            case 'T': {
+                var   expr = chr.items[item_id].expr;
+                var bTypes = expr.specs.map(function(spec){
+                    var bType = deepClone(templates['type'].body[0].expression);
+                    parser.visit(bType,{
+                        visitIdentifier: function(path) {
+                            // +++ non-(primitive|union) types +++
+                            switch (path.node.name) {
+                            case 'OBJ':  path.replace(expr.id);break;
+                            case 'TYPE': path.replace(b.literal(spec.name));break;
+                            }
+                            this.traverse(path);
+                        }
+                    });
+                    return bType;
+                });
+                var bTypeUnion = b.literal(false);
+                while (bTypes.length>0) {
+                    var bType = bTypes.shift();
+                    bTypeUnion = b.logicalExpression('||',bType,bTypeUnion);
+                }
+                js1 = [b.ifStatement(bTypeUnion,
+                                     b.blockStatement(next1()),
+                                     null)];
+                break;
+            }
             case 'O':
                 var expr = chr.items[item_id].expr;
                 expr = parser.visit(expr,{visitSnapExpression:visitSnapExpressionAndCompile});

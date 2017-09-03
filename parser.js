@@ -169,7 +169,8 @@ const util = require('./util.js');
         SnapExpression: 'SnapExpression',
         QueryWhereStatement: 'QueryWhereStatement',
         WhereExpression: 'WhereExpression',
-        ItemExpression: 'ItemExpression'
+        ItemExpression: 'ItemExpression',
+        TypeSpecifier: 'TypeSpecifier'
     };
 
     PropertyKind = {
@@ -1867,6 +1868,14 @@ const util = require('./util.js');
                 expr: expr,
                 t: null,
                 rank: null
+            };
+        },
+
+        createTypeSpecifier: function(id,specs) {
+            return {
+                type: Syntax.TypeSpecifier,
+                id: id,
+                specs: specs
             };
         },
 
@@ -3997,6 +4006,27 @@ const util = require('./util.js');
         }
     }
 
+    function parseTypeSpecifier(id) {
+        var startToken = lookahead;
+        var      specs = [];
+        while (true) {
+            var spec = parseVariableIdentifier();
+            if (spec.name==='Maybe') {
+                specs.push(parseVariableIdentifier());
+                specs.push(delegate.createIdentifier('Undefined'));
+                specs.push(delegate.createIdentifier('Null'));
+            } else
+                specs.push(spec);
+            if (match('|'))
+                expect('|');
+            else
+                break;
+        }
+        // +++ sort,uniq on specs +++
+        // +++ handle non-(primitive|Union) +++
+        return delegate.markEnd(delegate.createTypeSpecifier(id,specs),startToken);
+    }
+
     function parseChrjsFullTerm() {
         if (match('['))
             return parseArrayInitialiser();
@@ -4046,6 +4076,11 @@ const util = require('./util.js');
                      expr.callee.type==='Identifier' &&
                      expr.callee.name==='out')
                 ans = delegate.createItemExpression('O',expr);                    // output
+            else if (expr.type==='Identifier' && match(':')) {
+                expect(':');
+                expect(':');
+                ans = delegate.createItemExpression('T',parseTypeSpecifier(expr));// type specifier
+            }
             else
                 ans = delegate.createItemExpression('?',expr);                    // guard
         }
@@ -4075,7 +4110,7 @@ const util = require('./util.js');
     }
 
     function parseQuerySnapBackend() {
-        var qsb = {items:[],init:null,accum:null}
+        var qsb = {items:[],init:null,accum:null};
         if (!match(';')) {
             while (index<length) {
                 qsb.items.push(parseChrjsItem());
@@ -4214,6 +4249,11 @@ const util = require('./util.js');
             .field('id',     def('Identifier'))
             .field('args',   [def('Identifier')])
             .field('body',   def('ConditionalExpression'));
+        def('TypeSpecifier')
+            .bases('Expression')
+            .build('id','specs')
+            .field('id',   def('Identifier'))
+            .field('specs',[def('Identifier')]); // +++ not just primitive and union types +++
         types.finalize();
         return function(ast,methods) {
             return types.visit(ast,methods);

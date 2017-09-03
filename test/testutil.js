@@ -55,7 +55,7 @@ describe("testutil",function() {
         });
     });
 
-    describe("ExtServer/WS XXX",function(){
+    describe("ExtServer/WS",function(){
         const srv = new testutil.ExtServer('malaya');
         it("inits a server",function(done){
             this.timeout(10000);

@@ -1,6 +1,6 @@
 {
   "name": "malaya",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "description": "Logic programming with JSON pattern matching",
   "dependencies": {
     "argparse": "^1.0.2",

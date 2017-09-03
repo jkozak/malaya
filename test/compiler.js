@@ -771,6 +771,130 @@ describe("fail statement",function(){
     });
 });
 
+describe("type checking XXX",function(){
+    describe("Number",function(){
+        var st;
+        this.bail(true);
+        it("specification",function(){
+            var js = compile("store {rule(-['a',{b}],b::Number);};");
+            st = eval(recast.print(js).code);
+        });
+        it("matches by type",function(){
+            st.add(['a',{b:17}]);
+            assert.strictEqual(st._private.orderedFacts.length,0);
+        });
+        it("doesn't match by type - string",function(){
+            st.add(['a',{b:'17'}]);
+            assert.strictEqual(st._private.orderedFacts.length,1);
+        });
+        it("doesn't match by type - undefined/absent",function(){
+            st.add(['a',{}]);
+            assert.strictEqual(st._private.orderedFacts.length,2);
+        });
+        it("doesn't match by type - undefined/explicit",function(){
+            st.add(['a',{b:undefined}]);
+            assert.strictEqual(st._private.orderedFacts.length,3);
+        });
+    });
+    describe("Boolean",function(){
+        var st;
+        this.bail(true);
+        it("specification",function(){
+            var js = compile("store {rule(-['a',{b}],b::Boolean);};");
+            st = eval(recast.print(js).code);
+        });
+        it("matches by type - false",function(){
+            st.add(['a',{b:false}]);
+            assert.strictEqual(st._private.orderedFacts.length,0);
+        });
+        it("matches by type - true",function(){
+            st.add(['a',{b:true}]);
+            assert.strictEqual(st._private.orderedFacts.length,0);
+        });
+        it("doesn't match by type - number",function(){
+            st.add(['a',{b:0}]);
+            assert.strictEqual(st._private.orderedFacts.length,1);
+        });
+        it("doesn't  match by type - undefined/absent",function(){
+            st.add(['a',{}]);
+            assert.strictEqual(st._private.orderedFacts.length,2);
+        });
+        it("doesn't match by type - undefined/explicit",function(){
+            st.add(['a',{b:undefined}]);
+            assert.strictEqual(st._private.orderedFacts.length,3);
+        });
+        it("doesn't match by type - null",function(){
+            st.add(['a',{b:null}]);
+            assert.strictEqual(st._private.orderedFacts.length,4);
+        });
+    });
+    describe("Maybe Boolean",function(){
+        var st;
+        this.bail(true);
+        it("specification",function(){
+            var js = compile("store {rule(-['a',{b}],b::Maybe Boolean);};");
+            st = eval(recast.print(js).code);
+        });
+        it("matches by type - false",function(){
+            st.add(['a',{b:false}]);
+            assert.strictEqual(st._private.orderedFacts.length,0);
+        });
+        it("matches by type - true",function(){
+            st.add(['a',{b:true}]);
+            assert.strictEqual(st._private.orderedFacts.length,0);
+        });
+        it("doesn't match by type - number",function(){
+            st.add(['a',{b:0}]);
+            assert.strictEqual(st._private.orderedFacts.length,1);
+        });
+        // see ticket [88d62b2fb4a89254]
+        // it("matches by type - undefined/absent",function(){
+        //     st.add(['a',{}]);
+        //     assert.strictEqual(st._private.orderedFacts.length,1);
+        // });
+        it("matches by type - undefined/explicit",function(){
+            st.add(['a',{b:undefined}]);
+            assert.strictEqual(st._private.orderedFacts.length,1);
+        });
+        it("matches by type - null",function(){
+            st.add(['a',{b:null}]);
+            assert.strictEqual(st._private.orderedFacts.length,1);
+        });
+    });
+    describe("Boolean | Number",function(){
+        var st;
+        this.bail(true);
+        it("specification",function(){
+            var js = compile("store {rule(-['a',{b}],b::Boolean|Number);};");
+            st = eval(recast.print(js).code);
+        });
+        it("matches by type - false",function(){
+            st.add(['a',{b:false}]);
+            assert.strictEqual(st._private.orderedFacts.length,0);
+        });
+        it("matches by type - true",function(){
+            st.add(['a',{b:true}]);
+            assert.strictEqual(st._private.orderedFacts.length,0);
+        });
+        it("matches by type - number",function(){
+            st.add(['a',{b:0}]);
+            assert.strictEqual(st._private.orderedFacts.length,0);
+        });
+        it("doesn't match by type - undefined/absent",function(){
+            st.add(['a',{}]);
+            assert.strictEqual(st._private.orderedFacts.length,1);
+        });
+        it("doesn't match by type - undefined/explicit",function(){
+            st.add(['a',{b:undefined}]);
+            assert.strictEqual(st._private.orderedFacts.length,2);
+        });
+        it("doesn't match by type - null",function(){
+            st.add(['a',{b:null}]);
+            assert.strictEqual(st._private.orderedFacts.length,3);
+        });
+    });
+});
+
 describe("compile hook",function() {
     var tdir = temp.mkdirSync();
     it("should be run when a chrjs file is compiled",function() {
