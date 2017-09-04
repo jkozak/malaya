@@ -4013,7 +4013,6 @@ const util = require('./util.js');
             var spec = parseVariableIdentifier();
             if (spec.name==='Maybe') {
                 specs.push(parseVariableIdentifier());
-                specs.push(delegate.createIdentifier('Undefined'));
                 specs.push(delegate.createIdentifier('Null'));
             } else
                 specs.push(spec);

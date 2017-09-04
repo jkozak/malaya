@@ -669,6 +669,7 @@ describe("Engine",function() {
                 assert.strictEqual(facts()[0][1].named,'ev');
                 assert(facts()[0][1]._id);
                 clock.tick(9998);
+                assert.strictEqual(facts().length,1);
                 done();
             });
             it("...which is cancelled",function(done){

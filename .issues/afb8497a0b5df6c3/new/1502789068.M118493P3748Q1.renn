@@ -1,8 +1,9 @@
 From: John Kozak
 Date: Tue, 15 Aug 2017 10:18:51 +0100
-State: new
+State: resolved
 Subject: code generated for match is confusing given {xxx:undefined,...}
 Message-Id: <afb8497a0b5df6c3-0-artemis@renn>
+resolution: fixed
 
 e.g.
 

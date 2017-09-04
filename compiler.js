@@ -781,8 +781,9 @@ Ref.flatAt = function(obj,fn) {
     throw new Error("not found");
 };
 
-var bProp    = function(bobj,prop) {return b.memberExpression(bobj,b.identifier(prop),false)};
-var bIsEqual = bProp(b.identifier('_'),'isEqual');
+var bProp        = function(bobj,prop) {return b.memberExpression(bobj,b.identifier(prop),false)};
+var bIsEqual     = bProp(b.identifier('_'),'isEqual');
+var bIsUndefined = bProp(b.identifier('_'),'isUndefined');
 
 function genEqual(p,q) {
     if (p.type=='Literal' || q.type=='Literal')
@@ -960,8 +961,10 @@ function genMatch(term,genRest,bIdFact) { // genRest() >> [stmt,...]; returns Bl
     visit(term,[]);
 
     var stmt = b.blockStatement(genRest());
-    for (var p in binds)
+    for (var p in binds) {
         stmt.body.unshift(b.expressionStatement(b.assignmentExpression('=',b.identifier(p),binds[p])));
+        bools.unshift(b.unaryExpression('!',b.callExpression(bIsUndefined,[binds[p]])));
+    }
     if (bools.length>0) {
         var test = bools.pop();
         while (bools.length>0) {

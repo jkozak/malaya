@@ -771,10 +771,10 @@ describe("fail statement",function(){
     });
 });
 
-describe("type checking XXX",function(){
+describe("type checking",function(){
     describe("Number",function(){
         var st;
-        this.bail(true);
+        afterEach(()=>st&&st.reset());
         it("specification",function(){
             var js = compile("store {rule(-['a',{b}],b::Number);};");
             st = eval(recast.print(js).code);
@@ -787,18 +787,14 @@ describe("type checking XXX",function(){
             st.add(['a',{b:'17'}]);
             assert.strictEqual(st._private.orderedFacts.length,1);
         });
-        it("doesn't match by type - undefined/absent",function(){
-            st.add(['a',{}]);
-            assert.strictEqual(st._private.orderedFacts.length,2);
-        });
-        it("doesn't match by type - undefined/explicit",function(){
-            st.add(['a',{b:undefined}]);
-            assert.strictEqual(st._private.orderedFacts.length,3);
+        it("doesn't match by type - null",function(){
+            st.add(['a',{b:null}]);
+            assert.strictEqual(st._private.orderedFacts.length,1);
         });
     });
     describe("Boolean",function(){
         var st;
-        this.bail(true);
+        afterEach(()=>st&&st.reset());
         it("specification",function(){
             var js = compile("store {rule(-['a',{b}],b::Boolean);};");
             st = eval(recast.print(js).code);
@@ -815,22 +811,14 @@ describe("type checking XXX",function(){
             st.add(['a',{b:0}]);
             assert.strictEqual(st._private.orderedFacts.length,1);
         });
-        it("doesn't  match by type - undefined/absent",function(){
-            st.add(['a',{}]);
-            assert.strictEqual(st._private.orderedFacts.length,2);
-        });
-        it("doesn't match by type - undefined/explicit",function(){
-            st.add(['a',{b:undefined}]);
-            assert.strictEqual(st._private.orderedFacts.length,3);
-        });
         it("doesn't match by type - null",function(){
             st.add(['a',{b:null}]);
-            assert.strictEqual(st._private.orderedFacts.length,4);
+            assert.strictEqual(st._private.orderedFacts.length,1);
         });
     });
     describe("Maybe Boolean",function(){
         var st;
-        this.bail(true);
+        afterEach(()=>st&&st.reset());
         it("specification",function(){
             var js = compile("store {rule(-['a',{b}],b::Maybe Boolean);};");
             st = eval(recast.print(js).code);
@@ -847,23 +835,14 @@ describe("type checking XXX",function(){
             st.add(['a',{b:0}]);
             assert.strictEqual(st._private.orderedFacts.length,1);
         });
-        // see ticket [88d62b2fb4a89254]
-        // it("matches by type - undefined/absent",function(){
-        //     st.add(['a',{}]);
-        //     assert.strictEqual(st._private.orderedFacts.length,1);
-        // });
-        it("matches by type - undefined/explicit",function(){
-            st.add(['a',{b:undefined}]);
-            assert.strictEqual(st._private.orderedFacts.length,1);
-        });
         it("matches by type - null",function(){
             st.add(['a',{b:null}]);
-            assert.strictEqual(st._private.orderedFacts.length,1);
+            assert.strictEqual(st._private.orderedFacts.length,0);
         });
     });
     describe("Boolean | Number",function(){
         var st;
-        this.bail(true);
+        afterEach(()=>st&&st.reset());
         it("specification",function(){
             var js = compile("store {rule(-['a',{b}],b::Boolean|Number);};");
             st = eval(recast.print(js).code);
@@ -880,17 +859,9 @@ describe("type checking XXX",function(){
             st.add(['a',{b:0}]);
             assert.strictEqual(st._private.orderedFacts.length,0);
         });
-        it("doesn't match by type - undefined/absent",function(){
-            st.add(['a',{}]);
-            assert.strictEqual(st._private.orderedFacts.length,1);
-        });
-        it("doesn't match by type - undefined/explicit",function(){
-            st.add(['a',{b:undefined}]);
-            assert.strictEqual(st._private.orderedFacts.length,2);
-        });
         it("doesn't match by type - null",function(){
             st.add(['a',{b:null}]);
-            assert.strictEqual(st._private.orderedFacts.length,3);
+            assert.strictEqual(st._private.orderedFacts.length,1);
         });
     });
 });

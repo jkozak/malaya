@@ -1,6 +1,7 @@
 From: John Kozak
 Date: Mon, 04 Sep 2017 09:20:44 +0100
 Subject: undefined match is confused
-State: new
+State: resolved
 Message-Id: <88d62b2fb4a89254-0-artemis@renn>
+resolution: fixed
 

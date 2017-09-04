@@ -483,6 +483,39 @@ exports.run = function(opts0,argv2) {
         }
     };
 
+    // optional decency checking: don't put undefined in store
+    const sanityCheckChrjsAdds = function(chrjs,source) {
+        const         _ = require('underscore');
+        const  compiler = require('./compiler.js');
+        const   ruleMap = compiler.getRuleMap(source);
+        const  mySource = path.relative(process.cwd(),source);
+        let  activeRule = null;
+        const findUndef = js=>{
+            if (js===undefined)
+                return true;
+            if (typeof js==='object')
+                return _.some(_.values(js),findUndef);
+            return false;
+        };
+        chrjs.on('queue-rule',function(id,bindings) {
+            activeRule = id;
+        });
+        chrjs.on('add',function(t,f) {
+            if (![2,3].includes(f.length) || typeof f[0]!=='string' || typeof f[1]!=='object') {
+                if (activeRule)
+                    console.log(" rule %s:%d added dubious %j",mySource,ruleMap[activeRule].start.line,f);
+                else
+                    console.log(" something added dubious %j",f);
+            }
+            if (findUndef(f)) {
+                if (activeRule)
+                    console.log(" rule %s:%d added undef-y %j",mySource,ruleMap[activeRule].start.line,f);
+                else
+                    console.log(" something added undef-y %j",f);
+            }
+        });
+    };
+
     // basic tracing facility
     // +++ move to `Engine`, make an `emit` stream +++
     const isFactInteresting = function(f) {        // what's worth tracing?
@@ -736,6 +769,7 @@ exports.run = function(opts0,argv2) {
         });
         eng.start();
         if (args.debug) {
+            sanityCheckChrjsAdds(eng.chrjs,source);
             traceChrjs(eng.chrjs,source);
             eng.on('out',(dest,data)=>{
                 const n = 80;   // max length of output to show
@@ -759,8 +793,10 @@ exports.run = function(opts0,argv2) {
         const  print = args.stdout;
         eng.chrjs = engine.makeInertChrjs();
         eng.start();
-        if (args.debug)
+        if (args.debug) {
+            sanityCheckChrjsAdds(eng.chrjs,source);
             traceChrjs(chrjs,source);
+        }
         eng.startPrevalence(function(err) {
             for (let t=1;t<eng.chrjs.t;t++) {
                 const fact = eng.chrjs.get(t+'');
