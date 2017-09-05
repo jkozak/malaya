@@ -17,6 +17,7 @@ const    util = require('./util.js');
 const    path = require('path');
 const       _ = require('underscore');
 const  crypto = require('crypto');
+const  VError = require('verror');
 
 const templates       = {};
 const template_marker = 'TEMPLATE_';
@@ -368,6 +369,8 @@ function annotateParse1(js) {   // poor man's attribute grammar - pass one
         visitVariableDeclarator:  function(path) {
             var name = path.node.id.name;
             this.traverse(path);
+            if (!vars[name])
+                throw new VError("var %j not known",name);
             vars[name].bound    = true;
             vars[name].declared = true;
             vars[name].mutable  = path.parent.kind!=='const';
@@ -1076,10 +1079,22 @@ function generateJS(js,what) {
                                        b.variableDeclaration('var',[b.variableDeclarator(bv,bx)]),
                                        body]) )];
         } else {
-            return [b.forInStatement(b.variableDeclaration('var',[b.variableDeclarator(bv,null)]),
-                                     b.identifier('facts'),
-                                     body,
-                                     false)];
+            var bx = b.binaryExpression('+',b.literal(''),bvx);
+            return [b.forStatement(b.variableDeclaration('var',[b.variableDeclarator(bvx,b.literal(0))]),
+                                   b.binaryExpression('<',
+                                                      bvx,
+                                                      b.memberExpression(
+                                                          b.callExpression(
+                                                              b.memberExpression(b.identifier('Object'),
+                                                                                 b.identifier('keys'),
+                                                                                 false),
+                                                              [b.identifier('facts')] ),
+                                                          b.identifier('length'),
+                                                          false) ),
+                                   b.updateExpression('++',bvx,true),
+                                   b.blockStatement([
+                                       b.variableDeclaration('var',[b.variableDeclarator(bv,bx)]),
+                                       body]) )];
         }
     };
     var genBack1 = function(item,bv) { // gen code to go back one step in `genForFacts` iteration

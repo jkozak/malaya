@@ -1,0 +1,9 @@
+From: John Kozak
+Date: Tue, 05 Sep 2017 14:59:29 +0100
+Subject: Re: Bug: code generated for non-indexed rule with delete crashes
+Message-Id: <da37d6b9ab1faf6a-f97019b6b5a51209-artemis@renn>
+References: <da37d6b9ab1faf6a-0-artemis@renn>
+In-Reply-To: <da37d6b9ab1faf6a-0-artemis@renn>
+
+Compiler generated a for-in loop, so the index manipulation code
+called after delete didn't work.

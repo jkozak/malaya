@@ -656,4 +656,14 @@ describe("regression tests",function() {
         st.add(['p',{b:0}]);
         assert.strictEqual(st._private.orderedFacts.length,2);
     });
+    it("broken iteration skip code generated [da37d6b9ab1faf6a]",function(){
+        var st = store {
+            rule ( ['_restart',{...},{port:'server:'}],
+                  -[_1,_2,{port:'plugin:pwd'}] );
+            rule (-['_restart',{...},{port:'server:'}]);
+        };
+        st.add(['wibble',{},{port:'plugin:pwd'}]);
+        st.add(['_restart',{},{port:'server:'}]);
+        assert.strictEqual(st._private.orderedFacts.length,0);
+    });
 });

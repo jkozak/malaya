@@ -71,6 +71,7 @@
     "eslint": "eslint -f compact .",
     "pretest": "npm run eslint --silent",
     "test:js": "cross-env NODE_ENV=test mocha -R mocha-tldr-reporter -C test/*.js",
+    "test:crap": "cross-env NODE_ENV=test mocha -R mocha-tldr-reporter -C test/crap.js",
     "test:chrjs": "cross-env NODE_ENV=test mocha -R mocha-tldr-reporter --compilers chrjs:compiler -C test/*.chrjs",
     "test": "npm run test:js --silent && npm run test:chrjs --silent",
     "test:XXX": "cross-env NODE_ENV=test mocha -R mocha-tldr-reporter --compilers chrjs:compiler -C test --grep XXX",

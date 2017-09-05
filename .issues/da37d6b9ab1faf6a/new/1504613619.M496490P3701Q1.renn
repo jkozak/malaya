@@ -1,0 +1,7 @@
+From: John Kozak
+Date: Tue, 05 Sep 2017 13:13:39 +0100
+Subject: Bug: code generated for non-indexed rule with delete crashes
+State: resolved
+Message-Id: <da37d6b9ab1faf6a-0-artemis@renn>
+resolution: fixed
+
