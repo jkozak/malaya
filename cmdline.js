@@ -761,11 +761,11 @@ exports.run = function(opts0,argv2) {
                 }
             }
         });
-        eng.on('saved',function(syshash) {
-            console.log("saved world:  %s",syshash);
+        eng.on('saved',function(syshash,worldHash,journalHash) {
+            console.log("closing hash:  %s",journalHash);
         });
-        eng.on('loaded',function(syshash) {
-            console.log("loaded: %s",syshash);
+        eng.on('loaded',function(syshash,worldHash,journalHash) {
+            console.log("loaded: %s",journalHash);
         });
         eng.start();
         if (args.debug) {

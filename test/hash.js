@@ -15,6 +15,15 @@ describe("hash('sha1')",function() {
         assert.equal(hash('sha1').hash(''),      'da39a3ee5e6b4b0d3255bfef95601890afd80709');
         assert.equal(hash('sha1').hash('wibble'),'02e0182ae38f90d11be647e337665e67f9243817');
     });
+    it("should produce correct well-known values for files",function() {
+        const  tdir = temp.mkdirSync();
+        const efile = path.join(tdir,'empty');
+        const wfile = path.join(tdir,'wibble');
+        fs.writeFileSync(efile, '');
+        fs.writeFileSync(wfile,'wibble');
+        assert.equal(hash('sha1').hashFileSync(efile),'da39a3ee5e6b4b0d3255bfef95601890afd80709');
+        assert.equal(hash('sha1').hashFileSync(wfile),'02e0182ae38f90d11be647e337665e67f9243817');
+    });
     it("should import and export values",function() {
         const   dir = temp.mkdirSync();
         const store = hash('sha1').makeStore(dir);

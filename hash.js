@@ -113,6 +113,9 @@ module.exports = function(algorithm) {
             const hasher = ans.makeHasher();
             hasher.write(x);
             return hasher.digest('hex');
+        },
+        hashFileSync: function(filename) {
+            return ans.hash(fs.readFileSync(filename));
         }
     };
     return ans;

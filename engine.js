@@ -51,6 +51,9 @@ const        hash = require('./hash.js');
 const        lock = require('./lock.js');
 
 
+const hashFileSync = hash(util.hashAlgorithm).hashFileSync;
+
+
 exports.makeInertChrjs = function(opts) {
     opts = opts || {tag:null};
     const obj = {              // behaves like `store {}`;
@@ -252,11 +255,14 @@ Engine.prototype._saveWorld = function() {
     const    root = {chrjs: eng.chrjs.getRoot(),
                      git:   eng.git,
                      rng:   {seed:eng._rng.seed,useCount:eng._rng.engine.getUseCount()} };
+    const      ts = eng.timestamp();
     rmRF.sync(dirNew);
     fs.mkdirSync(dirNew);
     fs.writeFileSync( path.join(dirNew,"world"),  util.serialise(syshash)+'\n');
     fs.appendFileSync(path.join(dirNew,"world"),  util.serialise(root)+'\n');
-    fs.writeFileSync( path.join(dirNew,"journal"),util.serialise([eng.timestamp(),'previous',syshash])+'\n');
+    const   worldHash = hashFileSync(path.join(dirNew,"world"));
+    fs.writeFileSync( path.join(dirNew,"journal"),util.serialise([ts,'previous',syshash,worldHash])+'\n');
+    const journalHash = hashFileSync(path.join(dirNew,"journal"));
     rmRF.sync(dirOld);
     fs.renameSync(dirCur,dirOld);
     fs.renameSync(dirNew,dirCur);
@@ -270,7 +276,7 @@ Engine.prototype._saveWorld = function() {
                 console.log("failed to push changes",err);
             }
     }
-    eng.emit('saved',syshash);
+    eng.emit('saved',syshash,worldHash,journalHash);
     return syshash;
 };
 
@@ -282,7 +288,11 @@ Engine.prototype.stopPrevalence = function(quick,cb) {
         // 'close' event for `fs.WriteStream` is undocumented _but_
         // cannot do dir renames in `_saveWorld` until journal closed.
         journal.on(util.onWindows ? 'close' : 'finish',function() {
-            if (!quick)
+            if (quick) {
+                // +++ better to use digest-stream? +++
+                const h = hashFileSync(path.join(eng.prevalenceDir,'state','journal'));
+                eng.emit('saved',null,null,h);
+            } else
                 eng._saveWorld();
             eng.chrjs.out = ()=>{};
             if (cb) cb();
@@ -483,7 +493,10 @@ Engine.prototype.startPrevalence = function(opts,cb) {
     const eng = this;
     eng._ensureStateDir();
     const jrnlFile = path.join(eng.prevalenceDir,'state','journal');
-    eng._loadWorld();
+    const wrldFile = path.join(eng.prevalenceDir,'state','world');
+    const jrnlHash = hashFileSync(jrnlFile);
+    const wrldHash = hashFileSync(wrldFile);
+    eng._loadWorld(wrldHash,jrnlHash);
     const residue = util.readFileLinesSync(jrnlFile,function(l) { // replay
         const js = util.deserialise(l);
         switch (js[1]) {
@@ -495,6 +508,8 @@ Engine.prototype.startPrevalence = function(opts,cb) {
         case 'previous':
             if (js[2]!==eng.syshash)
                 throw new VError("syshash  wanted: %s  got: %s",eng.syshash,js[2]);
+            if (js[3]!==wrldHash)
+                throw new VError("world file hash: %s  expected: %s",wrldHash,js[3]);
             break;
         }
         return true;
@@ -533,7 +548,7 @@ Engine.prototype.cacheFile = function(fn,cb) {
         encache(fn,fn,en);
 };
 
-Engine.prototype._loadWorld = function() {
+Engine.prototype._loadWorld = function(wrldHash,jrnlHash) {
     const  eng = this;
     let lineNo = 1;
     util.readFileLinesSync(path.join(eng.prevalenceDir,'state','world'),function(line) {
@@ -555,7 +570,7 @@ Engine.prototype._loadWorld = function() {
             return false;
         }
     });
-    eng.emit('loaded',eng.syshash);
+    eng.emit('loaded',eng.syshash,wrldHash,jrnlHash);
 };
 
 Engine.prototype.closeConnection = function(portName) {

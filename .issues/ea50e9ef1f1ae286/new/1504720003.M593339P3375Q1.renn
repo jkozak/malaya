@@ -1,0 +1,16 @@
+From: John Kozak
+Date: Wed, 06 Sep 2017 18:36:43 +0100
+State: resolved
+Subject: system hash should be of newly saved journal file, not stream
+Message-Id: <ea50e9ef1f1ae286-0-artemis@renn>
+resolution: fixed
+
+There's a not terribly sneaky way to corrupt a malaya system: just
+edit the world file!  This can be fixed by defining the "syshash" (the
+one that's promulgated to the world as a robust,secure indicator of
+system state) to be the hash of the journal file; the 'previous' link
+at the beginning of the journal should be to the hash of the world file.
+
+If the journal hash does not match the promulgated one, can strip
+lines and recalc hash until a hit is found to show what has been done
+(or that the journal is corrupt).

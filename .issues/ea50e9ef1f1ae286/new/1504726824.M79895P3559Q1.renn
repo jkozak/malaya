@@ -1,0 +1,11 @@
+From: John Kozak
+Date: Wed, 06 Sep 2017 18:47:57 +0100
+Subject: Re: system hash should be of newly saved journal file, not stream
+Message-Id: <ea50e9ef1f1ae286-f0325094344f0281-artemis@renn>
+References: <ea50e9ef1f1ae286-0-artemis@renn>
+In-Reply-To: <ea50e9ef1f1ae286-0-artemis@renn>
+
+should store both hashes in an object to make this readable, e.g.
+
+journal first line:
+[1504639666880,":previous",<syshash>,<worldhash>]
