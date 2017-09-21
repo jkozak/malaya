@@ -3,6 +3,7 @@
   "version": "0.7.0",
   "description": "Logic programming with JSON pattern matching",
   "dependencies": {
+    "agly": "0.0.1",
     "argparse": "^1.0.2",
     "basic-auth": "^1.0.1",
     "browserify": "^14.1.0",
