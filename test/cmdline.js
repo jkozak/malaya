@@ -50,7 +50,36 @@ describe("utility functions for this test file",function() {
             });
         });
     });
+    describe("summariseJSON XXX",function() {
+        it("preserves basic structure",function(){
+            assert.strictEqual(cmdline.summariseJSON([]),'[]');
+        });
+        it("preserves more complex structure",function(){
+            assert.strictEqual(cmdline.summariseJSON([[{},{}]]),'[[{},{}]]');
+        });
+        it("truncates strings",function(){
+            assert.strictEqual(cmdline.summariseJSON('123456789012345678901234567890'),
+                               '"123456789012..."');
+        });
+        it("doesn't truncate short strings",function(){
+            assert.strictEqual(cmdline.summariseJSON('123456789',{n:10}),
+                               '"123456789"');
+        });
+        it("doesn't truncate just-right strings",function(){
+            assert.strictEqual(cmdline.summariseJSON('1234567890',{n:10}),
+                               '"1234567890"');
+        });
+        it("truncates long strings",function(){
+            assert.strictEqual(cmdline.summariseJSON('12345678901',{n:10}),
+                               '"1234567890..."');
+        });
+        it("is nice to ports",function(){
+            assert.strictEqual(cmdline.summariseJSON({port:'ws://127.0.0.1:51594/data'}),
+                               '{"port":"ws://127.0.0.1:51594/data"}');
+        });
+    });
 });
+
 
 describe("cmdline",function() {
     let saveArgv;

@@ -691,9 +691,15 @@ Engine.prototype.addConnection = function(portName,io,cookies) {
 Engine.prototype.makeHttpPortName = function(req,prefix) { // nodejs http connection here
     const sock = req.socket;
     const prot = req.protocol==='https' ? 'wss' : 'ws';
+    let   addr = sock.remoteAddress;
+    const  pfx = '::ffff:';
+    const  sfx = '/.websocket';
     prefix = prefix || req.path;
-
-    return util.format("%s://%s:%s%s",prot,sock.remoteAddress,sock.remotePort,prefix);
+    if (addr.startsWith(pfx))
+        addr = addr.substr(pfx.length);
+    if (prefix.endsWith(sfx))
+        prefix = prefix.slice(0,prefix.length-sfx.length);
+    return util.format("%s://%s:%s%s",prot,addr,sock.remotePort,prefix);
 };
 
 Engine.prototype._importConnection = function(portName,req) {

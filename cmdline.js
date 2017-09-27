@@ -70,6 +70,18 @@ const argTypeMagicSpec = arg=>{
     return ans;
 };
 
+const summariseJSON = exports.summariseJSON = (js,{n=12}={})=>
+      JSON.stringify(js,(k,v)=>{
+          if (typeof v!=='string')
+              return v;
+          else if (k==='port')
+              return v;
+          else if (v.length>n)
+              return v.slice(0,n)+'...';
+          else
+              return v;
+      });
+
 addSubcommand('browse',{addHelp:true});
 subcommands.browse.addArgument(
     ['what'],
@@ -497,22 +509,17 @@ exports.run = function(opts0,argv2) {
                 return _.some(_.values(js),findUndef);
             return false;
         };
+        const loc = ()=>activeRule ?
+              `rule ${mySource}:${ruleMap[activeRule].start.line}` :
+              "something";
         chrjs.on('queue-rule',function(id,bindings) {
             activeRule = id;
         });
         chrjs.on('add',function(t,f) {
-            if (![2,3].includes(f.length) || typeof f[0]!=='string' || typeof f[1]!=='object') {
-                if (activeRule)
-                    console.log(" rule %s:%d added dubious %j",mySource,ruleMap[activeRule].start.line,f);
-                else
-                    console.log(" something added dubious %j",f);
-            }
-            if (findUndef(f)) {
-                if (activeRule)
-                    console.log(" rule %s:%d added undef-y %j",mySource,ruleMap[activeRule].start.line,f);
-                else
-                    console.log(" something added undef-y %j",f);
-            }
+            if (![2,3].includes(f.length) || typeof f[0]!=='string' || typeof f[1]!=='object')
+                console.log(" %s added dubious %s",loc(),summariseJSON(f));
+            if (findUndef(f))
+                console.log(" %s added undef-y %s",loc(),summariseJSON(f));
         });
     };
 
@@ -554,7 +561,7 @@ exports.run = function(opts0,argv2) {
                     console.log("~~~ %d boring adds ignored ~~~",borings);
                     borings = 0;
                 }
-                console.log("> %j",f);
+                console.log(`> ${summariseJSON(f)}`);
                 provoker = null;
             } else {
                 borings++;
@@ -573,15 +580,15 @@ exports.run = function(opts0,argv2) {
                 const firing1 = outQ.shift();
                 if (isTraceInteresting(firing1)) {
                     if (provoker) {
-                        console.log("> %j",provoker);
+                        console.log(`> ${summariseJSON(provoker)}`);
                         provoker = null;
                     }
                     console.log(" rule %s:%d took %dms",mySource,ruleMap[firing1.id].start.line,Date.now()-firing1.t);
                     firing1.dels.forEach(function(d){
-                        console.log("  - %j",d);
+                        console.log(`  - ${summariseJSON(d)}`);
                     });
                     firing1.adds.forEach(function(a){
-                        console.log("  + %j",a);
+                        console.log(`  + ${summariseJSON(a)}`);
                     });
                 } else
                     borings++;
@@ -772,10 +779,7 @@ exports.run = function(opts0,argv2) {
             sanityCheckChrjsAdds(eng.chrjs,source);
             traceChrjs(eng.chrjs,source);
             eng.on('out',(dest,data)=>{
-                const n = 80;   // max length of output to show
-                const s = JSON.stringify(data);
-                const r = s.length>n ? '...' : '';
-                console.log("< %j %s%s",dest,s.slice(0,n),r);
+                console.log("< %j %s",dest,summariseJSON(data));
             });
         }
         installSignalHandlers(eng);
