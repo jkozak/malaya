@@ -8,6 +8,7 @@ const VError = require('verror');
 const assert = require('assert');
 const   util = require('./util.js');
 const execCP = require('child_process').exec;
+const  chalk = require('chalk');
 
 // configure main arg parser
 
@@ -517,9 +518,9 @@ exports.run = function(opts0,argv2) {
         });
         chrjs.on('add',function(t,f) {
             if (![2,3].includes(f.length) || typeof f[0]!=='string' || typeof f[1]!=='object')
-                console.log(" %s added dubious %s",loc(),summariseJSON(f));
+                console.log(chalk.yellow(`${loc()} added dubious `)+summariseJSON(f));
             if (findUndef(f))
-                console.log(" %s added undef-y %s",loc(),summariseJSON(f));
+                console.log(chalk.yellow(`${loc()} added undef-y `)+summariseJSON(f));
         });
     };
 
@@ -558,10 +559,10 @@ exports.run = function(opts0,argv2) {
                 stack[stack.length-1].adds.push(f);
             else if (isAddInteresting(f)) {
                 if (borings) {
-                    console.log("~~~ %d boring adds ignored ~~~",borings);
+                    console.log(chalk.yellow(`~~~ ${borings} boring adds ignored ~~~`));
                     borings = 0;
                 }
-                console.log(`> ${summariseJSON(f)}`);
+                console.log(`${chalk.yellow('>')} ${summariseJSON(f)}`);
                 provoker = null;
             } else {
                 borings++;
@@ -580,15 +581,15 @@ exports.run = function(opts0,argv2) {
                 const firing1 = outQ.shift();
                 if (isTraceInteresting(firing1)) {
                     if (provoker) {
-                        console.log(`> ${summariseJSON(provoker)}`);
+                        console.log(`${chalk.yellow('>')} ${summariseJSON(provoker)}`);
                         provoker = null;
                     }
-                    console.log(" rule %s:%d took %dms",mySource,ruleMap[firing1.id].start.line,Date.now()-firing1.t);
+                    console.log(chalk.yellow(` rule ${mySource}:${ruleMap[firing1.id].start.line} took ${Date.now()-firing1.t}ms`));
                     firing1.dels.forEach(function(d){
-                        console.log(`  - ${summariseJSON(d)}`);
+                        console.log(`  ${chalk.yellow('-')} ${summariseJSON(d)}`);
                     });
                     firing1.adds.forEach(function(a){
-                        console.log(`  + ${summariseJSON(a)}`);
+                        console.log(`  ${chalk.yellow('+')} ${summariseJSON(a)}`);
                     });
                 } else
                     borings++;
@@ -607,7 +608,7 @@ exports.run = function(opts0,argv2) {
         options.prevalenceDir = prevalenceDir;
         const eng = _createEngine(options);
         eng.on('mode',function(mode) {
-            console.log("mode now: %s",mode);
+            console.log(chalk.yellow(util.format("mode now: %s",mode)));
             if (mode==='broken' && args.admin)
                 process.exit(1);
         });
@@ -779,7 +780,7 @@ exports.run = function(opts0,argv2) {
             sanityCheckChrjsAdds(eng.chrjs,source);
             traceChrjs(eng.chrjs,source);
             eng.on('out',(dest,data)=>{
-                console.log("< %j %s",dest,summariseJSON(data));
+                console.log("%s %j %s",chalk.yellow('<'),dest,summariseJSON(data));
             });
         }
         installSignalHandlers(eng);
