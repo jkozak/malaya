@@ -163,7 +163,7 @@ const Engine = exports.Engine = function(options) {
         throw new VError("reserved endpoint used");
     eng.on('mode',function(mode) {
         if (magic._restart && mode==='master')
-            eng.update(['_restart',{},{port:'server:'}]);
+            eng.update(['_restart',eng._magicRestartData(),{port:'server:'}]);
         eng.broadcast(['mode',mode],'admin');
     });
     eng.on('connection',function(portName,type) {
@@ -180,7 +180,7 @@ const Engine = exports.Engine = function(options) {
                 magic._tick = 1000;
             eng.tickInterval = setInterval(()=>{
                 if (magic._tick)
-                    eng.update(['_tick',{date:new Date()},{port:'server:'}]);
+                    eng.update(['_tick',eng._magicTickData(),{port:'server:'}]);
                 if (magic['_take-outputs'])
                     eng.update(['_take-outputs',{},{port:'server:'}]);
             },magic._tick);
@@ -201,8 +201,10 @@ const Engine = exports.Engine = function(options) {
     return eng;
 };
 
-
 util.inherits(Engine,events.EventEmitter);
+
+Engine.prototype._magicRestartData = function() {return {};};
+Engine.prototype._magicTickData    = function() {return {date:new Date()};};
 
 Engine.prototype.sanityCheck = function() { // performed just before starting
     const eng = this;
