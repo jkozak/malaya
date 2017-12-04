@@ -303,6 +303,7 @@ if (util.env==='test')  {
         } else
             ws.srv = null;
         ws.queue = [];
+        // +++ cookies in `options` +++
         ws.sock  = new WebSocket(url,options);
         ws.jps   = new whiskey.JSONParseStream();
         ws.sock.onmessage = (e)=>{

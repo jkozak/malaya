@@ -571,11 +571,11 @@ describe("compile",function() {
     it("should generate JS for trivial store via var",function() {
         var js = compile("store {['user',{name:'sid'}];rule(['user',{name:a}]);rule(['company',{user:a,name:b}]);};");
         var st = eval(recast.print(js).code);
-        assert.deepEqual(st._private.facts,{"1":['user',{name:'sid'}]});
+        assert.deepEqual(st._private.rawFacts,{"1":['user',{name:'sid'}]});
     });
     it("should generate JS for trivial store via const",function() {
         var js = compile("const st = store {['user',{name:'sid'}];rule(['user',{name:a}]);rule(['company',{user:a,name:b}]);};\n"+
-                         "require('assert').deepEqual(st._private.facts,{'1':['user',{name:'sid'}]})");
+                         "require('assert').deepEqual(st._private.rawFacts,{'1':['user',{name:'sid'}]})");
         eval(recast.print(js).code);
     });
     // ??? what about 'let' declarations? ???
@@ -586,7 +586,7 @@ describe("compile",function() {
         st.add(['a',17]);
         assert.deepEqual(st._private.orderedFacts,[['b',0]]);
         st.reset();
-        assert.deepEqual(st._private.facts,{});
+        assert.deepEqual(st._private.rawFacts,{});
         st.add(['c',1]);
         var ans = st.add(['a',17]);
         assert.strictEqual(ans.adds.length,1);

@@ -138,10 +138,22 @@ function TEMPLATE_store() {
         };
         if (!process.env.NODE_ENV || !process.env.NODE_ENV.startsWith('prod'))
             obj._private = {
-                get facts()   {return facts;},
+                get rawFacts() {return facts;},
                 get orderedFacts() {
                     var keys = Object.keys(facts).map(function(t){return parseInt(t);});
                     return keys.sort(function(p,q){return p-q;}).map(function(t){return facts[t];});
+                },
+                facts: function(sel){
+                    switch (typeof sel) {
+                    case 'string':
+                        return obj._private.orderedFacts.filter(function(f){return f[0]===sel;});
+                    case 'function':
+                        return obj._private.orderedFacts.filter(sel);
+                    case 'undefined':
+                        return obj._private.orderedFacts;
+                    default:
+                        throw new Error("bad fact selector: "+JSON.stringify(sel));
+                    }
                 }
             };
 
