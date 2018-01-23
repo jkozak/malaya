@@ -61,3 +61,35 @@ store {
 
    rule (['Permissions',
 }
+
+
+Plugins
+-------
+
+systemd
+=======
+
+random
+======
+
+Source of cryptographically random numbers, deterministic enough (i.e.
+shipped in as updates).
+
+
+HTTP
+====
+
+Small piece of express code to wrap a ~(req,res)~ tuple, attach an ID
+to it and punt into Malaya.
+
+Strip out all the non-JSON bits, trivially ~JSON.parse o JSON.stringify~.
+
+Call-out to stash body in a K/V store:
+ `out('plugin:http',['stash-body',{id}])`
+gives update:
+ `['body',{id,key},{port:'plugin:http'}]`
+
+
+email
+=====
+
