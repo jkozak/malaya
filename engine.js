@@ -671,7 +671,8 @@ Engine.prototype.addConnection = function(portName,io,cookies) {
         io.i.on('readable',function() {
             let js;
             while (!throttled && (js=io.i.read())!==null) {
-                if (js instanceof Array && js.length===2) {
+                if (js instanceof Array && js.length===2 &&
+                    (typeof js[0])==='string' && (typeof js[1])==='object') {
                     js.push(io.headers);
                     eng.update(js,function() {
                         throttled = false;
