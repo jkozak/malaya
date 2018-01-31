@@ -1,6 +1,6 @@
 {
   "name": "malaya",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "Logic programming with JSON pattern matching",
   "dependencies": {
     "agly": "0.0.1",

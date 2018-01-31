@@ -223,6 +223,16 @@ subcommands.init.addArgument(
     }
 );
 
+addSubcommand('journal',{addHelp:true});
+subcommands.journal.addArgument(
+    ['-n','--names'],
+    {
+        action:       'storeTrue',
+        help:         "show only filenames",
+        defaultValue: false
+    }
+);
+
 addSubcommand('kill',{addHelp:true});
 subcommands.kill.addArgument(
     ['signal'],
@@ -233,8 +243,6 @@ subcommands.kill.addArgument(
         defaultValue: 'SIGQUIT'
     }
 );
-
-addSubcommand('logs',{addHelp:true});
 
 addSubcommand('parse',{addHelp:true});
 subcommands.parse.addArgument(
@@ -393,6 +401,14 @@ subcommands.transform.addArgument(
     {
         action:       'store',
         help:         "chrjs source file for transform"
+    }
+);
+subcommands.transform.addArgument(
+    ['source'],
+    {
+        action:       'store',
+        nargs:        '?',
+        help:         "business logic source file"
     }
 );
 
@@ -796,7 +812,7 @@ exports.run = function(opts0,argv2) {
         const source = path.resolve(process.cwd(),args.transform);
         const  chrjs = require(source);
         const  print = args.stdout;
-        eng.chrjs = engine.makeInertChrjs();
+        eng.chrjs = args.source ? require(path.resolve(args.source)) : engine.makeInertChrjs();
         eng.start();
         if (args.debug) {
             sanityCheckChrjsAdds(eng.chrjs,source);
@@ -915,17 +931,24 @@ exports.run = function(opts0,argv2) {
             client.repl(url);
     };
 
-    subcommands.logs.exec = function() {
+    subcommands.journal.exec = function() {
         checkDirectoriesExist();
         const eng = createEngine({});
         eng._makeHashes();
-        eng.journalChain(function(err,hs) {
-            if (err)
-                throw err;
-            hs.forEach(function(h) {
-                process.stdout.write(h+'\n');
+        if (args.names)
+            eng.journalChain(function(err,hs) {
+                if (err)
+                    throw err;
+                hs.forEach(function(h) {
+                    process.stdout.write(h+'\n');
+                });
             });
-        });
+        else
+            eng.buildHistoryStream((err,read)=>{
+                if (err)
+                    throw err;
+                read.pipe(process.stdout);
+            });
     };
 
     if (subcommands[args.subcommandName]===undefined)
