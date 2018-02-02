@@ -33,7 +33,7 @@ argparse.addArgument(['-v','--verbose'],
                      {
                          action:       'count',
                          defaultValue: 1,
-                         help: "       be more verbose"
+                         help:         "be more verbose"
                      });
 exports.argparse = argparse;
 
