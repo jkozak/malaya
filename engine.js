@@ -130,6 +130,7 @@ const Engine = exports.Engine = function(options) {
     eng.sandbox        = null;
     eng.chrjs          = options.chrjs || eng.compile(options.businessLogic) || exports.makeInertChrjs();
     eng.hashes         = null;                   // hash store
+    eng.wsOptions      = options.wsOptions;
     eng.options        = options;
     eng.mode           = 'idle';                 // 'master' | 'slave' | 'idle'
     eng.conns          = {};                     // <port> -> {i:<in-stream>,o:<out-stream>,type:<type>}
@@ -716,11 +717,12 @@ Engine.prototype._addToExpressApp = function(app,server) {
     const      eng = this;
     const createIO = (ws,req,setup)=>{
         const portName = eng.makeHttpPortName(req);
+        const  headers = eng._importConnection(portName,req);
         let         io = {
             i:       null,
             o:       null,
             type:    null,
-            headers: _.omit(eng._importConnection(portName,req),_.isUndefined)
+            headers: headers && _.omit(headers,_.isUndefined)
         };
         setup(io);
         if (io.headers===null)
@@ -754,7 +756,7 @@ Engine.prototype._addToExpressApp = function(app,server) {
             ws.close();
         return io;
     };
-    expressWS(app,server);
+    expressWS(app,server,{wsOptions:eng.wsOptions});
     app.ws('/admin',(ws,req)=>{
         createIO(ws,req,io=>{
             io.type = 'admin';
