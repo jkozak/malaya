@@ -730,14 +730,14 @@ Engine.prototype._addToExpressApp = function(app,server) {
         else if (typeof io.headers!=='object')
             throw new VError("bad headers object: %j",io.headers);
         if (io!==null) {
+            io.i.on('error',()=>{               // +++ this should be in addConnection
+                io.i.end();
+            });
             ws.on('message',msg=>{
                 io.i.write(msg);
             });
             io.o.on('data',chunk=>{
                 ws.send(chunk);
-            });
-            io.i.on('error',()=>{               // +++ this should be in addConnection
-                io.i.end();
             });
             io.i.on('end',()=>{
                 eng.closeConnection(portName);
