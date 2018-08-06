@@ -737,7 +737,14 @@ Engine.prototype._addToExpressApp = function(app,server) {
                 io.i.write(msg);
             });
             io.o.on('data',chunk=>{
-                ws.send(chunk);
+                ws.send(chunk,err=>{
+                    if (err) {
+                        if (err.code==='EPIPE')
+                            io.o.end();
+                        else
+                            throw err;
+                    }
+                });
             });
             io.i.on('end',()=>{
                 eng.closeConnection(portName);
