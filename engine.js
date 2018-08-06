@@ -999,8 +999,10 @@ Engine.prototype.out = function(dest,json) {
             plugin.out(json);
     } else {
         const d = eng.conns[dest];
-        if (d)
+        if (d && d.o.readyState===d.o.OPEN)
             d.o.write(json);
+        else if (d)
+            console.log("connection not open for: %j",dest);
         else
             console.log("no connection found for: %j",dest);
     }
