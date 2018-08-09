@@ -730,11 +730,20 @@ Engine.prototype._addToExpressApp = function(app,server) {
         else if (typeof io.headers!=='object')
             throw new VError("bad headers object: %j",io.headers);
         if (io!==null) {
-            io.i.on('error',()=>{               // +++ this should be in addConnection
+            io.i.on('error',()=>{
                 io.i.end();
             });
             ws.on('message',msg=>{
                 io.i.write(msg);
+            });
+            io.i.on('end',()=>{
+                eng.closeConnection(portName);
+            });
+            io.o.on('error',()=>{
+                io.o.end();
+            });
+            io.o.on('end',()=>{
+                ws.close();
             });
             io.o.on('data',chunk=>{
                 ws.send(chunk,err=>{
@@ -746,13 +755,8 @@ Engine.prototype._addToExpressApp = function(app,server) {
                     }
                 });
             });
-            io.i.on('end',()=>{
-                eng.closeConnection(portName);
-            });
-            io.o.on('error',()=>{
-                io.o.end();
-            });                                 // +++ to here
-            io.o.on('end',()=>{
+            ws.on('error',err=>{
+                console.log("ws error: %j",err);
                 ws.close();
             });
             ws.on('close',()=>{
