@@ -261,6 +261,11 @@ if (util.env==='test')  {
             if (srv.noisy)
                 console.log(line);
         });
+        byline(srv.proc.stderr).on('data',(line)=>{
+            line = line.toString();
+            if (srv.noisy)
+                console.log(line);
+        });
     };
     ExtServer.prototype.kill = function(sig) {
         const srv = this;
