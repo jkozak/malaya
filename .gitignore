@@ -20,5 +20,3 @@ doc/*.html
 npm-debug.log
 
 .tern-port
-
-package-lock.json
