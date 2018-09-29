@@ -12,6 +12,7 @@ const       recast = require('recast');
 const         http = require('http');
 const       minify = require('express-minify');
 const cookieParser = require('cookie-parser');
+const     jmespath = require('jmespath');
 
 const         util = require('./util.js');
 const       parser = require('./parser.js');
@@ -149,8 +150,21 @@ exports.populateApp = function(eng,app) {
         // +++ the filename
         app.get('/_private/facts',(req,res)=>{
             if (ip.isPrivate(req.ip)) {
-                res.writeHead(200,{'Content-Type':'application/json'});
-                res.write(util.serialise(eng.chrjs._private.orderedFacts));
+                let ans;
+                if (req.query.q) {
+                    try {
+                        ans = jmespath.search(eng.chrjs._private.orderedFacts,req.query.q);
+                        res.writeHead(200,{'Content-Type':'application/json'});
+                        res.write(util.serialise(ans));
+                    } catch (e) {
+                        res.writeHead(400,{'Content-Type':'text/plain'});
+                        res.write(e.toString());
+                    }
+                } else {
+                    ans = eng.chrjs._private.orderedFacts;
+                    res.writeHead(200,{'Content-Type':'application/json'});
+                    res.write(util.serialise(ans));
+                }
             } else
                 res.writeHead(404,{'Content-Type':'text/plain'});
             res.end();

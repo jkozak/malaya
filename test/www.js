@@ -125,6 +125,21 @@ describe("web server",function() {
                 } );
 
     });
+    it("discretely queries the beans",function(done){
+        request(`http://localhost:${port}/_private/facts?q=[*][0]`,
+                (err,resp,body) => {
+                    if (err)
+                        done(err);
+                    else if (resp.statusCode!==200)
+                        done(new VError("expected status 200, got %j",resp.statusCode));
+                    else {
+                        assert.deepEqual(util.deserialise(body),
+                                         eng.chrjs._private.orderedFacts.map(x=>x[0]));
+                        done();
+                    }
+                } );
+
+    });
     it("stops",function(done){
         eng.become('idle');
         eng.stop(true,done);

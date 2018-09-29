@@ -16,6 +16,7 @@
     "express-minify": "^0.2.0",
     "express-ws": "^3.0.0",
     "ip": "^1.1.4",
+    "jmespath": "^0.15.0",
     "jsdom": "^9.11.0",
     "minimist": "^1.1.1",
     "moment": "^2.22.2",
