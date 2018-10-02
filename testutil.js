@@ -288,6 +288,7 @@ if (util.env==='test')  {
     };
     ExtServer.prototype.call = function(fn,cb) {
         const srv = this;
+        cb = cb || (()=>{});
         srv._getFacts((err,facts)=>{
             if (err)
                 cb(err);
