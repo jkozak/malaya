@@ -20,6 +20,10 @@ describe('deserialise',function() {
     it("should handle http journal entries",function() {
         util.deserialise('[1433080456517,":http",[":/home/jk/malaya/examples/idb/www/index.html",":31bdc7b5c80ff5e8e2daa218faf40e567143121e"]]');
     });
+    it("should behave sensibly",function(){
+        assert.deepEqual(util.deserialise('[1,":a",{"p":":q"}]'),
+                         [1,'a',{p:'q'}]);
+    });
 });
 
 describe('serialise',function() {

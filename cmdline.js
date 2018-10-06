@@ -94,6 +94,24 @@ subcommands.browse.addArgument(
 
 addSubcommand('cat',{addHelp:true});
 subcommands.cat.addArgument(
+    ['-f','--format'],
+    {
+        action:       'store',
+        defaultValue: 'JSON',
+        type:         s=>s.toLowerCase(),
+        choices:      ['full','json','json5','yaml'],
+        help:         "display format"
+    }
+);
+subcommands.cat.addArgument(
+    ['-j','--jmespath'],
+    {
+        action:       'store',
+        defaultValue: null,
+        help:         "jmespath expression to pass total expression through"
+    }
+);
+subcommands.cat.addArgument(
     ['what'],
     {
         action:       'store',
@@ -656,25 +674,67 @@ exports.run = function(opts0,argv2) {
     };
 
     subcommands.cat.exec = function() {
+        const  engine = require('./engine.js');
+        const whiskey = require('./whiskey.js');
+        const     out = new whiskey.LineStream(util.deserialise);
+        const  getFmt = s=>{
+            switch (s) {
+            case 'full':
+                return new whiskey.StringifyObjectStream(util.serialise);
+            case 'json':
+                return new whiskey.StringifyJSONStream();
+            case 'json5': {
+                const JSON5 = require('json5');
+                return new whiskey.StringifyObjectStream(JSON5.stringify);
+            }
+            case 'yaml': {
+                const yaml = require('js-yaml');
+                return new whiskey.StringifyObjectStream(yaml.safeDump);
+            }
+            default:
+                throw new Error("SNO");
+            }
+        };
         checkDirectoriesExist();
+        let out1 = out;
+        if (args.jmespath) {
+            const   stream = require('stream');
+            const jmespath = require('jmespath');
+            out1 = stream.PassThrough({objectMode:true});
+            require("stream-to-array")(out,(err,arr)=>{
+                if (err)
+                    throw err;
+                else {
+                    const ans = jmespath.search(arr,args.jmespath);
+                    if (!ans)
+                        throw new Error("jmespath failed");
+                    ans.forEach(e=>out1.write(e));
+                    out1.end();
+                }
+            });
+        }
+        out1
+            .pipe(getFmt(args.format))
+            .pipe(process.stdout);
         switch (args.what) {
         case 'journal':
         case 'world':
-            fs.createReadStream(path.join(args.prevalence_directory,'state',args.what)).pipe(process.stdout);
+            fs.createReadStream(path.join(prevalenceDir,'state',args.what)).pipe(out);
             break;
+        case 'facts':
+            throw new Error("WriteMe"); // read from factstore directly
         case 'history': {
-            const eng = createEngine({});
-            eng._makeHashes();
-            eng.buildHistoryStream(function(err,history) {
-                if (err) throw err;
-                history.pipe(process.stdout);
-            });
+            engine.buildHistoryStream(
+                prevalenceDir,
+                (err,history)=>{
+                    if (err) throw err;
+                    history.pipe(out);
+                });
             break;
         }
         default: {
-            const   hash = require('./hash.js')(hashAlgorithm);
-            const hstore = hash.makeStore(path.join(prevalenceDir,'hashes'));
-            fs.createReadStream(hstore.makeFilename(args.what)).pipe(process.stdout);
+            const hstore = engine.makeHashes(prevalenceDir);
+            fs.createReadStream(hstore.makeFilename(args.what)).pipe(out);
             break;
         }
         };

@@ -382,16 +382,16 @@ describe("Engine",function() {
             eng.init();
             eng.start();
             eng.stop();
-            eng.walkJournalFile(path.join(dir,'.prevalence','state','journal'),
-                                false,
-                                function(err,x,what) {
-                                    assert.strictEqual(err,null);
-                                    if (what==='journal')
-                                        hs.push(x);
-                                },
-                                function() {
-                                    assert.strictEqual(hs.length,1);
-                                    done(); });
+            engine.walkJournalFile(path.join(dir,'.prevalence','state','journal'),
+                                   false,
+                                   function(err,x,what) {
+                                       assert.strictEqual(err,null);
+                                       if (what==='journal')
+                                           hs.push(x);
+                                   },
+                                   function() {
+                                       assert.strictEqual(hs.length,1);
+                                       done(); });
         });
         it("traverses the journal file and hash store",function(done) {
             const   dir = temp.mkdirSync();
@@ -404,25 +404,26 @@ describe("Engine",function() {
                 assert(!e1);
                 eng.stopPrevalence(false,function(e2) {
                     assert(!e2);
-                    eng.walkJournalFile(path.join(dir,'.prevalence','state','journal'),
-                                        false,
-                                        function(err,x,what) {
-                                            assert.strictEqual(err,null);
-                                            if (what==='journal') {
-                                                eng.walkHashes(x,
-                                                               false,
-                                                               function(err1,h,w) {
-                                                                   assert(!err1);
-                                                                   if (what==='journal')
-                                                                       hs.push(h);
-                                                               },
-                                                               function() {
-                                                                   done2();
-                                                               });
-                                            }
-                                        },
-                                        function() {
-                                            done2(); });
+                    engine.walkJournalFile(path.join(dir,'.prevalence','state','journal'),
+                                           false,
+                                           function(err,x,what) {
+                                               assert.strictEqual(err,null);
+                                               if (what==='journal') {
+                                                   engine.walkHashes(eng.hashes,
+                                                                     x,
+                                                                     false,
+                                                                     function(err1,h,w) {
+                                                                         assert(!err1);
+                                                                         if (what==='journal')
+                                                                             hs.push(h);
+                                                                     },
+                                                                     function() {
+                                                                         done2();
+                                                                     });
+                                               }
+                                           },
+                                           function() {
+                                               done2(); });
                 });
             });
         });
