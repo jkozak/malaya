@@ -50,7 +50,7 @@ describe("utility functions for this test file",function() {
             });
         });
     });
-    describe("summariseJSON XXX",function() {
+    describe("summariseJSON",function() {
         it("preserves basic structure",function(){
             assert.strictEqual(cmdline.summariseJSON([]),'[]');
         });
@@ -304,7 +304,6 @@ describe("cmd line interface [slow]",function() {
         });
     });
     it("shows as running",function(done) {
-        this.timeout(10000);
         child.exec(util.format("node malaya -p %j status",pdir),
                    {},
                    (code,stdout,stderr)=>{
@@ -315,6 +314,19 @@ describe("cmd line interface [slow]",function() {
                                done();
                            else
                                done(new VError("bad output from `malaya status`: %j",stdout));
+                       }
+                   });
+    });
+    it("queries running server",function(done){
+        child.exec(util.format(`node malaya -p %j cat -j "[?[0]=='_restart']" facts`,pdir),
+                   {},
+                   (code,stdout,stderr)=>{
+                       if (code!==null)
+                           done(new VError("`malaya cat facts` fails: %j",code));
+                       else {
+                           const js = JSON.parse(stdout.trim());
+                           assert.deepEqual(js,['_restart',{},{port:'server:'}]);
+                           done();
                        }
                    });
     });
@@ -344,6 +356,32 @@ describe("cmd line interface [slow]",function() {
                                done();
                            else
                                done(new VError("bad output from `malaya status`: %j",stdout));
+                       }
+                   });
+    });
+    it("queries history",function(done){
+        child.exec(util.format(`node malaya -p %j cat -j "[?[2][0]=='_restart']" history`,pdir),
+                   {},
+                   (code,stdout,stderr)=>{
+                       if (code!==null)
+                           done(new VError("`malaya cat history` fails: %j",code));
+                       else {
+                           const js = JSON.parse(stdout.trim());
+                           assert.deepEqual(js[2],['_restart',{},{port:'server:'}]);
+                           done();
+                       }
+                   });
+    });
+    it("queries journal",function(done){
+        child.exec(util.format(`node malaya -p %j cat journal`,pdir),
+                   {},
+                   (code,stdout,stderr)=>{
+                       if (code!==null)
+                           done(new VError("`malaya cat history` fails: %j",code));
+                       else {
+                           const js = JSON.parse(stdout.trim());
+                           assert.deepEqual(js[1],'previous');
+                           done();
                        }
                    });
     });

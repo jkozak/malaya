@@ -665,6 +665,21 @@ exports.run = function(opts0,argv2) {
             process.kill(data.pid,sig);
     };
 
+    const mkClientStream = function(what) {
+        checkDirectoriesExist();
+        const lock = require("./lock.js");
+        const data = lock.lockDataSync(path.join(prevalenceDir,'lock'));
+        if (data===null || data.pid===null) {
+            console.log("not running");
+            return null;
+        } else {
+            const ports = JSON.parse(fs.readFileSync(path.join(prevalenceDir,'ports')),'utf8');
+            const    WS = require('websocket-stream');
+            const    ws = new WS(`ws://localhost:${ports.http}/${what}`);
+            return ws;
+        }
+    };
+
     const findSource = function(){
         const possibilities = ['bl.chrjs','index.malaya'];
         for (const p of possibilities)
@@ -676,7 +691,6 @@ exports.run = function(opts0,argv2) {
     subcommands.cat.exec = function() {
         const  engine = require('./engine.js');
         const whiskey = require('./whiskey.js');
-        const     out = new whiskey.LineStream(util.deserialise);
         const  getFmt = s=>{
             switch (s) {
             case 'full':
@@ -695,6 +709,9 @@ exports.run = function(opts0,argv2) {
                 throw new Error("SNO");
             }
         };
+        const     out = new whiskey.LineStream(util.deserialise);
+        const     dst = getFmt(args.format);
+        dst.pipe(process.stdout);
         checkDirectoriesExist();
         let out1 = out;
         if (args.jmespath) {
@@ -713,16 +730,42 @@ exports.run = function(opts0,argv2) {
                 }
             });
         }
-        out1
-            .pipe(getFmt(args.format))
-            .pipe(process.stdout);
+        out1.pipe(dst);
         switch (args.what) {
         case 'journal':
         case 'world':
             fs.createReadStream(path.join(prevalenceDir,'state',args.what)).pipe(out);
             break;
-        case 'facts':
-            throw new Error("WriteMe"); // read from factstore directly
+        case 'facts': {
+            const ws = mkClientStream('admin');
+            if (ws) {
+                const jsps = new whiskey.JSONParseStream();
+                let      n = 0;
+                ws.pipe(jsps);
+                jsps.on('readable',()=>{
+                    const js = jsps.read();
+                    switch (++n) {
+                    case 1:
+                        if (js[0]!=='engine')
+                            throw new Error("bad first packet: %j",js);
+                        break;
+                    case 2: {
+                        const x = args.jmespath ? {jmespath:args.jmespath} : {};
+                        if (js[0]!=='connection')
+                            throw new Error("bad second packet: %j",js);
+                        ws.write(JSON.stringify(['facts',x])+'\n');
+                        break;
+                    }
+                    case 3:
+                        if (js!==null)
+                            js.forEach(j=>dst.write(j));
+                        ws.end();
+                        break;
+                    }
+                });
+            }
+            break;
+        }
         case 'history': {
             engine.buildHistoryStream(
                 prevalenceDir,
@@ -821,6 +864,7 @@ exports.run = function(opts0,argv2) {
                           masterUrl:       args.masterUrl,
                           privateTestUrls: args.privateTestUrls};
         const      eng = createEngine(options);
+        const    ports = {};
         eng._bindGlobals();
         eng.on('listen',function(protocol,port) {
             console.log("%s listening on *:%s",protocol,port);
@@ -844,6 +888,12 @@ exports.run = function(opts0,argv2) {
                     }).end();
                 }
             }
+            ports[protocol] = port;
+            if (Object.keys(ports).length===Object.keys(options.ports).length)  // all ports listening?
+                fs.writeFileSync(path.join(eng.prevalenceDir,'ports'),JSON.stringify(ports));
+        });
+        process.on('exit',()=>{
+            fs.unlinkSync(path.join(eng.prevalenceDir,'ports'));
         });
         eng.on('saved',function(syshash,worldHash,journalHash) {
             console.log("closing hash:  %s",journalHash);

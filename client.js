@@ -39,7 +39,7 @@ exports.repl = function(url) {
             const msgs = messages;
             messages = [];
             msgs.forEach(function(msg) {
-                process.stdout.write(util.format("< %j\n",JSON.parse(msg)));
+                process.stdout.write(util.format(" < %j\n",JSON.parse(msg)));
             });
             setImmediate(repl);
         });

@@ -43,6 +43,7 @@ const          vm = require('vm');
 const       shell = require('shelljs');
 const      random = require('random-js');
 const   expressWS = require('express-ws');
+const    jmespath = require('jmespath');
 
 const    compiler = require('./compiler.js');
 const         www = require('./www.js');
@@ -774,7 +775,7 @@ Engine.prototype._addToExpressApp = function(app,server) {
     app.ws('/admin',(ws,req)=>{
         createIO(ws,req,io=>{
             io.type = 'admin';
-            io.i    = new whiskey.JSONParseStream();
+            io.i    = new whiskey.JSONParseStream(); // ??? should this be util.serialise ???
             io.o    = new whiskey.StringifyJSONStream();
         });
     });
@@ -805,6 +806,10 @@ Engine.prototype.listenHttp = function(mode,port,done) {
     eng.http.listen(port,()=>{
         eng.emit('listen','http',eng.http.address().port);
         done();
+    });
+
+    eng.http.once('close',()=>{
+        eng.emit('unlisten','http',eng.http.address().port);
     });
 };
 
@@ -1417,6 +1422,13 @@ Engine.prototype.administer = function(port) {
                             break;
                         }
                     }
+                    break;
+                case 'facts':
+                    const res = js[1].jmespath ?
+                        jmespath.search(eng.chrjs._private.orderedFacts,js[1].jmespath) :
+                        eng.chrjs._private.orderedFacts;
+                    io.o.write(res);
+                    break;
                 }
             } catch (e) {
                 console.log(e);
