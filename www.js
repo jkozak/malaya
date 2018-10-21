@@ -3,7 +3,6 @@
 const       VError = require('verror');
 const         path = require('path');
 const           fs = require('fs');
-const           ip = require('ip');
 const      express = require('express');
 const   browserify = require('browserify');
 const     reactify = require('reactify');
@@ -144,37 +143,35 @@ exports.populateApp = function(eng,app) {
         return doBrowserify(path.join(webDir,req.path.substr(1)))(req,res);
     });
 
-    // only for use in testing
-    if (eng.options.privateTestUrls && util.env!=='prod') {
-        // +++ safer to have a POST which dumps to disk then returns
-        // +++ the filename
-        app.get('/_private/facts',(req,res)=>{
-            if (ip.isPrivate(req.ip)) {
-                let ans;
-                if (req.query.q) {
-                    try {
-                        ans = jmespath.search(eng.chrjs._private.orderedFacts,req.query.q);
-                        res.writeHead(200,{'Content-Type':'application/json'});
-                        res.write(util.serialise(ans));
-                    } catch (e) {
-                        res.writeHead(400,{'Content-Type':'text/plain'});
-                        res.write(e.toString());
-                    }
-                } else {
-                    ans = eng.chrjs._private.orderedFacts;
+    app.get('/_private/facts',(req,res)=>{
+        if (eng._allowUnsafe({type:'www/private',request:req})) {
+            let ans;
+            if (req.query.q) {
+                try {
+                    ans = jmespath.search(eng.chrjs._private.orderedFacts,req.query.q);
                     res.writeHead(200,{'Content-Type':'application/json'});
                     res.write(util.serialise(ans));
+                } catch (e) {
+                    res.writeHead(400,{'Content-Type':'text/plain'});
+                    res.write(e.toString());
                 }
-            } else
-                res.writeHead(404,{'Content-Type':'text/plain'});
-            res.end();
-        });
-        app.get('/_private/counts',(req,res)=>{
+            } else {
+                ans = eng.chrjs._private.orderedFacts;
+                res.writeHead(200,{'Content-Type':'application/json'});
+                res.write(util.serialise(ans));
+            }
+        } else
+            res.writeHead(404,{'Content-Type':'text/plain'});
+        res.end();
+    });
+    app.get('/_private/counts',(req,res)=>{
+        if (eng._allowUnsafe({type:'www/private',request:req})) {
             res.writeHead(200,{'Content-Type':'application/json'});
             res.write(JSON.stringify(eng.getCounts()));
-            res.end();
-        });
-    }
+        } else
+            res.writeHead(404,{'Content-Type':'text/plain'});
+        res.end();
+    });
 
     app.use(function(req,res,next) {
         if (req.method==='GET' || req.method==='HEAD') {

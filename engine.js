@@ -825,6 +825,13 @@ Engine.prototype.journaliseCodeSources = function(type,item2,always,cb) {
         if (cb) cb(null);
 };
 
+Engine.prototype._allowUnsafe = function(op) {
+    const eng = this;
+    if (op.type==='www/private')
+        return util.env!=='prod' && eng.options.privateTestUrls && ip.isPrivate(op.request.ip);
+    return false;
+};
+
 Engine.prototype._become = function(mode,cb) {
     const eng = this;
     if (mode===eng.mode)
