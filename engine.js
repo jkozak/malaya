@@ -754,6 +754,10 @@ Engine.prototype._addToExpressApp = function(app,server) {
                     if (err) {
                         if (err.code==='EPIPE')
                             io.o.end();
+                        else if (err.message==='This socket is closed') // Yuk.  Thanks, node.
+                            console.log("write after close: %s",portName);
+                        else if (eng.conns[portName] && eng.conns[portName].closing)
+                            console.log("write during close: %s",portName);
                         else
                             throw err;
                     }
