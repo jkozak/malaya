@@ -237,39 +237,47 @@ if (util.env==='test')  {
     };
     ExtServer.prototype.run = function(args,cb) {
         const srv = this;
+        const run = ()=>{
+            srv.proc = srv._spawn('run',
+                                  ['--private-test-urls',
+                                   '-w','0'].concat(args) );
+            srv.proc.once('error',(err)=>{
+                cb(err);
+            });
+            srv.proc.once('exit',(err)=>{
+                srv.proc = null;
+                srv.port = null;
+            });
+            byline(srv.proc.stdout).on('data',(line)=>{
+                line = line.toString();
+                let m = /http listening on \*:([0-9]+)/.exec(line);
+                if (m)
+                    srv.port = parseInt(m[1]);
+                m = /^mode now: ([a-z]+)$/.exec(line);
+                if (m && m[1]==='master')
+                    cb();
+                if (srv.noisy)
+                    console.log(line);
+            });
+            byline(srv.proc.stderr).on('data',(line)=>{
+                line = line.toString();
+                if (srv.noisy)
+                    console.log(line);
+            });
+        };
         if (cb===undefined) {
             cb   = args;
             args = [];
         }
-        srv.proc = srv._spawn('run',
-                              ['--private-test-urls',
-                               '-w','0'].concat(args) );
-        srv.proc.once('error',(err)=>{
-            cb(err);
-        });
-        srv.proc.once('exit',(err)=>{
-            srv.proc = null;
-        });
-        byline(srv.proc.stdout).on('data',(line)=>{
-            line = line.toString();
-            let m = /http listening on \*:([0-9]+)/.exec(line);
-            if (m)
-                srv.port = parseInt(m[1]);
-            m = /^mode now: ([a-z]+)$/.exec(line);
-            if (m && m[1]==='master')
-                cb();
-            if (srv.noisy)
-                console.log(line);
-        });
-        byline(srv.proc.stderr).on('data',(line)=>{
-            line = line.toString();
-            if (srv.noisy)
-                console.log(line);
-        });
+        if (srv.proc!==null) {
+            srv.proc.once('exit',run);
+            srv.proc.kill();
+        } else
+            run();
     };
     ExtServer.prototype.kill = function(sig) {
         const srv = this;
-        if (srv.proc)
+        if (srv.proc!==null)
             srv.proc.kill(sig);
     };
     ExtServer.prototype._getFacts = function(cb) {
