@@ -55,7 +55,7 @@ exports.readFdLinesSync = function(fd,fn) {
 };
 
 exports.readFileLinesSync = function(path0,fn) {
-    const fd = fs.openSync(path0,"r+");
+    const fd = fs.openSync(path0,"r");
     try {
         return exports.readFdLinesSync(fd,fn);
     } finally {
