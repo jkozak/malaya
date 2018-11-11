@@ -57,6 +57,9 @@ describe("testutil",function() {
 
     describe("ExtServer/WS",function(){
         const srv = new testutil.ExtServer('malaya');
+        it("is not alive initially",function(){
+            assert.isFalse(srv.isAlive());
+        });
         it("inits a server",function(done){
             this.timeout(10000);
             srv.init(['test/bl/null.chrjs'],(err)=>{
@@ -69,6 +72,9 @@ describe("testutil",function() {
                 }
             });
         });
+        it("is still not alive yet",function(){
+            assert.isFalse(srv.isAlive());
+        });
         it("starts a server",function(done){
             this.timeout(10000);
             srv.run(['--auto',"_connect,_disconnect,_restart",
@@ -80,6 +86,9 @@ describe("testutil",function() {
                     done();
                 }
             });
+        });
+        it("is alive now",function(){
+            assert.isTrue(srv.isAlive());
         });
         it("is tested with a monad via server object",function(done){
             new testutil.WS(srv)
@@ -100,9 +109,15 @@ describe("testutil",function() {
                 .closed()
                 .end(done);
         });
+        it("is still alive",function(){
+            assert.isTrue(srv.isAlive());
+        });
         it("closes down nicely",function(done){
             srv.proc.once('exit',()=>done());
             srv.kill();
+        });
+        it("is not alive again",function(){
+            assert.isFalse(srv.isAlive());
         });
     });
 

@@ -280,6 +280,19 @@ if (util.env==='test')  {
         if (srv.proc!==null)
             srv.proc.kill(sig);
     };
+    ExtServer.prototype.isAlive = function() {
+        const srv = this;
+        if (srv.proc!==null) {
+            try {
+                srv.kill(0);
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
+        else
+            return false;
+    };
     ExtServer.prototype._getFacts = function(cb) {
         const srv = this;
         http.get(`http://localhost:${srv.port}/_private/facts`,res=>{
