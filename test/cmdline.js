@@ -377,7 +377,7 @@ describe("cmd line interface [slow]",function() {
                    {},
                    (code,stdout,stderr)=>{
                        if (code!==null)
-                           done(new VError("`malaya cat history` fails: %j",code));
+                           done(new VError("`malaya cat journal` fails: %j",code));
                        else {
                            const js = JSON.parse(stdout.trim());
                            assert.deepEqual(js[1],'previous');
