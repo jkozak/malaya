@@ -45,7 +45,7 @@ describe("fs stream",function() {
                     switch (i++) {
                     case 0:
                         assert.strictEqual(js,data1);
-                        fs.writeFile(filename,data2);
+                        fs.writeFileSync(filename,data2);
                         break;
                     case 1:
                         assert.strictEqual(js,data2);
