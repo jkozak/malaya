@@ -1,0 +1,4 @@
+module.exports = store {
+    rule (-['ping',{...rest},{port}],
+           out(port,['pong',{...rest}]) );
+};

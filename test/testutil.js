@@ -62,7 +62,7 @@ describe("testutil",function() {
         });
         it("inits a server",function(done){
             this.timeout(10000);
-            srv.init(['test/bl/null.chrjs'],(err)=>{
+            srv.init(['test/bl/pingpong.malaya'],(err)=>{
                 if (err)
                     done(err);
                 else {
@@ -78,7 +78,7 @@ describe("testutil",function() {
         it("starts a server",function(done){
             this.timeout(10000);
             srv.run(['--auto',"_connect,_disconnect,_restart",
-                     'test/bl/null.chrjs'],(err)=>{
+                     'test/bl/pingpong.malaya'],(err)=>{
                 if (err)
                     done(err);
                 else {
@@ -108,6 +108,37 @@ describe("testutil",function() {
                 .close()
                 .closed()
                 .end(done);
+        });
+        it("transmits and receives",function(done){
+            new testutil.WS(srv)
+                .opened()
+                .xmit(['ping',{id:1}])
+                .rcve(js=>assert.deepEqual(js,['pong',{id:1}]))
+                .end(done);
+        });
+        it("transmits and receives multiple times",function(done){
+            const seen = [];
+            new testutil.WS(srv)
+                .opened()
+                .xmit(['ping',{id:1}])
+                .xmit(['ping',{id:2}])
+                .rcveWhile(js=>{
+                    seen.push(js[1].id);
+                    return seen.length<2;
+                })
+                .end(done);
+        });
+        it("ensures end is a one-off",function(){
+            assert.throws(()=>{
+                new testutil.WS(srv)
+                    .end()
+                    .end();
+            });
+        });
+        it("yet allows civilised chaining",function(done){
+            const ws = new testutil.WS(srv);
+
+            ws.end(()=>ws.end(done));
         });
         it("is still alive",function(){
             assert.isTrue(srv.isAlive());

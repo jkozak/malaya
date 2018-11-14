@@ -372,6 +372,21 @@ if (util.env==='test')  {
         });
         return ws;
     };
+    WS.prototype.rcveWhile = function(fn) {
+        const ws = this;
+        ws.queue.push(()=>{
+            const loop = ()=>{
+                ws.jps.once('data',(js)=>{
+                    if (fn(js))
+                        loop();
+                    else
+                        ws._next();
+                });
+            };
+            loop();
+        });
+        return ws;
+    };
     WS.prototype.close = function(fn) {
         const ws = this;
         ws.queue.push(()=>{
@@ -449,9 +464,9 @@ if (util.env==='test')  {
     WS.prototype.end = function(fn) {
         const ws = this;
         ws.queue.push(()=>{
-            if (fn) fn();
             if (ws.queue.length>0)
                 throw new VError("WS: end not final item: %j",ws.queue.map(fn1=>fn1.toString().slice(0,40)));
+            if (fn) fn();
         });
         ws._next();
     };
