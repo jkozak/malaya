@@ -141,6 +141,7 @@ const Engine = exports.Engine = function(options) {
     eng._timestamp     = options.timestamp || require('monotonic-timestamp');
     eng._nextTimestamp = null;                   // to force next timestamp to known value
     eng.journalFlush   = (cb)=>cb(null);         // flush journal
+    eng.journalFd      = null;
     eng.chrjs.tag      = options.tag;
     eng.masterUrl      = eng.options.masterUrl;
     eng.replicateSock  = null;
@@ -291,7 +292,10 @@ Engine.prototype.stopPrevalence = function(quick,cb) {
         eng.journal = null;
         // 'close' event for `fs.WriteStream` is undocumented _but_
         // cannot do dir renames in `_saveWorld` until journal closed.
-        journal.on(util.onWindows ? 'close' : 'finish',function() {
+        journal.on('finish',()=>{
+            fs.fdatasyncSync(eng.journalFd);
+            fs.closeSync(eng.journalFd);
+            eng.journalFd = null;
             if (quick) {
                 // +++ better to use digest-stream? +++
                 const h = hashFileSync(path.join(eng.prevalenceDir,'state','journal'));
@@ -526,7 +530,12 @@ Engine.prototype.startPrevalence = function(opts,cb) {
         console.log("truncating journal file to lose junk: %j",residue);
         fs.truncateSync(jrnlFile,jrnlSize-residue.length);
     }
-    eng.journal   = opts.readonly ? null : fs.createWriteStream(jrnlFile,{flags:'a'});
+    if (opts.readonly)
+        eng.journal   = null;
+    else {
+        eng.journalFd = fs.openSync(jrnlFile,'a');
+        eng.journal   = fs.createWriteStream(null,{fd:eng.journalFd,autoClose:false});
+    }
     eng.chrjs.out = function(d,j) {return eng.out(d,j);};
     if (cb) cb();
 };

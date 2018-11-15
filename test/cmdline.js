@@ -379,8 +379,8 @@ describe("cmd line interface [slow]",function() {
                        if (code!==null)
                            done(new VError("`malaya cat journal` fails: %j",code));
                        else {
-                           const js = JSON.parse(stdout.trim());
-                           assert.deepEqual(js[1],'previous');
+                           const jss = stdout.trim().split('\n').map(s=>JSON.parse(s));
+                           assert.deepEqual(jss[0][1],'previous');
                            done();
                        }
                    });
