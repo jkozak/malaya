@@ -124,6 +124,18 @@ describe("hash('sha1')",function() {
             testHashMode('test',6,null,4);
         });
     }
+    it("uses working files nicely",function(){
+        const dir = temp.mkdirSync();
+        let store = hash('sha1').makeStore(dir);
+        const   h = store.putSync("test line!  meet the test line");
+        store.putSync("it's the modern test line");
+        fs.renameSync(store.makeFilename(h),store.makeFilename(h)+'.tmp'); // fake a working file
+        assert.strictEqual(store.getHashes().length,1);   // temp file hidden
+        assert.strictEqual(fs.readdirSync(dir).length,2); // but exists
+        store = hash('sha1').makeStore(dir);
+        assert.strictEqual(store.getHashes().length,1);
+        assert.strictEqual(fs.readdirSync(dir).length,1); // temp file deleted
+    });
     describe("#createWriteStream",function() {
         const roundTrip = function(contents,hash0,done) {
             const   dir = temp.mkdirSync();

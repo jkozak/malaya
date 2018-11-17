@@ -8,6 +8,7 @@ const util   = require('./util.js');
 const events = require('events');
 const path   = require('path');
 const VError = require('verror');
+const rmRF   = require('rimraf');
 
 // This module is largely sync but is only called during single-activity time
 // (loading,saving) so that doesn't really matter.
@@ -37,6 +38,7 @@ module.exports = function(algorithm) {
                     fs.chmodSync(filename,4*8*8+4*8+4); // mode 0444
             };
             ans.init(dirname);
+            rmRF.sync(path.join(dirname,'*.tmp'));      // forget any partially put files
             const store = {
                 on:           function(what,handler) {ee.on(what,handler);},
                 makeFilename: function(h) {
@@ -52,8 +54,11 @@ module.exports = function(algorithm) {
                     const        h = ans.hash(x);
                     const filename = store.makeFilename(h);
                     if (!fs.existsSync(filename)) {
+                        // use rename to make this (more?) atomic
+                        // fs.writeFileSync has no guarantees of when the file is named
+                        fs.writeFileSync(filename+'.tmp',x);
+                        fs.renameSync(filename+'.tmp',filename);
                         ee.emit('add',h);
-                        fs.writeFileSync(filename,x);
                     }
                     setMode(filename);
                     return h;
@@ -63,7 +68,7 @@ module.exports = function(algorithm) {
                     return fs.readFileSync(store.makeFilename(h),opts);
                 },
                 getHashes:function() {
-                    return fs.readdirSync(dirname);
+                    return fs.readdirSync(dirname).filter(f=>!f.endsWith('.tmp'));
                 },
                 check: function(hash) {
                     const b = ans.hash(store.getSync(hash))===hash;
