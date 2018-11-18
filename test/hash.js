@@ -75,6 +75,30 @@ describe("hash('sha1')",function() {
             return true;
         }));
     });
+    describe("supports multiple encodings",function(){
+        let   dir;
+        let store;
+        let  text;
+        let     h;
+        before(()=>{
+            dir   = temp.mkdirSync();
+            store = hash('sha1').makeStore(dir);
+            text  = "testie mctestface";
+            h     = store.putSync(text);
+        });
+        it("default (utf8)",function(){
+            assert.strictEqual(typeof store.getSync(h),'string');
+            assert.strictEqual(store.getSync(h),text);
+        });
+        it("ascii",function(){
+            assert.strictEqual(typeof store.getSync(h,{encoding:'ascii'}),'string');
+            assert.strictEqual(store.getSync(h,{encoding:'ascii'}),text);
+        });
+        it("uninterpreted binary",function(){
+            assert(Buffer.isBuffer(store.getSync(h,{encoding:null})));
+            assert.strictEqual(store.getSync(h,{encoding:null}).toString(),text);
+        });
+    });
     it("should detect containment",function() {
         const   dir = temp.mkdirSync();
         const store = hash('sha1').makeStore(dir);

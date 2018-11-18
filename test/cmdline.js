@@ -330,6 +330,16 @@ describe("cmd line interface [slow]",function() {
                        }
                    });
     });
+    it("fscks cleanly",function(done){
+        child.exec(util.format(`node malaya -p %j fsck`,pdir),
+                   {},
+                   (code,stdout,stderr)=>{
+                       if (code!==null)
+                           done(new VError("`malaya fsck` fails: %j",code));
+                       else
+                           done();
+                   });
+    });
     // +++ saving, port access &c +++
     it("stops",function(done) {
         this.timeout(10000);

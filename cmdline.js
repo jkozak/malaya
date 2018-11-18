@@ -200,6 +200,8 @@ subcommands.exec.addArgument(
     }
 );
 
+addSubcommand('fsck',{addHelp:true});
+
 addSubcommand('init',{addHelp:true});
 subcommands.init.addArgument(
     ['-d','--data'],
@@ -794,6 +796,116 @@ exports.run = function(opts0,argv2) {
         vm.runInNewContext(compile(args.source),{
             require:require,
             console:console});
+    };
+
+    subcommands.fsck.exec = function() {
+        const    hash = require('./hash.js');
+        const whiskey = require('./whiskey.js');
+        const  engine = require('./engine.js');
+        const  hashes = hash(util.hashAlgorithm).makeStore(path.join(prevalenceDir,'hashes'));
+        let        ok = true;
+        checkDirectoriesExist();
+        try {
+            const lines = fs.readFileSync(path.join(prevalenceDir,'state/world'),'utf8').split('\n');
+            assert.strictEqual(lines[lines.length-1],'');
+            lines.pop();
+            if (lines.length!==2)
+                throw new VError("wrong number of lines in world file: %s",lines.length);
+            lines.forEach(l=>util.deserialise(l));
+        } catch (e) {
+            console.log("error in world file: %s",e.message);
+            ok = false;
+        }
+        try {
+            const lines = fs.readFileSync(path.join(prevalenceDir,'state/journal'),'utf8').split('\n');
+            assert.strictEqual(lines[lines.length-1],'');
+            lines.pop();
+            lines.forEach(l=>util.deserialise(l));
+        } catch (e) {
+            console.log("error in journal file: %s",e.message);
+            ok = false;
+        }
+        hashes.sanityCheck(err=>{console.log(err);ok=false;}); // this is sync really
+        engine.buildHistoryStream(prevalenceDir,(err,rf)=>{    // this is sync really
+            let first = true;
+            if (err) {
+                console.log("error in journal chaining: %s",err.message);
+                ok = false;
+            } else {
+                const rj = new whiskey.LineStream(util.deserialise);
+                let    t;
+                rf.pipe(rj);
+                rj.on('data',js=>{
+                    if (typeof js[0]!=="number") {
+                        console.log("error in history: first item not a number: %j",js[0]);
+                        ok = false;
+                    } else {
+                        if (!first) {
+                            if (t>js[0]) {
+                                console.log("error in history: not monotonic: %j %j",t,js[0]);
+                                ok = false;
+                            }
+                        }
+                        t = js[0];
+                    }
+                    switch (js[1]) {
+                    case 'init':
+                        if (!first) {
+                            console.log("error in history: 'init' occurs after start: %j",js);
+                            ok = false;
+                        }
+                        break;
+                    case 'previous':
+                        if (js.length!==4) {
+                            console.log("error in history: bad 'previous': %j",js);
+                            ok = false;
+                        }
+                        break;
+                    case 'code':
+                        if (!Array.isArray(js[2])) {
+                            console.log("error in history: code expects an array",js);
+                            ok = false;
+                        }
+                        Object.keys(js[2][2]).forEach(k=>{
+                            const h = js[2][2][k];
+                            if (!fs.existsSync(path.join(prevalenceDir,'hashes',h))) {
+                                console.log("error in history: code item not found in store: %j",h);
+                                ok = false;
+                            }
+                        });
+                        break;
+                    case 'http':
+                        if (!Array.isArray(js[2])) {
+                            console.log("error in history: http expects an array",js);
+                            ok = false;
+                        }
+                        if (!fs.existsSync(path.join(prevalenceDir,'hashes',js[2][1]))) {
+                            console.log("error in history: http item not found in store: %j",js[2][1]);
+                            ok = false;
+                        }
+                        break;
+                    case 'update':
+                        if (!Array.isArray(js[2])) {
+                            console.log("error in history: update expects an array",js);
+                            ok = false;
+                        }
+                        break;
+                    default:
+                        console.log("error in history: unknown item: %j",js);
+                        ok = false;
+                    }
+                    if (first) {
+                        if (js[1]!=='init') {
+                            console.log("history does not start with init: %j",js);
+                            ok = false;
+                        }
+                        first = false;
+                    }
+                });
+            }
+        });
+        if (!ok)
+            throw new util.Fail("errors were found");
     };
 
     subcommands.init.exec = function() {

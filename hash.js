@@ -39,6 +39,7 @@ module.exports = function(algorithm) {
             };
             ans.init(dirname);
             rmRF.sync(path.join(dirname,'*.tmp'));      // forget any partially put files
+            rmRF.sync(path.join(dirname,'stage.*'));    // forget any partially put files
             const store = {
                 on:           function(what,handler) {ee.on(what,handler);},
                 makeFilename: function(h) {
@@ -64,7 +65,7 @@ module.exports = function(algorithm) {
                     return h;
                 },
                 getSync: function(h,opts) {
-                    opts = opts || {encoding:'utf8'};
+                    opts = Object.assign({},{encoding:'utf8'},opts);
                     return fs.readFileSync(store.makeFilename(h),opts);
                 },
                 getHashes:function() {
@@ -80,7 +81,7 @@ module.exports = function(algorithm) {
                     const hashes = store.getHashes();
                     for (const k in hashes) { // check all hashes are sound
                         const h = hashes[k];
-                        if (ans.hash(store.getSync(h))!==h)
+                        if (ans.hash(store.getSync(h,{encoding:null}))!==h)
                             cb(new VError("broken hash: %j",h));
                     }
                 },
