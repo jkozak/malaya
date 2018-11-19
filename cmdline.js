@@ -1173,6 +1173,9 @@ exports.run = function(opts0,argv2) {
             });
     };
 
+    if (opts.tweakSubcommands)
+        opts.tweakSubcommands({prevalenceDir});
+
     if (subcommands[args.subcommandName]===undefined)
         throw new VError("unknown subcommand: %s",args.subcommandName);
     if (subcommands[args.subcommandName].exec===undefined)
