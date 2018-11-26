@@ -59,23 +59,27 @@ describe("utility functions for this test file",function() {
         });
         it("truncates strings",function(){
             assert.strictEqual(cmdline.summariseJSON('123456789012345678901234567890'),
-                               '"123456789012..."');
+                               "'123456789012...'");
         });
         it("doesn't truncate short strings",function(){
             assert.strictEqual(cmdline.summariseJSON('123456789',{n:10}),
-                               '"123456789"');
+                               "'123456789'");
         });
         it("doesn't truncate just-right strings",function(){
             assert.strictEqual(cmdline.summariseJSON('1234567890',{n:10}),
-                               '"1234567890"');
+                               "'1234567890'");
         });
         it("truncates long strings",function(){
             assert.strictEqual(cmdline.summariseJSON('12345678901',{n:10}),
-                               '"1234567890..."');
+                               "'1234567890...'");
+        });
+        it("preserves long strings if asked",function(){
+            assert.strictEqual(cmdline.summariseJSON('12345678901',{n:10,long:true}),
+                               '"12345678901"');
         });
         it("is nice to ports",function(){
             assert.strictEqual(cmdline.summariseJSON({port:'ws://127.0.0.1:51594/data'}),
-                               '{"port":"ws://127.0.0.1:51594/data"}');
+                               "{port:'ws://127.0.0.1:51594/data'}");
         });
     });
 });
@@ -318,7 +322,7 @@ describe("cmd line interface [slow]",function() {
                    });
     });
     it("queries running server",function(done){
-        child.exec(util.format(`node malaya -p %j cat -j "[?[0]=='_restart']" facts`,pdir),
+        child.exec(util.format(`node malaya -p %j cat -f json -j "[?[0]=='_restart']" facts`,pdir),
                    {},
                    (code,stdout,stderr)=>{
                        if (code!==null)
@@ -370,7 +374,7 @@ describe("cmd line interface [slow]",function() {
                    });
     });
     it("queries history",function(done){
-        child.exec(util.format(`node malaya -p %j cat -j "[?[2][0]=='_restart']" history`,pdir),
+        child.exec(util.format(`node malaya -p %j cat -f json -j "[?[2][0]=='_restart']" history`,pdir),
                    {},
                    (code,stdout,stderr)=>{
                        if (code!==null)
@@ -383,7 +387,7 @@ describe("cmd line interface [slow]",function() {
                    });
     });
     it("queries journal",function(done){
-        child.exec(util.format(`node malaya -p %j cat journal`,pdir),
+        child.exec(util.format(`node malaya -p %j cat -f json journal`,pdir),
                    {},
                    (code,stdout,stderr)=>{
                        if (code!==null)

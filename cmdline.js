@@ -16,6 +16,13 @@ const argparse = new (require('argparse').ArgumentParser)({
     addHelp:     true,
     description: require('./package.json').description
 });
+argparse.addArgument(['-l','--long-lines'],
+                     {
+                         action:       'storeTrue',
+                         defaultValue: false,
+                         help:         "don't summarise JSON strings",
+                         dest:         'long'
+                     } );
 argparse.addArgument(['-p','--prevalence-directory'],
                      {
                          action:       'store',
@@ -71,17 +78,23 @@ const argTypeMagicSpec = arg=>{
     return ans;
 };
 
-const summariseJSON = exports.summariseJSON = (js,{n=12}={})=>
-      JSON.stringify(js,(k,v)=>{
-          if (typeof v!=='string')
-              return v;
-          else if (k==='port')
-              return v;
-          else if (v.length>n)
-              return v.slice(0,n)+'...';
-          else
-              return v;
-      });
+const summariseJSON = exports.summariseJSON = (js,{n=12,long=false}={})=>{
+    if (long)
+        return JSON.stringify(js);
+    else {
+        const  JSON5 = require('json5');
+        return JSON5.stringify(js,(k,v)=>{
+            if (typeof v!=='string')
+                return v;
+            else if (k==='port')
+                return v;
+            else if (v.length>n)
+                return v.slice(0,n)+'...';
+            else
+                return v;
+        });
+    }
+};
 
 addSubcommand('browse',{addHelp:true});
 subcommands.browse.addArgument(
@@ -97,9 +110,9 @@ subcommands.cat.addArgument(
     ['-f','--format'],
     {
         action:       'store',
-        defaultValue: 'JSON',
+        defaultValue: 'pretty',
         type:         s=>s.toLowerCase(),
-        choices:      ['full','json','json5','yaml'],
+        choices:      ['full','json','json5','pretty','yaml'],
         help:         "display format"
     }
 );
@@ -532,6 +545,19 @@ exports.run = function(opts0,argv2) {
         }
     };
 
+    const fmtJSON = js=>summariseJSON(js,{long:args.long});
+    const fmtFact = f=>{
+        if (Array.isArray(f) && [2,3].includes(f.length) && typeof f[0]==='string') {
+            if (f.length===2)
+                return `['${chalk.blue(f[0])}',${fmtJSON(f[1])}]`;
+            else
+                return `['${chalk.blue(f[0])}',${fmtJSON(f[1])},${chalk.green(fmtJSON(f[2]))}]`;
+        } else {
+            const JSON5 = require('json5');
+            return JSON5.stringify(f);
+        }
+    };
+
     // optional decency checking: don't put undefined in store
     const sanityCheckChrjsAdds = function(chrjs,source) {
         const         _ = require('underscore');
@@ -554,9 +580,9 @@ exports.run = function(opts0,argv2) {
         });
         chrjs.on('add',function(t,f) {
             if (![2,3].includes(f.length) || typeof f[0]!=='string' || typeof f[1]!=='object')
-                console.log(chalk.yellow(`${loc()} added dubious `)+summariseJSON(f));
+                console.log(chalk.yellow(`${loc()} added dubious `)+fmtFact(f));
             if (findUndef(f))
-                console.log(chalk.yellow(`${loc()} added undef-y `)+summariseJSON(f));
+                console.log(chalk.yellow(`${loc()} added undef-y `)+fmtFact(f));
         });
     };
 
@@ -598,7 +624,7 @@ exports.run = function(opts0,argv2) {
                     console.log(chalk.yellow(`~~~ ${borings} boring adds ignored ~~~`));
                     borings = 0;
                 }
-                console.log(`${chalk.yellow('>')} ${summariseJSON(f)}`);
+                console.log(`${chalk.yellow('>')} ${fmtFact(f)}`);
                 provoker = null;
             } else {
                 borings++;
@@ -617,15 +643,15 @@ exports.run = function(opts0,argv2) {
                 const firing1 = outQ.shift();
                 if (isTraceInteresting(firing1)) {
                     if (provoker) {
-                        console.log(`${chalk.yellow('>')} ${summariseJSON(provoker)}`);
+                        console.log(`${chalk.yellow('>')} ${fmtFact(provoker)}`);
                         provoker = null;
                     }
                     console.log(chalk.yellow(` rule ${mySource}:${ruleMap[firing1.id].start.line} took ${Date.now()-firing1.t}ms`));
                     firing1.dels.forEach(function(d){
-                        console.log(`  ${chalk.yellow('-')} ${summariseJSON(d)}`);
+                        console.log(`  ${chalk.yellow('-')} ${fmtFact(d)}`);
                     });
                     firing1.adds.forEach(function(a){
-                        console.log(`  ${chalk.yellow('+')} ${summariseJSON(a)}`);
+                        console.log(`  ${chalk.yellow('+')} ${fmtFact(a)}`);
                     });
                 } else
                     borings++;
@@ -693,26 +719,77 @@ exports.run = function(opts0,argv2) {
     subcommands.cat.exec = function() {
         const  engine = require('./engine.js');
         const whiskey = require('./whiskey.js');
-        const  getFmt = s=>{
+        const   JSON5 = require('json5');
+        const  getFmt = (s,what)=>{
             switch (s) {
             case 'full':
                 return new whiskey.StringifyObjectStream(util.serialise);
             case 'json':
                 return new whiskey.StringifyJSONStream();
             case 'json5': {
-                const JSON5 = require('json5');
                 return new whiskey.StringifyObjectStream(JSON5.stringify);
             }
             case 'yaml': {
                 const yaml = require('js-yaml');
                 return new whiskey.StringifyObjectStream(yaml.safeDump);
             }
+            case 'pretty':
+                switch (what) {
+                case 'history':
+                case 'journal':
+                    return new whiskey.StringifyObjectStream(
+                        j=>
+                            chalk.yellow(new Date(j[0]).toISOString())+' '+
+                            chalk.yellow(j[1])+' '+
+                            (j[1]==='update' ? fmtFact(j[2]) : fmtJSON(j[2]))
+                    );
+                case 'facts':
+                    return new whiskey.StringifyObjectStream(fmtFact);
+                case 'world': {
+                    let i = 0;
+                    return new whiskey.StringifyObjectStream(j=>{
+                        switch (++i) {
+                        case 1:
+                            return fmtJSON(j);
+                        case 2: {
+                            let ans = '';
+                            Object.keys(j).forEach(k=>{
+                                if (k==='chrjs') {
+                                    ans += `   chrjs: {\n`;
+                                    Object.keys(j.chrjs).forEach(k1=>{
+                                        if (k1==='facts') {
+                                            ans += `      facts: {\n`;
+                                            Object.keys(j.chrjs.facts).forEach(k2=>{
+                                                const id = `${k2}:`.padEnd(j.chrjs.t.toString().length+1,' ');
+                                                ans += `         ${id} ${fmtFact(j.chrjs.facts[k2])},\n`;
+                                            });
+                                            if (Object.keys(j.chrjs.facts).length>0)
+                                                ans = ans.slice(0,-2)+'\n';
+                                            ans += `      },\n`;
+                                        } else
+                                            ans += `      ${k1}: ${fmtJSON(j.chrjs[k1])},\n`;
+                                    });
+                                    ans  = ans.slice(0,-2)+'\n';
+                                    ans += `   },\n`;
+                                } else
+                                    ans += `   ${k}: ${fmtJSON(j[k])},\n`;
+                            });
+                            return `{\n${ans}}`;
+                        }
+                        default:
+                            throw new Error('SNO');
+                        }
+                    });
+                }
+                default:
+                    throw new Error('SNO');
+                }
             default:
                 throw new Error("SNO");
             }
         };
         const     out = new whiskey.LineStream(util.deserialise);
-        const     dst = getFmt(args.format);
+        const     dst = getFmt(args.format,args.what);
         dst.pipe(process.stdout);
         checkDirectoriesExist();
         let out1 = out;
