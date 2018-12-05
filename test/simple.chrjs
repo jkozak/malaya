@@ -686,8 +686,8 @@ describe("regression tests",function() {
         var st = store {
             rule ( ['__setDefaultIdeaPrices',{},{roles,...}],
                    roles.includes('sysadmin'),
-                   -['idea',{price:{amount:'GBP'},...rest}],
-                   +['idea',{price:{amount:100000,currency:'GBP'},...rest}] );
+                  -['idea',{price:{amount:'GBP'},...rest}],
+                  +['idea',{price:{amount:100000,currency:'GBP'},...rest}] );
             rule (-['__setDefaultIdeaPrices',{},{...}]);
         };
         st.add(['idea',{price:{amount:'GBP'}}]);
