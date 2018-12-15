@@ -983,3 +983,20 @@ describe("caching",function(){
         });
     });
 });
+
+describe("load XXX",function(){
+    let st;
+    it("loads a malaya source file",function(){
+        st = compiler.load('test/bl/count.chrjs');
+    });
+    it("which has a __file__ property",function(){
+        assert.strictEqual(st.__file__,path.resolve('test/bl/count.chrjs'));
+    });
+    it("which works",function(){
+        st.update(['x',{}]);
+        _.chain(st._private.orderedFacts)
+            .tap(ff=>assert.strictEqual(ff.length,1))
+            .each(f=>assert.strictEqual(f[0],'stats'))
+            .each(f=>assert.strictEqual(f[1].xCount,1));
+    });
+});

@@ -2,13 +2,15 @@
 
 // all-in-one command to administer malaya
 
-const     fs = require('fs');
-const   path = require('path');
-const VError = require('verror');
-const assert = require('assert');
-const   util = require('./util.js');
-const execCP = require('child_process').exec;
-const  chalk = require('chalk');
+const      fs = require('fs');
+const    path = require('path');
+const  VError = require('verror');
+const  assert = require('assert');
+const    util = require('./util.js');
+const  execCP = require('child_process').exec;
+const   chalk = require('chalk');
+
+const tracing = require('./tracing');
 
 // configure main arg parser
 
@@ -78,23 +80,7 @@ const argTypeMagicSpec = arg=>{
     return ans;
 };
 
-const summariseJSON = exports.summariseJSON = (js,{n=12,long=false}={})=>{
-    if (long)
-        return JSON.stringify(js);
-    else {
-        const  JSON5 = require('json5');
-        return JSON5.stringify(js,(k,v)=>{
-            if (typeof v!=='string')
-                return v;
-            else if (k==='port')
-                return v;
-            else if (v.length>n)
-                return v.slice(0,n)+'...';
-            else
-                return v;
-        });
-    }
-};
+const summariseJSON = tracing.summariseJSON;
 
 addSubcommand('browse',{addHelp:true});
 subcommands.browse.addArgument(
@@ -545,18 +531,8 @@ exports.run = function(opts0,argv2) {
         }
     };
 
-    const fmtJSON = js=>summariseJSON(js,{long:args.long});
-    const fmtFact = f=>{
-        if (Array.isArray(f) && [2,3].includes(f.length) && typeof f[0]==='string') {
-            if (f.length===2)
-                return `['${chalk.blue(f[0])}',${fmtJSON(f[1])}]`;
-            else
-                return `['${chalk.blue(f[0])}',${fmtJSON(f[1])},${chalk.green(fmtJSON(f[2]))}]`;
-        } else {
-            const JSON5 = require('json5');
-            return JSON5.stringify(f);
-        }
-    };
+    const fmtJSON = js=>tracing.fmtJSON(js,{long:args.long});
+    const fmtFact = f=>tracing.fmtFact(f,{long:args.long});
 
     // optional decency checking: don't put undefined in store
     const sanityCheckChrjsAdds = function(chrjs,source) {
@@ -586,78 +562,7 @@ exports.run = function(opts0,argv2) {
         });
     };
 
-    // basic tracing facility
-    // +++ move to `Engine`, make an `emit` stream +++
-    const isFactInteresting = function(f) {        // what's worth tracing?
-        return ['_tick','_take-outputs','_output'].indexOf(f[0])===-1;
-    };
-    const isAddInteresting = function(add) {
-        return isFactInteresting(add);
-    };
-    const isTraceInteresting = function(firing) {
-        if (firing.adds.length!==0)
-            return true;
-        if (firing.dels.filter(function(d){return isFactInteresting(d);}).length===0)
-            return false;
-        return true;
-    };
-    const traceChrjs = function(chrjs,source) {
-        // rule invocations nest, but that's an implementation detail;
-        // so we use `stack` and `outQ` to flatten out the display
-        const compiler = require('./compiler.js');
-        const    stack = [];
-        const     outQ = [];
-        const  ruleMap = compiler.getRuleMap(source);
-        const mySource = path.relative(process.cwd(),source);
-        let   provoker = null;
-        let    borings = 0;       // count of `add`s deemed not interesting
-        chrjs.on('queue-rule',function(id,bindings) {
-            const firing = {id:id,done:false,dels:[],adds:[],t:Date.now()};
-            stack.push(firing);
-            outQ.push(firing);
-        });
-        chrjs.on('add',function(t,f) {
-            if (stack.length>0)
-                stack[stack.length-1].adds.push(f);
-            else if (isAddInteresting(f)) {
-                if (borings) {
-                    console.log(chalk.yellow(`~~~ ${borings} boring adds ignored ~~~`));
-                    borings = 0;
-                }
-                console.log(`${chalk.yellow('>')} ${fmtFact(f)}`);
-                provoker = null;
-            } else {
-                borings++;
-                provoker = f;
-            }
-        });
-        chrjs.on('del',function(t,f) {
-            if (stack.length>0)
-                stack[stack.length-1].dels.push(f);
-        });
-        chrjs.on('finish-rule',function(id) {
-            const firing = stack.pop();
-            assert.strictEqual(firing.id,id);
-            firing.done = true;
-            while (outQ.length>0 && outQ[0].done) { /* eslint no-loop-func:0 */
-                const firing1 = outQ.shift();
-                if (isTraceInteresting(firing1)) {
-                    if (provoker) {
-                        console.log(`${chalk.yellow('>')} ${fmtFact(provoker)}`);
-                        provoker = null;
-                    }
-                    console.log(chalk.yellow(` rule ${mySource}:${ruleMap[firing1.id].start.line} took ${Date.now()-firing1.t}ms`));
-                    firing1.dels.forEach(function(d){
-                        console.log(`  ${chalk.yellow('-')} ${fmtFact(d)}`);
-                    });
-                    firing1.adds.forEach(function(a){
-                        console.log(`  ${chalk.yellow('+')} ${fmtFact(a)}`);
-                    });
-                } else
-                    borings++;
-            }
-        });
-    };
+    const traceChrjs = (chrjs,source)=>tracing.trace(chrjs,source,{long:args.long});
 
     const _createEngine = opts.createEngine || function(options) {
         const engine = require('./engine.js');
@@ -1094,7 +999,7 @@ exports.run = function(opts0,argv2) {
         if (args.debug) {
             sanityCheckChrjsAdds(eng.chrjs,source);
             traceChrjs(eng.chrjs,source);
-            eng.on('out',(dest,data)=>{
+            eng.on('out',(dest,data)=>{ // we have clobbered the one in chrjs
                 console.log("%s %j %s",chalk.yellow('<'),dest,summariseJSON(data));
             });
         }

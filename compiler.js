@@ -30,6 +30,8 @@ const b = (function() {
     });
 })();
 
+let currentFilename = null;
+
 function TEMPLATE_store() {
     (function() {
         var  store = this;
@@ -69,7 +71,7 @@ function TEMPLATE_store() {
                 refs[t] = facts[t];
                 dels.push(t);
             }
-            index[fact[0]].splice(_.indexOf(index[fact[0]],ti,true),1);
+            index[fact[0]].splice(_.indexOf(index[fact[0]],ti,true),1); // +++ replace with Array.indexOf +++
             delete facts[t];
         };
         var _rebuild = function() {
@@ -107,6 +109,8 @@ function TEMPLATE_store() {
             get queries() {return queries;},
             reset: function(){t=1;index={};facts={};init();},
             out:   function(dest,data) {ee.emit('out',dest,data);},
+
+            get __file__() {return __file__;},
 
             // business logic protocol
             tag: null,
@@ -1579,7 +1583,9 @@ function generateJS(js,what) {
                 path.node.body.unshift(b.variableDeclaration('var',[
                     b.variableDeclarator(b.identifier('_'),
                                          b.callExpression(b.identifier('require'),
-                                                          [b.literal('underscore')] ) ) ]));
+                                                          [b.literal('underscore')] ) ),
+                    b.variableDeclarator(b.identifier('__file__'),
+                                         b.literal(currentFilename) ) ]));
                 path.node.body.unshift(b.expressionStatement(b.literal("use strict")));
                 this.traverse(path);
             },
@@ -1703,7 +1709,7 @@ var ruleMaps = {};              // <path> -> <rule-id> -> <loc> ...
 
 exports.getRuleMap = function(p) {
     if (!exports.debug)
-        throw new Error("ruleMap building off");
+        throw new Error("rulemap building off");
     return ruleMaps[path.resolve(p)];
 };
 
@@ -1921,32 +1927,47 @@ var mkCachePrefix = exports.mkCachePrefix = function(opts) {
     return '// '+version+' '+JSON.stringify(opts)+' '+JSON.stringify(exports.debug)+'\n';
 };
 
-require.extensions['.malaya'] = require.extensions['.chrjs'] = function(module,filename) {
-    filename = path.resolve(filename);
-    var content = fs.readFileSync(filename,'utf8').replace(/\t/g,'        '); // remove tabs
-    {
+exports.load = function(filename,opts){
+    opts = opts || {};
+    var       mod = opts.module || new module.constructor();
+    var saveDebug = exports.debug;
+    filename   = path.resolve(filename);
+    opts.debug = opts.debug===undefined ? false : opts.debug;
+    mod.paths  = module.paths;
+    exports.debug = opts.debug;
+    try {
+        var   content = fs.readFileSync(filename,'utf8').replace(/\t/g,'        '); // remove tabs
         var    hasher = crypto.createHash('sha1');
         var parseOpts = {loc:exports.debug,attrs:true};
         hasher.write(mkCachePrefix(parseOpts));
         hasher.write(content);
         var         h = hasher.digest('hex');
         var   ccached = path.join(process.cwd(),'.ccache',h);
+        currentFilename = filename;
         try {
-            module._compile(fs.readFileSync(ccached,'utf8'),filename);
+            mod._compile(fs.readFileSync(ccached,'utf8'),filename);
             if (exports.debug)
                 ruleMaps[filename] = JSON.parse(fs.readFileSync(ccached+'.map','utf8'));
         } catch(e1) {
             var chrjs = parser.parse(content,parseOpts);
             var  code = recast.print(generateJS(chrjs)).code;
             ruleMaps[filename] = buildRuleMap(chrjs);
-            module._compile(code,filename);
+            mod._compile(code,filename);
             try {
                 fs.writeFileSync(ccached,       code);
                 fs.writeFileSync(ccached+'.map',JSON.stringify(ruleMaps[filename]));
             } catch (e2) {}
         }
+        ee.emit('compile',filename);
+        return mod.exports;
+    } finally {
+        currentFilename = null;
+        exports.debug   = saveDebug;
     }
-    ee.emit('compile',filename);
+};
+
+require.extensions['.malaya'] = require.extensions['.chrjs'] = function(module,filename) {
+    exports.load(filename,{module:module,debug:exports.debug});
 };
 
 if (util.env==='test') {
