@@ -135,6 +135,8 @@ function TEMPLATE_store() {
                 return ans;
             },
             update: function(u) {
+                if (exports.debug)
+                    Object.freeze(u);
                 var res = obj.add(u);
                 res.adds.forEach(function(t) {res.refs[t]=facts[t];});
                 return res;
@@ -1403,6 +1405,15 @@ function generateJS(js,what) {
         return rv;
     };
 
+    var genFreezeMaybe = function(bObj) {
+        return exports.debug ?
+            b.callExpression(b.memberExpression(b.identifier('Object'),
+                                                b.identifier('freeze'),
+                                                false),
+                             [bObj] ) :
+            bObj;
+    };
+
     var genStore = function(path) {
         var storeCHR = path.node;
         // generate a JS `function` to implement a CHRJS `store`
@@ -1480,7 +1491,7 @@ function generateJS(js,what) {
             }
             case 'ObjectExpression':
             case 'ArrayExpression': {
-                var init = storeCHR.body[i];
+                var init = genFreezeMaybe(storeCHR.body[i]);
                 var call = b.callExpression(bProp(b.identifier('obj'),'add'),[init]);
                 code.inits.push(b.expressionStatement(call));
                 break;

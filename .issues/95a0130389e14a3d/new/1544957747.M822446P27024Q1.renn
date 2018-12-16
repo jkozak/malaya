@@ -1,0 +1,8 @@
+From: John Kozak
+Date: Sun, 16 Dec 2018 10:55:02 +0000
+Subject: Re: Use `Object.freeze` on facts when performance issue fixed in v8
+Message-Id: <95a0130389e14a3d-a09016ebabd447c3-artemis@renn>
+References: <95a0130389e14a3d-0-artemis@renn>
+In-Reply-To: <95a0130389e14a3d-0-artemis@renn>
+
+Now enabled when compiler debug flag set.
