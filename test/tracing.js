@@ -42,7 +42,7 @@ describe("summariseJSON",function() {
     });
 });
 
-describe("tracing of compiled code XXX",function(){
+describe("tracing of compiled code",function(){
     const saveDebug = compiler.debug;
     const saveChalk = chalk.enabled;
     before(()=>{compiler.debug=true;chalk.enabled=false;});
