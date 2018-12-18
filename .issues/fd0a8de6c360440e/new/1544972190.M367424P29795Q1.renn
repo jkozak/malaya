@@ -1,0 +1,15 @@
+From: John Kozak
+Date: Sun, 16 Dec 2018 14:52:44 +0000
+State: resolved
+Subject: possible race attack on world file integrity
+Message-Id: <fd0a8de6c360440e-0-artemis@renn>
+resolution: fixed
+
+The world file is written to `state-NEW/world` , then hashed and that
+hash stored in the new journal.  This means that an enemy could update
+the world file before the hash is computed and poison it.
+
+Either:
+ - Hash calculation and file writing should be done in the same breath
+   (some stream magic?)
+ - use an unnamed temp file for the world until safely hashed

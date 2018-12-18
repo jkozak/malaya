@@ -182,4 +182,21 @@ describe("hash('sha1')",function() {
             roundTrip('\x00','5ba93c9db0cff93f52b521d7420e43f6eda2784f',done);
         });
     });
+    describe("first line of file hashing",function(){
+        const  tdir = temp.mkdirSync();
+        const jfile = path.join(tdir,'journal');
+        it("should produce correct well-known value for lone line",function() {
+            fs.writeFileSync(jfile,'wibble\n');
+            assert.equal(hash('sha1').hashFirstLineOfFileSync(jfile),'02e0182ae38f90d11be647e337665e67f9243817');
+        });
+        it("should produce correct well-known value for multiple lines",function() {
+            fs.writeFileSync(jfile,'wibble\nwobble\n');
+            assert.equal(hash('sha1').hashFirstLineOfFileSync(jfile),'02e0182ae38f90d11be647e337665e67f9243817');
+        });
+        it("should produce correct well-known value for multiple lines, improperly terminated",function() {
+            fs.writeFileSync(jfile,'wibble\nwobble');
+            assert.equal(hash('sha1').hashFirstLineOfFileSync(jfile),'02e0182ae38f90d11be647e337665e67f9243817');
+        });
+
+    });
 });

@@ -52,7 +52,9 @@ const        hash = require('./hash.js');
 const        lock = require('./lock.js');
 
 
-const hashFileSync = hash(util.hashAlgorithm).hashFileSync;
+const ourHash                 = hash(util.hashAlgorithm);
+const hashFileSync            = ourHash.hashFileSync;
+const hashFirstLineOfFileSync = ourHash.hashFirstLineOfFileSync;
 
 
 exports.makeInertChrjs = function(opts) {
@@ -260,20 +262,27 @@ Engine.prototype._saveWorld = function() {
     const    root = {chrjs: eng.chrjs.getRoot(),
                      git:   eng.git,
                      rng:   {seed:eng._rng.seed,useCount:eng._rng.engine.getUseCount()} };
+    const  wLine1 = util.serialise(syshash)+'\n';
+    const  wLine2 = util.serialise(root)+'\n';
     const      ts = eng.timestamp();
     rmRF.sync(dirNew);
     fs.mkdirSync(dirNew);
-    fs.writeFileSync( path.join(dirNew,"world"),  util.serialise(syshash)+'\n');
-    fs.appendFileSync(path.join(dirNew,"world"),  util.serialise(root)+'\n');
-    const   worldHash = hashFileSync(path.join(dirNew,"world"));
-    fs.writeFileSync( path.join(dirNew,"journal"),util.serialise([ts,'previous',syshash,worldHash])+'\n');
-    const journalHash = hashFileSync(path.join(dirNew,"journal"));
+    fs.writeFileSync( path.join(dirNew,"world"),wLine1);
+    fs.appendFileSync(path.join(dirNew,"world"),wLine2);
+    const    hasher = ourHash.makeHasher();
+    hasher.write(wLine1);
+    hasher.write(wLine2);
+    const worldHash = hasher.digest('hex');
+    const   journal = util.serialise([ts,'previous',syshash,worldHash]);
+    fs.writeFileSync( path.join(dirNew,"journal"),journal+'\n');
+    const journalHash = ourHash.hash(journal);
     rmRF.sync(dirOld);
     fs.renameSync(dirCur,dirOld);
     fs.renameSync(dirNew,dirCur);
     if (eng.git) {
         shell.exec("git add .",{cwd:eng.prevalenceDir});
-        shell.exec(`git commit -m "prevalence world save: ${syshash}"`,{cwd:eng.prevalenceDir});
+        shell.exec(`git commit -m "prevalence world save: ${journalHash}"`,{cwd:eng.prevalenceDir});
+        shell.exec(`git tag JOURNAL-${journalHash}`,{cwd:eng.prevalenceDir}); // +++ optionally signed +++
         if (eng.git==='push')
             try {
                 shell.exec(`git push origin prevalence`,{cwd:eng.prevalenceDir});
@@ -505,8 +514,12 @@ Engine.prototype.startPrevalence = function(opts,cb) {
     eng._ensureStateDir();
     const jrnlFile = path.join(eng.prevalenceDir,'state','journal');
     const wrldFile = path.join(eng.prevalenceDir,'state','world');
-    const jrnlHash = hashFileSync(jrnlFile);
+    const jrnlHash = hashFirstLineOfFileSync(jrnlFile);
     const wrldHash = hashFileSync(wrldFile);
+    if (eng.git) {
+        // +++ check jrnlHash against git if used +++
+    }
+    // +++ witness plugins +++
     eng._loadWorld(wrldHash,jrnlHash);
     const residue = util.readFileLinesSync(jrnlFile,function(l) { // replay
         const js = util.deserialise(l);

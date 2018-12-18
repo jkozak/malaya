@@ -1,14 +1,14 @@
 "use strict";
 
-const _      = require('underscore');
-const crypto = require('crypto');
-const stream = require('stream');
-const fs     = require('fs');
-const util   = require('./util.js');
-const events = require('events');
-const path   = require('path');
-const VError = require('verror');
-const rmRF   = require('rimraf');
+const _       = require('underscore');
+const crypto  = require('crypto');
+const stream  = require('stream');
+const fs      = require('fs');
+const util    = require('./util.js');
+const events  = require('events');
+const path    = require('path');
+const VError  = require('verror');
+const rmRF    = require('rimraf');
 
 // This module is largely sync but is only called during single-activity time
 // (loading,saving) so that doesn't really matter.
@@ -122,6 +122,14 @@ module.exports = function(algorithm) {
         },
         hashFileSync: function(filename) {
             return ans.hash(fs.readFileSync(filename));
+        },
+        hashFirstLineOfFileSync: function(filename) {
+            let line;
+            util.readFileLinesSync(filename,l=>{
+                line = l;
+                return false;
+            });
+            return ans.hash(line);
         }
     };
     return ans;

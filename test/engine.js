@@ -851,12 +851,13 @@ describe("Engine",function() {
         });
     });
     describe("git prevalence backup",function(){
-        let   dir;
-        let   srv;
-        const git = (args,opts)=>shell.exec("git "+args,
-                                            _.extend({cwd:   srv.prevalenceDir,
-                                                      silent:true},
-                                                     opts));
+        let       dir;
+        let       srv;
+        const jHashes = [];
+        const     git = (args,opts)=>shell.exec("git "+args,
+                                                _.extend({cwd:   srv.prevalenceDir,
+                                                          silent:true},
+                                                         opts));
         after(()=>{
             if (srv)
                 srv.kill();
@@ -905,12 +906,22 @@ describe("Engine",function() {
                         const lines = log.stdout.trim().split('\n');
                         assert.strictEqual(lines.length,2);
                         lines.forEach((l)=>{
-                            assert(/^[0-9a-f]+ prevalence world save: [0-9a-f]+$/.exec(l));
+                            const m = /^[0-9a-f]+ prevalence world save: ([0-9a-f]+)$/.exec(l);
+                            assert(m);
+                            jHashes.push(m[1]);
                         });
                         done();
                     });
                     srv.kill('SIGINT');
                 }
+            });
+        });
+        it("has created tags",function(){
+            const tagrc = git("tag");
+            assert.strictEqual(tagrc.code,0);
+            const tags = tagrc.stdout.split(/\r?\n/);
+            jHashes.forEach(jh=>{
+                assert(tags.includes('JOURNAL-'+jh));
             });
         });
     });
