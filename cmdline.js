@@ -44,6 +44,12 @@ argparse.addArgument(['-v','--verbose'],
                          defaultValue: 1,
                          help:         "be more verbose"
                      });
+argparse.addArgument(['-P','--plugin'],
+                     {
+                         action:       'store',
+                         nargs:        '?',
+                         help:         "plugin to load"
+                     });
 exports.argparse = argparse;
 
 // configure subcommand parsers
@@ -437,14 +443,29 @@ process.on('uncaughtException',function(err) {
     /*eslint-enable no-process-exit*/
 });
 
-exports.run = function(opts0,argv2) {
-    const          opts = opts0 || {};
-    const          args = argparse.parseArgs(argv2);
+function stripPluginArgs(args) {
+    const plugins = [];
+    while (args.length>1 && ['-P','--plugin'].includes(args[0])) {
+        plugins.push(args[1]);
+        args = args.slice(2);
+    }
+    return [plugins,args];
+}
+
+exports.run = function(opts={},argv2=process.argv.slice(2)) {
+    const [plugins,argv2a] = stripPluginArgs(argv2);
+
+    plugins.forEach(p=>require('./plugin.js').add(p));
+
+    const          args = argparse.parseArgs(argv2a);
     const prevalenceDir = path.resolve(args.prevalence_directory);
     const hashAlgorithm = opts.hashAlgorithm || util.hashAlgorithm;
 
     exports.verbosity = args.verbose-args.quiet;
     exports.args      = args;
+
+    if (args.plugin && args.plugin.length>0)
+        throw new util.Fail("plugins must be specified as the first arguments");
 
     const findCallback = function() { // extract the callback for single-shot use.
         let cb;

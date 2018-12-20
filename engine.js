@@ -50,12 +50,12 @@ const         www = require('./www.js');
 const     whiskey = require('./whiskey.js');
 const        hash = require('./hash.js');
 const        lock = require('./lock.js');
+const      plugin = require('./plugin.js');
 
 
 const ourHash                 = hash(util.hashAlgorithm);
 const hashFileSync            = ourHash.hashFileSync;
 const hashFirstLineOfFileSync = ourHash.hashFirstLineOfFileSync;
-
 
 exports.makeInertChrjs = function(opts) {
     opts = opts || {tag:null};
@@ -120,7 +120,7 @@ const Engine = exports.Engine = function(options) {
     options.ports            = options.ports || {http:3000};
     options.bundles          = options.bundles || {};
     options.minify           = options.minify===undefined ? util.env!=='test' : options.minify;
-    options.magic            = options.magic || {_tick:1000,_restart:true,'_take-outputs':true};
+    options.magic            = options.magic || {_restart:true};
     options.endpoints        = options.endpoints || ['data'];
     options.createHttpServer = options.createHttpServer || www.createServer;
     options.populateHttpApp  = options.populateHttpApp || www.populateApp;
@@ -150,7 +150,6 @@ const Engine = exports.Engine = function(options) {
     eng.active         = null;                   // update being processed
     eng.tickInterval   = null;                   // for magic ticks
     eng.git            = options.git==='none' ? null : options.git;
-    eng.plugins        = {};
     eng._rng           = {
         engine: random.engines.mt19937(),
         dist:   random.real(0,1,false),
@@ -202,6 +201,8 @@ const Engine = exports.Engine = function(options) {
             eng.update(['_disconnect',{port:port,type:type},{port:'server:'}]);
         });
     }
+
+    plugin.registerEngine(eng);
 
     return eng;
 };
@@ -1043,12 +1044,13 @@ Engine.prototype.out = function(dest,json) {
         else
             console.log("bad server _msg: %j",json);
     } else if (dest.startsWith(pluginPort)) {
-        const name   = dest.slice(pluginPort.length);
-        const plugin = eng.plugins[name];
-        if (!plugin)
+        const parts = dest.split(':');
+        const name  = parts[1];
+        const   pl  = plugin.get(name);
+        if (!pl)
             eng.emit('error',`unknown plugin: ${name}`);
         else
-            plugin.out(json);
+            pl.out(json,parts[1],parts.slice(2).join(':'));
     } else {
         const d = eng.conns[dest];
         if (d && d.o.readyState===d.o.OPEN)
@@ -1471,14 +1473,9 @@ Engine.prototype.administer = function(port) {
     });
 };
 
-Engine.prototype.addPlugin = function(name,opts) {
-    const eng = this;
-    if (!opts)
-        opts = require(`./plugins/${name}`);
-    if (typeof opts.out!=='function')
-        eng.emit('error',`plugin ${name} does not define an out handler`);
-    eng.plugins[name] = opts;
-    opts.update       = (js,cb)=>eng.update([js[0],js[1],{port:`plugin:${name}`}],cb);
+Engine.prototype.addPlugin = function(name,eps) { // back compatibility with 0.7.x for MCI
+    plugin.add(name,plugin.makeOldPlugin(eps));
+    plugin.instantiate(name);
 };
 
 Engine.prototype.getCounts = function() {

@@ -3,6 +3,7 @@
 const   engine = require('../engine.js');
 const   Engine = engine.Engine;
 const compiler = require('../compiler.js');
+const   plugin = require('../plugin.js');
 
 const        _ = require("underscore");
 const   assert = require("chai").assert;
@@ -490,6 +491,7 @@ describe("Engine",function() {
     describe("#addConnection using `_output` pseudo-fact",function() {
         it("sends input, receives output",function(done) {
             const eng = new Engine({dir:           temp.mkdirSync(),
+                                    magic:         {'_take-outputs':true},
                                     businessLogic: path.join(__dirname,'bl','output.chrjs') });
             const  io = createIO();
             eng.init();
@@ -508,7 +510,8 @@ describe("Engine",function() {
         });
         it("multiplexes",function(done) {
             const eng = new Engine({dir:           temp.mkdirSync(),
-                                  businessLogic: path.join(__dirname,'bl','output.chrjs') });
+                                    magic:         {'_take-outputs':true},
+                                    businessLogic: path.join(__dirname,'bl','output.chrjs') });
             const io1 = createIO();
             const io2 = createIO();
             const io3 = createIO();
@@ -932,6 +935,7 @@ describe("Engine",function() {
             eng = new Engine({dir:           temp.mkdirSync(),
                               businessLogic: path.join(__dirname,'bl','null.chrjs') });
         });
+        after(()=>{plugin._private.forgetAll();});
         it("provides special out destination",function(done) {
             const jsOut = {op:'munge',data:[3,4,5]};
             opts.out = (js)=>{

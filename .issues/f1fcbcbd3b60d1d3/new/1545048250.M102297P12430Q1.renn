@@ -1,0 +1,27 @@
+From: John Kozak
+Date: Mon, 17 Dec 2018 11:56:54 +0000
+State: new
+Subject: plugins
+Message-Id: <f1fcbcbd3b60d1d3-0-artemis@renn>
+
+Requirements:
+ - plugins can extend
+  - engine (source of inputs and outputs)
+  - cmdline (new subcommands)
+  - client (new cmds)
+
+how about:
+ - a plugin is a module which has one export, `install`
+   - called with useful entrypoints
+    - `addSubcommand`
+    - `subcommands` to tweak existing ones
+    - `update` to send an input to the (or a?) store
+   -  returns plugin attributes and entrypoints
+    - `name` of plugin
+    - `start` e.g. socket listen
+    - `stop`
+    - `init` run at init time only
+    - `out` to process outputs for this plugin
+
+In early `cmdline.run`, scan start for `--plugin <module>`, action and
+remove.
