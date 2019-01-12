@@ -1,5 +1,7 @@
 "use strict";
 
+const       _ = require('underscore');
+
 const cmdline = require('./cmdline.js');
 
 const classes = {};
@@ -49,8 +51,7 @@ exports.makeOldPlugin = eps=>{        // back compat with 0.7.x
 const plugins = [];
 
 exports.registerEngine = eng=>{
-    Object.keys(plugins).forEach(k=>{
-        const pl = plugins[k];
+    plugins.forEach(pl=>{
         pl.engine = eng;
         pl.update = (js,addr)=>{
             if (js.length!==2 && typeof js[0]!=='string' & typeof js[1]!=='object')
@@ -72,10 +73,10 @@ exports.registerEngine = eng=>{
     eng.on('become',mode=>{
         switch (mode) {
         case 'master':
-            exports.start({});
+            exports.start();
             break;
         default:
-            exports.stop({});
+            exports.stop();
             break;
         }
     });
@@ -87,16 +88,31 @@ exports.get = name=>{
     return ans;
 };
 
-const add = exports.add = (name,pl)=>{
-    plugins[name] = pl;
+const add = exports.add = (name,cl)=>{
+    classes[name] = cl;
 };
 
-exports.load = name=>{
-    add(name,require(`malaya-plugin-${name}`));
+exports.require = name=>{
+    let cl = classes[name];
+    if (!cl) {
+        try {
+            cl = require(`./plugins/${name}.js`);
+        } catch (e1) {
+            try {
+                cl = require(`malaya-plugin-${name}`);
+            } catch (e2) {
+                // empty
+            }
+        }
+    }
+    if (!cl)
+        throw new Error(`can't find plugin ${name}`);
+    add(name,cl);
+    return classes[name];
 };
 
 exports.instantiate = (name,opts={})=>{
-    const pl = new plugins[name](opts);
+    const pl = new classes[name](opts);
     pl.name = opts.name || name;
     if (plugins.filter(pl1=>(pl1.name===pl.name)).length>0)
         throw new Error(`plugin named ${pl.name} twice`);
@@ -104,10 +120,16 @@ exports.instantiate = (name,opts={})=>{
     return pl;
 };
 
-exports.start = opts=>plugins.forEach(pl=>pl.start(opts,()=>{})); // !!! wait for all
-exports.stop  = opts=>plugins.forEach(pl=>pl.stop( opts,()=>{}));
+exports.start = (opts={},cb=()=>{})=>{
+    const done = _.after(plugins.length,cb);
+    plugins.forEach(pl=>pl.start(opts,done));
+};
+exports.stop = (opts={},cb=()=>{})=>{
+    const done = _.after(plugins.length,cb);
+    plugins.forEach(pl=>pl.stop(opts,done));
+};
 
-plugins.timer = class extends Plugin {
+classes.timer = class extends Plugin {
     constructor(opts) {
         super();
         this.timer = null;
@@ -135,7 +157,7 @@ plugins.timer = class extends Plugin {
     }
 };
 
-plugins.restart = class extends Plugin {
+classes.restart = class extends Plugin {
     constructor(opts) {
         super();
         const pl = this;
@@ -166,7 +188,7 @@ plugins.restart = class extends Plugin {
 
 exports._private = {
     forgetAll: ()=>{
-        Object.values(classes).forEach(cl=>{delete plugins[cl];});
+        Object.values(classes).forEach(cl=>{delete classes[cl];});
         plugins.length=0;
     }
 };

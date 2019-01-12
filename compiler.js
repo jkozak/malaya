@@ -114,6 +114,7 @@ function TEMPLATE_store() {
             get __file__() {return __file__;},
 
             plugin: function(name,opts) {
+                malayaPlugin.require(name);
                 malayaPlugin.instantiate(name,opts).connect(obj);
                 return obj;
             },
