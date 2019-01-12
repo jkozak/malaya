@@ -16,6 +16,7 @@ describe("old style",function(){
     let      n = 0;
     let    eng;
     after(()=>{plugin._private.forgetAll();});
+    after(()=>(eng && eng.stop()));
     it("provides special out destination",function(done) {
         const  eps = {};
         eps.out = (js)=>{
@@ -24,6 +25,7 @@ describe("old style",function(){
             done();
         };
         eng = new engine.Engine({dir:           temp.mkdirSync(),
+                                 ports:         {},
                                  businessLogic: path.join(__dirname,'bl','null.chrjs') });
         eng.addPlugin('twiddle',eps);
         eng.init();
@@ -43,6 +45,7 @@ describe("dolce stil novista",function(){
     let   n = 0;
     let eng;
     after(()=>{plugin._private.forgetAll();});
+    after(()=>(eng && eng.stop()));
     it("provides special out destination",function(done) {
         plugin.add('twiddle',class extends plugin.Plugin {
             out(js,name,addr) {
@@ -54,6 +57,8 @@ describe("dolce stil novista",function(){
         });
         plugin.instantiate('twiddle');
         eng = new engine.Engine({dir:           temp.mkdirSync(),
+                                 magic:         {},
+                                 ports:         {},
                                  businessLogic: path.join(__dirname,'bl','null.chrjs') });
         eng.init();
         eng.start();
@@ -72,6 +77,7 @@ describe("multiple instance of plugin",function(){
     const outs = {twiddle:0,twiddle1:0};
     let    eng;
     after(()=>{plugin._private.forgetAll();});
+    after(()=>(eng && eng.stop()));
     it("provides special out destinations",function(done) {
         const done1 = _.after(2,done);
         plugin.add('twiddle',class extends plugin.Plugin {
@@ -85,6 +91,8 @@ describe("multiple instance of plugin",function(){
         plugin.instantiate('twiddle');
         plugin.instantiate('twiddle',{name:'twiddle1'});
         eng = new engine.Engine({dir:           temp.mkdirSync(),
+                                 magic:         {},
+                                 ports:         {},
                                  businessLogic: path.join(__dirname,'bl','null.chrjs') });
         eng.init();
         eng.start();
@@ -106,6 +114,7 @@ describe("subaddressing",function(){
     let   n = 0;
     let eng;
     after(()=>{plugin._private.forgetAll();});
+    after(()=>(eng && eng.stop()));
     it("provides special out destination",function(done) {
         plugin.add('twoddle',class extends plugin.Plugin {
             out(js,name,addr) {
@@ -117,6 +126,8 @@ describe("subaddressing",function(){
         });
         plugin.instantiate('twoddle');
         eng = new engine.Engine({dir:           temp.mkdirSync(),
+                                 magic:         {},
+                                 ports:         {},
                                  businessLogic: path.join(__dirname,'bl','null.chrjs') });
         eng.init();
         eng.start();
@@ -136,19 +147,40 @@ describe("subaddressing",function(){
 
 // +++ subcommands
 
-describe("restart XXX",function(){
+describe("restart",function(){
     this.bail(true);
     let eng;
     after(()=>{plugin._private.forgetAll();});
+    after(()=>(eng && eng.stop()));
     it("instantiates plugin",function() {
         plugin.instantiate('restart');
     });
     it("starts engine",function(){
         eng = new engine.Engine({dir:           temp.mkdirSync(),
                                  magic:         {},
+                                 ports:         {},
                                  businessLogic: path.join(__dirname,'bl','null.chrjs') });
         eng.init();
         plugin.get('restart').connect(eng.chrjs);
+        eng.start();
+        eng.become('master',()=>{});
+    });
+    it("restart has been sent",function(){
+        assert.deepEqual(eng.chrjs._private.orderedFacts,[['restart',{},{port:'plugin:restart'}]]);
+    });
+});
+
+describe("specify restart plugin in source code",function(){
+    this.bail(true);
+    let eng;
+    after(()=>{plugin._private.forgetAll();});
+    after(()=>(eng && eng.stop()));
+    it("loads source file",function(){
+        eng = new engine.Engine({dir:           temp.mkdirSync(),
+                                 magic:         {},
+                                 ports:         {},
+                                 businessLogic: path.join(__dirname,'bl','restart.malaya') });
+        eng.init();
         eng.start();
         eng.become('master',()=>{});
     });

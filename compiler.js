@@ -18,6 +18,7 @@ const    path = require('path');
 const       _ = require('underscore');
 const  crypto = require('crypto');
 const  VError = require('verror');
+const  plugin = require('./plugin.js');
 
 const templates       = {};
 const template_marker = 'TEMPLATE_';
@@ -111,6 +112,11 @@ function TEMPLATE_store() {
             out:   function(dest,data) {ee.emit('out',dest,data);},
 
             get __file__() {return __file__;},
+
+            plugin: function(name,opts) {
+                malayaPlugin.instantiate(name,opts).connect(obj);
+                return obj;
+            },
 
             // business logic protocol
             tag: null,
@@ -302,6 +308,7 @@ var chrLocalVars = {
 };
 
 // +++ CBB - don't (ab)use global scope +++
+global.malayaPlugin = plugin;
 global.MalayaDate = function(){
     if (arguments.length===0)
         return new Date(MalayaDate.now());
