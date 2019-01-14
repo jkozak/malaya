@@ -158,11 +158,12 @@ classes.timer = class extends Plugin {
 };
 
 classes.restart = class extends Plugin {
-    constructor(opts) {
+    constructor(opts={}) {
         super();
         const pl = this;
         pl.running = false;
         pl.initted = false;
+        pl.getData = opts.getData || (()=>{return {};});
     }
     start(opts,cb) {
         const pl = this;
@@ -171,7 +172,7 @@ classes.restart = class extends Plugin {
                 if (!pl.running)
                     throw new Error(`engine started before plugins initialised`);
                 else
-                    pl.update(['restart',{}]);
+                    pl.update(['restart',pl.getData()]);
             });
             pl.initted = true;
         }
