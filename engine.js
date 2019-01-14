@@ -1206,7 +1206,7 @@ const journalChain = exports.journalChain = function(prevalenceDir,cb) {
 Engine.prototype.journalChain = function(cb) {
     // delivers list of journal files in chronological order
     const eng = this;
-    journalChain(eng.prevalenceDir,eng.hashes,cb);
+    journalChain(eng.prevalenceDir,cb);
 };
 
 const buildHistoryStream = exports.buildHistoryStream = (prevalenceDir,cb)=>{

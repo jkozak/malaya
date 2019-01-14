@@ -367,4 +367,19 @@ describe("cmd line interface [slow]",function() {
                        }
                    });
     });
+    it("queries history filenames",function(done){
+        child.exec(`node malaya -p ${pdir} cat history-files`,
+                   {},
+                   (code,stdout,stderr)=>{
+                       if (code!==null)
+                           done(new VError("`malaya cat history-files` fails: %j",code));
+                       else {
+                           const files = stdout.split('\n');
+                           assert.strictEqual(files.length,4);
+                           assert.strictEqual(files[3],'');
+                           assert.strictEqual(files[2],'journal');
+                           done();
+                       }
+                   });
+    });
 });

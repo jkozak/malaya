@@ -1,6 +1,7 @@
 From: John Kozak
 Date: Sun, 13 Jan 2019 21:00:55 +0000
 Subject: ./malaya journal --names doesn't work
-State: new
+State: resolved
 Message-Id: <eb753a57315d8cde-0-artemis@renn>
+resolution: fixed
 

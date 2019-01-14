@@ -242,16 +242,6 @@ subcommands.init.addArgument(
     }
 );
 
-addSubcommand('journal',{addHelp:true});
-subcommands.journal.addArgument(
-    ['-n','--names'],
-    {
-        action:       'storeTrue',
-        help:         "show only filenames",
-        defaultValue: false
-    }
-);
-
 addSubcommand('kill',{addHelp:true});
 subcommands.kill.addArgument(
     ['signal'],
@@ -631,9 +621,8 @@ exports.run = function(opts0,argv2) {
                 return new whiskey.StringifyObjectStream(util.serialise);
             case 'json':
                 return new whiskey.StringifyJSONStream();
-            case 'json5': {
+            case 'json5':
                 return new whiskey.StringifyObjectStream(JSON5.stringify);
-            }
             case 'yaml': {
                 const yaml = require('js-yaml');
                 return new whiskey.StringifyObjectStream(yaml.safeDump);
@@ -648,6 +637,8 @@ exports.run = function(opts0,argv2) {
                             chalk.yellow(j[1])+' '+
                             (j[1]==='update' ? fmtFact(j[2]) : fmtJSON(j[2]))
                     );
+                case 'history-files':
+                    return new whiskey.StringifyObjectStream(x=>x);
                 case 'facts':
                     return new whiskey.StringifyObjectStream(fmtFact);
                 case 'world': {
@@ -756,6 +747,19 @@ exports.run = function(opts0,argv2) {
                 (err,history)=>{
                     if (err) throw err;
                     history.pipe(out);
+                });
+            break;
+        }
+        case 'history-files': {
+            engine.journalChain(
+                prevalenceDir,
+                function(err,hs) {
+                    if (err)
+                        throw err;
+                    if (args.format==='pretty')
+                        hs.forEach(h=>dst.write(h));
+                    else
+                        dst.write(hs);
                 });
             break;
         }
@@ -1133,26 +1137,6 @@ exports.run = function(opts0,argv2) {
             client.nonInteractive(url);
         else
             client.repl(url);
-    };
-
-    subcommands.journal.exec = function() {
-        checkDirectoriesExist();
-        const eng = createEngine({});
-        eng._makeHashes();
-        if (args.names)
-            eng.journalChain(function(err,hs) {
-                if (err)
-                    throw err;
-                hs.forEach(function(h) {
-                    process.stdout.write(h+'\n');
-                });
-            });
-        else
-            eng.buildHistoryStream((err,read)=>{
-                if (err)
-                    throw err;
-                read.pipe(process.stdout);
-            });
     };
 
     if (opts.tweakSubcommands)
