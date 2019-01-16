@@ -1,6 +1,6 @@
 "use strict";
 
-const plugin = require('./plugin.js');
+const plugin = require('../plugin.js');
 
 //const    net = require('net');
 

@@ -8,7 +8,7 @@
         "jasmine": false,
         "es6":true
     },
-    "extends": ["eslint:recommended"],
+    "extends": ["eslint:recommended","plugin:node/recommended"],
     "rules": {
         "no-console": 0,        // !!! review this later !!!
         "no-unused-vars": [2, {"vars": "all", "args": "none"}],

@@ -2,7 +2,7 @@
 
 const hash    = require("../hash.js");
 
-const assert  = require("assert");
+const assert = require('chai').assert;
 const temp    = require('temp').track();
 const util    = require('../util.js');
 const fs      = require('fs');

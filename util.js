@@ -26,15 +26,11 @@ exports.error  = function (msg) {
         console.error(_util.format.apply(null,arguments));
 };
 
-exports.printf  = function (msg) {
-    _util.print(_util.format.apply(null,arguments));
-};
-
 exports.inherits = _util.inherits;
 
 exports.readFdLinesSync = function(fd,fn) {
     const bufferSize = 1024;
-    const buffer     = new Buffer(bufferSize);
+    const buffer     = Buffer.alloc(bufferSize);
     let   leftOver   = '';
     let   done       = false;
     let   read,line,idxStart,idx;

@@ -5,7 +5,8 @@ const util    = require("../util.js");
 const fs      = require("fs");
 const temp    = require("temp").track();
 const path    = require("path");
-const assert  = require("assert");
+const assert  = require('chai').assert;
+
 
 describe('constants',function() {
     it("`env` will always be 'test' when testing",function() {

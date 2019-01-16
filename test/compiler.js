@@ -4,7 +4,7 @@
 
 var compiler = require("../compiler.js");
 var   parser = require("../parser.js");
-var   assert = require("assert");
+const assert = require('chai').assert;
 var   recast = require("recast");
 var     util = require('../util.js');
 var     temp = require('temp');
@@ -878,9 +878,7 @@ describe("compile hook",function() {
             ok = true;
         });
         fs.writeFileSync(fn,"store {\nrule (['1']);}");
-        //N.B. used to use just `require(fn)` but that doesn't work
-        //     with another version of node under `nvm`.
-        require.extensions['.chrjs'](module,fn);
+        require(fn);
         assert(ok);
     });
 });
@@ -897,7 +895,7 @@ describe("rule maps",function() {
                 ok = true;
             });
             fs.writeFileSync(fn,"store {\nrule (['1'],+['2',for(0;[];a=>a+1)]);}");
-            require.extensions['.chrjs'](module,fn);
+            require(fn);
             assert(ok);
         } finally {
             compiler.debug = false;
@@ -906,7 +904,7 @@ describe("rule maps",function() {
     it("should not build rule maps unless asked",function() {
         var fn = path.join(tdir,'b.chrjs');
         fs.writeFileSync(fn,"store {\nrule (['1']);}");
-        require.extensions['.chrjs'](module,fn);
+        require(fn);
         assert.throws(function() {
             compiler.getRuleMap(fn);
         });
@@ -950,34 +948,35 @@ describe("caching",function(){
             assert.strictEqual(fs.readdirSync(path.join(tdir,'.ccache')).length,0);
         });
         it("places entry in cache",function(){
-            require.extensions['.chrjs']({_compile:(code,filename)=>{js1=code;}},fn1);
+            compiler.load(fn1,{module:{_compile:(code,filename)=>{js1=code;}}});
             assert.strictEqual(fs.readdirSync(path.join(tdir,'.ccache')).length,2); // js and map
-
+            assert.strictEqual(typeof js1,'string');
         });
         it("fetches from cache",function(){
-            require.extensions['.chrjs']({_compile:(code,filename)=>{assert.strictEqual(code,js1);}},fn1);
+            compiler.load(fn1,{module:{_compile:(code,filename)=>{assert.strictEqual(code,js1);}}});
             assert.strictEqual(fs.readdirSync(path.join(tdir,'.ccache')).length,2); // js and map
 
         });
         it("fetches from cache by content",function(){
-            require.extensions['.malaya']({_compile:(code,filename)=>{assert.strictEqual(code,js1);}},fn1);
+            compiler.load(fn1,{module:{_compile:(code,filename)=>{assert.strictEqual(code,js1);}}});
             assert.strictEqual(fs.readdirSync(path.join(tdir,'.ccache')).length,2); // js and map
 
         });
         it("places another entry in cache",function(){
-            require.extensions['.chrjs']({_compile:(code,filename)=>{js2=code;}},fn2);
+            compiler.load(fn2,{module:{_compile:(code,filename)=>{js2=code;}}});
             assert.strictEqual(fs.readdirSync(path.join(tdir,'.ccache')).length,4); // js and map
+            assert.strictEqual(typeof js2,'string');
         });
         it("emitted code differs",function(){
             assert.notStrictEqual(js1,js2);
         });
         it("fetches other from cache",function(){
-            require.extensions['.chrjs']({_compile:(code,filename)=>{assert.strictEqual(code,js2);}},fn2);
+            compiler.load(fn2,{module:{_compile:(code,filename)=>{assert.strictEqual(code,js2);}}});
             assert.strictEqual(fs.readdirSync(path.join(tdir,'.ccache')).length,4); // js and map
 
         });
         it("fetches other from cache by content",function(){
-            require.extensions['.malaya']({_compile:(code,filename)=>{assert.strictEqual(code,js2);}},fn2);
+            compiler.load(fn2,{module:{_compile:(code,filename)=>{assert.strictEqual(code,js2);}}});
             assert.strictEqual(fs.readdirSync(path.join(tdir,'.ccache')).length,4); // js and map
 
         });
