@@ -789,7 +789,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
             fs.createReadStream(hstore.makeFilename(args.what)).pipe(out);
             break;
         }
-        };
+        }
     };
 
     subcommands.compile.exec = function() {

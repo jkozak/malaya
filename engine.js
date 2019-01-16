@@ -116,7 +116,6 @@ const Engine = exports.Engine = function(options) {
     options                  = options || {};
     options.dir              = options.dir || process.cwd();
     options.webDir           = options.webDir || path.join(options.dir,'www');
-    options.tag              = options.tag;
     options.ports            = options.ports || {http:3000};
     options.bundles          = options.bundles || {};
     options.minify           = options.minify===undefined ? util.env!=='test' : options.minify;
@@ -1458,13 +1457,13 @@ Engine.prototype.administer = function(port) {
                         }
                     }
                     break;
-                case 'facts':
+                case 'facts': {
                     const res = js[1].jmespath ?
                         jmespath.search(eng.chrjs._private.orderedFacts,js[1].jmespath) :
                         eng.chrjs._private.orderedFacts;
                     io.o.write(res);
                     break;
-                }
+                } }
             } catch (e) {
                 console.log(e);
                 eng.closeConnection(port);

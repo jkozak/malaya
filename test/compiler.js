@@ -34,7 +34,7 @@ function findById(js,name,mangled) {    // find subtree of `js` with id `name`
         }
     });
     return ans;
-};
+}
 
 var parseItem = function(code) {
     var  ast = compiler._private.annotateParse2(compiler._private.annotateParse1(parse("store{rule RULE1("+code+")}")));
