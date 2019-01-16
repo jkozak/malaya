@@ -10,7 +10,7 @@ compiler.debug = true;
 
 const sourceFilename = argv._[0];
 
-require(sourceFilename);
+require(sourceFilename);        // eslint-disable-line security/detect-non-literal-require
 
 const stanzas = compiler.getStanzas(sourceFilename);
 

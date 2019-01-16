@@ -235,7 +235,7 @@ Engine.prototype.compile = function(source) {
     }
     if (source) {
         const children = module.children.slice(0);
-        const    chrjs = require(path.resolve(source));
+        const    chrjs = require(path.resolve(source)); // eslint-disable-line security/detect-non-literal-require
         const    loads = _.difference(module.children,children);
         if (loads.length>1)
             throw new VError("compiling %s added %s modules",source,loads.length);
@@ -1290,7 +1290,7 @@ Engine.prototype.replicateHashes = function(url,callback) {
                         function(err,h,what,x) {
                             if (h!==null)
                                 hashes[h] = what;
-                            if (hash===jrnlhash) {
+                            if (h===jrnlhash) { // !!! review this
                                 if (what==='journal')
                                     syshash = h;
                                 else if (what==='source code')

@@ -7,7 +7,7 @@ const    path = require('path');
 const  VError = require('verror');
 const  assert = require('assert');
 const    util = require('./util.js');
-const  execCP = require('child_process').exec;
+const  execCP = require('child_process').exec; // eslint-disable-line security/detect-child-process
 const   chalk = require('chalk');
 
 const tracing = require('./tracing');
@@ -1033,6 +1033,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
     };
 
     subcommands.transform.exec = function() {
+        /* eslint-disable security/detect-non-literal-require */
         checkDirectoriesExist();
         require('./compiler.js'); // for .chrjs extension
         const     cb = findCallback();

@@ -8,9 +8,12 @@
         "jasmine": false,
         "es6":true
     },
-    "extends": ["eslint:recommended","plugin:node/recommended"],
+    "plugins": ["security"],
+    "extends": ["eslint:recommended","plugin:node/recommended","plugin:security/recommended"],
     "rules": {
         "no-console": 0,        // !!! review this later !!!
         "no-unused-vars": [2, {"vars": "all", "args": "none"}],
+        "security/detect-non-literal-fs-filename": 0,
+        "security/detect-object-injection": 0
     }
 }

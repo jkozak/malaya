@@ -93,6 +93,7 @@ const add = exports.add = (name,cl)=>{
 };
 
 exports.require = name=>{
+    /* eslint-disable security/detect-non-literal-require */
     let cl = classes[name];
     if (!cl) {
         try {

@@ -878,7 +878,7 @@ describe("compile hook",function() {
             ok = true;
         });
         fs.writeFileSync(fn,"store {\nrule (['1']);}");
-        require(fn);
+        require(fn);            // eslint-disable-line security/detect-non-literal-require
         assert(ok);
     });
 });
@@ -895,7 +895,7 @@ describe("rule maps",function() {
                 ok = true;
             });
             fs.writeFileSync(fn,"store {\nrule (['1'],+['2',for(0;[];a=>a+1)]);}");
-            require(fn);
+            require(fn);        // eslint-disable-line security/detect-non-literal-require
             assert(ok);
         } finally {
             compiler.debug = false;
@@ -904,7 +904,7 @@ describe("rule maps",function() {
     it("should not build rule maps unless asked",function() {
         var fn = path.join(tdir,'b.chrjs');
         fs.writeFileSync(fn,"store {\nrule (['1']);}");
-        require(fn);
+        require(fn);            // eslint-disable-line security/detect-non-literal-require
         assert.throws(function() {
             compiler.getRuleMap(fn);
         });

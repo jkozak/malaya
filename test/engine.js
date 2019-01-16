@@ -546,7 +546,7 @@ describe("Engine",function() {
         let clock;
         before(()=>{clock=sinon.useFakeTimers();});
         after(()=>{clock.restore();});
-        const mkOutChrjs = require(path.join(__dirname,'bl','out.chrjs'));
+        const mkOutChrjs = require(path.join(__dirname,'bl','out.chrjs')); // eslint-disable-line security/detect-non-literal-require
         it("sends input, receives output",function(done) {
             const eng = new Engine({dir:   temp.mkdirSync(),
                                     chrjs: mkOutChrjs() });

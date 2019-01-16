@@ -13,6 +13,8 @@ const child   = require('child_process');
 const engine  = require('../engine.js');
 const whiskey = require('../whiskey.js');
 
+/* eslint security/detect-child-process: 0 */
+
 const fillDirWithSomeData = function(dir,data,cb) {
     const dfn = path.join(dir,'data.json');
     fs.writeFileSync(dfn,JSON.stringify(data));

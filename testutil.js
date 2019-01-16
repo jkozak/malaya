@@ -19,7 +19,7 @@ if (util.env==='test')  {
     const      path = require('path');
     const      temp = require('temp').track();
     const        fs = require('fs');
-    const        cp = require('child_process');
+    const        cp = require('child_process'); // eslint-disable-line security/detect-child-process
     let          id = 0;
 
     const runInEngine = exports.runInEngine = function(source,opts) {

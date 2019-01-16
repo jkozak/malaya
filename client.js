@@ -29,7 +29,7 @@ exports.repl = function(url) {
         rl.question("> ",function(answer) {
             if (answer)
                 try {
-                    /* eslint no-eval:0 */
+                    /* eslint no-eval:0 security/detect-eval-with-expression:0 */
                     const js = eval(answer); // !!! nicer to use than JSON.parse, but dodgy !!!
                     if (js)
                         write(js);
