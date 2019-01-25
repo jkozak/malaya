@@ -2,7 +2,7 @@
 
 const  parser = require("../parser.js");
 
-const  assert = require('chai').assert;
+const  assert = require('assert').strict;
 const    temp = require('temp');
 const    util = require('../util.js');
 const    path = require('path');

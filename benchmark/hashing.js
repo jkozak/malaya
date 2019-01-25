@@ -5,7 +5,7 @@ const         path = require('path');
 const         temp = require('temp').track();
 const       crypto = require('crypto');
 const digestStream = require('digest-stream');
-const       assert = require('chai').assert;
+const       assert = require('assert').strict;
 
 const         util = require('../util.js');
 

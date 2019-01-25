@@ -2,9 +2,9 @@
 //N.B. "use strict" breaks the test environment and can't use ES6
 //     stuff without it, so leave this sadly old and under-checked.
 
-var compiler = require("../compiler.js");
-var   parser = require("../parser.js");
-const assert = require('chai').assert;
+var compiler = require('../compiler.js');
+var   parser = require('../parser.js');
+var   assert = require('assert').strict;
 var   recast = require("recast");
 var     util = require('../util.js');
 var     temp = require('temp');

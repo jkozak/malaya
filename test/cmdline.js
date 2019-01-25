@@ -6,7 +6,7 @@ const util    = require("../util.js");
 const fs      = require("fs");
 const temp    = require("temp").track();
 const path    = require("path");
-const assert  = require('chai').assert;
+const assert  = require('assert').strict;
 const VError  = require("verror");
 const child   = require('child_process');
 

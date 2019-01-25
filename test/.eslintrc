@@ -10,6 +10,7 @@
         "mocha/no-exclusive-tests": "error",
         "chai-expect/missing-assertion": 2,
         "chai-expect/terminating-properties": 1,
-        "security/detect-eval-with-expression": 0
+        "security/detect-eval-with-expression": 0,
+        "node/no-unsupported-features/node-builtins": ["error",{ignores:['assert.strict']}]
     }
 }

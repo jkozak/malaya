@@ -1,9 +1,9 @@
 "use strict";
 
-const   plugin = require("../plugin.js");
+const   plugin = require('../plugin.js');
 
 const        _ = require('underscore');
-const   assert = require("chai").assert;
+const   assert = require('assert').strict;
 const   engine = require('../engine.js');
 const     temp = require('temp').track();
 const     path = require('path');

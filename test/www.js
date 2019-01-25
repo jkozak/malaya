@@ -3,7 +3,7 @@
 const   engine = require('../engine.js');
 const   Engine = engine.Engine;
 
-const   assert = require("chai").assert;
+const   assert = require('assert').strict;
 const     temp = require('temp').track();
 const       fs = require('fs');
 const     path = require('path');

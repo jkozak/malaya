@@ -5,10 +5,10 @@ const   Engine = engine.Engine;
 const compiler = require('../compiler.js');
 const   plugin = require('../plugin.js');
 
-const        _ = require("underscore");
-const   assert = require("chai").assert;
-const    sinon = require("sinon");
-const    shell = require("shelljs");
+const        _ = require('underscore');
+const   assert = require('assert').strict;
+const    sinon = require('sinon');
+const    shell = require('shelljs');
 const     temp = require('temp').track();
 const       fs = require('fs');
 const     path = require('path');

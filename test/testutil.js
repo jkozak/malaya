@@ -2,7 +2,7 @@
 
 const      testutil = require('../testutil.js');
 
-const        assert = require('chai').assert;
+const        assert = require('assert').strict;
 const          path = require('path');
 const            fs = require('fs');
 
@@ -58,7 +58,7 @@ describe("testutil",function() {
     describe("ExtServer/WS",function(){
         const srv = new testutil.ExtServer('malaya');
         it("is not alive initially",function(){
-            assert.isFalse(srv.isAlive());
+            assert.ok(!srv.isAlive());
         });
         it("inits a server",function(done){
             this.timeout(10000);
@@ -73,7 +73,7 @@ describe("testutil",function() {
             });
         });
         it("is still not alive yet",function(){
-            assert.isFalse(srv.isAlive());
+            assert.ok(!srv.isAlive());
         });
         it("starts a server",function(done){
             this.timeout(10000);
@@ -88,7 +88,7 @@ describe("testutil",function() {
             });
         });
         it("is alive now",function(){
-            assert.isTrue(srv.isAlive());
+            assert.ok(srv.isAlive());
         });
         it("is tested with a monad via server object",function(done){
             new testutil.WS(srv)
@@ -141,14 +141,14 @@ describe("testutil",function() {
             ws.end(()=>ws.end(done));
         });
         it("is still alive",function(){
-            assert.isTrue(srv.isAlive());
+            assert.ok(srv.isAlive());
         });
         it("closes down nicely",function(done){
             srv.proc.once('exit',()=>done());
             srv.kill();
         });
         it("is not alive again",function(){
-            assert.isFalse(srv.isAlive());
+            assert.ok(!srv.isAlive());
         });
     });
 

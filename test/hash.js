@@ -2,7 +2,7 @@
 
 const hash    = require("../hash.js");
 
-const assert = require('chai').assert;
+const assert  = require('assert').strict;
 const temp    = require('temp').track();
 const util    = require('../util.js');
 const fs      = require('fs');
@@ -167,7 +167,7 @@ describe("hash('sha1')",function() {
             const    ws = store.createWriteStream();
             ws.on('stored',function(hash1) {
                 assert.equal(hash1,hash0);
-                assert.equal(fs.readFileSync(store.makeFilename(hash1)),contents);
+                assert.equal(fs.readFileSync(store.makeFilename(hash1),'utf8'),contents);
                 done();
             });
             resumer().queue(contents).end().pipe(ws);

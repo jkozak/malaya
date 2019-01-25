@@ -5,7 +5,7 @@ const whiskey = require('../whiskey.js');
 const       _ = require('underscore');
 const  stream = require('stream');
 const    util = require('util');
-const  assert = require('chai').assert;
+const  assert = require('assert').strict;
 const resumer = require('resumer');
 const  VError = require('verror');
 
