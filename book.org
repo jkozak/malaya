@@ -6,22 +6,49 @@
 ** Prerequisites
 * Installation
 ** General instructions
-Malaya requires nodejs, and should run on any platform nodejs supports
-** Specific OSs
-*** linux
-*** macOS
-*** windows
+Malaya requires nodejs, and should run on any platform nodejs supports.
+
+It can be installed from =npm=.
+
 * JSON pattern matching
 * Constraint Handler Rules
-* Example 1
+* Malaya fact stores
+* Other language features
+* Example 1 - turing machine
 * Prevalence
-* Engines
-* Plugins: talking to the world
+* The malaya command
+** =init=
+** =run=
+** =fsck=
+** =kill=
+** =save=
+** =cat=
+** =status=
+** =query=
+* Engines - running the system
+* Plugins - talking to the world
+** introduction
+** bundled plugins
+*** =tcp=
+*** =ws=
+*** =udp=
+*** =process=
+*** =http=
+*** =file=
+*** =unix=
+** other plugins
+*** =matrix=
+*** =ssb=
+*** =systemd=
+*** =slack=
 * Example 2
 * Example 3
 * Updating the schema
-* Example 4
-* Future
+* Example 4 - going international with multi-currency support
+* Working with the journal
+* Example 5 - GDPR
+* Example 6 - installing a malaya server under linux
+* Future directions
 ** compile to SQL
 ** GUI visualisation
 ** in-browser
@@ -30,3 +57,10 @@ Malaya requires nodejs, and should run on any platform nodejs supports
 *** parallelisation
 *** join tuning
 *** autoindexing
+** formal methods
+*** model checking
+** consensus (ePaxos?)
+** p2p apps
+** embed in other platforms than node
+** (auto-)sharding
+* Language reference
