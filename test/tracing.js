@@ -1,10 +1,10 @@
 "use strict";
 
-const tracing  = require("../tracing.js");
+const tracing  = require('../tracing.js');
 
-const assert   = require("assert");
-const   chalk  = require("chalk");
-const    util  = require("util");
+const assert   = require('assert').strict;
+const   chalk  = require('chalk');
+const    util  = require('util');
 
 const compiler = require("../compiler.js");
 

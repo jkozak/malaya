@@ -1,11 +1,11 @@
 "use strict";
 
-const util    = require("../util.js");
+const util    = require('../util.js');
 
-const fs      = require("fs");
-const temp    = require("temp").track();
-const path    = require("path");
-const assert  = require("assert");
+const fs      = require('fs');
+const temp    = require('temp').track();
+const path    = require('path');
+const assert  = require('assert').strict;
 
 describe('constants',function() {
     it("`env` will always be 'test' when testing",function() {

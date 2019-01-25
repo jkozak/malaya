@@ -4,7 +4,7 @@
 
 var compiler = require("../compiler.js");
 var   parser = require("../parser.js");
-var   assert = require("assert");
+const assert = require('assert').strict;
 var   recast = require("recast");
 var     util = require('../util.js');
 var     temp = require('temp');

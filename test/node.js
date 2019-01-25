@@ -7,7 +7,7 @@
 const     fs = require('fs');
 const   path = require('path');
 const   temp = require('temp').track();
-const assert = require('assert');
+const assert = require('assert').strict;
 const VError = require('verror');
 
 describe("fs stream",function() {

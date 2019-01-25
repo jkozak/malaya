@@ -5,7 +5,7 @@ const   lock = require('../lock.js');
 const     fs = require('fs');
 const   temp = require('temp').track();
 const   path = require('path');
-const assert = require('assert');
+const assert = require('assert').strict;
 
 
 describe("basic locking",function() {
