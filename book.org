@@ -1,0 +1,32 @@
+#+TITLE: Malaya
+#+AUTHOR: John Kozak
+
+* Introduction
+** Basics
+** Prerequisites
+* Installation
+** General instructions
+Malaya requires nodejs, and should run on any platform nodejs supports
+** Specific OSs
+*** linux
+*** macOS
+*** windows
+* JSON pattern matching
+* Constraint Handler Rules
+* Example 1
+* Prevalence
+* Engines
+* Plugins: talking to the world
+* Example 2
+* Example 3
+* Updating the schema
+* Example 4
+* Future
+** compile to SQL
+** GUI visualisation
+** in-browser
+** performance
+*** better compilation
+*** parallelisation
+*** join tuning
+*** autoindexing
