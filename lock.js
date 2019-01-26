@@ -21,26 +21,31 @@ exports.lockSync = function(filename,data) {
 
     fs.writeSync(tmp.fd,JSON.stringify(data),null,null,null);
     fs.closeSync(tmp.fd);
-    for (let i=0;i<2;i++)
-        try {
-            fs.linkSync(tmp.path,filename);     // if locked, fails here
-            return true;
-        } catch (e) {
-            const pid = exports.pidLockedSync(filename);
-            if (pid===process_.pid)
-                return false;
-            else if (pid===null) {
-                try {
-                    util.info("removing stale lockfile %s",filename);
-                    fs.unlinkSync(filename);
-                    continue;
-                } catch (e1) {
-                    throw new VError(e,"lockfile %s is stale but can't be removed",filename);
+
+    try {
+        for (let i=0;i<2;i++)
+            try {
+                fs.linkSync(tmp.path,filename);     // if locked, fails here
+                return true;
+            } catch (e) {
+                const pid = exports.pidLockedSync(filename);
+                if (pid===process_.pid) {
+                    return false;
+                } else if (pid===null) {
+                    try {
+                        util.info("removing stale lockfile %s",filename);
+                        fs.unlinkSync(filename);
+                        continue;
+                    } catch (e1) {
+                        throw new VError(e,"lockfile %s is stale but can't be removed",filename);
+                    }
                 }
+                throw new VError(e,"lockfile %s is held by process %d",filename,pid);
             }
-            throw new VError(e,"lockfile %s is held by process %d",filename,pid);
-        }
-    throw new VError("failed to acquire lockfile %s",filename);
+        throw new VError("failed to acquire lockfile %s",filename);
+    } finally {
+        fs.unlinkSync(tmp.path);
+    }
 };
 
 exports.lockDataSync = function(filename) {
