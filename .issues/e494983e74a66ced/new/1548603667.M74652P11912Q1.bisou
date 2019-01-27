@@ -1,0 +1,7 @@
+From: John Kozak
+Date: Sun, 27 Jan 2019 15:39:32 +0000
+State: new
+Subject: malaya run mode which stops when all possible work has been done
+Message-Id: <e494983e74a66ced-0-artemis@bisou>
+
+this is possible now with the file plugin

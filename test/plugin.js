@@ -436,6 +436,7 @@ module.exports = store {}
         eng.become('master');
     });
     it("data has been seen",function(done){
+        // +++ resolve hacky use of setImmediate [e494983e74a66ced] +++
         setImmediate(()=>{
             assert.deepEqual(eng.chrjs._private.orderedFacts,[
                 ['test',{id:1},{port:'plugin:file'}],
