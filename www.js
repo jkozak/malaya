@@ -87,14 +87,14 @@ exports.populateApp = function(eng,app) {
                     filesRead.push(f);
             });
             b.bundle()
-                .on('error',function(err) {
+                .once('error',function(err) {
                     console.log("!!! bundle fail: %s",err);
                     cb(err);
                 })
                 .on('data',function(chunk) {
                     js += chunk.toString();
                 })
-                .on('end',function() {
+                .once('end',function() {
                     const deps = {};
                     filesRead.forEach(function(f) {
                         deps[f] = fs.statSync(f);

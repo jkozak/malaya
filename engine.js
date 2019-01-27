@@ -835,7 +835,7 @@ Engine.prototype.listenHttp = function(mode,port,done) {
     });
 
     eng.http.once('close',()=>{
-        eng.emit('unlisten','http',eng.http.address().port);
+        eng.emit('unlisten','http',eng.options.ports.http);
     });
 };
 
@@ -897,6 +897,7 @@ Engine.prototype._become = function(mode,cb) {
                     else
                         eng.stopPrevalence(true,cb);
                 });
+                eng.http.close();
                 eng.closeAllConnections('replication',done);
                 eng.options.endpoints.forEach(ep=>eng.closeAllConnections(ep,done));
                 plugin.stop(done);

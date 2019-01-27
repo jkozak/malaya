@@ -29,7 +29,7 @@ describe("web server",function() {
         fs.writeFileSync(path.join(wdir,file),text);
         fs.mkdirSync(path.join(wdir,xdir));
         fs.writeFileSync(path.join(wdir,xdir,'Wood'),text);
-        eng.on('listen',(type,port0)=>{
+        eng.once('listen',(type,port0)=>{
             port = port0;
             done();
         });
@@ -142,7 +142,7 @@ describe("web server",function() {
     });
     it("stops",function(done){
         eng.become('idle');
-        eng.stop(true,done);
+        eng.stop(false,done);
     });
 });
 // +++ tests for require/bundle +++
