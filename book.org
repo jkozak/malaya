@@ -27,6 +27,7 @@ It can be installed from =npm=.
 ** =query=
 * Engines - running the system
 * Plugins - talking to the world
+
 ** introduction
 ** bundled plugins
 *** =tcp=
@@ -41,6 +42,12 @@ It can be installed from =npm=.
 *** =ssb=
 *** =systemd=
 *** =slack=
+*** =inotify=
+*** =LDAP=
+*** =DNS=
+*** Cloud provider APIs, e.g. AWS, GCloud, Azure
+*** eBPF
+
 * Example 2
 * Example 3
 * Updating the schema
@@ -49,18 +56,29 @@ It can be installed from =npm=.
 * Example 5 - GDPR
 * Example 6 - installing a malaya server under linux
 * Future directions
+
 ** compile to SQL
 ** GUI visualisation
 ** in-browser
 ** performance
+
 *** better compilation
 *** parallelisation
 *** join tuning
+
 *** autoindexing
+
 ** formal methods
+
 *** model checking
+
 ** consensus (ePaxos?)
 ** p2p apps
 ** embed in other platforms than node
 ** (auto-)sharding
+** operate on untranslated binary data
+
+Avoid cost of binary->JSON->binary translation by compiling the
+rules to work on binary data directly.
+
 * Language reference

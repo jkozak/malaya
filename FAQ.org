@@ -1,0 +1,96 @@
+* Frequently Asked Questions
+
+** Where does the name come from?
+
+- Multisets And Logic Are Your Application
+ - that's a backronym, of course.  The true story will be told one day.
+
+** Is it a database?
+
+It provides persistent storage of application data, so yes.  But see
+below.  We've been using the term "fact-store" to make this a bit
+clearer.
+
+** Is It relational?
+
+Yes - joins and so on.  But see below.
+
+** Is it SQL?
+
+No, not at all. There is a plan for a tool to translate the malaya
+notation to SQL plus the glue needed to run s a server, but that's not
+implemented yet.
+
+** Can it be used in connection with a standard database?
+
+Not much.  It would be possible to stream data as a real-time export
+to an RDB with an appropriate plugin.
+
+** What would I use it for?
+** Why would I want to use it?
+** What's CHR?
+** Why JSON everywhere?
+
+It's good enough for most things and it's very well known.
+
+** What significant limitations does it have?
+
+In-memory only at the moment, so there's a fact-store size limitation
+of 10s of gigabytes (the size of the ~nodejs~ heap).
+
+** Who's writing it?
+
+John Kozak <jk@thameslighter.net> is the principal author.
+
+** What is prevalence?
+
+See [[https://en.wikipedia.org/wiki/System_Prevalence][wikipedia]]
+
+** If prevalence is so great why doesn't everyone use it?
+** What's the performance like?
+
+Fine for the application types recommended here.
+
+** Distributed?
+** Sharded?
+** Is it web-scale?
+
+Not yet.
+
+** Is it HA?
+
+Support of a consensus protocol like ePaxos is planned.
+
+** How auditable is it?
+
+Extremely.
+
+** If the journal history is untamperable what about GDPR?
+** The journal history doesn't contain /en clair/ passwords, does it?
+** What about schema changes?
+** Does it offer replication?
+A previous version offered this.  We'd like to get ot back in, perhaps
+as part of a more general distributed-sytem model
+** Does it have debugging or visualisation tools?
+
+An OpenGL visualiser was available and will be revived at some point.
+
+** Much documentation?
+
+No, but a manual is being written.
+
+** Release schedule?
+
+The 0.7 version has been in private use on a couple of projects for
+several years and has proven to be stable.
+
+A 0.9 release is available now for review and comment.  A 1.0 release
+is planned for before the end of 2019; future releases within the 1.*
+stream will maintain back-compatibility.
+
+** Can the on-disk fact-store be encrypted?
+** What plaforms does it run on?
+
+Anywhere ~nodejs~ runs, in principle.  Most deployments are expected
+to be on linux, but we'll run CI tests on linux, macOS and windows
+against current and LTS versions of ~nodejs~.
