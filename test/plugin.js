@@ -5,6 +5,7 @@ const   plugin = require('../plugin.js');
 const   engine = require('../engine.js');
 
 const        _ = require('underscore');
+const       fs = require('fs');
 const     temp = require('temp').track();
 const     path = require('path');
 const    sinon = require('sinon');
@@ -399,5 +400,91 @@ describe("restart and timer in concert",function(){
             ['restart',{},{port:'plugin:restart'}],
             ['tick',{t:1000},{port:'plugin:timer'}]
         ]);
+    });
+});
+
+describe("file read",function(){
+    this.bail(true);
+    let   eng;
+    const dir = temp.mkdirSync();
+    before(()=>{
+        fs.writeFileSync(path.join(dir,'test.malaya'),`
+module.exports = store {}
+    .plugin('file',{src:'${path.join(dir,'test.data')}'});
+`,
+                     {encoding:'utf8'} );
+        fs.writeFileSync(path.join(dir,'test.data'),`
+["test",{"id":1}]
+["test",{"id":2}]
+["test",{"id":3}]
+`.trimLeft(),
+                     {encoding:'utf8'} );
+    });
+    after(()=>{plugin._private.reset();});
+    after(()=>(eng && eng.stop()));
+    it("loads source file",function(done){
+        eng = new engine.Engine({dir,
+                                 magic:         {},
+                                 ports:         {},
+                                 businessLogic: path.join(dir,'test.malaya') });
+        eng.init();
+        eng.start();
+        eng.on('mode',mode=>{
+            if (mode==='master')
+                done();
+        });
+        eng.become('master');
+    });
+    it("data has been seen",function(done){
+        setImmediate(()=>{
+            assert.deepEqual(eng.chrjs._private.orderedFacts,[
+                ['test',{id:1},{port:'plugin:file'}],
+                ['test',{id:2},{port:'plugin:file'}],
+                ['test',{id:3},{port:'plugin:file'}]
+            ]);
+            done();
+        });
+    });
+});
+
+describe("file write",function(){
+    this.bail(true);
+    let   eng;
+    const dir = temp.mkdirSync();
+    before(()=>{
+        fs.writeFileSync(path.join(dir,'test.malaya'),`
+module.exports = store {
+    rule (-['ping',{}],
+           out('plugin:file',['pong',{}]) );
+}
+    .plugin('file',{dst:'${path.join(dir,'test.data')}'});
+`,
+                     {encoding:'utf8'} );
+    });
+    after(()=>{plugin._private.reset();});
+    after(()=>(eng && eng.stop()));
+    it("loads source file",function(done){
+        eng = new engine.Engine({dir,
+                                 magic:         {},
+                                 ports:         {},
+                                 businessLogic: path.join(dir,'test.malaya') });
+        eng.init();
+        eng.start();
+        eng.on('mode',mode=>{
+            if (mode==='master')
+                done();
+        });
+        eng.become('master');
+    });
+    it("receives data", function(done) {
+        eng.update(['ping',{}],done);
+    });
+    it("data has been written",function(done){
+        // +++ resolve hacky use of setImmediate [e494983e74a66ced] +++
+        setImmediate(()=>{
+            const wd = fs.readFileSync(path.join(dir,'test.data'),'utf8');
+            assert.deepEqual(JSON.parse(wd),['pong',{}]);
+            done();
+        });
     });
 });

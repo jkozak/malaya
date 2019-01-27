@@ -1,8 +1,10 @@
 "use strict";
 
 const       _ = require('underscore');
+const      fs = require('fs');
 
 const cmdline = require('./cmdline.js');
+const whiskey = require('./whiskey.js');
 
 const classes = {};
 
@@ -188,6 +190,57 @@ function setStandardClasses() {
             super.stop(cb);
         }
     };
+
+    classes.file = class extends Plugin {
+        constructor({src,dst,Reader=whiskey.JSONParseStream,Writer=whiskey.StringifyJSONStream}) {
+            super();
+            const pl = this;
+            pl.Reader  = Reader;
+            pl.Writer  = Writer;
+            pl.rs      = null;
+            pl.ws      = null;
+            pl.src     = src;
+            pl.dst     = dst;
+        }
+        start(cb) {
+            const pl = this;
+            if (pl.src) {
+                const rfs = fs.createReadStream(pl.src,{encoding:'utf8'});
+                pl.rs = new pl.Reader();
+                rfs.pipe(pl.rs);
+                pl.rs.on('data',js=>{
+                    if (!Array.isArray(js) || js.length!==2 || typeof js[0]!=='string' || typeof js[1]!=='object') {
+                        console.log("dud input: %j",js);
+                    } else {
+                        pl.update(js);
+                    }
+                });
+            }
+            if (pl.dst) {
+                const wfs = fs.createWriteStream(pl.dst,{encoding:'utf8'});
+                pl.ws = new pl.Writer();
+                pl.ws.pipe(wfs);
+            }
+            cb();
+        }
+        stop(cb) {
+            const pl = this;
+            if (pl.rs) {
+                pl.rs.destroy();
+                pl.rs = null;
+            }
+            if (pl.ws) {
+                pl.ws.destroy();
+                pl.ws = null;
+            }
+            cb();
+        }
+        out(js,addr) {
+            const pl = this;
+            pl.ws.write(js);
+        }
+    };
+
     // +++ more small plugins +++
 }
 setStandardClasses();
