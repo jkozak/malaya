@@ -354,3 +354,50 @@ describe("timer explicit interval",function(){
             ['tick',{t:20000},{port:'plugin:timer'}] ]);
     });
 });
+
+describe("restart and timer in concert",function(){
+    this.bail(true);
+    let eng;
+    let clock;
+    before(()=>{clock=sinon.useFakeTimers();});
+    after(()=>{plugin._private.reset();});
+    after(()=>(eng && eng.stop()));
+    after(()=>{clock.restore();});
+    it("loads source file",function(done){
+        eng = new engine.Engine({dir:           temp.mkdirSync(),
+                                 magic:         {},
+                                 ports:         {},
+                                 businessLogic: path.join(__dirname,'bl','restart_timer.malaya') });
+        eng.init();
+        eng.start();
+        eng.once('mode',mode=>{
+            if (mode==='master')
+                done();
+        });
+        eng.become('master');
+    });
+    it("restart has been sent",function(){
+        assert.deepEqual(eng.chrjs._private.orderedFacts,[['restart',{},{port:'plugin:restart'}]]);
+    });
+    it("waits no time at all", function() {
+        clock.tick(0);
+    });
+    it("only restart sent",function(){
+        assert.deepEqual(eng.chrjs._private.orderedFacts,[['restart',{},{port:'plugin:restart'}]]);
+    });
+    it("waits not quite a second", function() {
+        clock.tick(999);
+    });
+    it("still only restart sent",function(){
+        assert.deepEqual(eng.chrjs._private.orderedFacts,[['restart',{},{port:'plugin:restart'}]]);
+    });
+    it("waits just a second", function() {
+        clock.tick(1);
+    });
+    it("restart and one tick sent", function() {
+        assert.deepEqual(eng.chrjs._private.orderedFacts,[
+            ['restart',{},{port:'plugin:restart'}],
+            ['tick',{t:1000},{port:'plugin:timer'}]
+        ]);
+    });
+});
