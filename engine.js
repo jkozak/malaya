@@ -842,13 +842,14 @@ Engine.prototype.listenHttp = function(mode,port,done) {
 Engine.prototype.journaliseCodeSources = function(type,item2,always,cb) {
     const  eng = this;
     const srcs = eng.sources;
+    cb = cb || (()=>{});
     if (always || Object.keys(eng.sources).length>0) {
         eng.sources = {};
         for (const fn in srcs)
             srcs[fn] = this.hashes.putFileSync(fn);
         this.journalise(type,[util.sourceVersion,item2,srcs],cb);
     } else
-        if (cb) cb(null);
+        cb(null);
 };
 
 Engine.prototype._allowUnsafe = function(op) {
@@ -868,7 +869,12 @@ Engine.prototype._become = function(mode,cb) {
                 if (err)
                     cb(err);
                 else
-                    eng.journaliseCodeSources('code',eng.options.businessLogic,false,cb);
+                    eng.journaliseCodeSources('code',eng.options.businessLogic,false,err2=>{
+                        if (err2)
+                            cb(err2);
+                        else
+                            plugin.start({},cb);
+                    });
             });
             break;
         }
@@ -885,7 +891,7 @@ Engine.prototype._become = function(mode,cb) {
         case 'idle': {
             switch (eng.mode) {
             case 'master': {
-                const done = _.after(1+eng.options.endpoints.length,function(err) {
+                const done = _.after(1+1+eng.options.endpoints.length,err=>{
                     if (err)
                         cb(err);
                     else
@@ -893,6 +899,7 @@ Engine.prototype._become = function(mode,cb) {
                 });
                 eng.closeAllConnections('replication',done);
                 eng.options.endpoints.forEach(ep=>eng.closeAllConnections(ep,done));
+                plugin.stop({},done);
                 break;
             }
             case 'slave':

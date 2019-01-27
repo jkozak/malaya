@@ -11,11 +11,11 @@ const     path = require('path');
 
 const jsOut = {op:'munge',data:[3,4,5]};
 
-describe("old style",function(){
+describe("old style (v0.7) plugins",function(){
     this.bail(true);
     let      n = 0;
     let    eng;
-    after(()=>{plugin._private.forgetAll();});
+    after(()=>{plugin._private.reset();});
     after(()=>(eng && eng.stop()));
     it("provides special out destination",function(done) {
         const  eps = {};
@@ -40,11 +40,62 @@ describe("old style",function(){
     });
 });
 
+describe("plugin start/stop with no plugins",function(){
+    before(()=>{plugin._private.forgetAll();});
+    after(()=>{plugin._private.reset();});
+    it("starts",function(done) {
+        plugin.start({},done);
+    });
+    it("stops",function(done) {
+        plugin.stop({},done);
+    });
+    it("starts again",function(done) {
+        plugin.start({},done);
+    });
+    it("stops again",function(done) {
+        plugin.stop({},done);
+    });
+    it("starts and stops",function(done) {
+        plugin.start({},err=>{
+            if (err)
+                done(err);
+            else
+                plugin.stop({},done);
+        });
+    });
+});
+
+describe("plugin start/stop with standard plugins",function(){
+    before(()=>{plugin._private.reset();});
+    after(()=>{plugin._private.reset();});
+    it("starts",function(done) {
+        plugin.start({},done);
+    });
+    it("stops",function(done) {
+        plugin.stop({},done);
+    });
+    it("starts again",function(done) {
+        plugin.start({},done);
+    });
+    it("stops again",function(done) {
+        plugin.stop({},done);
+    });
+    it("starts and stops",function(done) {
+        plugin.start({},err=>{
+            if (err)
+                done(err);
+            else
+                plugin.stop({},done);
+        });
+    });
+});
+
+
 describe("dolce stil novista",function(){
     this.bail(true);
     let   n = 0;
     let eng;
-    after(()=>{plugin._private.forgetAll();});
+    after(()=>{plugin._private.reset();});
     after(()=>(eng && eng.stop()));
     it("provides special out destination",function(done) {
         plugin.add('twiddle',class extends plugin.Plugin {
@@ -76,7 +127,7 @@ describe("multiple instance of plugin",function(){
     this.bail(true);
     const outs = {twiddle:0,twiddle1:0};
     let    eng;
-    after(()=>{plugin._private.forgetAll();});
+    after(()=>{plugin._private.reset();});
     after(()=>(eng && eng.stop()));
     it("provides special out destinations",function(done) {
         const done1 = _.after(2,done);
@@ -113,7 +164,7 @@ describe("subaddressing",function(){
     this.bail(true);
     let   n = 0;
     let eng;
-    after(()=>{plugin._private.forgetAll();});
+    after(()=>{plugin._private.reset();});
     after(()=>(eng && eng.stop()));
     it("provides special out destination",function(done) {
         plugin.add('twoddle',class extends plugin.Plugin {
@@ -150,7 +201,7 @@ describe("subaddressing",function(){
 describe("restart",function(){
     this.bail(true);
     let eng;
-    after(()=>{plugin._private.forgetAll();});
+    after(()=>{plugin._private.reset();});
     after(()=>(eng && eng.stop()));
     it("instantiates plugin",function() {
         plugin.instantiate('restart');
@@ -173,7 +224,7 @@ describe("restart",function(){
 describe("specify restart plugin in source code",function(){
     this.bail(true);
     let eng;
-    after(()=>{plugin._private.forgetAll();});
+    after(()=>{plugin._private.reset();});
     after(()=>(eng && eng.stop()));
     it("loads source file",function(){
         eng = new engine.Engine({dir:           temp.mkdirSync(),

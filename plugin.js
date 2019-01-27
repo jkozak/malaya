@@ -106,6 +106,8 @@ exports.require = name=>{
             }
         }
     }
+    if (typeof cl==='object' && Object.keys(cl).length===0) // plugin might not export a value
+        cl = classes[name];
     if (!cl)
         throw new Error(`can't find plugin ${name}`);
     add(name,cl);
@@ -122,75 +124,92 @@ exports.instantiate = (name,opts={})=>{
 };
 
 exports.start = (opts={},cb=()=>{})=>{
-    const done = _.after(plugins.length,cb);
-    plugins.forEach(pl=>pl.start(opts,done));
+    if (plugins.length===0)
+        cb();
+    else {
+        const done = _.after(plugins.length,cb);
+        plugins.forEach(pl=>pl.start(opts,done));
+    }
 };
 exports.stop = (opts={},cb=()=>{})=>{
-    const done = _.after(plugins.length,cb);
-    plugins.forEach(pl=>pl.stop(opts,done));
+    if (plugins.length===0)
+        cb();
+    else {
+        const done = _.after(plugins.length,cb);
+        plugins.forEach(pl=>pl.stop(opts,done));
+    }
 };
 
-classes.timer = class extends Plugin {
-    constructor(opts) {
-        super();
-        this.timer = null;
-    }
-    start(opts,cb) {
-        const pl = this;
-        if (pl.timer)
-            cb(new Error(`timer started when active`));
-        else {
-            pl.timer = setInterval(()=>{
-                pl.update(['tick',{t:Date.now()}]);
-            },opts.interval);
+function setStandardClasses() {
+    classes.timer = class extends Plugin {
+        constructor(opts) {
+            super();
+            this.timer = null;
+        }
+        start(opts,cb) {
+            const pl = this;
+            if (pl.timer)
+                cb(new Error(`timer started when active`));
+            else {
+                pl.timer = setInterval(()=>{
+                    pl.update(['tick',{t:Date.now()}]);
+                },opts.interval);
+                super.start(opts,cb);
+            }
+        }
+        stop(opts,cb) {
+            const pl = this;
+            if (!pl.timer)
+                cb(new Error(`timer stopped when inactive`));
+            else {
+                clearInterval(pl.timer);
+                pl.timer = null;
+                super.stop(opts,cb);
+            }
+        }
+    };
+
+    classes.restart = class extends Plugin {
+        constructor(opts={}) {
+            super();
+            const pl = this;
+            pl.running = false;
+            pl.initted = false;
+            pl.getData = opts.getData || (()=>{return {};});
+        }
+        start(opts,cb) {
+            const pl = this;
+            if (!pl.initted) {
+                pl.engine.on('mode',mode=>{
+                    if (!pl.running)
+                        throw new Error(`engine started before plugins initialised`);
+                    else
+                        pl.update(['restart',pl.getData()]);
+                });
+                pl.initted = true;
+            }
+            pl.running = true;
             super.start(opts,cb);
         }
-    }
-    stop(opts,cb) {
-        const pl = this;
-        if (!pl.timer)
-            cb(new Error(`timer stopped when inactive`));
-        else {
-            clearInterval(pl.timer);
-            pl.timer = null;
+        stop(opts,cb) {
+            this.running = false;
             super.stop(opts,cb);
         }
-    }
-};
-
-classes.restart = class extends Plugin {
-    constructor(opts={}) {
-        super();
-        const pl = this;
-        pl.running = false;
-        pl.initted = false;
-        pl.getData = opts.getData || (()=>{return {};});
-    }
-    start(opts,cb) {
-        const pl = this;
-        if (!pl.initted) {
-            pl.engine.on('mode',mode=>{
-                if (!pl.running)
-                    throw new Error(`engine started before plugins initialised`);
-                else
-                    pl.update(['restart',pl.getData()]);
-            });
-            pl.initted = true;
-        }
-        pl.running = true;
-        super.start(opts,cb);
-    }
-    stop(opts,cb) {
-        this.running = false;
-        super.stop(opts,cb);
-    }
-};
-
-// +++ more small plugins +++
+    };
+    // +++ more small plugins +++
+}
+setStandardClasses();
 
 exports._private = {
     forgetAll: ()=>{
         Object.values(classes).forEach(cl=>{delete classes[cl];});
-        plugins.length=0;
+        classes.length = 0;
+        plugins.length = 0;
+    },
+    reset: ()=>{
+        Object.values(classes).forEach(cl=>{delete classes[cl];});
+        classes.length = 0;
+        plugins.length = 0;
+        setStandardClasses();
     }
 };
