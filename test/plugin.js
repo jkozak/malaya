@@ -2,11 +2,13 @@
 
 const   plugin = require('../plugin.js');
 
-const        _ = require('underscore');
-const   assert = require('assert').strict;
 const   engine = require('../engine.js');
+
+const        _ = require('underscore');
 const     temp = require('temp').track();
 const     path = require('path');
+const    sinon = require('sinon');
+const   assert = require('assert').strict;
 
 
 const jsOut = {op:'munge',data:[3,4,5]};
@@ -198,7 +200,7 @@ describe("subaddressing",function(){
 
 // +++ subcommands
 
-describe("restart",function(){
+describe("restart plugin added dynamically",function(){
     this.bail(true);
     let eng;
     after(()=>{plugin._private.reset();});
@@ -206,7 +208,7 @@ describe("restart",function(){
     it("instantiates plugin",function() {
         plugin.instantiate('restart');
     });
-    it("starts engine",function(){
+    it("starts engine",function(done){
         eng = new engine.Engine({dir:           temp.mkdirSync(),
                                  magic:         {},
                                  ports:         {},
@@ -214,28 +216,141 @@ describe("restart",function(){
         eng.init();
         plugin.get('restart').connect(eng.chrjs);
         eng.start();
-        eng.become('master',()=>{});
+        eng.once('mode',mode=>{
+            if (mode==='master')
+                done();
+        });
+        eng.become('master');
     });
     it("restart has been sent",function(){
         assert.deepEqual(eng.chrjs._private.orderedFacts,[['restart',{},{port:'plugin:restart'}]]);
     });
 });
 
-describe("specify restart plugin in source code",function(){
+describe("restart",function(){
     this.bail(true);
     let eng;
     after(()=>{plugin._private.reset();});
     after(()=>(eng && eng.stop()));
-    it("loads source file",function(){
+    it("loads source file",function(done){
         eng = new engine.Engine({dir:           temp.mkdirSync(),
                                  magic:         {},
                                  ports:         {},
                                  businessLogic: path.join(__dirname,'bl','restart.malaya') });
         eng.init();
         eng.start();
-        eng.become('master',()=>{});
+        eng.once('mode',mode=>{
+            if (mode==='master')
+                done();
+        });
+        eng.become('master');
     });
     it("restart has been sent",function(){
         assert.deepEqual(eng.chrjs._private.orderedFacts,[['restart',{},{port:'plugin:restart'}]]);
+    });
+});
+
+describe("timer with default interval",function(){
+    this.bail(true);
+    let eng;
+    let clock;
+    before(()=>{clock=sinon.useFakeTimers();});
+    after(()=>{plugin._private.reset();});
+    after(()=>(eng && eng.stop()));
+    after(()=>{clock.restore();});
+    it("loads source file",function(done){
+        eng = new engine.Engine({dir:           temp.mkdirSync(),
+                                 magic:         {},
+                                 ports:         {},
+                                 businessLogic: path.join(__dirname,'bl','timer.malaya') });
+        eng.init();
+        eng.start();
+        eng.once('mode',mode=>{
+            if (mode==='master')
+                done();
+        });
+        eng.become('master');
+    });
+    it("nothing sent yet",function(){
+        assert.deepEqual(eng.chrjs._private.orderedFacts,[]);
+    });
+    it("waits no time at all", function() {
+        clock.tick(0);
+    });
+    it("nothing sent yet",function(){
+        assert.deepEqual(eng.chrjs._private.orderedFacts,[]);
+    });
+    it("waits not quite a second", function() {
+        clock.tick(999);
+    });
+    it("nothing sent yet",function(){
+        assert.deepEqual(eng.chrjs._private.orderedFacts,[]);
+    });
+    it("waits just a second", function() {
+        clock.tick(1);
+    });
+    it("one tick sent", function() {
+        assert.deepEqual(eng.chrjs._private.orderedFacts,[['tick',{t:1000},{port:'plugin:timer'}]]);
+    });
+    it("waits another second", function() {
+        clock.tick(1000);
+    });
+    it("two ticks sent", function() {
+        assert.deepEqual(eng.chrjs._private.orderedFacts,[
+            ['tick',{t:1000},{port:'plugin:timer'}],
+            ['tick',{t:2000},{port:'plugin:timer'}] ]);
+    });
+});
+
+describe("timer explicit interval",function(){
+    this.bail(true);
+    let eng;
+    let clock;
+    before(()=>{clock=sinon.useFakeTimers();});
+    after(()=>{plugin._private.reset();});
+    after(()=>(eng && eng.stop()));
+    after(()=>{clock.restore();});
+    it("loads source file",function(done){
+        eng = new engine.Engine({dir:           temp.mkdirSync(),
+                                 magic:         {},
+                                 ports:         {},
+                                 businessLogic: path.join(__dirname,'bl','timer10.malaya') });
+        eng.init();
+        eng.start();
+        eng.once('mode',mode=>{
+            if (mode==='master')
+                done();
+        });
+        eng.become('master');
+    });
+    it("nothing sent yet",function(){
+        assert.deepEqual(eng.chrjs._private.orderedFacts,[]);
+    });
+    it("waits no time at all", function() {
+        clock.tick(0);
+        assert.deepEqual(eng.chrjs._private.orderedFacts,[]);
+    });
+    it("nothing sent yet",function(){
+        assert.deepEqual(eng.chrjs._private.orderedFacts,[]);
+    });
+    it("waits not quite a second", function() {
+        clock.tick(9999);
+    });
+    it("nothing sent yet",function(){
+        assert.deepEqual(eng.chrjs._private.orderedFacts,[]);
+    });
+    it("waits just a second", function() {
+        clock.tick(1);
+    });
+    it("one tick sent", function() {
+        assert.deepEqual(eng.chrjs._private.orderedFacts,[['tick',{t:10000},{port:'plugin:timer'}]]);
+    });
+    it("waits another second", function() {
+        clock.tick(10000);
+    });
+    it("two ticks sent", function() {
+        assert.deepEqual(eng.chrjs._private.orderedFacts,[
+            ['tick',{t:10000},{port:'plugin:timer'}],
+            ['tick',{t:20000},{port:'plugin:timer'}] ]);
     });
 });

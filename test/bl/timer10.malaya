@@ -1,0 +1,2 @@
+module.exports = store{}
+    .plugin('timer',{interval:10000});

@@ -70,16 +70,6 @@ exports.registerEngine = eng=>{
         if (pl.eps)             // back compat with 0.7.x
             pl.eps.update = pl.update;
     });
-    eng.on('become',mode=>{
-        switch (mode) {
-        case 'master':
-            exports.start();
-            break;
-        default:
-            exports.stop();
-            break;
-        }
-    });
 };
 
 exports.get = name=>{
@@ -143,8 +133,10 @@ exports.stop = (opts={},cb=()=>{})=>{
 function setStandardClasses() {
     classes.timer = class extends Plugin {
         constructor(opts) {
-            super();
-            this.timer = null;
+            super(opts);
+            const pl = this;
+            pl.timer         = null;
+            pl.opts.interval = opts.interval || 1000;
         }
         start(opts,cb) {
             const pl = this;
@@ -153,7 +145,7 @@ function setStandardClasses() {
             else {
                 pl.timer = setInterval(()=>{
                     pl.update(['tick',{t:Date.now()}]);
-                },opts.interval);
+                },pl.opts.interval);
                 super.start(opts,cb);
             }
         }
@@ -171,7 +163,7 @@ function setStandardClasses() {
 
     classes.restart = class extends Plugin {
         constructor(opts={}) {
-            super();
+            super(opts);
             const pl = this;
             pl.running = false;
             pl.initted = false;
@@ -183,7 +175,7 @@ function setStandardClasses() {
                 pl.engine.on('mode',mode=>{
                     if (!pl.running)
                         throw new Error(`engine started before plugins initialised`);
-                    else
+                    else if (mode==='master')
                         pl.update(['restart',pl.getData()]);
                 });
                 pl.initted = true;
