@@ -873,7 +873,7 @@ Engine.prototype._become = function(mode,cb) {
                         if (err2)
                             cb(err2);
                         else
-                            plugin.start({},cb);
+                            plugin.start(cb);
                     });
             });
             break;
@@ -899,7 +899,7 @@ Engine.prototype._become = function(mode,cb) {
                 });
                 eng.closeAllConnections('replication',done);
                 eng.options.endpoints.forEach(ep=>eng.closeAllConnections(ep,done));
-                plugin.stop({},done);
+                plugin.stop(done);
                 break;
             }
             case 'slave':

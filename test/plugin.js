@@ -46,23 +46,23 @@ describe("plugin start/stop with no plugins",function(){
     before(()=>{plugin._private.forgetAll();});
     after(()=>{plugin._private.reset();});
     it("starts",function(done) {
-        plugin.start({},done);
+        plugin.start(done);
     });
     it("stops",function(done) {
-        plugin.stop({},done);
+        plugin.stop(done);
     });
     it("starts again",function(done) {
-        plugin.start({},done);
+        plugin.start(done);
     });
     it("stops again",function(done) {
-        plugin.stop({},done);
+        plugin.stop(done);
     });
     it("starts and stops",function(done) {
-        plugin.start({},err=>{
+        plugin.start(err=>{
             if (err)
                 done(err);
             else
-                plugin.stop({},done);
+                plugin.stop(done);
         });
     });
 });
@@ -71,23 +71,23 @@ describe("plugin start/stop with standard plugins",function(){
     before(()=>{plugin._private.reset();});
     after(()=>{plugin._private.reset();});
     it("starts",function(done) {
-        plugin.start({},done);
+        plugin.start(done);
     });
     it("stops",function(done) {
-        plugin.stop({},done);
+        plugin.stop(done);
     });
     it("starts again",function(done) {
-        plugin.start({},done);
+        plugin.start(done);
     });
     it("stops again",function(done) {
-        plugin.stop({},done);
+        plugin.stop(done);
     });
     it("starts and stops",function(done) {
-        plugin.start({},err=>{
+        plugin.start(err=>{
             if (err)
                 done(err);
             else
-                plugin.stop({},done);
+                plugin.stop(done);
         });
     });
 });

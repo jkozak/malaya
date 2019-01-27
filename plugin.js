@@ -20,14 +20,14 @@ class Plugin {
     connect(chrjs) {
         this.chrjs = chrjs;
     }
-    start(opts,cb) {
+    start(cb) {
         const pl = this;
         if (!pl.chrjs)
             cb(new Error(`plugin ${pl.name} started while not connected`));
         else
             cb(null);
     }
-    stop(opts,cb)  {cb(null);}
+    stop(cb)  {cb(null);}
     out(js,addr)   {}
 }
 exports.Plugin = Plugin;
@@ -113,20 +113,20 @@ exports.instantiate = (name,opts={})=>{
     return pl;
 };
 
-exports.start = (opts={},cb=()=>{})=>{
+exports.start = (cb=()=>{})=>{
     if (plugins.length===0)
         cb();
     else {
         const done = _.after(plugins.length,cb);
-        plugins.forEach(pl=>pl.start(opts,done));
+        plugins.forEach(pl=>pl.start(done));
     }
 };
-exports.stop = (opts={},cb=()=>{})=>{
+exports.stop = (cb=()=>{})=>{
     if (plugins.length===0)
         cb();
     else {
         const done = _.after(plugins.length,cb);
-        plugins.forEach(pl=>pl.stop(opts,done));
+        plugins.forEach(pl=>pl.stop(done));
     }
 };
 
@@ -138,7 +138,7 @@ function setStandardClasses() {
             pl.timer         = null;
             pl.opts.interval = opts.interval || 1000;
         }
-        start(opts,cb) {
+        start(cb) {
             const pl = this;
             if (pl.timer)
                 cb(new Error(`timer started when active`));
@@ -146,17 +146,17 @@ function setStandardClasses() {
                 pl.timer = setInterval(()=>{
                     pl.update(['tick',{t:Date.now()}]);
                 },pl.opts.interval);
-                super.start(opts,cb);
+                super.start(cb);
             }
         }
-        stop(opts,cb) {
+        stop(cb) {
             const pl = this;
             if (!pl.timer)
                 cb(new Error(`timer stopped when inactive`));
             else {
                 clearInterval(pl.timer);
                 pl.timer = null;
-                super.stop(opts,cb);
+                super.stop(cb);
             }
         }
     };
@@ -169,7 +169,7 @@ function setStandardClasses() {
             pl.initted = false;
             pl.getData = opts.getData || (()=>{return {};});
         }
-        start(opts,cb) {
+        start(cb) {
             const pl = this;
             if (!pl.initted) {
                 pl.engine.on('mode',mode=>{
@@ -181,11 +181,11 @@ function setStandardClasses() {
                 pl.initted = true;
             }
             pl.running = true;
-            super.start(opts,cb);
+            super.start(cb);
         }
-        stop(opts,cb) {
+        stop(cb) {
             this.running = false;
-            super.stop(opts,cb);
+            super.stop(cb);
         }
     };
     // +++ more small plugins +++

@@ -15,7 +15,7 @@ plugin.add('tcp',class extends plugin.Plugin {
         pl.Writer      = Writer;
         pl.connections = {};
     }
-    start(opts,cb) {
+    start(cb) {
         const pl = this;
         pl.server = net.createServer({});
         pl.server.on('error',err=>{
@@ -49,7 +49,7 @@ plugin.add('tcp',class extends plugin.Plugin {
             super.start({},cb);
         });
     }
-    stop(opts,cb) {
+    stop(cb) {
         const pl = this;
         pl.server.once('close',()=>{
             pl.server = null;
