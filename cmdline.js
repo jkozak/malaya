@@ -46,9 +46,21 @@ argparse.addArgument(['-v','--verbose'],
                      });
 argparse.addArgument(['-P','--plugin'],
                      {
-                         action:       'store',
-                         nargs:        '?',
+                         action:       'append',
+                         defaultValue: [],
                          help:         "plugin to load"
+                     });
+argparse.addArgument(['-O','--override'],
+                     {
+                         action:       'append',
+                         defaultValue: [],
+                         type:          s=>{
+                             const m = s.match(/([^.]+).([^=]+)=(.*)/);
+                             if (!m)
+                                 throw new Error(`bad override spec: ${s}`);
+                             return [m[1],m[2],JSON.parse(m[3])];
+                         },
+                         help:         "plugin setting to override"
                      });
 exports.argparse = argparse;
 
@@ -455,7 +467,7 @@ function stripPluginArgs(args) {
 exports.run = function(opts={},argv2=process.argv.slice(2)) {
     const [plugins,argv2a] = stripPluginArgs(argv2);
 
-    plugins.forEach(p=>require('./plugin.js').add(p));
+    plugins.forEach(p=>require('./plugin.js').require(p));
 
     const          args = argparse.parseArgs(argv2a);
     const prevalenceDir = path.resolve(args.prevalence_directory);
@@ -466,6 +478,9 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
 
     if (args.plugin && args.plugin.length>0)
         throw new util.Fail("plugins must be specified as the first arguments");
+
+    if (args.override.length>0)
+        throw new Error("NYI:override");
 
     const findCallback = function() { // extract the callback for single-shot use.
         let cb;
@@ -1025,7 +1040,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
             sanityCheckChrjsAdds(eng.chrjs,source);
             traceChrjs(eng.chrjs,source);
             eng.on('out',(dest,data)=>{ // we have clobbered the one in chrjs
-                console.log("%s %j %s",chalk.yellow('<'),dest,summariseJSON(data));
+                console.log("%s %j %s",chalk.yellow('<'),dest,summariseJSON(data,{long:args.long}));
             });
         }
         installSignalHandlers(eng);

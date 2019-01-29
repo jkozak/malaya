@@ -9,10 +9,9 @@ const whiskey = require('./whiskey.js');
 const classes = {};
 
 class Plugin {
+    static init(opts) {}
     constructor(opts) {
         const pl = this;
-        pl.addSubcommand = cmdline.addSubcommand;
-        pl.subcommands   = cmdline.subcommands;
         pl.engine        = null;
         pl.update        = ()=>{throw new Error("engine not active yet");};
         pl.name          = null;
@@ -80,8 +79,15 @@ exports.get = name=>{
     return ans;
 };
 
-const add = exports.add = (name,cl)=>{
+exports.add = (name,cl)=>{
     classes[name] = cl;
+    cl.init({                   // use getters to fetch values lazily
+        get addSubcommand() {return cmdline.addSubcommand;},
+        get args()          {return cmdline.args;},
+        get subcommands()   {return cmdline.subcommands;},
+        get verbosity()     {return cmdline.verbosity;},
+        package:            require('./package.json').name
+    });
 };
 
 exports.require = name=>{
@@ -89,20 +95,18 @@ exports.require = name=>{
     let cl = classes[name];
     if (!cl) {
         try {
-            cl = require(`./plugins/${name}.js`);
+            require(`./plugins/${name}.js`);
         } catch (e1) {
             try {
-                cl = require(`malaya-plugin-${name}`);
+                require(`malaya-plugin-${name}`).init(require('./index.js'));
             } catch (e2) {
                 // empty
+                throw e2;       // !!! TESTING !!!
             }
         }
     }
-    if (typeof cl==='object' && Object.keys(cl).length===0) // plugin might not export a value
-        cl = classes[name];
-    if (!cl)
-        throw new Error(`can't find plugin ${name}`);
-    add(name,cl);
+    if (!classes[name])
+        throw new Error(`can't load plugin ${name}`);
     return classes[name];
 };
 

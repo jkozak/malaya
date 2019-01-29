@@ -32,7 +32,7 @@ const fmtFact = exports.fmtFact = (f,opts={})=>{
         if (f.length===2)
             return `['${chalk.blue(f[0])}',${fmtJSON(f[1],opts)}]`;
         else
-            return `['${chalk.blue(f[0])}',${fmtJSON(f[1],opts)},${chalk.green(fmtJSON(f[2]))}]`;
+            return `['${chalk.blue(f[0])}',${fmtJSON(f[1],opts)},${chalk.green(fmtJSON(f[2],opts))}]`;
     } else
         return chalk.red(JSON5.stringify(f));
 };
@@ -51,7 +51,7 @@ const isTraceInteresting = firing=>{
     return true;
 };
 
-exports.trace = (chrjs,opts={})=>{
+exports.trace = (chrjs,source_,opts={})=>{
     // rule invocations nest, but that's an implementation detail;
     // so we use `stack` and `outQ` to flatten out the display
     const    stack = [];

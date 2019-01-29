@@ -50,11 +50,11 @@ describe("tracing of compiled code",function(){
     it("traces execution",function(){
         const st = require("./bl/pingpong.malaya");
         let  out = '';
-        tracing.trace(st,{print:(...rest)=>{
+        tracing.trace(st,'dummy.malaya',{print:(...rest)=>{
             out += util.format.apply(null,rest);
         }});
-        st.update(['ping',{p:'q'},{port:'???port???'}]);
-        assert(out.includes('???port???'));
+        st.update(['ping',{p:'q'},{port:'?????port?????'}]);
+        assert(out.includes('?????port?????'));
         assert(out.includes('ping'));
         assert(out.includes('pong'));
     });
