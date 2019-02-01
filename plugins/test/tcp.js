@@ -16,7 +16,7 @@ describe("tcp plugin",function(){
     it("creates and starts engine with plugin", function() {
         eng = new engine.Engine({
             prevalenceDir: path.join(dir,'.prevalence'),
-            businessLogic: 'test/plugins/bl/tcp.malaya'
+            businessLogic: 'plugins/test/bl/tcp.malaya'
         });
         eng.init();
         eng.start();

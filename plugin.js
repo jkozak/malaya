@@ -249,6 +249,8 @@ function setStandardClasses() {
 }
 setStandardClasses();
 
+exports.prefix = 'plugin:';    // for building port names
+
 exports._private = {
     forgetAll: ()=>{
         Object.values(classes).forEach(cl=>{delete classes[cl];});

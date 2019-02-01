@@ -815,9 +815,13 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
     subcommands.exec.exec = function() {
         const vm = require('vm');
         args.source = args.source || findSource();
-        vm.runInNewContext(compile(args.source),{
-            require:require,
-            console:console});
+        const chrjs = compile(args.source);
+        vm.runInNewContext(chrjs,{
+            require:      require,
+            module:       {exports:{}},
+            process:      process,    // +++ other built-in modules of interest to plugins +++
+            malayaPlugin: require('./plugin.js'),
+            console:      console});
     };
 
     subcommands.fsck.exec = function() {
