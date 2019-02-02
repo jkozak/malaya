@@ -85,9 +85,9 @@ to it and punt into Malaya.
 Strip out all the non-JSON bits, trivially ~JSON.parse o JSON.stringify~.
 
 Call-out to stash body in a K/V store:
- `out('plugin:http',['stash-body',{id}])`
+ `out('http',['stash-body',{id}])`
 gives update:
- `['body',{id,key},{port:'plugin:http'}]`
+ `['body',{id,key},{port:'http'}]`
 
 
 email

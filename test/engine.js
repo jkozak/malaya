@@ -945,7 +945,7 @@ describe("Engine",function() {
             eng.addPlugin('twiddle',opts);
             eng.init();
             eng.start();
-            eng.out('plugin:twiddle',jsOut);
+            eng.out('twiddle',jsOut);
         });
         it("installs an update function",function(){
             assert.strictEqual(typeof opts.update,'function');

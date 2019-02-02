@@ -60,7 +60,7 @@ exports.registerEngine = eng=>{
             let port = pl.name;
             if (addr)
                 port += ':'+addr;
-            const js2 = js.concat([{port:`plugin:${port}`}]);
+            const js2 = js.concat([{port}]);
             if (pl.chrjs===eng.chrjs)
                 eng.update(js2);
             else if (pl.chrjs)
@@ -271,8 +271,6 @@ function setStandardClasses() {
     // +++ more small plugins +++
 }
 setStandardClasses();
-
-exports.prefix = 'plugin:';    // for building port names
 
 exports._private = {
     forgetAll: ()=>{

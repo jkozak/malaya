@@ -33,7 +33,7 @@ describe("old style (v0.7) plugins",function(){
         eng.addPlugin('twiddle',eps);
         eng.init();
         eng.start();
-        eng.out('plugin:twiddle',jsOut);
+        eng.out('twiddle',jsOut);
     });
     it("installed an update function",function(){
         assert.strictEqual(typeof plugin.get('twiddle').update,'function');
@@ -116,7 +116,7 @@ describe("dolce stil novista",function(){
                                  businessLogic: path.join(__dirname,'bl','null.chrjs') });
         eng.init();
         eng.start();
-        eng.out('plugin:twiddle',jsOut);
+        eng.out('twiddle',jsOut);
     });
     it("installed an update function",function(){
         assert.strictEqual(typeof plugin.get('twiddle').update,'function');
@@ -150,8 +150,8 @@ describe("multiple instance of plugin",function(){
                                  businessLogic: path.join(__dirname,'bl','null.chrjs') });
         eng.init();
         eng.start();
-        eng.out('plugin:twiddle', jsOut);
-        eng.out('plugin:twiddle1',jsOut);
+        eng.out('twiddle', jsOut);
+        eng.out('twiddle1',jsOut);
     });
     it("installed an update function",function(){
         assert.strictEqual(typeof plugin.get('twiddle') .update,'function');
@@ -185,7 +185,7 @@ describe("subaddressing",function(){
                                  businessLogic: path.join(__dirname,'bl','null.chrjs') });
         eng.init();
         eng.start();
-        eng.out('plugin:twoddle:1854:aq',jsOut);
+        eng.out('twoddle:1854:aq',jsOut);
     });
     it("installed an update function",function(){
         assert.strictEqual(typeof plugin.get('twoddle').update,'function');
@@ -224,7 +224,7 @@ describe("restart plugin added dynamically",function(){
         eng.become('master');
     });
     it("restart has been sent",function(){
-        assert.deepEqual(eng.chrjs._private.orderedFacts,[['restart',{},{port:'plugin:restart'}]]);
+        assert.deepEqual(eng.chrjs._private.orderedFacts,[['restart',{},{port:'restart'}]]);
     });
 });
 
@@ -247,7 +247,7 @@ describe("restart",function(){
         eng.become('master');
     });
     it("restart has been sent",function(){
-        assert.deepEqual(eng.chrjs._private.orderedFacts,[['restart',{},{port:'plugin:restart'}]]);
+        assert.deepEqual(eng.chrjs._private.orderedFacts,[['restart',{},{port:'restart'}]]);
     });
 });
 
@@ -291,15 +291,15 @@ describe("timer with default interval",function(){
         clock.tick(1);
     });
     it("one tick sent", function() {
-        assert.deepEqual(eng.chrjs._private.orderedFacts,[['tick',{t:1000},{port:'plugin:timer'}]]);
+        assert.deepEqual(eng.chrjs._private.orderedFacts,[['tick',{t:1000},{port:'timer'}]]);
     });
     it("waits another second", function() {
         clock.tick(1000);
     });
     it("two ticks sent", function() {
         assert.deepEqual(eng.chrjs._private.orderedFacts,[
-            ['tick',{t:1000},{port:'plugin:timer'}],
-            ['tick',{t:2000},{port:'plugin:timer'}] ]);
+            ['tick',{t:1000},{port:'timer'}],
+            ['tick',{t:2000},{port:'timer'}] ]);
     });
 });
 
@@ -344,15 +344,15 @@ describe("timer explicit interval",function(){
         clock.tick(1);
     });
     it("one tick sent", function() {
-        assert.deepEqual(eng.chrjs._private.orderedFacts,[['tick',{t:10000},{port:'plugin:timer'}]]);
+        assert.deepEqual(eng.chrjs._private.orderedFacts,[['tick',{t:10000},{port:'timer'}]]);
     });
     it("waits another second", function() {
         clock.tick(10000);
     });
     it("two ticks sent", function() {
         assert.deepEqual(eng.chrjs._private.orderedFacts,[
-            ['tick',{t:10000},{port:'plugin:timer'}],
-            ['tick',{t:20000},{port:'plugin:timer'}] ]);
+            ['tick',{t:10000},{port:'timer'}],
+            ['tick',{t:20000},{port:'timer'}] ]);
     });
 });
 
@@ -378,27 +378,27 @@ describe("restart and timer in concert",function(){
         eng.become('master');
     });
     it("restart has been sent",function(){
-        assert.deepEqual(eng.chrjs._private.orderedFacts,[['restart',{},{port:'plugin:restart'}]]);
+        assert.deepEqual(eng.chrjs._private.orderedFacts,[['restart',{},{port:'restart'}]]);
     });
     it("waits no time at all", function() {
         clock.tick(0);
     });
     it("only restart sent",function(){
-        assert.deepEqual(eng.chrjs._private.orderedFacts,[['restart',{},{port:'plugin:restart'}]]);
+        assert.deepEqual(eng.chrjs._private.orderedFacts,[['restart',{},{port:'restart'}]]);
     });
     it("waits not quite a second", function() {
         clock.tick(999);
     });
     it("still only restart sent",function(){
-        assert.deepEqual(eng.chrjs._private.orderedFacts,[['restart',{},{port:'plugin:restart'}]]);
+        assert.deepEqual(eng.chrjs._private.orderedFacts,[['restart',{},{port:'restart'}]]);
     });
     it("waits just a second", function() {
         clock.tick(1);
     });
     it("restart and one tick sent", function() {
         assert.deepEqual(eng.chrjs._private.orderedFacts,[
-            ['restart',{},{port:'plugin:restart'}],
-            ['tick',{t:1000},{port:'plugin:timer'}]
+            ['restart',{},{port:'restart'}],
+            ['tick',{t:1000},{port:'timer'}]
         ]);
     });
 });
@@ -413,7 +413,7 @@ describe("fs readFile",function() {
         fs.writeFileSync(path.join(dir,'test.malaya'),`
 module.exports = store {
     rule (-['go',{},{}],
-           out('plugin:fs',['readFile',{filename:'${xxx}'}]) );
+           out('fs',['readFile',{filename:'${xxx}'}]) );
 }
     .plugin('fs');
 `);
@@ -455,7 +455,7 @@ describe("fs writeFile",function() {
         fs.writeFileSync(path.join(dir,'test.malaya'),`
 module.exports = store {
     rule (-['go',{},{}],
-           out('plugin:fs',['writeFile',{filename:'${xxx}',contents:'xxx'}]) );
+           out('fs',['writeFile',{filename:'${xxx}',contents:'xxx'}]) );
 }
     .plugin('fs');
 `);
@@ -527,9 +527,9 @@ module.exports = store {}
         // +++ resolve hacky use of setImmediate [e494983e74a66ced] +++
         setImmediate(()=>{
             assert.deepEqual(eng.chrjs._private.orderedFacts,[
-                ['test',{id:1},{port:'plugin:file'}],
-                ['test',{id:2},{port:'plugin:file'}],
-                ['test',{id:3},{port:'plugin:file'}]
+                ['test',{id:1},{port:'file'}],
+                ['test',{id:2},{port:'file'}],
+                ['test',{id:3},{port:'file'}]
             ]);
             done();
         });
@@ -544,7 +544,7 @@ describe("file write",function(){
         fs.writeFileSync(path.join(dir,'test.malaya'),`
 module.exports = store {
     rule (-['ping',{}],
-           out('plugin:file',['pong',{}]) );
+           out('file',['pong',{}]) );
 }
     .plugin('file',{dst:'${path.join(dir,'test.data')}'});
 `,

@@ -1057,7 +1057,7 @@ Engine.prototype.out = function(dest,json) {
             console.log("connection not open for: %j",dest);
         else
             console.log("no connection found for: %j",dest);
-    } else if (plugin.prefix.length===0) {
+    } else {
         const parts = dest.split(':');
         const name  = parts[0];
         const   pl  = plugin.get(name);
@@ -1065,14 +1065,6 @@ Engine.prototype.out = function(dest,json) {
             eng.emit('error',`unknown plugin: ${name}`);
         else
             pl.out(json,parts[0],parts.slice(1).join(':'));
-    } else {
-        const parts = dest.split(':');
-        const name  = parts[1];
-        const   pl  = plugin.get(name);
-        if (!pl)
-            eng.emit('error',`unknown plugin: ${name}`);
-        else
-            pl.out(json,parts[1],parts.slice(2).join(':'));
     }
 };
 
