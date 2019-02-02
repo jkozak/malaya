@@ -1007,8 +1007,8 @@ Engine.prototype.broadcast = function(js,type,cb) {
 };
 
 Engine.prototype.out = function(dest,json) {
-    const        eng = this;
-    const pluginPort = 'plugin:';
+    const eng = this;
+    let     d;
     if (eng.options.debug)
         eng.emit('out',dest,json);
     if (json===null)
@@ -1050,7 +1050,22 @@ Engine.prototype.out = function(dest,json) {
             }
         else
             console.log("bad server _msg: %j",json);
-    } else if (dest.startsWith(pluginPort)) {
+    } else if ((d=eng.conns[dest])) {
+        if (d && d.o.readyState===d.o.OPEN)
+            d.o.write(json);
+        else if (d)
+            console.log("connection not open for: %j",dest);
+        else
+            console.log("no connection found for: %j",dest);
+    } else if (plugin.prefix.length===0) {
+        const parts = dest.split(':');
+        const name  = parts[0];
+        const   pl  = plugin.get(name);
+        if (!pl)
+            eng.emit('error',`unknown plugin: ${name}`);
+        else
+            pl.out(json,parts[0],parts.slice(1).join(':'));
+    } else {
         const parts = dest.split(':');
         const name  = parts[1];
         const   pl  = plugin.get(name);
@@ -1058,14 +1073,6 @@ Engine.prototype.out = function(dest,json) {
             eng.emit('error',`unknown plugin: ${name}`);
         else
             pl.out(json,parts[1],parts.slice(2).join(':'));
-    } else {
-        const d = eng.conns[dest];
-        if (d && d.o.readyState===d.o.OPEN)
-            d.o.write(json);
-        else if (d)
-            console.log("connection not open for: %j",dest);
-        else
-            console.log("no connection found for: %j",dest);
     }
 };
 
