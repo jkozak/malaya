@@ -12,6 +12,7 @@ plugin.add('process',class extends plugin.Plugin {
         const pl = this;
         pl.raw       = raw;
         pl.processes = null;
+        pl.exitWait  = 1000;
         if (pl.raw)
             throw new Error("NYI: plugin process raw mode");
     }
@@ -22,18 +23,26 @@ plugin.add('process',class extends plugin.Plugin {
     }
     stop(cb) {
         const pl = this;
-        if (pl.process.length===0)
-            cp();
+        if (Object.keys(pl.processes).length===0)
+            cb();
         else {
-            pl.processes.forEach(sp=>sp.kill());
-            pl.on('exit',()=>{
-                if (Object.keys(pl.processes).length===0) {
-                    pl.processes = {};
-                    cb();
-                }
+            Object.values(pl.processes).forEach(sp=>{
+                sp.on('exit',()=>{
+                    if (Object.keys(pl.processes).length===0)
+                        cb();
+                });
+                sp.kill();
             });
+            setTimeout(()=>{    // bayonet any survivors after exitWait ms
+                Object.values(pl.processes).forEach(sp=>{
+                    sp.on('exit',()=>{
+                        if (Object.keys(pl.processes).length===0)
+                            cb();
+                    });
+                    sp.kill('SIGKILL');
+                });
+            },pl.exitWait);
         }
-        // +++ check if not all killed in a bit
     }
     pipeTo(port,what,data) {
         const pl = this;
