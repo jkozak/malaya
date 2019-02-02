@@ -1034,23 +1034,6 @@ Engine.prototype.out = function(dest,json) {
             case '_disconnect':
                 eng.closeConnection(json[1].port);
                 break;
-            case '_schedule': {
-                json[1].repeat = !!json[1].repeat;
-                const start = json[1].repeat ? setInterval : setTimeout;
-                json[1]._id = start(()=>{
-                    eng.update(json[1].message);
-                },json[1].after);
-                if (json[1].named)
-                    setImmediate(()=>{
-                        eng.update(['_scheduled',json[1],{port:'server:'}]);
-                    });
-                break;
-            }
-            case '_deschedule': {
-                const stop = json[1].repeat ? clearInterval : clearTimeout;
-                stop(json[1]._id);
-                break;
-            }
             default:
                 console.log("bad server _msg: %j",json);
             }
