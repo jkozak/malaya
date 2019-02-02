@@ -9,6 +9,7 @@ const cmdline = require('./cmdline.js');
 const whiskey = require('./whiskey.js');
 
 const classes = {};
+const plugins = [];
 
 class Plugin {
     static init(opts) {}
@@ -19,6 +20,20 @@ class Plugin {
         pl.name          = null;
         pl.chrjs         = null;              // updated when added to a store
         pl.opts          = opts;
+    }
+    depends(name) {
+        let dep;
+        plugins.forEach(pl=>{
+            if (name===pl.name)
+                dep = pl;
+        });
+        // this guarantees the plugins are in the right order by the
+        // hacky expedient of failing if they're not.
+        // +++ improve this +++
+        // +++ check attached to the same store +++
+        if (!dep)
+            throw new Error(`can't find plugin: ${name}`);
+        return dep;
     }
     connect(chrjs) {
         this.chrjs = chrjs;
@@ -67,8 +82,6 @@ exports.makeOldPlugin = eps=>{        // back compat with 0.7.x
         }
     };
 };
-
-const plugins = [];
 
 exports.registerEngine = eng=>{
     plugins.forEach(pl=>{
@@ -149,9 +162,9 @@ exports.start = (cb=()=>{})=>{
 exports.stop = (cb=()=>{})=>{
     if (plugins.length===0)
         cb();
-    else {
+    else {                      // stop plugins in reverse order to starting them
         const done = _.after(plugins.length,cb);
-        plugins.forEach(pl=>pl.stop(done));
+        plugins.slice().reverse().forEach(pl=>pl.stop(done));
     }
 };
 

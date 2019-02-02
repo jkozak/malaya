@@ -109,6 +109,20 @@ exports.deserialise = function(s) {
     });
 };
 
+exports.makeHttpPortName = function(req,prefix) { // nodejs http connection here
+    const sock = req.socket;
+    const prot = req.protocol==='https' ? 'wss' : 'ws';
+    let   addr = sock.remoteAddress;
+    const  pfx = '::ffff:';
+    const  sfx = '/.websocket';
+    prefix = prefix || req.path;
+    if (addr.startsWith(pfx))
+        addr = addr.substr(pfx.length);
+    if (prefix.endsWith(sfx))
+        prefix = prefix.slice(0,prefix.length-sfx.length);
+    return _util.format("%s://%s:%s%s",prot,addr,sock.remotePort,prefix);
+};
+
 exports.deepClone = function(json) {
     return JSON.parse(JSON.stringify(json)); // lazy, very
 };

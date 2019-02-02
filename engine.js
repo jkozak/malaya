@@ -718,20 +718,6 @@ Engine.prototype.addConnection = function(portName,io,cookies) {
     eng.emit('connection',portName,io.type,cookies);
 };
 
-Engine.prototype.makeHttpPortName = function(req,prefix) { // nodejs http connection here
-    const sock = req.socket;
-    const prot = req.protocol==='https' ? 'wss' : 'ws';
-    let   addr = sock.remoteAddress;
-    const  pfx = '::ffff:';
-    const  sfx = '/.websocket';
-    prefix = prefix || req.path;
-    if (addr.startsWith(pfx))
-        addr = addr.substr(pfx.length);
-    if (prefix.endsWith(sfx))
-        prefix = prefix.slice(0,prefix.length-sfx.length);
-    return util.format("%s://%s:%s%s",prot,addr,sock.remotePort,prefix);
-};
-
 Engine.prototype._importConnection = function(portName,req) {
     if (req.path==='/admin' && !ip.isPrivate(req.socket.remoteAddress))
         return null;
@@ -742,7 +728,7 @@ Engine.prototype._importConnection = function(portName,req) {
 Engine.prototype._addToExpressApp = function(app,server) {
     const      eng = this;
     const createIO = (ws,req,setup)=>{
-        const portName = eng.makeHttpPortName(req);
+        const portName = util.makeHttpPortName(req);
         const  headers = eng._importConnection(portName,req);
         let         io = {
             i:       null,
