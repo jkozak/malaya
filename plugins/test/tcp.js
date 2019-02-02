@@ -5,12 +5,12 @@ const   engine = require('../../engine.js');
 const     path = require('path');
 const     temp = require('temp').track();
 
-describe("tcp plugin",function(){
+describe("tcp plugin XXX",function(){
     const   dir = temp.mkdirSync();
     let     eng;
     this.bail(true);
     after(()=>{
-        eng.stopPrevalence();
+        eng.become('idle');
         eng.stop();
     });
     it("creates and starts engine with plugin", function() {
@@ -20,6 +20,6 @@ describe("tcp plugin",function(){
         });
         eng.init();
         eng.start();
-        eng.startPrevalence();
+        eng.become('master');
     });
 });

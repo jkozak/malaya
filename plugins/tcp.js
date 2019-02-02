@@ -46,16 +46,16 @@ plugin.add('tcp',class extends plugin.Plugin {
             pl.update(['connect',{port},{port:'tcp'}]);
         });
         pl.server.listen(pl.portReq,()=>{
-            super.start({},cb);
+            super.start(cb);
         });
     }
     stop(cb) {
         const pl = this;
         pl.server.once('close',()=>{
             pl.server = null;
-            super.stop({},cb);
+            super.stop(cb);
         });
-        Object.values(pl.connections).forEach(c=>c.socket.close());
+        Object.values(pl.connections).forEach(c=>c.socket.destroy());
         pl.server.close();
     }
     out(js,addr) {
