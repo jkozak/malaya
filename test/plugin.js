@@ -414,13 +414,16 @@ describe("fs readFile",function() {
 module.exports = store {
     rule (-['go',{},{}],
            out('fs',['readFile',{filename:'${xxx}'}]) );
+
+    rule ( ['readFile',{...},{port:'fs'}],
+           out('callback',['done',{}]) );
 }
-    .plugin('fs');
+    .plugin('fs')
+    .plugin('callback');
 `);
     });
     after(()=>{plugin._private.reset();});
     after(()=>(eng && eng.stop()));
-    afterEach(done=>setTimeout(done,0)); // ensure immediate functions get called
     it("loads source file",function(done){
         eng = new engine.Engine({dir,
                                  magic:         {},
@@ -428,14 +431,11 @@ module.exports = store {
                                  businessLogic: path.join(dir,'test.malaya') });
         eng.init();
         eng.start();
-        eng.on('mode',mode=>{
-            if (mode==='master')
-                done();
-        });
-        eng.become('master');
+        eng.become('master',done);
     });
-    it("trigger activity",function() {
+    it("trigger activity",function(done) {
         eng.update(['go',{},{}]);
+        plugin._private.testCallback = done;
     });
     it("file has been read",function() {
         const facts = eng.chrjs._private.orderedFacts;
@@ -456,13 +456,16 @@ describe("fs writeFile",function() {
 module.exports = store {
     rule (-['go',{},{}],
            out('fs',['writeFile',{filename:'${xxx}',contents:'xxx'}]) );
+
+    rule ( ['writeFile',{...},{port:'fs'}],
+           out('callback',['done',{}]) );
 }
-    .plugin('fs');
+    .plugin('fs')
+    .plugin('callback');
 `);
     });
     after(()=>{plugin._private.reset();});
     after(()=>(eng && eng.stop()));
-    afterEach(done=>setTimeout(done,0)); // ensure immediate functions get called
     it("loads source file",function(done){
         eng = new engine.Engine({dir,
                                  magic:         {},
@@ -470,14 +473,11 @@ module.exports = store {
                                  businessLogic: path.join(dir,'test.malaya') });
         eng.init();
         eng.start();
-        eng.on('mode',mode=>{
-            if (mode==='master')
-                done();
-        });
-        eng.become('master');
+        eng.become('master',done);
     });
-    it("trigger activity",function() {
+    it("trigger activity",function(done) {
         eng.update(['go',{},{}]);
+        plugin._private.testCallback = done;
     });
     it("file has been written", function() {
         assert.equal(fs.readFileSync(xxx,'utf8'),'xxx');

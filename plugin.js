@@ -1,8 +1,10 @@
 "use strict";
 
-const       _ = require('underscore');
-const      fs = require('fs');
+const        _ = require('underscore');
+const       fs = require('fs');
+const through2 = require('through2');
 
+const    util = require('./util.js');
 const cmdline = require('./cmdline.js');
 const whiskey = require('./whiskey.js');
 
@@ -29,9 +31,26 @@ class Plugin {
             cb(null);
     }
     stop(cb)  {cb(null);}
-    out(js,addr)   {}
+    out(js,name,addr)   {}
 }
 exports.Plugin = Plugin;
+
+class StreamPlugin extends Plugin {
+    constructor(opts) {
+        super(opts);
+        const pl = this;
+        pl.reader = through2.obj();
+        pl.writer = through2.obj((js,enc,cb)=>{
+            pl.update(js);
+            cb();
+        });
+    }
+    out(js,name,addr) {
+        const pl = this;
+        pl.reader.write(js.concat({addr}));
+    }
+}
+exports.StreamPlugin = StreamPlugin;
 
 exports.makeOldPlugin = eps=>{        // back compat with 0.7.x
     return class extends Plugin {
@@ -198,7 +217,6 @@ function setStandardClasses() {
     classes.fs = class extends Plugin {
         out([op,{filename,contents}],name,addr) {
             const pl = this;
-            setImmediate(()=>{
                 switch (op) {
                 case 'readFile':
                     fs.readFile(filename,'utf8',(err,contents)=>{
@@ -215,7 +233,6 @@ function setStandardClasses() {
                 default:
                     throw new Error(`unknown file plugin operation: ${op}`);
                 }
-            });
         }
     };
 
@@ -268,11 +285,19 @@ function setStandardClasses() {
         }
     };
 
+    if (util.env==='test')
+        classes.callback = class extends Plugin {
+            out(js,name,addr) {
+                exports._private.testCallback(null,[js,name,addr]);
+            }
+        };
+
     // +++ more small plugins +++
 }
 setStandardClasses();
 
 exports._private = {
+    callback: ()=>{throw new Error("test callback not set");},
     forgetAll: ()=>{
         Object.values(classes).forEach(cl=>{delete classes[cl];});
         classes.length = 0;

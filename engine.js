@@ -925,15 +925,16 @@ Engine.prototype._become = function(mode,cb) {
     }
 };
 
-Engine.prototype.become = function(mode) {
+Engine.prototype.become = function(mode,cb) {
     const  eng = this;
     const port = eng.options.ports.http;
     const main = function() {
         if (mode!=='idle' && eng.mode!=='idle') { // change mode via intervening 'idle'
             eng._become('idle',function(err) {
-                if (err)
+                if (err) {
                     eng.emit('error',err);
-                else {
+                    cb(err);
+                } else {
                     eng.mode = 'idle';
                     eng.become(mode);
                 }
@@ -941,17 +942,22 @@ Engine.prototype.become = function(mode) {
         }
         else
             eng._become(mode,function(err) {
-                if (err)
+                if (err) {
                     eng.emit('error',err);
-                else {
+                    cb(err);
+                } else {
                     eng.mode = mode;
                     eng.emit('mode',mode);
+                    cb();
                 }
             });
     };
-    if (eng.mode==='broken')
-        eng.emit(new VError("can't do anything, broken"));
-    else {
+    cb = cb || (()=>{});
+    if (eng.mode==='broken') {
+        const err = new Error("can't do anything, broken");
+        eng.emit('error',err);
+        cb(err);
+    } else {
         eng.emit('become',mode);
         if (eng.http===null && (port || port===0)) {
             eng.listenHttp(mode,port,function(err) {
