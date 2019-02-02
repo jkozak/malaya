@@ -195,6 +195,30 @@ function setStandardClasses() {
         }
     };
 
+    classes.fs = class extends Plugin {
+        out([op,{filename,contents}],name,addr) {
+            const pl = this;
+            setImmediate(()=>{
+                switch (op) {
+                case 'readFile':
+                    fs.readFile(filename,'utf8',(err,contents)=>{
+                        pl.update(['readFile',err ?
+                                   {err,filename} :
+                                   {err,filename,contents} ]);
+                    });
+                    break;
+                case 'writeFile':
+                    fs.writeFile(filename,contents,err=>{
+                        pl.update(['writeFile',{err,filename}]);
+                    });
+                    break;
+                default:
+                    throw new Error(`unknown file plugin operation: ${op}`);
+                }
+            });
+        }
+    };
+
     classes.file = class extends Plugin {
         constructor({src,dst,Reader=whiskey.JSONParseStream,Writer=whiskey.StringifyJSONStream}) {
             super();
@@ -213,11 +237,10 @@ function setStandardClasses() {
                 pl.rs = new pl.Reader();
                 rfs.pipe(pl.rs);
                 pl.rs.on('data',js=>{
-                    if (!Array.isArray(js) || js.length!==2 || typeof js[0]!=='string' || typeof js[1]!=='object') {
-                        console.log("dud input: %j",js);
-                    } else {
+                    if (!Array.isArray(js) || js.length!==2 || typeof js[0]!=='string' || typeof js[1]!=='object')
+                        throw new Error(`dud input: ${JSON.stringify(js)}`);
+                    else
                         pl.update(js);
-                    }
                 });
             }
             if (pl.dst) {
@@ -239,7 +262,7 @@ function setStandardClasses() {
             }
             cb();
         }
-        out(js,addr) {
+        out(js,name,addr) {
             const pl = this;
             pl.ws.write(js);
         }

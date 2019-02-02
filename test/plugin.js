@@ -403,6 +403,94 @@ describe("restart and timer in concert",function(){
     });
 });
 
+describe("fs readFile",function() {
+    this.bail(true);
+    let   eng;
+    const dir = temp.mkdirSync();
+    const xxx = path.join(dir,'xxx');
+    before(()=>{
+        fs.writeFileSync(xxx,'xxx');
+        fs.writeFileSync(path.join(dir,'test.malaya'),`
+module.exports = store {
+    rule (-['go',{},{}],
+           out('plugin:fs',['readFile',{filename:'${xxx}'}]) );
+}
+    .plugin('fs');
+`);
+    });
+    after(()=>{plugin._private.reset();});
+    after(()=>(eng && eng.stop()));
+    afterEach(done=>setTimeout(done,0)); // ensure immediate functions get called
+    it("loads source file",function(done){
+        eng = new engine.Engine({dir,
+                                 magic:         {},
+                                 ports:         {},
+                                 businessLogic: path.join(dir,'test.malaya') });
+        eng.init();
+        eng.start();
+        eng.on('mode',mode=>{
+            if (mode==='master')
+                done();
+        });
+        eng.become('master');
+    });
+    it("trigger activity",function() {
+        eng.update(['go',{},{}]);
+    });
+    it("file has been read",function() {
+        const facts = eng.chrjs._private.orderedFacts;
+        assert.equal(facts.length,1);
+        assert.equal(facts[0][0],         'readFile');
+        assert.equal(facts[0][1].filename,xxx);
+        assert.equal(facts[0][1].contents,'xxx');
+    });
+});
+
+describe("fs writeFile",function() {
+    this.bail(true);
+    let   eng;
+    const dir = temp.mkdirSync();
+    const xxx = path.join(dir,'xxx');
+    before(()=>{
+        fs.writeFileSync(path.join(dir,'test.malaya'),`
+module.exports = store {
+    rule (-['go',{},{}],
+           out('plugin:fs',['writeFile',{filename:'${xxx}',contents:'xxx'}]) );
+}
+    .plugin('fs');
+`);
+    });
+    after(()=>{plugin._private.reset();});
+    after(()=>(eng && eng.stop()));
+    afterEach(done=>setTimeout(done,0)); // ensure immediate functions get called
+    it("loads source file",function(done){
+        eng = new engine.Engine({dir,
+                                 magic:         {},
+                                 ports:         {},
+                                 businessLogic: path.join(dir,'test.malaya') });
+        eng.init();
+        eng.start();
+        eng.on('mode',mode=>{
+            if (mode==='master')
+                done();
+        });
+        eng.become('master');
+    });
+    it("trigger activity",function() {
+        eng.update(['go',{},{}]);
+    });
+    it("file has been written", function() {
+        assert.equal(fs.readFileSync(xxx,'utf8'),'xxx');
+    });
+    it("write has been notified",function() {
+        const facts = eng.chrjs._private.orderedFacts;
+        assert.equal(facts.length,1);
+        assert.equal(facts[0][0],         'writeFile');
+        assert.equal(facts[0][1].filename,xxx);
+    });
+});
+
+
 describe("file read",function(){
     this.bail(true);
     let   eng;
