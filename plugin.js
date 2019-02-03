@@ -86,13 +86,13 @@ exports.makeOldPlugin = eps=>{        // back compat with 0.7.x
 exports.registerEngine = eng=>{
     plugins.forEach(pl=>{
         pl.engine = eng;
-        pl.update = (js,addr)=>{
+        pl.update = (js,addr,misc={})=>{
             if (js.length!==2 && typeof js[0]!=='string' & typeof js[1]!=='object')
                 throw new Error(`bad update record type: ${JSON.stringify(js)}`);
             let port = pl.name;
             if (addr)
                 port += ':'+addr;
-            const js2 = js.concat([{port}]);
+            const js2 = js.concat([_.extend({port},misc)]);
             if (pl.chrjs===eng.chrjs)
                 eng.update(js2);
             else if (pl.chrjs)
