@@ -15,7 +15,6 @@ exports.ws = plugin.add('ws',class extends plugin.Plugin {
         pl.port        = null;
         pl.server      = server && pl.depends(server); // the http(s?) server plugin
         pl.wss         = null;
-        pl.index       = 0;
         pl.connections = {};
     }
     start(cb) {

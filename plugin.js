@@ -22,17 +22,19 @@ class Plugin {
         pl.opts          = opts;
     }
     depends(name) {
-        let dep;
-        plugins.forEach(pl=>{
-            if (name===pl.name)
-                dep = pl;
+        const pl = this;
+        let  dep;
+        plugins.forEach(pl1=>{
+            if (name===pl1.name)
+                dep = pl1;
         });
         // this guarantees the plugins are in the right order by the
         // hacky expedient of failing if they're not.
         // +++ improve this +++
-        // +++ check attached to the same store +++
         if (!dep)
             throw new Error(`can't find plugin: ${name}`);
+        if (dep.chrjs!==pl.chrjs)
+            throw new Error(`dependent plugins must be attached to the same store`);
         return dep;
     }
     connect(chrjs) {
@@ -45,8 +47,8 @@ class Plugin {
         else
             cb(null);
     }
-    stop(cb)  {cb(null);}
-    out(js,name,addr)   {}
+    stop(cb)               {cb(null);}
+    out(js,name,addr,misc) {}
 }
 exports.Plugin = Plugin;
 
@@ -60,9 +62,10 @@ class StreamPlugin extends Plugin {
             cb();
         });
     }
-    out(js,name,addr) {
-        const pl = this;
-        pl.reader.write(js.concat({addr}));
+    out(js,name,addr,misc) {
+        const   pl = this;
+        const meta = _.extend(addr ? {addr} : {},misc || {});
+        pl.reader.write(js.concat(meta));
     }
 }
 exports.StreamPlugin = StreamPlugin;
@@ -321,5 +324,6 @@ exports._private = {
         classes.length = 0;
         plugins.length = 0;
         setStandardClasses();
-    }
+    },
+    plugins: plugins
 };

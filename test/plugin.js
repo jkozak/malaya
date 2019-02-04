@@ -195,6 +195,64 @@ describe("subaddressing",function(){
     });
 });
 
+describe("StreamPlugin XXX",function() {
+    this.bail(true);
+    let   eng;
+    let    pl;
+    const dir = temp.mkdirSync();
+    const src = path.join(dir,"pingpong.malaya");
+    before(()=>fs.writeFileSync(src,`
+module.exports = store {
+    rule (-['ping',{...rest},{port}],
+           out(port,['pong',{...rest}]) );
+}
+    .plugin('twuddle');
+`.trim() ));
+    after(()=>{plugin._private.reset();});
+    after(()=>(eng && eng.stop()));
+    it("creates engine with test plugin",function(done) {
+        plugin.add('twuddle',class extends plugin.StreamPlugin {
+        });
+        eng = new engine.Engine({dir:           path.join(dir),
+                                 magic:         {},
+                                 ports:         {},
+                                 businessLogic: src });
+        eng.init();
+        eng.start();
+        eng.become('master');
+        assert.equal(plugin._private.plugins.length,1);
+        done();
+    });
+    it("finds plugin",function(){
+        assert.equal(plugin._private.plugins.length,1);
+        pl = plugin.get('twuddle');
+        assert(pl);
+    });
+    it("sends message", function() {
+        pl.writer.write(['ping',{test:777}]);
+    });
+    it("not lodged in store", function() {
+        assert.deepEqual(eng.chrjs._private.orderedFacts,[]);
+    });
+    it("receives reply", function(done) {
+        pl.reader.once('data',data=>{
+            assert.deepEqual(data,['pong',{test:777},{}]);
+            done();
+        });
+    });
+    it("sends and receives another reply", function(done) {
+        pl.reader.once('data',data=>{
+            assert.deepEqual(data,['pong',{test:888},{}]);
+            done();
+        });
+        pl.writer.write(['ping',{test:888}]);
+    });
+    it("not lodged in store", function() {
+        assert.deepEqual(eng.chrjs._private.orderedFacts,[]);
+    });
+});
+
+
 // +++ update
 
 // +++ addSubcommand
