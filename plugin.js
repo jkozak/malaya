@@ -25,8 +25,11 @@ class Plugin {
         const pl = this;
         let  dep;
         plugins.forEach(pl1=>{
-            if (name===pl1.name)
+            if (name===pl1.name) {
+                if (dep)
+                    throw new Error('SNO');
                 dep = pl1;
+            }
         });
         // this guarantees the plugins are in the right order by the
         // hacky expedient of failing if they're not.
@@ -47,8 +50,8 @@ class Plugin {
         else
             cb(null);
     }
-    stop(cb)               {cb(null);}
-    out(js,name,addr,misc) {}
+    stop(cb)          {cb(null);}
+    out(js,name,addr) {}
 }
 exports.Plugin = Plugin;
 
@@ -62,9 +65,9 @@ class StreamPlugin extends Plugin {
             cb();
         });
     }
-    out(js,name,addr,misc) {
+    out(js,name,addr) {
         const   pl = this;
-        const meta = _.extend(addr ? {addr} : {},misc || {});
+        const meta = addr ? {addr} : {};
         pl.reader.write(js.concat(meta));
     }
 }

@@ -195,7 +195,7 @@ describe("subaddressing",function(){
     });
 });
 
-describe("StreamPlugin XXX",function() {
+describe("StreamPlugin",function() {
     this.bail(true);
     let   eng;
     let    pl;

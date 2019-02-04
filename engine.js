@@ -883,7 +883,8 @@ Engine.prototype._become = function(mode,cb) {
                     else
                         eng.stopPrevalence(true,cb);
                 });
-                eng.http.close();
+                if (eng.http)
+                    eng.http.close();
                 eng.closeAllConnections('replication',done);
                 eng.options.endpoints.forEach(ep=>eng.closeAllConnections(ep,done));
                 plugin.stop(done);

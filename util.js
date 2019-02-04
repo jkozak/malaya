@@ -135,6 +135,19 @@ exports.endsWith = function(str,suffix) {
     return str.indexOf(suffix,str.length-suffix.length)!==-1;
 };
 
+exports.readToEnd = (stream,cb)=>{
+    const bufs = [];
+    stream.on('data',chunk=>{
+        console.log("*** read: %j",chunk);
+        bufs.push(chunk);
+    });
+    stream.on('end',err=>{
+        console.log("*** end");
+        cb(err,Buffer.concat(bufs).toString());
+    });
+};
+
+
 // environmental stuff
 
 exports.sourceVersion = (function() {

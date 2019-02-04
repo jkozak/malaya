@@ -38,12 +38,12 @@ exports.ws = plugin.add('ws',class extends plugin.Plugin {
                 delete pl.connections[portName];
             });
         });
-        pl.wss.listening(()=>cb());
+        pl.wss.listening(()=>super.cb());
     }
     stop(cb) {
         const pl = this;
         pl.wss.once('close',ws=>{
-            cb();
+            super.stop(cb);
         });
         Object.values(pl.connections).forEach(ws=>ws.close());
         pl.wss.close(cb);
