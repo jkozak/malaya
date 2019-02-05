@@ -35,17 +35,18 @@ let currentFilename = null;
 
 function TEMPLATE_store() {
     (function() {
-        var  store = this;
-        var assert = require('assert');
-        var     ee = new (require('events').EventEmitter)();
-        var      t = 1;              // must be > 0 always?
-        var  facts = {};             // 't' -> fact; this is the main fact store
-        var  index = {};             // term1 -> [t,...]  where t is number not string
-        var   adds = [];             // <t>,...
-        var   dels = [];             // <t>,...
-        var   refs = {};             // <t>:<fact>,...
-        var    err = null;
-        var   _add = function(fact) {
+        var   store = this;
+        var plugins = {};
+        var  assert = require('assert');
+        var      ee = new (require('events').EventEmitter)();
+        var       t = 1;              // must be > 0 always?
+        var   facts = {};             // 't' -> fact; this is the main fact store
+        var   index = {};             // term1 -> [t,...]  where t is number not string
+        var    adds = [];             // <t>,...
+        var    dels = [];             // <t>,...
+        var    refs = {};             // <t>:<fact>,...
+        var     err = null;
+        var    _add = function(fact) {
             if (fact instanceof Array && fact.length>0 && (typeof fact[0])==='string') {
                 var     ti = t++;
                 var t_fact = ''+ti;  // `t_fact` is a string , use ti in indices
@@ -56,12 +57,16 @@ function TEMPLATE_store() {
                     index[fact[0]] = [];
                 index[fact[0]].push(ti);
                 INSERT_INDEXED_MATCHES;
+                if (fact.length===3 && fact[2].dst && plugins[fact[2].dst]) { // dst: output
+                    _del(t_fact);
+                    obj.out(fact[2].dst,fact.slice(0,2));
+                }
                 return t_fact;
             } else
                 ee.emit('error',new Error("unloved fact format: "+JSON.stringify(fact)));
             return null;
         };
-        var   _del = function(t) {
+        var    _del = function(t) {
             var   ti = parseInt(t);  // use this in indices
             var    i = adds.indexOf(t);
             var fact = facts[t];
@@ -115,8 +120,12 @@ function TEMPLATE_store() {
 
             plugin: function(name,opts) {
                 malayaPlugin.require(name);
-                malayaPlugin.instantiate(name,opts).connect(obj);
-                return obj;
+                const pl = malayaPlugin.instantiate(name,opts);
+                pl.connect(obj);
+                if (plugins[pl.name])
+                    throw new Error("plugin name duplicated: "+pl.name);
+                plugins[pl.name] = pl;
+                return obj;     // can be chained
             },
 
             // business logic protocol

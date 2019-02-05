@@ -95,10 +95,12 @@ exports.registerEngine = eng=>{
         pl.update = (js,addr,misc={})=>{
             if (js.length!==2 && typeof js[0]!=='string' & typeof js[1]!=='object')
                 throw new Error(`bad update record type: ${JSON.stringify(js)}`);
-            let port = pl.name;
-            if (addr)
-                port += ':'+addr;
-            const js2 = js.concat([_.extend({port},misc)]);
+            let src = pl.name;
+            if (typeof addr==='string')
+                src += ':'+addr;
+            else if (Array.isArray(addr))
+                src = src.concat(addr);
+            const js2 = js.concat([_.extend({src},misc)]);
             if (pl.chrjs===eng.chrjs)
                 eng.update(js2);
             else if (pl.chrjs)
@@ -249,6 +251,10 @@ function setStandardClasses() {
                         pl.update(['writeFile',{err,filename}]);
                     });
                     break;
+                case 'listfiles':
+                case 'move':
+                case 'delete':
+                    throw new Error('NYI');
                 default:
                     throw new Error(`unknown file plugin operation: ${op}`);
                 }

@@ -22,12 +22,10 @@ describe("http plugin",function(){
         const src = path.join(dir,'test.malaya');
         fs.writeFileSync(src,`
 module.exports = store {
-    rule (-['request',{id,method:'GET',url:'/NotFound',...},{port:'http'}],
-           out('http',['response',{id,statusCode:404}]) );
-    rule (-['request',{id,method:'GET',url:'/SomeCrap',...},{port:'http'}],
-           out('http',['response',{id,statusCode:200,body:'"SomeCrap"',headers:{'Content-Type':'application/json'}}]) );
-    rule (-[x,a,m],
-           console.log("*** what?: %j",[x,a,m]) || true);
+    rule (-['request',{id,method:'GET',url:'/NotFound',...},{src:'http'}],
+          +['response',{id,statusCode:404},{dst:'http'}] );
+    rule (-['request',{id,method:'GET',url:'/SomeCrap',...},{src:'http'}],
+          +['response',{id,statusCode:200,body:'"SomeCrap"',headers:{'Content-Type':'application/json'}},{dst:'http'}] );
 }
     .plugin('http',{port:0});
 `);

@@ -1033,6 +1033,13 @@ Engine.prototype.out = function(dest,json) {
             console.log("connection not open for: %j",dest);
         else
             console.log("no connection found for: %j",dest);
+    } else if (Array.isArray(dest)){
+        const name = dest[0];
+        const   pl = plugin.get(name);
+        if (!pl)
+            eng.emit('error',`unknown plugin: ${name}`);
+        else
+            pl.out(json,name,dest.slice(1));
     } else {
         const parts = dest.split(':');
         const name  = parts[0];

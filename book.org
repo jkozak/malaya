@@ -29,6 +29,31 @@ It can be installed from =npm=.
 * Plugins - talking to the world
 
 ** introduction
+
+A malaya system communicates with the outside world via plugins
+
+# example
+
+Plugins are attached to stores and can receive and send facts between
+them.  A fact sent by a plugin instance called =garden= might look like this:
+
+#BEGIN_SRC malaya
+['bloom',{plant:'crocus'},{src:'garden'}]
+#END_SRC
+
+The =src= item identifies the plugin sending the fact.
+
+Malaya code can send to the plugin like this:
+
+#BEGIN_SRC malaya
+['re-pot',{plant:'crocus'},{dst:'garden'}]
+#END_SRC
+
+Here the =dst= item identifies to which plugin instance the fact is to
+be sent.  Effectively, the plugin adds an extra rule at the end of the
+store to consume anything with a =dst= field in its third slot
+matching its instance name.
+
 ** bundled plugins
 *** =tcp=
 *** =ws=

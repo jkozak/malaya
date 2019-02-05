@@ -20,7 +20,7 @@ describe("process plugin",function(){
         fs.writeFileSync(src,`
 module.exports = store {
     rule (-['restart',{...},{...}],
-           out('process',['spawn',{command:'ls',args:['-al','${dir}'],opts:{}}]) );
+          +['spawn',{command:'ls',args:['-al','${dir}'],opts:{}},{dst:'process'}] );
 }
     .plugin('restart')
     .plugin('process');

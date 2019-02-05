@@ -163,7 +163,7 @@ describe("multiple instance of plugin",function(){
     });
 });
 
-describe("subaddressing",function(){
+describe("subaddressing :-style",function(){
     this.bail(true);
     let   n = 0;
     let eng;
@@ -173,6 +173,7 @@ describe("subaddressing",function(){
         plugin.add('twoddle',class extends plugin.Plugin {
             out(js,name,addr) {
                 assert.deepEqual(js,  jsOut);
+                assert.deepEqual(name,'twoddle');
                 assert.deepEqual(addr,'1854:aq');
                 n++;
                 done();
@@ -195,6 +196,39 @@ describe("subaddressing",function(){
     });
 });
 
+describe("subaddressing array style",function(){
+    this.bail(true);
+    let   n = 0;
+    let eng;
+    after(()=>{plugin._private.reset();});
+    after(()=>(eng && eng.stop()));
+    it("provides special out destination",function(done) {
+        plugin.add('twoddle',class extends plugin.Plugin {
+            out(js,name,addr) {
+                assert.deepEqual(js,  jsOut);
+                assert.deepEqual(name,'twoddle');
+                assert.deepEqual(addr,['1854','aq']);
+                n++;
+                done();
+            }
+        });
+        plugin.instantiate('twoddle');
+        eng = new engine.Engine({dir:           temp.mkdirSync(),
+                                 magic:         {},
+                                 ports:         {},
+                                 businessLogic: path.join(__dirname,'bl','null.chrjs') });
+        eng.init();
+        eng.start();
+        eng.out(['twoddle','1854','aq'],jsOut);
+    });
+    it("installed an update function",function(){
+        assert.strictEqual(typeof plugin.get('twoddle').update,'function');
+    });
+    it("passed output to plugin",function(){
+        assert.strictEqual(n,1);
+    });
+});
+
 describe("StreamPlugin",function() {
     this.bail(true);
     let   eng;
@@ -203,8 +237,10 @@ describe("StreamPlugin",function() {
     const src = path.join(dir,"pingpong.malaya");
     before(()=>fs.writeFileSync(src,`
 module.exports = store {
-    rule (-['ping',{...rest},{port}],
-           out(port,['pong',{...rest}]) );
+    rule (-['ping',{...rest},{src}],
+          +['pong',{...rest},{dst:src}] );
+    rule (-['pang',{...rest},{src}],
+          +['peng',{...rest},{dst:'NoneSuch'}] );
 }
     .plugin('twuddle');
 `.trim() ));
@@ -250,6 +286,12 @@ module.exports = store {
     it("not lodged in store", function() {
         assert.deepEqual(eng.chrjs._private.orderedFacts,[]);
     });
+    it("sends a pang message", function() {
+        pl.writer.write(['pang',{test:999}]);
+    });
+    it("NoneSuch plugin msg lodged in store", function() {
+        assert.deepEqual(eng.chrjs._private.orderedFacts,[['peng',{test:999},{dst:'NoneSuch'}]]);
+    });
 });
 
 
@@ -282,7 +324,7 @@ describe("restart plugin added dynamically",function(){
         eng.become('master');
     });
     it("restart has been sent",function(){
-        assert.deepEqual(eng.chrjs._private.orderedFacts,[['restart',{},{port:'restart'}]]);
+        assert.deepEqual(eng.chrjs._private.orderedFacts,[['restart',{},{src:'restart'}]]);
     });
 });
 
@@ -305,7 +347,7 @@ describe("restart",function(){
         eng.become('master');
     });
     it("restart has been sent",function(){
-        assert.deepEqual(eng.chrjs._private.orderedFacts,[['restart',{},{port:'restart'}]]);
+        assert.deepEqual(eng.chrjs._private.orderedFacts,[['restart',{},{src:'restart'}]]);
     });
 });
 
@@ -349,15 +391,15 @@ describe("timer with default interval",function(){
         clock.tick(1);
     });
     it("one tick sent", function() {
-        assert.deepEqual(eng.chrjs._private.orderedFacts,[['tick',{t:1000},{port:'timer'}]]);
+        assert.deepEqual(eng.chrjs._private.orderedFacts,[['tick',{t:1000},{src:'timer'}]]);
     });
     it("waits another second", function() {
         clock.tick(1000);
     });
     it("two ticks sent", function() {
         assert.deepEqual(eng.chrjs._private.orderedFacts,[
-            ['tick',{t:1000},{port:'timer'}],
-            ['tick',{t:2000},{port:'timer'}] ]);
+            ['tick',{t:1000},{src:'timer'}],
+            ['tick',{t:2000},{src:'timer'}] ]);
     });
 });
 
@@ -402,15 +444,15 @@ describe("timer explicit interval",function(){
         clock.tick(1);
     });
     it("one tick sent", function() {
-        assert.deepEqual(eng.chrjs._private.orderedFacts,[['tick',{t:10000},{port:'timer'}]]);
+        assert.deepEqual(eng.chrjs._private.orderedFacts,[['tick',{t:10000},{src:'timer'}]]);
     });
     it("waits another second", function() {
         clock.tick(10000);
     });
     it("two ticks sent", function() {
         assert.deepEqual(eng.chrjs._private.orderedFacts,[
-            ['tick',{t:10000},{port:'timer'}],
-            ['tick',{t:20000},{port:'timer'}] ]);
+            ['tick',{t:10000},{src:'timer'}],
+            ['tick',{t:20000},{src:'timer'}] ]);
     });
 });
 
@@ -436,27 +478,27 @@ describe("restart and timer in concert",function(){
         eng.become('master');
     });
     it("restart has been sent",function(){
-        assert.deepEqual(eng.chrjs._private.orderedFacts,[['restart',{},{port:'restart'}]]);
+        assert.deepEqual(eng.chrjs._private.orderedFacts,[['restart',{},{src:'restart'}]]);
     });
     it("waits no time at all", function() {
         clock.tick(0);
     });
     it("only restart sent",function(){
-        assert.deepEqual(eng.chrjs._private.orderedFacts,[['restart',{},{port:'restart'}]]);
+        assert.deepEqual(eng.chrjs._private.orderedFacts,[['restart',{},{src:'restart'}]]);
     });
     it("waits not quite a second", function() {
         clock.tick(999);
     });
     it("still only restart sent",function(){
-        assert.deepEqual(eng.chrjs._private.orderedFacts,[['restart',{},{port:'restart'}]]);
+        assert.deepEqual(eng.chrjs._private.orderedFacts,[['restart',{},{src:'restart'}]]);
     });
     it("waits just a second", function() {
         clock.tick(1);
     });
     it("restart and one tick sent", function() {
         assert.deepEqual(eng.chrjs._private.orderedFacts,[
-            ['restart',{},{port:'restart'}],
-            ['tick',{t:1000},{port:'timer'}]
+            ['restart',{},{src:'restart'}],
+            ['tick',{t:1000},{src:'timer'}]
         ]);
     });
 });
@@ -473,7 +515,7 @@ module.exports = store {
     rule (-['go',{},{}],
            out('fs',['readFile',{filename:'${xxx}'}]) );
 
-    rule ( ['readFile',{...},{port:'fs'}],
+    rule ( ['readFile',{...},{src:'fs'}],
            out('callback',['done',{}]) );
 }
     .plugin('fs')
@@ -515,7 +557,7 @@ module.exports = store {
     rule (-['go',{},{}],
            out('fs',['writeFile',{filename:'${xxx}',contents:'xxx'}]) );
 
-    rule ( ['writeFile',{...},{port:'fs'}],
+    rule ( ['writeFile',{...},{src:'fs'}],
            out('callback',['done',{}]) );
 }
     .plugin('fs')
@@ -585,9 +627,9 @@ module.exports = store {}
         // +++ resolve hacky use of setImmediate [e494983e74a66ced] +++
         setImmediate(()=>{
             assert.deepEqual(eng.chrjs._private.orderedFacts,[
-                ['test',{id:1},{port:'file'}],
-                ['test',{id:2},{port:'file'}],
-                ['test',{id:3},{port:'file'}]
+                ['test',{id:1},{src:'file'}],
+                ['test',{id:2},{src:'file'}],
+                ['test',{id:3},{src:'file'}]
             ]);
             done();
         });
@@ -602,7 +644,7 @@ describe("file write",function(){
         fs.writeFileSync(path.join(dir,'test.malaya'),`
 module.exports = store {
     rule (-['ping',{}],
-           out('file',['pong',{}]) );
+          +['pong',{},{dst:'file'}] );
 }
     .plugin('file',{dst:'${path.join(dir,'test.data')}'});
 `,
