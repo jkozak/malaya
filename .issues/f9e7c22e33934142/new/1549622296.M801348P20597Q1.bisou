@@ -1,0 +1,13 @@
+From: John Kozak
+Date: Fri, 08 Feb 2019 10:35:11 +0000
+State: resolved
+Subject: big world files slow to load
+Message-Id: <f9e7c22e33934142-0-artemis@bisou>
+resolution: fixed
+
+Loading a 23M world file took 3 mins.  Somewhat atypical file insofar
+as it contained a lot of base64 binary crud that shouldn't have been
+there, but anyway.
+
+Increasing the buffer size in `util.readFileLinesSync` fies this in a
+nicely linear way (increase by factor of 64, takes 3 secs).

@@ -29,7 +29,7 @@ exports.error  = function (msg) {
 exports.inherits = _util.inherits;
 
 exports.readFdLinesSync = function(fd,fn) {
-    const bufferSize = 1024;
+    const bufferSize = 64*1024;
     const buffer     = Buffer.alloc(bufferSize);
     let   leftOver   = '';
     let   done       = false;
