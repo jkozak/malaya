@@ -1,6 +1,7 @@
 "use strict";
 
 const   engine = require('../../engine.js');
+const   plugin = require('../../plugin.js');
 
 const       fs = require('fs');
 const     path = require('path');
@@ -15,6 +16,7 @@ describe("process plugin",function(){
         eng.stopPrevalence();
         eng.stop();
     });
+    after(()=>{plugin._private.reset();});
     it("creates and starts engine with plugin", function() {
         const src = path.join(dir,'proc.malaya');
         fs.writeFileSync(src,`

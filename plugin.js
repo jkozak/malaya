@@ -15,11 +15,12 @@ class Plugin {
     static init(opts) {}
     constructor(opts) {
         const pl = this;
-        pl.engine        = null;
-        pl.update        = ()=>{throw new Error("engine not active yet");};
-        pl.name          = null;
-        pl.chrjs         = null;              // updated when added to a store
-        pl.opts          = opts;
+        pl.engine   = null;
+        pl.update   = ()=>{throw new Error("engine not active yet");};
+        pl.name     = null;
+        pl.chrjs    = null;              // updated when added to a store
+        pl.opts     = opts;
+        pl._depends = [];
     }
     depends(name) {
         const pl = this;
@@ -36,12 +37,16 @@ class Plugin {
         // +++ improve this +++
         if (!dep)
             throw new Error(`can't find plugin: ${name}`);
-        if (dep.chrjs!==pl.chrjs)
-            throw new Error(`dependent plugins must be attached to the same store`);
+        pl._depends.push(dep);
         return dep;
     }
     connect(chrjs) {
-        this.chrjs = chrjs;
+        const pl = this;
+        pl.chrjs = chrjs;
+        pl._depends.forEach(dep=>{
+            if (dep.chrjs!==pl.chrjs)
+                throw new Error(`dependent plugins must be attached to the same store`);
+        });
     }
     start(cb) {
         const pl = this;
@@ -99,8 +104,9 @@ exports.registerEngine = eng=>{
             if (typeof addr==='string')
                 src += ':'+addr;
             else if (Array.isArray(addr))
-                src = src.concat(addr);
+                src = [src,...addr];
             const js2 = js.concat([_.extend({src},misc)]);
+            //console.log("*** %j   src: %j  js2: %j",addr,src,js2);
             if (pl.chrjs===eng.chrjs)
                 eng.update(js2);
             else if (pl.chrjs)
@@ -313,7 +319,7 @@ function setStandardClasses() {
     if (util.env==='test')
         classes.callback = class extends Plugin {
             out(js,name,addr) {
-                exports._private.testCallback(null,[js,name,addr]);
+                exports._private.callback(null,[js,name,addr]);
             }
         };
 

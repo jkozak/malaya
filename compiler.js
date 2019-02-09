@@ -57,9 +57,13 @@ function TEMPLATE_store() {
                     index[fact[0]] = [];
                 index[fact[0]].push(ti);
                 INSERT_INDEXED_MATCHES;
-                if (fact.length===3 && fact[2].dst && plugins[fact[2].dst]) { // dst: output
-                    _del(t_fact);
-                    obj.out(fact[2].dst,fact.slice(0,2));
+                if (fact.length===3 && fact[2].dst) {
+                    var d = fact[2].dst;
+                    if ((typeof d==='string' && plugins[d]) ||
+                        Array.isArray(d) && d.length>0 && plugins[d[0]] ) {
+                        _del(t_fact);
+                        obj.out(fact[2].dst,fact.slice(0,2));
+                    }
                 }
                 return t_fact;
             } else

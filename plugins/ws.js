@@ -1,9 +1,16 @@
 "use strict";
 
-const      util = require('../util.js');
 const    plugin = require('../plugin.js');
 
 const WebSocket = require('ws');
+
+function makeHttpPortName(req) {
+    const s = req.socket;
+    let   a = s.remoteAddress;
+    if (a.startsWith('::ffff:'))
+        a = a.slice(7);
+    return `${a}:${s.remotePort}${req.url}`;
+}
 
 exports.ws = plugin.add('ws',class extends plugin.Plugin {
     constructor({server,port}) {
@@ -26,19 +33,21 @@ exports.ws = plugin.add('ws',class extends plugin.Plugin {
             pl.port = pl.wss.address.port;
         } else
             throw new Error('SNO');
-        pl.wss.on('connection',(ws,request)=>{
-            const portName = util.makeHttpPortName(request);
-            pl.update(['connect',{request,port:portName}]);
+        pl.wss.on('connection',(ws,req)=>{
+            const portName = makeHttpPortName(req,req.url);
+            pl.update(['connect',{request:{url:req.url},port:portName}]);
             pl.connections[portName] = ws;
             ws.on('message',msg=>{
-                // +++ JSONify, send to malaya +++
+                pl.update(JSON.parse(msg),[portName]);
             });
-            pl.wss.once('close',ws=>{
+            ws.once('close',ws=>{
                 pl.update(['disconnect',{port:portName}]);
                 delete pl.connections[portName];
             });
         });
-        pl.wss.listening(()=>super.cb());
+        pl.wss.once('listening',()=>{
+            super.start(cb);
+        });
     }
     stop(cb) {
         const pl = this;
@@ -50,6 +59,7 @@ exports.ws = plugin.add('ws',class extends plugin.Plugin {
         pl.wss = null;
     }
     out(js,name,addr) {
-        // +++ send data to socket +++
+        const pl = this;
+        pl.connections[addr].send(js);
     }
 });

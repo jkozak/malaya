@@ -535,7 +535,7 @@ module.exports = store {
     });
     it("trigger activity",function(done) {
         eng.update(['go',{},{}]);
-        plugin._private.testCallback = done;
+        plugin._private.callback = done;
     });
     it("file has been read",function() {
         const facts = eng.chrjs._private.orderedFacts;
@@ -577,7 +577,7 @@ module.exports = store {
     });
     it("trigger activity",function(done) {
         eng.update(['go',{},{}]);
-        plugin._private.testCallback = done;
+        plugin._private.callback = done;
     });
     it("file has been written", function() {
         assert.equal(fs.readFileSync(xxx,'utf8'),'xxx');

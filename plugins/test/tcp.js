@@ -1,6 +1,7 @@
 "use strict";
 
 const   engine = require('../../engine.js');
+const   plugin = require('../../plugin.js');
 
 const     path = require('path');
 const     temp = require('temp').track();
@@ -13,6 +14,7 @@ describe("tcp plugin",function(){
         eng.become('idle');
         eng.stop(true,done);
     });
+    after(()=>{plugin._private.reset();});
     it("creates and starts engine with plugin", function(done) {
         eng = new engine.Engine({
             prevalenceDir: path.join(dir,'.prevalence'),
