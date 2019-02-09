@@ -21,13 +21,16 @@ exports.http = plugin.add('http',class extends plugin.Plugin {
             pl.port = pl.server.address().port;
             super.start(cb);
         });
+        pl.server.listen();
+    }
+    ready() {
+        const pl = this;
         pl.server.on('request',(req,res)=>{
             pl.reqs[++pl.index] = [req,res];
             pl.update(['request',{
                 id:pl.index,
                 method:req.method,path:req.path,headers:req.headers,url:req.url} ]);
         });
-        pl.server.listen();
     }
     stop(cb) {
         const pl = this;

@@ -16,7 +16,7 @@ class Plugin {
     constructor(opts) {
         const pl = this;
         pl.engine   = null;
-        pl.update   = ()=>{throw new Error("engine not active yet");};
+        pl.update   = ()=>{throw new Error("engine not ready yet");};
         pl.name     = null;
         pl.chrjs    = null;              // updated when added to a store
         pl.opts     = opts;
@@ -54,6 +54,8 @@ class Plugin {
             cb(new Error(`plugin ${pl.name} started while not connected`));
         else
             cb(null);
+    }
+    ready() {
     }
     stop(cb)          {cb(null);}
     out(js,name,addr) {}
@@ -95,27 +97,32 @@ exports.makeOldPlugin = eps=>{        // back compat with 0.7.x
 };
 
 exports.registerEngine = eng=>{
-    plugins.forEach(pl=>{
-        pl.engine = eng;
-        pl.update = (js,addr,misc={})=>{
-            if (js.length!==2 && typeof js[0]!=='string' & typeof js[1]!=='object')
-                throw new Error(`bad update record type: ${JSON.stringify(js)}`);
-            let src = pl.name;
-            if (typeof addr==='string')
-                src += ':'+addr;
-            else if (Array.isArray(addr))
-                src = [src,...addr];
-            const js2 = js.concat([_.extend({src},misc)]);
-            //console.log("*** %j   src: %j  js2: %j",addr,src,js2);
-            if (pl.chrjs===eng.chrjs)
-                eng.update(js2);
-            else if (pl.chrjs)
-                pl.chrjs.update(js2);
-            else
-                throw new Error(`plugin ${pl.name} trying to send while not connected`);
-        };
-        if (pl.eps)             // back compat with 0.7.x
-            pl.eps.update = pl.update;
+    eng.on('mode',mode=>{
+        if (mode==='master') {
+            plugins.forEach(pl=>{
+                pl.engine = eng;
+                pl.update = (js,addr,misc={})=>{
+                    if (js.length!==2 && typeof js[0]!=='string' & typeof js[1]!=='object')
+                        throw new Error(`bad update record type: ${JSON.stringify(js)}`);
+                    let src = pl.name;
+                    if (typeof addr==='string')
+                        src += ':'+addr;
+                    else if (Array.isArray(addr))
+                        src = [src,...addr];
+                    const js2 = js.concat([_.extend({src},misc)]);
+                    //console.log("*** %j   src: %j  js2: %j",addr,src,js2);
+                    if (pl.chrjs===eng.chrjs)
+                        eng.update(js2);
+                    else if (pl.chrjs)
+                        pl.chrjs.update(js2);
+                    else
+                        throw new Error(`plugin ${pl.name} trying to send while not connected`);
+                };
+                if (pl.eps)             // back compat with 0.7.x
+                    pl.eps.update = pl.update;
+                pl.ready();
+            });
+        }
     });
 };
 
@@ -190,16 +197,11 @@ function setStandardClasses() {
             pl.timer         = null;
             pl.opts.interval = opts.interval || 1000;
         }
-        start(cb) {
+        ready() {
             const pl = this;
-            if (pl.timer)
-                cb(new Error(`timer started when active`));
-            else {
-                pl.timer = setInterval(()=>{
-                    pl.update(['tick',{t:Date.now()}]);
-                },pl.opts.interval);
-                super.start(cb);
-            }
+            pl.timer = setInterval(()=>{
+                pl.update(['tick',{t:Date.now()}]);
+            },pl.opts.interval);
         }
         stop(cb) {
             const pl = this;
@@ -217,27 +219,11 @@ function setStandardClasses() {
         constructor(opts={}) {
             super(opts);
             const pl = this;
-            pl.running = false;
-            pl.initted = false;
             pl.getData = opts.getData || (()=>{return {};});
         }
-        start(cb) {
+        ready() {
             const pl = this;
-            if (!pl.initted) {
-                pl.engine.on('mode',mode=>{
-                    if (!pl.running)
-                        throw new Error(`engine started before plugins initialised`);
-                    else if (mode==='master')
-                        pl.update(['restart',pl.getData()]);
-                });
-                pl.initted = true;
-            }
-            pl.running = true;
-            super.start(cb);
-        }
-        stop(cb) {
-            this.running = false;
-            super.stop(cb);
+            pl.update(['restart',pl.getData()]);
         }
     };
 

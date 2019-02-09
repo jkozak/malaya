@@ -16,16 +16,23 @@ plugin.add('tcp',class extends plugin.Plugin {
     constructor({port=0,Reader=whiskey.JSONParseStream,Writer=whiskey.StringifyJSONStream}) {
         super();
         const pl = this;
-        pl.port0       = port;    // IP port
+        pl.port0       = port;    // IP port requested
         pl.server      = null;
         pl.Reader      = Reader;
         pl.Writer      = Writer;
-        pl.port        = null;
+        pl.port        = null;    // IP port allocated
         pl.connections = {};
     }
     start(cb) {
         const pl = this;
         pl.server = net.createServer({});
+        pl.server.listen(pl.portReq,()=>{
+            pl.port = pl.server.address().port;
+            super.start(cb);
+        });
+    }
+    ready() {
+        const pl = this;
         pl.server.on('error',err=>{
             pl.update(['error',{err}]);
         });
@@ -50,10 +57,6 @@ plugin.add('tcp',class extends plugin.Plugin {
                 pl.update(['disconnect',{port:portName}],[portName]);
             });
             pl.update(['connect',{port:portName}]);
-        });
-        pl.server.listen(pl.portReq,()=>{
-            pl.port = pl.server.address().port;
-            super.start(cb);
         });
     }
     stop(cb) {
