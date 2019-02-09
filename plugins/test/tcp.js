@@ -9,7 +9,7 @@ const     path = require('path');
 const     temp = require('temp').track();
 const   assert = require('assert').strict;
 
-describe("tcp plugin XXX",function(){
+describe("tcp plugin",function(){
     const   dir = temp.mkdirSync();
     let     eng;
     let      pl;

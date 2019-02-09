@@ -110,7 +110,6 @@ exports.registerEngine = eng=>{
                     else if (Array.isArray(addr))
                         src = [src,...addr];
                     const js2 = js.concat([_.extend({src},misc)]);
-                    //console.log("*** %j   src: %j  js2: %j",addr,src,js2);
                     if (pl.chrjs===eng.chrjs)
                         eng.update(js2);
                     else if (pl.chrjs)

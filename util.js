@@ -138,7 +138,6 @@ exports.endsWith = function(str,suffix) {
 exports.readToEnd = (stream,cb)=>{
     const bufs = [];
     stream.on('data',chunk=>{
-        console.log("*** read: %j",chunk);
         bufs.push(chunk);
     });
     stream.on('end',err=>{
