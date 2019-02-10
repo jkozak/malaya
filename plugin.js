@@ -2,6 +2,7 @@
 
 const        _ = require('underscore');
 const       fs = require('fs');
+const   stream = require('stream');
 const through2 = require('through2');
 
 const    util = require('./util.js');
@@ -66,11 +67,20 @@ class StreamPlugin extends Plugin {
     constructor(opts) {
         super(opts);
         const pl = this;
-        pl.reader = through2.obj();
-        pl.writer = through2.obj((js,enc,cb)=>{
-            pl.update(js);
-            cb();
-        });
+        pl.reader = opts.Reader ? new opts.Reader() : through2.obj();
+        pl.writer = opts.Writer ? new opts.Writer() : through2.obj();
+        pl.writer.on('data',()=>{throw new Error("not ready to send data from engine");});
+    }
+    ready() {
+        const pl = this;
+        pl.writer.removeAllListeners('data');
+        pl.writer.on('data',js=>pl.update(js));
+    }
+    stop(cb) {
+        const pl = this;
+        pl.writer.removeAllListeners('data');
+        pl.writer.on('data',()=>{throw new Error("not ready to send data from engine");});
+        super.stop(cb);
     }
     out(js,name,addr) {
         const   pl = this;
@@ -171,6 +181,58 @@ exports.instantiate = (name,opts={})=>{
     return pl;
 };
 
+exports.instantiateWriteStream = s=>{  // chars -> JSON
+    if (Array.isArray(s)) {
+        const insts = s.map(cl=>new cl());
+        for (let i=0;i<insts.length-1;i++)
+            insts[i].pipe(insts[i+1]);
+        return new class extends stream.Duplex {
+            constructor() {
+                super({readableObjectMode:true});
+            }
+            pipe(s1,opts) {
+                return insts[insts.length-1].pipe(s1,opts);
+            }
+            read(size) {
+                return insts[insts.length-1].read(size);
+            }
+            write(chunk,enc,cb) {
+                return insts[0].write(chunk,enc,cb);
+            }
+        }();
+    } else
+        return new s();
+};
+
+exports.instantiateReadStream = s=>{   // JSON -> chars
+    if (Array.isArray(s)) {
+        const insts = s.map(cl=>new cl());
+        for (let i=insts.length-1;i>0;i--)
+            insts[i].pipe(insts[i-1]);
+        return new class extends stream.Duplex {
+            constructor() {
+                super({writableObjectMode:true});
+            }
+            on(ev,fn) {
+                return insts[0].on(ev,fn);
+            }
+            once(ev,fn) {
+                return insts[0].once(ev,fn);
+            }
+            pipe(s1,opts) {
+                return insts[0].pipe(s1,opts);
+            }
+            read(size) {
+                return insts[0].read(size);
+            }
+            write(chunk,enc,cb) {
+                return insts[insts.length-1].write(chunk,enc,cb);
+            }
+        }();
+    } else
+        return new s();
+};
+
 exports.start = (cb=()=>{})=>{
     if (plugins.length===0)
         cb();
@@ -267,7 +329,7 @@ function setStandardClasses() {
             const pl = this;
             if (pl.src) {
                 const rfs = fs.createReadStream(pl.src,{encoding:'utf8'});
-                pl.rs = new pl.Reader();
+                pl.rs = exports.instantiateWriteStream(pl.Reader);
                 rfs.pipe(pl.rs);
                 pl.rs.on('data',js=>{
                     if (!Array.isArray(js) || js.length!==2 || typeof js[0]!=='string' || typeof js[1]!=='object')

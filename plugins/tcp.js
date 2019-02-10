@@ -38,8 +38,8 @@ plugin.add('tcp',class extends plugin.Plugin {
         });
         pl.server.on('connection',socket=>{
             const portName = makeTcpPortName(socket);
-            const       rs = new pl.Reader();
-            const       ws = new pl.Writer();
+            const       rs = plugin.instantiateReadStream(pl.Reader);
+            const       ws = plugin.instantiateWriteStream(pl.Writer);
             socket.pipe(rs);
             ws.pipe(socket);
             rs.on('data',js=>{

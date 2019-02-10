@@ -3,6 +3,7 @@
 const   plugin = require('../plugin.js');
 
 const   engine = require('../engine.js');
+const  whiskey = require('../whiskey.js');
 
 const        _ = require('underscore');
 const       fs = require('fs');
@@ -10,6 +11,7 @@ const     temp = require('temp').track();
 const     path = require('path');
 const    sinon = require('sinon');
 const   assert = require('assert').strict;
+const   stream = require('stream');
 
 
 const jsOut = {op:'munge',data:[3,4,5]};
@@ -243,7 +245,7 @@ module.exports = store {
           +['peng',{...rest},{dst:'NoneSuch'}] );
 }
     .plugin('twuddle');
-`.trim() ));
+`));
     after(()=>{plugin._private.reset();});
     after(()=>(eng && eng.stop()));
     it("creates engine with test plugin",function(done) {
@@ -291,6 +293,87 @@ module.exports = store {
     });
     it("NoneSuch plugin msg lodged in store", function() {
         assert.deepEqual(eng.chrjs._private.orderedFacts,[['peng',{test:999},{dst:'NoneSuch'}]]);
+    });
+});
+
+describe("instantiateReadStream",function() {
+    let rs;
+    it("creates chained readable stream",function() {
+        rs = plugin.instantiateReadStream([whiskey.StringifyJSONStream,
+                                           class extends stream.Transform {
+                                               constructor() {
+                                                   super({objectMode:true});
+                                               }
+                                               _transform(chunk,enc,cb) {
+                                                   chunk[1].test3 = 222;
+                                                   this.push(chunk);
+                                               }
+                                           }
+                                           ]);
+    });
+    it("writes to far end of chain",function() {
+        rs.write(['test',{}]);
+    });
+    it("reads from near end",function(done) {
+        rs.on('data',data=>{
+            assert.equal(data,`["test",{"test3":222}]\n`);
+            done();
+        });
+    });
+});
+
+describe("instantiateWriteStream with chained classes", function() {
+    this.bail(true);
+    let   eng;
+    let    pl;
+    let    ws;
+    const dir = temp.mkdirSync();
+    const src = path.join(dir,"test.malaya");
+    before(()=>fs.writeFileSync(src,`
+module.exports = store {
+}
+    .plugin('tweddle');
+`));
+    after(()=>{plugin._private.reset();});
+    after(()=>(eng && eng.stop()));
+    it("creates engine with test plugin",function(done) {
+        plugin.add('tweddle',class extends plugin.StreamPlugin {
+        });
+        eng = new engine.Engine({dir:           path.join(dir),
+                                 magic:         {},
+                                 ports:         {},
+                                 businessLogic: src });
+        eng.init();
+        eng.start();
+        eng.become('master',done);
+        assert.equal(plugin._private.plugins.length,1);
+    });
+    it("finds plugin",function(){
+        assert.equal(plugin._private.plugins.length,1);
+        pl = plugin.get('tweddle');
+        assert(pl);
+    });
+    it("creates chained writable stream",function() {
+        ws = plugin.instantiateWriteStream([whiskey.JSONParseStream,
+                                            class extends stream.Transform {
+                                                constructor() {
+                                                    super({objectMode:true});
+                                                }
+                                                _transform(chunk,enc,cb) {
+                                                    chunk[1].test2 = 111;
+                                                    this.push(chunk);
+                                                }
+                                            } ]);
+    });
+    it("wires chained stream to plugin input",function() {
+        ws.pipe(pl.writer);
+    });
+    it("chained stream sends data",function() {
+        ws.write(`["test",{}]\n`);
+    });
+    it("data lodged in store",function() {
+        assert.deepEqual(eng.chrjs._private.orderedFacts,
+                         [['test',{test2:111},{src:'tweddle'}]] );
     });
 });
 
