@@ -1,0 +1,23 @@
+{
+  "name": "malaya-plugin-systemd",
+  "version": "0.8.99",
+  "description": "system liaison plugin for malaya",
+  "peerDependencies": {
+    "malaya": "0.8.99"
+  },
+  "dependencies": {
+    "sd-notify": "^2.5.1",
+    "systemd": "^0.3.1"
+  },
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "malaya",
+    "plugin",
+    "systemd"
+  ],
+  "author": "John Kozak <jk@malaya.site>",
+  "license": "AGPL3"
+}

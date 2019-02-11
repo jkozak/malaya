@@ -63,13 +63,19 @@ matching its instance name.
 *** =file=
 *** =unix=
 ** other plugins
-*** =matrix=
-*** =ssb=
-*** =systemd=
-*** =slack=
+*** =bpf=
+*** =dbus=
+*** =DNS=
+*** =email=
 *** =inotify=
 *** =LDAP=
-*** =DNS=
+*** =matrix=
+*** =slack=
+*** =ssb=
+*** =ssh=
+*** =stripe=
+*** =syslog=
+*** =systemd=
 *** Cloud provider APIs, e.g. AWS, GCloud, Azure
 *** eBPF
 

@@ -1,2 +1,9 @@
 test/
+
 benchmark/
+
+# these are npm published separately
+plugins/inotify
+plugins/slack
+plugins/systemd
+

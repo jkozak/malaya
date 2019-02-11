@@ -159,11 +159,13 @@ exports.require = name=>{
         try {
             require(`./plugins/${name}.js`);
         } catch (e1) {
+            const malaya = require('./index.js');
             try {
-                require(`malaya-plugin-${name}`).init(require('./index.js'));
+                const pkg = require(`./plugins/${name}/package.json`);
+                require(`./plugins/${name}/${pkg.main}`).init(malaya);
             } catch (e2) {
-                // empty
-                throw e2;       // !!! TESTING !!!
+                //console.log(e2);
+                require(`malaya-plugin-${name}`).init(malaya);
             }
         }
     }
