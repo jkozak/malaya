@@ -1,6 +1,15 @@
 test/
+plugins/test/
 
 benchmark/
+
+images/
+
+.prevalence/
+
+.issues
+
+*.shk
 
 # these are npm published separately
 plugins/inotify
