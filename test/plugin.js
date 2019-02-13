@@ -307,6 +307,7 @@ describe("instantiateReadStream",function() {
                                                _transform(chunk,enc,cb) {
                                                    chunk[1].test3 = 222;
                                                    this.push(chunk);
+                                                   cb();
                                                }
                                            }
                                            ]);
@@ -362,6 +363,7 @@ module.exports = store {
                                                 _transform(chunk,enc,cb) {
                                                     chunk[1].test2 = 111;
                                                     this.push(chunk);
+                                                    cb();
                                                 }
                                             } ]);
     });
