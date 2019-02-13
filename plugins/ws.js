@@ -56,7 +56,8 @@ exports.ws = plugin.add('ws',class extends plugin.Plugin {
         });
         Object.values(pl.connections).forEach(ws=>ws.close());
         pl.wss.close(cb);
-        pl.wss = null;
+        pl.wss  = null;
+        pl.port = null;
     }
     out(js,name,addr) {
         const pl = this;

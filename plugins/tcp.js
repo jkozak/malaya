@@ -63,6 +63,7 @@ plugin.add('tcp',class extends plugin.Plugin {
         const pl = this;
         pl.server.once('close',()=>{
             pl.server = null;
+            pl.port   = null;
             super.stop(cb);
         });
         Object.values(pl.connections).forEach(c=>c.socket.destroy());
