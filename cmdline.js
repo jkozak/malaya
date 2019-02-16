@@ -210,6 +210,26 @@ subcommands.exec.addArgument(
     }
 );
 subcommands.exec.addArgument(
+    ['-m','--mode'],
+    {
+        action:       'store',
+        choices:      ['idle','master','slave'],
+        defaultValue: 'master',
+        help:         "mode in which to start"
+    }
+);
+subcommands.exec.addArgument(
+    ['-w','--web-port'],
+    {
+        action:       'store',
+        defaultValue: 3000,
+        type:         parseInt,
+        dest:         'webPort',
+        help:         "http port to listen on",
+        metavar:      "port"
+    }
+);
+subcommands.exec.addArgument(
     ['source'],
     {
         action:       'store',
@@ -469,7 +489,11 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
 
     plugins.forEach(p=>require('./plugin.js').require(p));
 
-    const          args = argparse.parseArgs(argv2a);
+    const args = argparse.parseArgs(argv2a);
+
+    if (args.subcommandName==='exec') // !!! HACK !!!
+        args.prevalence_directory = path.join(require('temp').mkdirSync(),'.prevalence');
+
     const prevalenceDir = path.resolve(args.prevalence_directory);
     const hashAlgorithm = opts.hashAlgorithm || util.hashAlgorithm;
 
@@ -813,15 +837,11 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
     };
 
     subcommands.exec.exec = function() {
-        const vm = require('vm');
         args.source = args.source || findSource();
-        const chrjs = compile(args.source);
-        vm.runInNewContext(chrjs,{
-            require:      require,
-            module:       {exports:{}},
-            process:      process,    // +++ other built-in modules of interest to plugins +++
-            malayaPlugin: require('./plugin.js'),
-            console:      console});
+        const eng = createEngine({
+            businessLogic: path.resolve(args.source) });
+        eng.init();
+        subcommands.run.exec();
     };
 
     subcommands.fsck.exec = function() {
