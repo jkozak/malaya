@@ -6,25 +6,11 @@ const   dgram = require('dgram');
 const  stream = require('stream');
 
 plugin.add('udp',class extends plugin.Plugin {
-    constructor({port   = 0,
-                 type   = 'udp4',
-                 Reader = class extends stream.Transform {
-                     constructor() {
-                         super({objectMode:true});
-                     }
-                     _transform(msg,env,cb) {
-                         this.push(JSON.parse(msg.toString('utf8')));
-                         cb();
-                     }
-                 },
-                 Writer = class extends stream.Transform {
-                     constructor() {
-                         super({objectMode:true});
-                     }
-                     _transform(js,env,cb) {
-                         this.push(Buffer.from(JSON.stringify(js)));
-                         cb();
-                     }
+    constructor({port    = 0,
+                 type    = 'udp4',
+                 encoder = {
+                     unpack: buf=>JSON.parse(buf.toString('utf8')),
+                     pack:   js=>Buffer.from(JSON.stringify(js))
                  } }) {
         super();
         const pl = this;
@@ -32,8 +18,25 @@ plugin.add('udp',class extends plugin.Plugin {
         pl.type        = type;
         pl.socket      = null;
         pl.interface   = null;
-        pl.Reader      = Reader;
-        pl.Writer      = Writer;
+        pl.Reader      = class extends stream.Transform {
+            constructor() {
+                super({objectMode:true});
+            }
+            _transform(msg,env,cb) {
+                console.log("*** read: %j",msg);
+                this.push(['data',encoder.unpack(msg)]);
+                cb();
+            }
+        };
+        pl.Writer      = class extends stream.Transform {
+            constructor() {
+                super({objectMode:true});
+            }
+            _transform(js,env,cb) {
+                this.push(encoder.pack(js[1]));
+                cb();
+            }
+        };
         pl.port        = null;    // IP port allocated
     }
     start(cb) {
@@ -52,7 +55,7 @@ plugin.add('udp',class extends plugin.Plugin {
         pl.socket.on('error',err=>{
             pl.update(['error',{err}]);
         });
-        pl.server.on('message',(msg,remoteAddress)=>{
+        pl.socket.on('message',(msg,remoteAddress)=>{
             pl.reader.once('data',data=>{
                 pl.update(data,[remoteAddress.address,remoteAddress.port]);
             });

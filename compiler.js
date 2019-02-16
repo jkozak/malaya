@@ -286,6 +286,7 @@ var chrGlobalVars = {           // only javascript globals allowed in CHRjs
     isNaN:      {ext:true,mutable:false,type:'function'},
     parseFloat: {ext:true,mutable:false,type:'function'},
     parseInt:   {ext:true,mutable:false,type:'function'},
+    Buffer:     {ext:true,mutable:false,type:'function'},
     Number:     {ext:true,mutable:false,type:'function'},
     Object:     {ext:true,mutable:false,type:'function'},
     JSON:       {ext:true,mutable:false,type:'function'},
