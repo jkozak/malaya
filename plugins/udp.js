@@ -23,7 +23,6 @@ plugin.add('udp',class extends plugin.Plugin {
                 super({objectMode:true});
             }
             _transform(msg,env,cb) {
-                console.log("*** read: %j",msg);
                 this.push(['data',encoder.unpack(msg)]);
                 cb();
             }
@@ -75,7 +74,8 @@ plugin.add('udp',class extends plugin.Plugin {
         const pl = this;
         pl.writer.once('data',data=>{
             pl.socket.send(data,0,data.length,addr[1],addr[0],err=>{
-                pl.update(['error',{err,addr}]);
+                if (err)
+                    pl.update(['error',{err,addr}]);
             });
         });
         pl.writer.write(js);
