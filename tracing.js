@@ -16,7 +16,7 @@ const summariseJSON = exports.summariseJSON = (js,{n=12,long=false}={})=>{
         return JSON5.stringify(js,(k,v)=>{
             if (typeof v!=='string')
                 return v;
-            else if (k==='port')
+            else if (['src','dst'].includes(k))
                 return v;
             else if (v.length>n)
                 return v.slice(0,n)+'...';
@@ -109,6 +109,6 @@ exports.trace = (chrjs,source_,opts={})=>{
         }
     });
     chrjs.on('out',(dest,data)=>{
-        print("%s %j %s",chalk.yellow('<'),dest,summariseJSON(data));
+        print("%s %j",chalk.yellow('<'),summariseJSON(data.concat([{dst:dest}])));
     });
 };

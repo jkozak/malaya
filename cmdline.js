@@ -1033,7 +1033,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
             sanityCheckChrjsAdds(eng.chrjs,source);
             traceChrjs(eng.chrjs,source);
             eng.on('out',(dest,data)=>{ // we have clobbered the one in chrjs
-                console.log("%s %j %s",chalk.yellow('<'),dest,summariseJSON(data,{long:args.long}));
+                console.log("%s %j",chalk.yellow('<'),summariseJSON(data.concat([{dst:dest}])));
             });
         }
         installSignalHandlers(eng);

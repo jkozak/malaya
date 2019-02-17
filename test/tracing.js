@@ -36,9 +36,13 @@ describe("summariseJSON",function() {
         assert.strictEqual(tracing.summariseJSON('12345678901',{n:10,long:true}),
                            '"12345678901"');
     });
-    it("is nice to ports",function(){
-        assert.strictEqual(tracing.summariseJSON({port:'ws://127.0.0.1:51594/data'}),
-                           "{port:'ws://127.0.0.1:51594/data'}");
+    it("is nice to src ports",function(){
+        assert.strictEqual(tracing.summariseJSON({src:'ws://127.0.0.1:51594/data'}),
+                           "{src:'ws://127.0.0.1:51594/data'}");
+    });
+    it("is nice to dst ports",function(){
+        assert.strictEqual(tracing.summariseJSON({dst:'ws://127.0.0.1:51594/data'}),
+                           "{dst:'ws://127.0.0.1:51594/data'}");
     });
 });
 
@@ -53,7 +57,7 @@ describe("tracing of compiled code",function(){
         tracing.trace(st,'dummy.malaya',{print:(...rest)=>{
             out += util.format.apply(null,rest);
         }});
-        st.update(['ping',{p:'q'},{port:'?????port?????'}]);
+        st.update(['ping',{p:'q'},{src:'?????port?????'}]);
         assert(out.includes('?????port?????'));
         assert(out.includes('ping'));
         assert(out.includes('pong'));
