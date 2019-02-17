@@ -106,8 +106,6 @@ exports.makeInertChrjs = function(opts) {
     return obj;
 };
 
-const knownMagic = ['_tick','_restart','_take-outputs','_connect','_disconnect'];
-
 const Engine = exports.Engine = function(options) {
     events.EventEmitter.call(this);
 
@@ -119,7 +117,6 @@ const Engine = exports.Engine = function(options) {
     options.ports            = options.ports || {http:3000};
     options.bundles          = options.bundles || {};
     options.minify           = options.minify===undefined ? util.env!=='test' : options.minify;
-    options.magic            = options.magic || {_restart:true};
     options.endpoints        = options.endpoints || ['data'];
     options.createHttpServer = options.createHttpServer || www.createServer;
     options.populateHttpApp  = options.populateHttpApp || www.populateApp;
@@ -148,7 +145,6 @@ const Engine = exports.Engine = function(options) {
     eng.masterUrl      = eng.options.masterUrl;
     eng.replicateSock  = null;
     eng.active         = null;                   // update being processed
-    eng.tickInterval   = null;                   // for magic ticks
     eng.git            = options.git==='none' ? null : options.git;
     eng._rng           = {
         engine: random.engines.mt19937(),
@@ -158,49 +154,14 @@ const Engine = exports.Engine = function(options) {
 
     eng.chrjs.on('error',(err)=>eng.emit('error',new VError(err,"chrjs: ")));
 
-    const magic = eng.options.magic;
-    Object.keys(magic).forEach((m)=>{
-        if (knownMagic.indexOf(m)===-1)
-            throw new VError("unknown magic: %j",m);
-    });
     if (options.endpoints.includes('admin') || options.endpoints.includes('replication/journal'))
         throw new VError("reserved endpoint used");
-    eng.on('mode',function(mode) {
-        if (magic._restart && mode==='master')
-            eng.update(['_restart',eng._magicRestartData(),{port:'server:'}]);
-        eng.broadcast(['mode',mode],'admin');
-    });
     eng.on('connection',function(portName,type) {
         eng.broadcast(['connection',portName,type,true],'admin');
     });
     eng.on('connectionClose',function(portName,type) {
         eng.broadcast(['connection',portName,type,false],'admin');
     });
-    eng.on('become',function(mode) {
-        if (eng.tickInterval)
-            clearInterval(eng.tickInterval);
-        if ((magic['_take-outputs'] || magic._tick) && mode==='master') {
-            if (magic._tick===true)
-                magic._tick = 1000;
-            eng.tickInterval = setInterval(()=>{
-                if (magic._tick)
-                    eng.update(['_tick',eng._magicTickData(),{port:'server:'}]);
-                if (magic['_take-outputs'])
-                    eng.update(['_take-outputs',{},{port:'server:'}]);
-            },magic._tick);
-        } else
-            eng.tickInterval = null;
-    });
-    if (magic._connect) {
-        eng.on('connection',function(port,type,cookies) {
-            eng.update(['_connect',{port:port,type:type,cookies:cookies},{port:'server:'}]);
-        });
-    }
-    if (magic._disconnect) {
-        eng.on('connectionClose',function(port,type) {
-            eng.update(['_disconnect',{port:port,type:type},{port:'server:'}]);
-        });
-    }
 
     plugin.registerEngine(eng);
 
@@ -208,9 +169,6 @@ const Engine = exports.Engine = function(options) {
 };
 
 util.inherits(Engine,events.EventEmitter);
-
-Engine.prototype._magicRestartData = function() {return {};};
-Engine.prototype._magicTickData    = function() {return {date:new Date()};};
 
 Engine.prototype.sanityCheck = function() { // performed just before starting
     const eng = this;
@@ -1059,16 +1017,7 @@ Engine.prototype.update = function(data,cb) {
     let     res;
     const done2 = _.after(2,function() {
         eng._nextTimestamp = null;
-        res.adds.forEach(function(t) {
-            const add = res.refs[t];
-            if (eng.options.magic['_take-outputs'] && add[0]==='_output') {
-                if (add.length!==3)
-                    eng.emit('error',util.format("bad _output: %j",add));
-                else
-                    eng.out(add[1],add[2]);
-            }
-        });
-        eng.active = null;
+        eng.active         = null;
         if (cb) cb(null,res);
     });
     eng._nextTimestamp = eng._timestamp();

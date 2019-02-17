@@ -63,35 +63,6 @@ describe("cmdline",function() {
     after(function() {
         process.argv = saveArgv;
     });
-    describe("argTypeMagicSpec",function(){
-        const argTypeMagicSpec = cmdline._private.argTypeMagicSpec;
-        it("handles an empty string",function(){
-            assert.deepEqual(argTypeMagicSpec(''),{});
-        });
-        it("handles a single item",function(){
-            assert.deepEqual(argTypeMagicSpec('_connect'),{_connect:true});
-        });
-        it("handles multiple items",function(){
-            assert.deepEqual(argTypeMagicSpec('_connect,_disconnect'),
-                             {_connect:true,_disconnect:true});
-        });
-        it("handles explicit values",function(){
-            assert.deepEqual(argTypeMagicSpec('_tick:99'),{_tick:99});
-        });
-        it("handles explicit values in combination",function(){
-            assert.deepEqual(argTypeMagicSpec('_tick:99,_restart'),
-                             {_tick:99,_restart:true});
-        });
-        it("supplies leading underscores as needed",function(){
-            assert.deepEqual(argTypeMagicSpec('_tick:99,restart'),
-                             {_tick:99,_restart:true});
-        });
-        it("savages bad items",function(){
-            assert.throws(()=>{
-                argTypeMagicSpec('1:2:3');
-            });
-        });
-    });
     describe("compile",function() {
     });
     describe("parse",function() {
@@ -204,7 +175,7 @@ describe("cmd line interface [slow]",function() {
     //N.B. use "node malaya" in these tests (rather than ./malaya) to
     //     get something that should work on linux and windows.
     it("parses to stdout",function(done) {
-        child.exec("node malaya parse -c test/bl/count.chrjs",
+        child.exec("node malaya parse -c test/bl/count.malaya",
                    {},
                    (code,stdout,stderr)=>{
                        if (code!==null)
@@ -221,7 +192,7 @@ describe("cmd line interface [slow]",function() {
     });
     it("inits prevalence store",function(done) {
         this.timeout(10000);
-        child.exec(util.format("node malaya -p %j init",pdir),
+        child.exec(util.format("node malaya -p %j init test/bl/restart.malaya",pdir),
                    {},
                    (code,stdout,stderr)=>{
                        if (code!==null)
@@ -234,7 +205,7 @@ describe("cmd line interface [slow]",function() {
     });
     it("rejects attempts to init twice",function(done) {
         this.timeout(10000);
-        child.exec(util.format("node malaya -p %j init",pdir),
+        child.exec(util.format("node malaya -p %j init test/bl/restart.malaya",pdir),
                    {},
                    (code,stdout,stderr)=>{
                        if (code===null)
@@ -261,7 +232,7 @@ describe("cmd line interface [slow]",function() {
     it("runs",function(done) {
         this.timeout(10000);
         let buf = '';
-        malaya = child.spawn("node",['malaya','-p',pdir,'run','-w0']);
+        malaya = child.spawn("node",['malaya','-p',pdir,'run','-w0','test/bl/restart.malaya']);
         malaya.stdout.on('data',(data)=>{
             buf += data;
             const lines = buf.split('\n');
@@ -292,14 +263,14 @@ describe("cmd line interface [slow]",function() {
                    });
     });
     it("queries running server",function(done){
-        child.exec(util.format(`node malaya -p %j cat -f json -j "[?[0]=='_restart']" facts`,pdir),
+        child.exec(util.format(`node malaya -p %j cat -f json -j "[?[0]=='restart']" facts`,pdir),
                    {},
                    (code,stdout,stderr)=>{
                        if (code!==null)
                            done(new VError("`malaya cat facts` fails: %j",code));
                        else {
                            const js = JSON.parse(stdout.trim());
-                           assert.deepEqual(js,['_restart',{},{port:'server:'}]);
+                           assert.deepEqual(js,['restart',{},{src:'restart'}]);
                            done();
                        }
                    });
@@ -344,14 +315,14 @@ describe("cmd line interface [slow]",function() {
                    });
     });
     it("queries history",function(done){
-        child.exec(util.format(`node malaya -p %j cat -f json -j "[?[2][0]=='_restart']" history`,pdir),
+        child.exec(util.format(`node malaya -p %j cat -f json -j "[?[2][0]=='restart']" history`,pdir),
                    {},
                    (code,stdout,stderr)=>{
                        if (code!==null)
                            done(new VError("`malaya cat history` fails: %j",code));
                        else {
                            const js = JSON.parse(stdout.trim());
-                           assert.deepEqual(js[2],['_restart',{},{port:'server:'}]);
+                           assert.deepEqual(js[2],['restart',{},{src:'restart'}]);
                            done();
                        }
                    });

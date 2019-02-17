@@ -113,7 +113,6 @@ describe("dolce stil novista",function(){
         });
         plugin.instantiate('twiddle');
         eng = new engine.Engine({dir:           temp.mkdirSync(),
-                                 magic:         {},
                                  ports:         {},
                                  businessLogic: path.join(__dirname,'bl','null.chrjs') });
         eng.init();
@@ -147,7 +146,6 @@ describe("multiple instance of plugin",function(){
         plugin.instantiate('twiddle');
         plugin.instantiate('twiddle','twiddle1',{});
         eng = new engine.Engine({dir:           temp.mkdirSync(),
-                                 magic:         {},
                                  ports:         {},
                                  businessLogic: path.join(__dirname,'bl','null.chrjs') });
         eng.init();
@@ -183,7 +181,6 @@ describe("subaddressing :-style",function(){
         });
         plugin.instantiate('twoddle');
         eng = new engine.Engine({dir:           temp.mkdirSync(),
-                                 magic:         {},
                                  ports:         {},
                                  businessLogic: path.join(__dirname,'bl','null.chrjs') });
         eng.init();
@@ -216,7 +213,6 @@ describe("subaddressing array style",function(){
         });
         plugin.instantiate('twoddle');
         eng = new engine.Engine({dir:           temp.mkdirSync(),
-                                 magic:         {},
                                  ports:         {},
                                  businessLogic: path.join(__dirname,'bl','null.chrjs') });
         eng.init();
@@ -252,7 +248,6 @@ module.exports = store {
         plugin.add('twuddle',class extends plugin.StreamPlugin {
         });
         eng = new engine.Engine({dir:           path.join(dir),
-                                 magic:         {},
                                  ports:         {},
                                  businessLogic: src });
         eng.init();
@@ -341,7 +336,6 @@ module.exports = store {
         plugin.add('tweddle',class extends plugin.StreamPlugin {
         });
         eng = new engine.Engine({dir:           path.join(dir),
-                                 magic:         {},
                                  ports:         {},
                                  businessLogic: src });
         eng.init();
@@ -379,7 +373,6 @@ module.exports = store {
     });
 });
 
-
 // +++ update
 
 // +++ addSubcommand
@@ -396,7 +389,6 @@ describe("restart plugin added dynamically",function(){
     });
     it("starts engine",function(done){
         eng = new engine.Engine({dir:           temp.mkdirSync(),
-                                 magic:         {},
                                  ports:         {},
                                  businessLogic: path.join(__dirname,'bl','null.chrjs') });
         eng.init();
@@ -420,7 +412,6 @@ describe("restart",function(){
     after(()=>(eng && eng.stop()));
     it("loads source file",function(done){
         eng = new engine.Engine({dir:           temp.mkdirSync(),
-                                 magic:         {},
                                  ports:         {},
                                  businessLogic: path.join(__dirname,'bl','restart.malaya') });
         eng.init();
@@ -446,7 +437,6 @@ describe("timer with default interval",function(){
     after(()=>{clock.restore();});
     it("loads source file",function(done){
         eng = new engine.Engine({dir:           temp.mkdirSync(),
-                                 magic:         {},
                                  ports:         {},
                                  businessLogic: path.join(__dirname,'bl','timer.malaya') });
         eng.init();
@@ -498,7 +488,6 @@ describe("timer explicit interval",function(){
     after(()=>{clock.restore();});
     it("loads source file",function(done){
         eng = new engine.Engine({dir:           temp.mkdirSync(),
-                                 magic:         {},
                                  ports:         {},
                                  businessLogic: path.join(__dirname,'bl','timer10.malaya') });
         eng.init();
@@ -551,7 +540,6 @@ describe("restart and timer in concert",function(){
     after(()=>{clock.restore();});
     it("loads source file",function(done){
         eng = new engine.Engine({dir:           temp.mkdirSync(),
-                                 magic:         {},
                                  ports:         {},
                                  businessLogic: path.join(__dirname,'bl','restart_timer.malaya') });
         eng.init();
@@ -697,7 +685,6 @@ module.exports = store {}
     after(()=>(eng && eng.stop()));
     it("loads source file",function(done){
         eng = new engine.Engine({dir,
-                                 magic:         {},
                                  ports:         {},
                                  businessLogic: path.join(dir,'test.malaya') });
         eng.init();
@@ -739,7 +726,6 @@ module.exports = store {
     after(()=>(eng && eng.stop()));
     it("loads source file",function(done){
         eng = new engine.Engine({dir,
-                                 magic:         {},
                                  ports:         {},
                                  businessLogic: path.join(dir,'test.malaya') });
         eng.init();

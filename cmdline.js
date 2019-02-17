@@ -78,26 +78,6 @@ const addSubcommand = exports.addSubcommand = function(name,opts) {
     return subcommands[name];
 };
 
-const argTypeMagicSpec = arg=>{
-    const   ans = {};
-    const items = arg.split(',');
-    if (items.length===1 && items[0]==='')
-        items.length = 0;
-    items.forEach(it=>{
-        const kv = it.split(':');
-        if (kv.length===1)
-            kv.push(true);
-        else if (kv.length===2) {
-            kv[1] = JSON.parse(kv[1]);
-        } else
-            throw new Error(`bad --auto spec item: ${it}`);
-        if (!kv[0].startsWith('_'))
-            kv[0] = '_'+kv[0];
-        ans[kv[0]] = kv[1];
-    });
-    return ans;
-};
-
 const summariseJSON = tracing.summariseJSON;
 
 addSubcommand('browse',{addHelp:true});
@@ -310,16 +290,6 @@ subcommands.parse.addArgument(
 );
 
 addSubcommand('run',{addHelp:true});
-subcommands.run.addArgument(
-    ['--auto'],
-    {
-        action:       'store',
-        defaultValue: null,
-        type:         argTypeMagicSpec,
-        help:         "magic events",
-        dest:         'auto'
-    }
-);
 subcommands.run.addArgument(
     ['--no-prefetch-bundles'],
     {
@@ -1018,7 +988,6 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                           debug:           args.debug,
                           git:             args.git,
                           ports:           {http:args.webPort},
-                          magic:           args.auto,
                           masterUrl:       args.masterUrl,
                           privateTestUrls: args.privateTestUrls};
         const      eng = createEngine(options);
@@ -1214,5 +1183,5 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
 };
 
 if (util.env==='test') {
-    exports._private = {argTypeMagicSpec:argTypeMagicSpec};
+    exports._private = {};
 }

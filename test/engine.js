@@ -488,60 +488,6 @@ describe("Engine",function() {
             });
         });
     });
-    describe("#addConnection using `_output` pseudo-fact",function() {
-        it("sends input, receives output",function(done) {
-            const eng = new Engine({dir:           temp.mkdirSync(),
-                                    magic:         {'_take-outputs':true},
-                                    businessLogic: path.join(__dirname,'bl','output.chrjs') });
-            const  io = createIO();
-            eng.init();
-            eng.start();
-            eng.startPrevalence(function(err) {
-                assert(!err);
-                eng.addConnection('test://1',io);
-                io.on('rcved',function() {
-                    try {
-                        assert.deepEqual(io.rcved,[{msg:"will this do?"}]);
-                        eng.stopPrevalence(true,done);
-                    } catch (e) {done(e);}
-                });
-                io.i.write(['do_summat',{}]);
-            });
-        });
-        it("multiplexes",function(done) {
-            const eng = new Engine({dir:           temp.mkdirSync(),
-                                    magic:         {'_take-outputs':true},
-                                    businessLogic: path.join(__dirname,'bl','output.chrjs') });
-            const io1 = createIO();
-            const io2 = createIO();
-            const io3 = createIO();
-            let  err1 = null;
-            let     n = 0;
-            const dun = _.after(3,()=>eng.stopPrevalence(true,(e)=>{
-                if (!err1)
-                    assert.strictEqual(n,3);
-                done(err1);
-            }));
-            eng.init();
-            eng.start();
-            eng.startPrevalence(function(err) {
-                assert(!err);
-                eng.addConnection('test://1',io1);
-                eng.addConnection('test://2',io2);
-                eng.addConnection('test://3',io3);
-                [io1,io2,io3].forEach(function(io) {
-                    io.on('rcved',function() {
-                        try {
-                            assert.deepEqual(io.rcved,[{msg:"that's yer lot"}]);
-                            n++;
-                            dun();
-                        } catch (e) {err1=e;dun();}
-                    });
-                });
-                io1.i.write(['do_em_all',{}]);
-            });
-        });
-    });
     describe("#addConnection using `out` function",function() {
         let clock;
         before(()=>{clock=sinon.useFakeTimers();});
