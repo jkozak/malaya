@@ -145,7 +145,7 @@ describe("multiple instance of plugin",function(){
             }
         });
         plugin.instantiate('twiddle');
-        plugin.instantiate('twiddle',{name:'twiddle1'});
+        plugin.instantiate('twiddle','twiddle1',{});
         eng = new engine.Engine({dir:           temp.mkdirSync(),
                                  magic:         {},
                                  ports:         {},

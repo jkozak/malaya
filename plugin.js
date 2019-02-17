@@ -174,9 +174,13 @@ exports.require = name=>{
     return classes[name];
 };
 
-exports.instantiate = (name,opts={})=>{
-    const pl = new classes[name](opts);
-    pl.name = opts.name || name;
+exports.instantiate = (plugin,name,opts)=>{
+    if (opts===undefined && (name===undefined || typeof name==='object')) {
+        opts = name || {};
+        name = plugin;
+    }
+    const pl = new classes[plugin](opts);
+    pl.name = name;
     if (plugins.filter(pl1=>(pl1.name===pl.name)).length>0)
         throw new Error(`plugin named ${pl.name} twice`);
     plugins.push(pl);

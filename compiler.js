@@ -122,9 +122,9 @@ function TEMPLATE_store() {
 
             get __file__() {return __file__;},
 
-            plugin: function(name,opts) {
-                malayaPlugin.require(name);
-                const pl = malayaPlugin.instantiate(name,opts);
+            plugin: function(plugin,name,opts) {
+                malayaPlugin.require(plugin);
+                const pl = malayaPlugin.instantiate(plugin,name,opts);
                 pl.connect(obj);
                 if (plugins[pl.name])
                     throw new Error("plugin name duplicated: "+pl.name);
