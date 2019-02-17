@@ -504,7 +504,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
         throw new util.Fail("plugins must be specified as the first arguments");
 
     if (args.override.length>0)
-        throw new Error("NYI:override");
+        require('./plugin.js').setOverrides(args.override);
 
     const findCallback = function() { // extract the callback for single-shot use.
         let cb;

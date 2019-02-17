@@ -11,6 +11,7 @@ const whiskey = require('./whiskey.js');
 
 const classes = {};
 const plugins = [];
+let overrides = [];
 
 class Plugin {
     static init(opts) {}
@@ -174,11 +175,21 @@ exports.require = name=>{
     return classes[name];
 };
 
+exports.setOverrides = os=>{
+    overrides = os;
+};
+
 exports.instantiate = (plugin,name,opts)=>{
+    const upds = {};
     if (opts===undefined && (name===undefined || typeof name==='object')) {
         opts = name || {};
         name = plugin;
     }
+    overrides.forEach(([inst,k,v])=>{
+        if (inst===name)
+            upds[k] = v;
+    });
+    opts = Object.assign({},opts,upds);
     const pl = new classes[plugin](opts);
     pl.name = name;
     if (plugins.filter(pl1=>(pl1.name===pl.name)).length>0)
