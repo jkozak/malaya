@@ -1,0 +1,6 @@
+From: John Kozak
+Date: Sun, 17 Feb 2019 11:51:34 +0000
+Subject: allow use of exports in malaya sources, not just module.exports
+State: new
+Message-Id: <a76c7acf8a41cb79-0-artemis@bisou>
+

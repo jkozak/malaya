@@ -235,7 +235,8 @@ Engine.prototype.compile = function(source) {
     }
     if (source) {
         const children = module.children.slice(0);
-        const    chrjs = require(path.resolve(source)); // eslint-disable-line security/detect-non-literal-require
+        const   asreqd = require(path.resolve(source)); // eslint-disable-line security/detect-non-literal-require
+        const    chrjs = asreqd.main || asreqd;
         const    loads = _.difference(module.children,children);
         if (loads.length>1)
             throw new VError("compiling %s added %s modules",source,loads.length);
