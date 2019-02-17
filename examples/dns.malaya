@@ -35,9 +35,9 @@ function packDNSname(buf,off,v) {
 function packDNSflags(buf,off,v) {
     var flags =
         ((v.qr     || 0) << 15) +
-        ((v.opcode || 0) << 14)  +
-        ((v.aa     || 0) << 11)  +
-        ((v.tc     || 0) << 10)  +
+        ((v.opcode || 0) << 14) +
+        ((v.aa     || 0) << 11) +
+        ((v.tc     || 0) << 10) +
         ((v.rd     || 0) << 9)  +
         ((v.ra     || 0) << 8)  +
         ((v.rc     || 0));
@@ -46,7 +46,7 @@ function packDNSflags(buf,off,v) {
 }
 
 module.exports = store {
-    rule (-['data',{id,flags:{qr,opcode,...},qname,...},{src:['udp',...addr]}],
+    rule (-['data',{id,flags:{qr:0,opcode,...},qname,...},{src:['udp',...addr]}],
           +['data',{id,flags:{qr:1,opcode,rc:0},qname},{dst:['udp',...addr]}] );
 
 }
