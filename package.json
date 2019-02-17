@@ -85,10 +85,10 @@
     "benchmark": "matcha -R plain benchmark/*.js",
     "eslint": "eslint -f compact .",
     "pretest": "npm run eslint --silent",
-    "test:js": "cross-env NODE_ENV=test mocha --exit -R min -C test/*.js plugins/test/*.js",
+    "test:js": "cross-env NODE_ENV=test mocha --exit -R min -C test/*.js plugins/test/*.js examples/test/*.js",
     "test:chrjs": "cross-env NODE_ENV=test mocha -R min --require compiler -C test/*.chrjs",
     "test": "npm run test:js --silent && npm run test:chrjs --silent",
-    "test:XXX": "cross-env NODE_ENV=test mocha -R min --require compiler -C test plugins/test --grep XXX",
+    "test:XXX": "cross-env NODE_ENV=test mocha -R min --require compiler -C test plugins/test examples/test --grep XXX",
     "init": "node malaya init",
     "start": "node malaya run"
   },

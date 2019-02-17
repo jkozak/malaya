@@ -1,5 +1,5 @@
 function unpackDNSname(buf,off) {
-    var ans = [];
+    const ans = [];
     while (true) {
         var n = buf.readUInt8(off);
         if (n===0)
@@ -7,19 +7,6 @@ function unpackDNSname(buf,off) {
         ans.push(buf.slice(off+1,off+n+1).toString('ascii'));
         off += n+1;
     }
-}
-
-function unpackDNSflags(buf,off) {
-    var flags = buf.readUInt16BE(2);
-    return [{
-        qr:     (flags >> 15) & 0x01,
-        opcode: (flags >> 14) & 0x0F,
-        aa:     (flags >> 11) & 0x01,   // not for query
-        tc:     (flags >> 10) & 0x01,
-        rd:     (flags >>  9) & 0x01,
-        ra:     (flags >>  8) & 0x01,   // not for query
-        rc:     (flags      ) & 0x0F    // not for query
-    },off+2];
 }
 
 function packDNSname(buf,off,v) {
@@ -32,51 +19,89 @@ function packDNSname(buf,off,v) {
     return off;
 }
 
-function packDNSflags(buf,off,v) {
-    var flags =
-        ((v.qr     || 0) << 15) +
-        ((v.opcode || 0) << 14) +
-        ((v.aa     || 0) << 11) +
-        ((v.tc     || 0) << 10) +
-        ((v.rd     || 0) << 9)  +
-        ((v.ra     || 0) << 8)  +
-        ((v.rc     || 0));
-    buf.writeUInt16BE(flags,off)
-    return off+2;
+function packDNS(js) {
+    let   off = 0;
+    const buf = Buffer.alloc(50);
+    off = buf.writeUInt16BE(js.id,off);
+    off = buf.writeUInt16BE(((js.flags.qr     || 0) << 15) +
+                            ((js.flags.opcode || 0) << 14) +
+                            ((js.flags.aa     || 0) << 11) +
+                            ((js.flags.tc     || 0) << 10) +
+                            ((js.flags.rd     || 0) << 9)  +
+                            ((js.flags.ra     || 0) << 8)  +
+                            ((js.flags.rc     || 0)),
+                            off);
+    off = buf.writeUInt16BE(js.qdcount||0,off);
+    off = buf.writeUInt16BE(js.ancount||0,off);
+    off = buf.writeUInt16BE(js.nscount||0,off);
+    off = buf.writeUInt16BE(js.arcount||0,off);
+    off = packDNSname(buf,off,js.qname);
+    off = buf.writeUInt16BE(js.qtype||0,off);
+    off = buf.writeUInt16BE(js.qclass||0,off);
+    if (js.name) {
+        off = packDNSname(buf,off,js.name);
+        off = buf.writeUInt16BE(js.type  || js.qtype, off);
+        off = buf.writeUInt16BE(js.clasz || js.qclass,off);
+        off = buf.writeUInt32BE(js.ttl || 0,          off);
+        switch (js.type) {
+        case 1:
+            off = buf.writeUInt16BE(4,off);
+            off = buf.writeUInt32BE(0x02020202,off); // !!!
+            break;
+        default:
+            console.log("bad type: %j",js.type);
+            break;
+        }
+    }
+    return buf.slice(0,off);
 }
 
-module.exports = store {
-    rule (-['data',{id,flags:{qr:0,opcode,...},qname,...},{src:['udp',...addr]}],
-          +['data',{id,flags:{qr:1,opcode,rc:0},qname},{dst:['udp',...addr]}] );
+function unpackDNS(buf) {
+    const   pdn = unpackDNSname(buf,12);
+    const flags = buf.readUInt16BE(2);
+    return {
+        id:      buf.readUInt16BE(0),
+        flags:   {
+            qr:     (flags >> 15) & 0x01,
+            opcode: (flags >> 14) & 0x0F,
+            aa:     (flags >> 11) & 0x01,   // not for query
+            tc:     (flags >> 10) & 0x01,
+            rd:     (flags >>  9) & 0x01,
+            ra:     (flags >>  8) & 0x01,   // not for query
+            rc:     (flags      ) & 0x0F    // not for query
+        },
+        qdcount: buf.readUInt16BE(4),
+        ancount: buf.readUInt16BE(6),
+        nscount: buf.readUInt16BE(8),
+        arcount: buf.readUInt16BE(10),
+        qname:   pdn[0],
+        qtype:   buf.readUInt16BE(pdn[1]),
+        qclass:  buf.readUInt16BE(pdn[1]+2)
+    };
+}
+
+module.exports.main = store {
+    rule (-['data',
+            {id,flags:{qr:0,opcode,...}, qname,qtype,qclass,...},
+            {src:['udp',...addr]}],
+          +['data',
+            {id,flags:{qr:1,opcode,rc:0},qname,qtype,qclass,
+             qdcount:1,ancount:1,
+             name:qname,clasz:qclass,type:qtype},
+            {dst:['udp',...addr]}] );
 
 }
     .plugin('udp',{
-        port:    10053,
+        port:    53,
         encoder: {
-            pack:  function(js) {
-                var buf = Buffer.alloc(30);
-                buf.writeUInt16BE(js.id,0);
-                packDNSflags(buf,2,js.flags);
-                buf.writeUInt16BE(js.qdcount||0,4);
-                buf.writeUInt16BE(js.ancount||0,6);
-                buf.writeUInt16BE(js.nscount||0,8);
-                buf.writeUInt16BE(js.arcount||0,10);
-                packDNSname(buf,12,js.qname);
-                return buf;
-            },
-            unpack: function(buf) {
-                var pdn = unpackDNSname(buf,12);
-                return {
-                    id:      buf.readUInt16BE(0),
-                    flags:   unpackDNSflags(buf,2)[0],
-                    qdcount: buf.readUInt16BE(4),
-                    ancount: buf.readUInt16BE(6),
-                    nscount: buf.readUInt16BE(8),
-                    arcount: buf.readUInt16BE(10),
-                    qname:   pdn[0],
-                    qtype:   buf.readUInt16BE(pdn[1]),
-                    qclass:  buf.readUInt16BE(pdn[1]+2),
-                };
-            }
+            pack:   packDNS,
+            unpack: unpackDNS
         }
     });
+
+module.exports._private = {
+    packDNSname:   packDNSname,
+    unpackDNSname: unpackDNSname,
+    packDNS:       packDNS,
+    unpackDNS:     unpackDNS
+};
