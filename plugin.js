@@ -176,6 +176,10 @@ exports.require = name=>{
 };
 
 exports.setOverrides = os=>{
+    Object.keys(os).forEach(k=>{
+        if (!Object.keys(overrides).includes(k))
+            throw new Error("unknown override type: %j",k);
+    });
     overrides = os;
 };
 
