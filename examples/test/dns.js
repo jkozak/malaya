@@ -7,12 +7,13 @@ const   plugin = require('../../plugin.js');
 const   malaya = require('../../index.js');
 const testutil = require('../../testutil.js');
 
+const     fs = require('fs');
 const   ndns = require('dns');
 const   path = require('path');
 const   temp = require('temp').track();
 const assert = require('assert').strict;
 
-describe("dns example",function() {
+describe("dns example XXX",function() {
     let dns;
 
     afterEach(()=>plugin._private.reset());
@@ -29,7 +30,7 @@ describe("dns example",function() {
         describe("DNS labels",function() {
             it("packs simplest label", function() {
                 const buf = Buffer.alloc(3);
-                const off = dns._private.packDNSname(buf,0,['a']);
+                const off = dns._private.packDNSname(buf,['a'],0);
                 assert.equal(off,3);
                 assert.equal(buf.readUInt8(0),1);            // one char in first segment
                 assert.equal(buf.slice(1,2).toString(),"a");
@@ -43,7 +44,7 @@ describe("dns example",function() {
             });
             it("packs simplest label with offset", function() {
                 const buf = Buffer.alloc(4);
-                const off = dns._private.packDNSname(buf,1,['a']);
+                const off = dns._private.packDNSname(buf,['a'],1);
                 assert.equal(off,4);
                 assert.equal(buf.readUInt8(1),1);            // one char in first segment
                 assert.equal(buf.slice(2,3).toString(),"a");
@@ -56,12 +57,29 @@ describe("dns example",function() {
                 assert.deepEqual(js,['a']);
             });
         });
+
+        describe("IPv4 addresses", function() {
+            const ipv4 = '192.168.231.8';
+            const  buf = Buffer.alloc(10);
+            it("packs IPv4",function() {
+                dns._private.packIPv4(buf,ipv4,0);
+            });
+            it("unpacks IPv4",function() {
+                const [quad,off] = dns._private.unpackIPv4(buf,0);
+                assert.equal(quad,ipv4);
+                assert.equal(off,4);
+            });
+        });
+
     });
 
-    describe("running as a process", function() {
+    describe("running as a process",function() {
         this.bail(true);
+        const noisy = false;
         const   dir = temp.mkdirSync();
         let saveDNS = ndns.getServers();
+        const srcFn = path.join(__dirname,'../dns.malaya');
+        const iniFn = path.join(dir,'init.json');
         let     srv;
 
         after(()=>ndns.setServers(saveDNS));
@@ -70,16 +88,19 @@ describe("dns example",function() {
                 srv.kill();
         });
         it("inits",function(done) {
+            fs.writeFileSync(iniFn,JSON.stringify([['rr',{name:['fred','co'],type:1,cls:1,rd:'6.6.7.7'}]]));
             srv = new testutil.ExtServer('malaya',
                                          {
-                                             noisy:         false,
+                                             dir,
+                                             noisy,
                                              preargs:       ['--override','udp.port=0'],
                                              prevalenceDir: path.join(dir,'.prevalence')
                                          });
-            srv.init([],done);
+            srv.init(['-d',iniFn,srcFn],done);
         });
         it("runs",function(done) {
-            srv.run([path.join(__dirname,'../dns.malaya')],done);
+            const args = noisy ? ['-D'] : [];
+            srv.run(args.concat([srcFn]),done);
         });
         it("has allocated a udp port",function() {
             assert.equal(typeof srv.plugins['udp'].port,'number');
@@ -89,10 +110,11 @@ describe("dns example",function() {
         });
         it("does a lookup for a known domain",function(done) {
             ndns.resolve('fred.co',(err,ans)=>{
-                //console.log("*** %j %j",err,ans);
+                assert(!err);
+                assert.equal(ans.length,1);
+                assert.equal(ans[0],'6.6.7.7');
                 done();
             });
         });
     });
-
 });

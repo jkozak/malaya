@@ -295,7 +295,8 @@ var chrGlobalVars = {           // only javascript globals allowed in CHRjs
     require:    {ext:true,mutable:false,type:'function'},
     module:     {ext:true,mutable:false,type:'function'},
     console:    {ext:true,mutable:false,type:'function'},
-    __dirname:  {ext:true,mutable:false,type:'string'}
+    __dirname:  {ext:true,mutable:false,type:'string'},
+    Error:      {ext:true,mutable:false,type:'function'},
 };
 if (util.env==='test')
     chrGlobalVars = Object.assign(chrGlobalVars,
@@ -303,7 +304,6 @@ if (util.env==='test')
                                       // general testing stuff
                                       console: {ext:true,mutable:false,type:'function'},
                                       process: {ext:true,mutable:false,type:'function'},
-                                      Error:   {ext:true,mutable:false,type:'function'},
                                       // the `mocha` globals
                                       before:  {ext:true,mutable:false,type:'function'},
                                       after:   {ext:true,mutable:false,type:'function'},
