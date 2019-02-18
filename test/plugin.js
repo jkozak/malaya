@@ -586,20 +586,19 @@ describe("fs readFile",function() {
         fs.writeFileSync(path.join(dir,'test.malaya'),`
 module.exports = store {
     rule (-['go',{},{}],
-           out('fs',['readFile',{filename:'${xxx}'}]) );
+          +['readFile',{filename:'${xxx}'},{dst:'fs'}] );
 
     rule ( ['readFile',{...},{src:'fs'}],
-           out('callback',['done',{}]) );
+          +['done',{},{dst:'dummy'}] );
 }
     .plugin('fs')
-    .plugin('callback');
+    .plugin('dummy');
 `);
     });
-    after(()=>{plugin._private.reset();});
     after(()=>(eng && eng.stop()));
+    after(()=>{plugin._private.reset();});
     it("loads source file",function(done){
         eng = new engine.Engine({dir,
-                                 magic:         {},
                                  ports:         {},
                                  businessLogic: path.join(dir,'test.malaya') });
         eng.init();
@@ -607,8 +606,8 @@ module.exports = store {
         eng.become('master',done);
     });
     it("trigger activity",function(done) {
+        plugin.get('dummy').reader.once('data',()=>done());
         eng.update(['go',{},{}]);
-        plugin._private.callback = done;
     });
     it("file has been read",function() {
         const facts = eng.chrjs._private.orderedFacts;
@@ -628,20 +627,19 @@ describe("fs writeFile",function() {
         fs.writeFileSync(path.join(dir,'test.malaya'),`
 module.exports = store {
     rule (-['go',{},{}],
-           out('fs',['writeFile',{filename:'${xxx}',contents:'xxx'}]) );
+          +['writeFile',{filename:'${xxx}',contents:'xxx'},{dst:'fs'}] );
 
     rule ( ['writeFile',{...},{src:'fs'}],
-           out('callback',['done',{}]) );
+          +['done',{},{dst:'dummy'}] );
 }
     .plugin('fs')
-    .plugin('callback');
+    .plugin('dummy');
 `);
     });
     after(()=>{plugin._private.reset();});
     after(()=>(eng && eng.stop()));
     it("loads source file",function(done){
         eng = new engine.Engine({dir,
-                                 magic:         {},
                                  ports:         {},
                                  businessLogic: path.join(dir,'test.malaya') });
         eng.init();
@@ -649,8 +647,8 @@ module.exports = store {
         eng.become('master',done);
     });
     it("trigger activity",function(done) {
+        plugin.get('dummy').reader.once('data',()=>done());
         eng.update(['go',{},{}]);
-        plugin._private.callback = done;
     });
     it("file has been written", function() {
         assert.equal(fs.readFileSync(xxx,'utf8'),'xxx');

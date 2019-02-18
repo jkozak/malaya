@@ -128,7 +128,6 @@ const Engine = exports.Engine = function(options) {
     eng.sources        = {};
     eng.sandbox        = null;
     eng.chrjs          = options.chrjs || eng.compile(options.businessLogic) || exports.makeInertChrjs();
-    eng.disablePlugins = !!options.disablePlugins;
     eng.hashes         = null;                   // hash store
     eng.wsOptions      = options.wsOptions;
     eng.options        = options;
@@ -818,7 +817,7 @@ Engine.prototype._become = function(mode,cb) {
                     eng.journaliseCodeSources('code',eng.options.businessLogic,false,err2=>{
                         if (err2)
                             cb(err2);
-                        else if (!eng.disablePlugins)
+                        else
                             plugin.start(cb);
                     });
             });
@@ -847,8 +846,7 @@ Engine.prototype._become = function(mode,cb) {
                     eng.http.close();
                 eng.closeAllConnections('replication',done);
                 eng.options.endpoints.forEach(ep=>eng.closeAllConnections(ep,done));
-                if (!eng.disablePlugins)
-                    plugin.stop(done);
+                plugin.stop(done);
                 break;
             }
             case 'slave':

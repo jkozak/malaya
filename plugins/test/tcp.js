@@ -27,10 +27,10 @@ module.exports = store {
      rule (-['ping',{...data},{src}],
            +['pong',{...data},{dst:src}] );
      rule (-[x,a,{src}],
-           +['rcve',{data:[x,a,src]},{dst:'callback'}] );
+           +['rcve',{data:[x,a,src]},{dst:'dummy'}] );
 }
     .plugin('tcp',{port:0})
-    .plugin('callback');
+    .plugin('dummy');
 `);
         eng = new engine.Engine({
             dir,
@@ -51,12 +51,11 @@ module.exports = store {
         assert.equal(typeof pl.port,'number');
     });
     it("makes a connection",function(done) {
-        plugin._private.callback = (a,[x,name,addr])=>{
-            plugin._private.callback = ()=>{};
-            assert.equal(x[0],'rcve');
-            if (x[1].data[0]==='connect')
+        plugin.get('dummy').reader.once('data',js=>{
+            assert.equal(js[0],'rcve');
+            if (js[1].data[0]==='connect')
                 done();
-        };
+        });
         client = net.createConnection({port:pl.port});
     });
     it("receives and replies to a message",function(done) {
@@ -66,12 +65,11 @@ module.exports = store {
         client.write(JSON.stringify(['ping',{test:555}])+'\n');
     });
     it("closes a connection",function(done) {
-        plugin._private.callback = (a,[x,name,addr])=>{
-            plugin._private.callback = ()=>{};
-            assert.equal(x[0],'rcve');
-            if (x[1].data[0]==='disconnect')
+        plugin.get('dummy').reader.once('data',js=>{
+            assert.equal(js[0],'rcve');
+            if (js[1].data[0]==='disconnect')
                 done();
-        };
+        });
         client.end();
     });
 });

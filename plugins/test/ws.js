@@ -28,17 +28,15 @@ module.exports = store {
      rule (-['ping',{...data},{src}],
            +['pong',{...data},{dst:src}] );
      rule (-[x,a,{src}],
-           +['rcve',{data:[x,a,src]},{dst:'callback'}] );
+           +['rcve',{data:[x,a,src]},{dst:'dummy'}] );
 }
     .plugin('http',{port:0})
     .plugin('ws',{server:'http'})
-    .plugin('callback');
+    .plugin('dummy');
 `);
         eng = new engine.Engine({
             dir,
-            magic:         [],
             ports:         {},
-            debug:         true,
             businessLogic: src
         });
         eng.init();
@@ -58,12 +56,11 @@ module.exports = store {
         assert.equal(typeof pl.server.port,'number'); // we know its port
     });
     it("makes a connection",function(done) {
-        plugin._private.callback = (a,[x,name,addr])=>{
-            plugin._private.callback = ()=>{};
-            assert.equal(x[0],'rcve');
-            if (x[1].data[0]==='connect')
+        plugin.get('dummy').reader.once('data',js=>{
+            assert.equal(js[0],'rcve');
+            if (js[1].data[0]==='connect')
                 done();
-        };
+        });
         client = new WebSocket(`http://localhost:${pl.server.port}/`);
     });
     it("receives and replies to a message",function(done) {
@@ -73,12 +70,11 @@ module.exports = store {
         client.send(JSON.stringify(['ping',{test:555}]));
     });
     it("closes a connection",function(done) {
-        plugin._private.callback = (a,[x,name,addr])=>{
-            plugin._private.callback = ()=>{};
-            assert.equal(x[0],'rcve');
-            if (x[1].data[0]==='disconnect')
+        plugin.get('dummy').reader.once('data',js=>{
+            assert.equal(js[0],'rcve');
+            if (js[1].data[0]==='disconnect')
                 done();
-        };
+        });
         client.close();
     });
 });

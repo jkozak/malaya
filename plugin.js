@@ -268,6 +268,8 @@ exports.stop = (cb=()=>{})=>{
 };
 
 function setStandardClasses() {
+    classes.dummy = class extends StreamPlugin {};
+
     classes.timer = class extends Plugin {
         constructor(opts) {
             super(opts);
@@ -380,29 +382,23 @@ function setStandardClasses() {
         }
     };
 
-    if (util.env==='test')
-        classes.callback = class extends Plugin {
-            out(js,name,addr) {
-                exports._private.callback(null,[js,name,addr]);
-            }
-        };
-
     // +++ more small plugins +++
 }
 setStandardClasses();
 
-exports._private = {
-    callback: ()=>{throw new Error("test callback not set");},
-    forgetAll: ()=>{
-        Object.values(classes).forEach(cl=>{delete classes[cl];});
-        classes.length = 0;
-        plugins.length = 0;
-    },
-    reset: ()=>{
-        Object.values(classes).forEach(cl=>{delete classes[cl];});
-        classes.length = 0;
-        plugins.length = 0;
-        setStandardClasses();
-    },
-    plugins: plugins
-};
+if (util.env==='test')
+    exports._private = {
+        forgetAll: ()=>{
+            Object.values(classes).forEach(cl=>{delete classes[cl];});
+            classes.length   = 0;
+            plugins.length   = 0;
+            overrides.length = 0;
+        },
+        reset: ()=>{
+            Object.values(classes).forEach(cl=>{delete classes[cl];});
+            classes.length   = 0;
+            plugins.length   = 0;
+            setStandardClasses();
+        },
+        plugins: plugins
+    };
