@@ -11,7 +11,7 @@ const whiskey = require('./whiskey.js');
 
 const classes = {};
 const plugins = [];
-let overrides = [];
+let overrides = {parameters:[],plugins:[]};
 
 class Plugin {
     static init(opts) {}
@@ -179,15 +179,20 @@ exports.setOverrides = os=>{
     overrides = os;
 };
 
-exports.instantiate = (plugin,name,opts)=>{
+exports.instantiate = (plugin0,name,opts)=>{
     const upds = {};
+    let plugin = plugin0;
     if (opts===undefined && (name===undefined || typeof name==='object')) {
         opts = name || {};
         name = plugin;
     }
-    overrides.forEach(([inst,k,v])=>{
+    overrides.parameters.forEach(([inst,k,v])=>{
         if (inst===name)
             upds[k] = v;
+    });
+    overrides.plugins.forEach(([inst,plugin1])=>{
+        if (inst===name)
+            plugin = plugin1;
     });
     opts = Object.assign({},opts,upds);
     const pl = new classes[plugin](opts);
@@ -274,14 +279,14 @@ function setStandardClasses() {
         constructor(opts) {
             super(opts);
             const pl = this;
-            pl.timer         = null;
-            pl.opts.interval = opts.interval || 1000;
+            pl.timer    = null;
+            pl.interval = opts.interval || 1000;
         }
         ready() {
             const pl = this;
             pl.timer = setInterval(()=>{
                 pl.update(['tick',{t:Date.now()}]);
-            },pl.opts.interval);
+            },pl.interval);
         }
         stop(cb) {
             const pl = this;
@@ -390,15 +395,16 @@ if (util.env==='test')
     exports._private = {
         forgetAll: ()=>{
             Object.values(classes).forEach(cl=>{delete classes[cl];});
-            classes.length   = 0;
-            plugins.length   = 0;
-            overrides.length = 0;
+            classes.length = 0;
+            plugins.length = 0;
+            Object.keys(overrides).forEach(k=>{
+                overrides[k].length = 0;
+            });
         },
-        reset: ()=>{
-            Object.values(classes).forEach(cl=>{delete classes[cl];});
-            classes.length   = 0;
-            plugins.length   = 0;
+        reset: function() {     // `function` because using `this`
+            this.forgetAll();
             setStandardClasses();
         },
+        classes: classes,
         plugins: plugins
     };

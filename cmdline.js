@@ -55,10 +55,14 @@ argparse.addArgument(['-O','--override'],
                          action:       'append',
                          defaultValue: [],
                          type:          s=>{
-                             const m = s.match(/([^.]+).([^=]+)=(.*)/);
-                             if (!m)
+                             let m = s.match(/([^.]+).([^=]+)=(.*)/);
+                             if (m)
+                                 return ['parameters',m[1],m[2],JSON.parse(m[3])];
+                             m = s.match(/([^.]+)=(.*)/);
+                             if (m)
+                                 return ['plugins',m[1],m[2]];
+                             else
                                  throw new Error(`bad override spec: ${s}`);
-                             return [m[1],m[2],JSON.parse(m[3])];
                          },
                          help:         "plugin setting to override"
                      });
@@ -473,8 +477,13 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
     if (args.plugin && args.plugin.length>0)
         throw new util.Fail("plugins must be specified as the first arguments");
 
-    if (args.override.length>0)
-        require('./plugin.js').setOverrides(args.override);
+    if (args.override.length>0) {
+        const overrides = {parameters:[],plugins:[]};
+        args.override.forEach(o=>{
+            overrides[o[0]].push(o.slice(1));
+        });
+        require('./plugin.js').setOverrides(overrides);
+    }
 
     const findCallback = function() { // extract the callback for single-shot use.
         let cb;

@@ -379,6 +379,75 @@ module.exports = store {
 
 // +++ subcommands
 
+describe("overrides",function() {
+    this.bail(true);
+    const dir = temp.mkdirSync();
+    let   eng;
+    let   pfs;                  // will hold the fs plugin
+    let   ptm;                  // will hold the timer plugin
+    before(()=>{
+        fs.writeFileSync(path.join(dir,'test.malaya'),`
+module.exports = store {
+    rule (-['go',{},{}],
+          +['readFile',{filename:'there-isnt-one.txt'},{dst:'fs'}] );
+
+    rule ( ['readFile',{...},{src:'fs'}],
+          +['done',{},{dst:'dummy'}] );
+}
+    .plugin('fs')
+    .plugin('dummy')
+    .plugin('timer',{interval:10000});
+`);
+    });
+    after(done=>(eng && eng.become('idle',done)));
+    after(()=>{plugin._private.reset();});
+    it("sets override of plugin to instantiate", function() {
+        plugin.setOverrides({
+            plugins:[['fs','dummy']],
+            parameters:[['timer','interval',1]]
+        });
+    });
+    it("starts engine",function(done){
+        eng = new engine.Engine({dir,
+                                 ports:         {},
+                                 businessLogic: path.join(dir,'test.malaya') });
+        eng.init();
+        eng.start();
+        eng.once('mode',mode=>{
+            if (mode==='master')
+                done();
+        });
+        eng.become('master');
+    });
+    it("finds the fs plugin", function() {
+        pfs = plugin.get('fs');
+        assert(pfs);
+    });
+    it("has not made fs an instance of fs", function() {
+        assert(!(pfs instanceof plugin._private.classes.fs));
+    });
+    it("has made fs an instance of dummy", function() {
+        assert(  pfs instanceof plugin._private.classes.dummy);
+    });
+    it("sends trigger, intercepts msg from fs", function(done) {
+        pfs.reader.once('data',js=>{
+            assert.deepEqual(js,['readFile',{filename:'there-isnt-one.txt'},{}]);
+            done();
+        });
+        eng.update(['go',{},{}]);
+    });
+    it("finds the timer plugin", function() {
+        ptm = plugin.get('timer');
+        assert(pfs);
+    });
+    it("has made timer an instance of timer", function() {
+        assert(ptm instanceof plugin._private.classes.timer);
+    });
+    it("has changed timer's interval paramter", function() {
+        assert.equal(ptm.interval,1);
+    });
+});
+
 describe("restart plugin added dynamically",function(){
     this.bail(true);
     let eng;
@@ -433,7 +502,7 @@ describe("timer with default interval",function(){
     let clock;
     before(()=>{clock=sinon.useFakeTimers();});
     after(()=>{plugin._private.reset();});
-    after(()=>(eng && eng.stop()));
+    after(done=>(eng && eng.become('idle',done)));
     after(()=>{clock.restore();});
     it("loads source file",function(done){
         eng = new engine.Engine({dir:           temp.mkdirSync(),
