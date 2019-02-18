@@ -33,6 +33,7 @@ plugin.add('tcp',class extends plugin.Plugin {
     }
     ready() {
         const pl = this;
+        pl.using('port',pl.port);
         pl.server.on('error',err=>{
             pl.update(['error',{err}]);
         });

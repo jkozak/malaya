@@ -51,6 +51,7 @@ plugin.add('udp',class extends plugin.Plugin {
     }
     ready() {
         const pl = this;
+        pl.using('port',pl.port);
         pl.socket.on('error',err=>{
             pl.update(['error',{err}]);
         });

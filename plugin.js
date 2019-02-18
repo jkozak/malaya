@@ -61,6 +61,18 @@ class Plugin {
     }
     stop(cb)          {cb(null);}
     out(js,name,addr) {}
+    using(type,id) {
+        const pl = this;
+        switch (type) {
+        case 'port': {
+            if (pl.engine)
+                pl.engine.emit('listen',pl.name,id);
+            break;
+        }
+        default:
+            throw new Error(`using: don't know about resource type: ${type}`);
+        }
+    }
 }
 exports.Plugin = Plugin;
 

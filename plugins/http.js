@@ -25,6 +25,7 @@ exports.http = plugin.add('http',class extends plugin.Plugin {
     }
     ready() {
         const pl = this;
+        pl.using('port',pl.port);
         pl.server.on('request',(req,res)=>{
             pl.reqs[++pl.index] = [req,res];
             pl.update(['request',{
