@@ -202,6 +202,16 @@ subcommands.exec.addArgument(
         help:         "mode in which to start"
     }
 );
+if (util.env!=='prod')
+    subcommands.exec.addArgument(
+        ['--private-test-urls'],
+        {
+            action:       'storeTrue',
+            defaultValue: false,
+            dest:         'privateTestUrls',
+            help:         "not for you"
+        }
+    );
 subcommands.exec.addArgument(
     ['-w','--web-port'],
     {

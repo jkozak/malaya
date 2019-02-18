@@ -213,13 +213,17 @@ if (util.env==='test')  {
         srv.noisy         = opts.noisy;
         srv.proc          = null;
         srv.port          = null;
+        srv.preargs       = opts.preargs || [];
+        srv.plugins       = {};
     };
     ExtServer.prototype._spawn = function(subcommand,args) {
         const srv = this;
         return cp.spawn("node",
                         [srv.serverJs,
                          '-p',srv.prevalenceDir
-                        ].concat(
+                        ]
+                        .concat(
+                            srv.preargs,
                             [subcommand],
                             args
                         ) );
@@ -235,10 +239,10 @@ if (util.env==='test')  {
             .once('error',done)
             .once('exit',done);
     };
-    ExtServer.prototype.run = function(args,cb) {
+    ExtServer.prototype._runOrExec = function(cmd,args,cb) {
         const srv = this;
         const run = ()=>{
-            srv.proc = srv._spawn('run',
+            srv.proc = srv._spawn(cmd,
                                   ['--private-test-urls',
                                    '-w','0'].concat(args) );
             srv.proc.once('error',(err)=>{
@@ -253,6 +257,11 @@ if (util.env==='test')  {
                 let m = /http listening on \*:([0-9]+)/.exec(line);
                 if (m)
                     srv.port = parseInt(m[1]);
+                else {
+                    m = /([a-zA-Z0-9$:_-]+) listening on \*:([0-9]+)/.exec(line);
+                    if (m)
+                        srv.plugins[m[1]] = {port:parseInt(m[2])};
+                }
                 m = /^mode now: ([a-z]+)$/.exec(line);
                 if (m && m[1]==='master')
                     cb();
@@ -274,6 +283,12 @@ if (util.env==='test')  {
             srv.proc.kill();
         } else
             run();
+    };
+    ExtServer.prototype.run = function(args,cb) {
+        return this._runOrExec('run',args,cb);
+    };
+    ExtServer.prototype.exec = function(args,cb) {
+        return this._runOrExec('exec',args,cb);
     };
     ExtServer.prototype.kill = function(sig) {
         const srv = this;
