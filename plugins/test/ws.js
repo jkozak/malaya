@@ -16,10 +16,7 @@ describe("ws plugin",function(){
     let      pl;
     let  client;
     this.bail(true);
-    after(done=>{
-        eng.become('idle');
-        eng.stop(true,done);
-    });
+    after(done=>eng.stop(true,done));
     after(()=>{plugin._private.reset();});
     it("creates and starts engine with plugin", function(done) {
         const src = path.join(dir,'test.malaya');

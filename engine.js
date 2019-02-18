@@ -278,11 +278,19 @@ Engine.prototype.stopPrevalence = function(quick,cb) {
 };
 
 Engine.prototype.stop = function(unlock,cb) {
-    unlock = unlock===undefined ? true : unlock;
     const eng = this;
-    if (unlock)
-        lock.unlockSync(path.join(eng.prevalenceDir,'lock'));
-    if (cb) cb();
+    if (eng.mode!=='idle')
+        eng.become('idle',err=>{
+            if (err)
+                throw err;
+            eng.stop(unlock,cb);
+        });
+    else {
+        unlock = unlock===undefined ? true : unlock;
+        if (unlock)
+            lock.unlockSync(path.join(eng.prevalenceDir,'lock'));
+        if (cb) cb();
+    }
 };
 
 Engine.prototype.loadData = function(data,cb) {

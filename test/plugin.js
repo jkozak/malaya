@@ -20,8 +20,8 @@ describe("old style (v0.7) plugins",function(){
     this.bail(true);
     let      n = 0;
     let    eng;
+    after(done=>(eng && eng.become('idle',done)));
     after(()=>{plugin._private.reset();});
-    after(()=>(eng && eng.stop()));
     it("provides special out destination",function(done) {
         const  eps = {};
         eps.out = (js)=>{
