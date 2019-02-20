@@ -132,7 +132,7 @@ function unpackDNSrrList(buf,n,off) {
 
 function packDNS(js) {
     let   off = 0;
-    const buf = Buffer.alloc(50);
+    const buf = Buffer.alloc(512);
     const ans = js.ans || [];
     const nss = js.nns || [];
     const ars = js.ars || [];
@@ -203,6 +203,14 @@ module.exports.main = store {
           +['data',{id,flags:{qr:1,opcode,rc:0},q,
                     ans:[{rd}] },                      {dst:['udp',...addr]}] );
 
+    rule ( ['data',{id,flags:{qr:0,opcode,...}, q,...},{src:['udp',...addr]}],
+           ['config',{dnsUpstream,...}],
+          +['data',{id,flags:{qr:0,opcode,ra:1},q},    {dst:['udp',...dnsUpstream]}] );
+
+    rule (-['data',{id,flags:{qr:1,opcode,...}, q,ans:[an,...],...},{src:['udp',...dnsUpstream]}],
+          +['rr',{name:an.name,type:an.type,cls:an.cls,rd:an.rd}]
+         );
+
     rule ( ['tick',{...},{src:'timer'}],
           +['testQuery',{}] );
 
@@ -223,7 +231,7 @@ module.exports.main = store {
           +['config',Object.assign({},config0,config1)] );
 }
     .plugin('restart',{dnsUpstream:['8.8.8.8',53]})
-    .plugin('timer',{interval:5000})
+    //.plugin('timer',{interval:5000})
     .plugin('udp',{
         port:    53,
         encoder: {
