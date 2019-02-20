@@ -319,12 +319,10 @@ function setStandardClasses() {
     classes.restart = class extends Plugin {
         constructor(opts={}) {
             super(opts);
-            const pl = this;
-            pl.getData = opts.getData || (()=>{return {};});
         }
         ready() {
             const pl = this;
-            pl.update(['restart',pl.getData()]);
+            pl.update(['restart',pl.opts]);
         }
     };
 

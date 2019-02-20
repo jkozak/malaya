@@ -65,6 +65,7 @@ function packDNSrr(buf,rr,q,off) {
         off = buf.writeUInt16BE(rr.rd.length,off);
         off = buf.write(        rr.rd,       off);
         break;
+    case 41:                    // OPT
     case 28:                    // AAAA
     case 15:                    // MX
     case 6:                     // SOA
@@ -100,6 +101,7 @@ function unpackDNSrr(buf,off) {
     case 16:                    // TXT
         rr.rd = buf.readUInt16BE(off);
         break;
+    case 41:                    // OPT
     case 28:                    // AAAA
     case 15:                    // MX
     case 6:                     // SOA
@@ -193,17 +195,34 @@ function unpackDNS(buf) {
 }
 
 module.exports.main = store {
+    ['config',{}];
+    ['counters',{dnsId:8888}];
+
     rule (-['data',{id,flags:{qr:0,opcode,...}, q,...},{src:['udp',...addr]}],
            ['rr',{name:q.name,type:q.type,cls:q.cls,rd,...}],
           +['data',{id,flags:{qr:1,opcode,rc:0},q,
                     ans:[{rd}] },                      {dst:['udp',...addr]}] );
 
     rule ( ['tick',{...},{src:'timer'}],
-          +['data',{flags:{qr:0},q:{name:['thameslighter','net'],type:1,cls:1}},{dst:['udp','10.1.1.2',53]}] );
+          +['testQuery',{}] );
 
-    rule (-['restart',{...},{src:'restart'}]);
+    rule (-['testQuery',{}],
+           ['config',{dnsUpstream,...}],
+          -['counters',{dnsId,...cfg}],
+          +['counters',{dnsId:dnsId++,...cfg}],
+          +['data',{id:dnsId,flags:{qr:0,ra:1},q:{name:['thameslighter','net'],type:1,cls:1}},{dst:['udp',...dnsUpstream]}])
+
+    rule (-['tick',{...},{src:'timer'}])
+
+    rule (-['restart',{dnsUpstream,...config},{src:'restart'}],
+           dnsU = (typeof dnsUpstream=='string') ? [dnsUpstream,53] : dnsUpstream,
+          +['configChange',{dnsUpstream:dnsU,...config}] );
+
+    rule (-['configChange',{...config1}],
+          -['config',{...config0}],
+          +['config',Object.assign({},config0,config1)] );
 }
-    .plugin('restart')
+    .plugin('restart',{dnsUpstream:['8.8.8.8',53]})
     .plugin('timer',{interval:5000})
     .plugin('udp',{
         port:    53,
