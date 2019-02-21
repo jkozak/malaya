@@ -23,7 +23,7 @@ plugin.add('udp',class extends plugin.Plugin {
                 super({objectMode:true});
             }
             _transform(msg,env,cb) {
-                this.push(['data',encoder.unpack(msg)]);
+                this.push(encoder.unpack(msg));
                 cb();
             }
         };
@@ -32,7 +32,7 @@ plugin.add('udp',class extends plugin.Plugin {
                 super({objectMode:true});
             }
             _transform(js,env,cb) {
-                this.push(encoder.pack(js[1]));
+                this.push(encoder.pack(js));
                 cb();
             }
         };

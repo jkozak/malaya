@@ -13,7 +13,7 @@ const   path = require('path');
 const   temp = require('temp').track();
 const assert = require('assert').strict;
 
-describe("dns example XXX",function() {
+describe("dns example",function() {
     let dns;
 
     afterEach(()=>plugin._private.reset());
@@ -28,33 +28,66 @@ describe("dns example XXX",function() {
         before(()=>{dns=malaya.load('examples/dns.malaya');});
 
         describe("DNS labels",function() {
+            this.bail(true);
+            let buf;
+            let off;
+            let  js;
             it("packs simplest label", function() {
-                const buf = Buffer.alloc(3);
-                const off = dns._private.packDNSname(buf,['a'],0);
+                buf = Buffer.alloc(3);
+                off = dns._private.packDNSname(buf,['a'],0);
                 assert.equal(off,3);
                 assert.equal(buf.readUInt8(0),1);            // one char in first segment
                 assert.equal(buf.slice(1,2).toString(),"a");
                 assert.equal(buf.readUInt8(2),0);
             });
             it("unpacks simplest label", function() {
-                const      buf = Buffer.from([1,'a'.charCodeAt(0),0]);
-                const [js,off] = dns._private.unpackDNSname(buf,0);
+                buf      = Buffer.from([1,'a'.charCodeAt(0),0]);
+                [js,off] = dns._private.unpackDNSname(buf,0);
                 assert.equal(off,3);
                 assert.deepEqual(js,['a']);
             });
             it("packs simplest label with offset", function() {
-                const buf = Buffer.alloc(4);
-                const off = dns._private.packDNSname(buf,['a'],1);
+                buf = Buffer.alloc(4);
+                off = dns._private.packDNSname(buf,['a'],1);
                 assert.equal(off,4);
                 assert.equal(buf.readUInt8(1),1);            // one char in first segment
                 assert.equal(buf.slice(2,3).toString(),"a");
                 assert.equal(buf.readUInt8(3),0);
             });
             it("unpacks simplest label with offset", function() {
-                const      buf = Buffer.from([0,1,'a'.charCodeAt(0),0]);
-                const [js,off] = dns._private.unpackDNSname(buf,1);
+                buf      = Buffer.from([0,1,'a'.charCodeAt(0),0]);
+                [js,off] = dns._private.unpackDNSname(buf,1);
                 assert.equal(off,4);
                 assert.deepEqual(js,['a']);
+            });
+            it("packs more complex label", function() {
+                buf = Buffer.alloc(13);
+                off = dns._private.packDNSname(buf,['bbc','co','uk'],1);
+                assert.equal(off,1+'bbc'.length+1+'co'.length+1+'uk'.length+1+1);
+                assert.equal(buf.readUInt8(1),3);            // one char in first segment
+                assert.deepEqual(buf.slice(2,5).toString(),'bbc');
+                assert.equal(buf.readUInt8(5),2);
+                assert.deepEqual(buf.slice(6,8).toString(),'co');
+                assert.equal(buf.readUInt8(8),2);
+                assert.deepEqual(buf.slice(9,11).toString(),'uk');
+                assert.equal(buf.readUInt8(11),0);
+            });
+            it("unpacks more complex label", function() {
+                [js,off] = dns._private.unpackDNSname(buf,1);
+                assert.equal(off,12);
+                assert.deepEqual(js,['bbc','co','uk']);
+            });
+            it("unpacks frame from `dig bbc.co.uk`", function() {
+                buf = Buffer.from([223,162,1,32,0,1,0,0,0,0,0,1,3,98,98,99,2,99,111,2,117,107,0,0,1,0,1,0,0,41,16,0,0,0,0,0,0,12,0,10,0,8,176,29,204,141,47,110,146,141]);
+                js = dns._private.unpackDNS(buf);
+                assert.equal(js[0],'query');
+                assert.deepEqual(js[1].q,{name:['bbc','co','uk'],cls:1,type:1});
+            });
+            it("unpacks frame from google DNS's response to `dig bbc.co.uk`", function() {
+                buf = Buffer.from([171,147,129,128,0,1,0,4,0,0,0,0,3,98,98,99,2,99,111,2,117,107,0,0,1,0,1,192,12,0,1,0,1,0,0,0,174,0,4,151,101,64,81,192,12,0,1,0,1,0,0,0,174,0,4,151,101,128,81,192,12,0,1,0,1,0,0,0,174,0,4,151,101,192,81,192,12,0,1,0,1,0,0,0,174,0,4,151,101,0,81]);
+                js = dns._private.unpackDNS(buf);
+                assert.equal(js[0],'response');
+                assert.deepEqual(js[1].q,{name:['bbc','co','uk'],cls:1,type:1});
             });
         });
 
@@ -88,7 +121,7 @@ describe("dns example XXX",function() {
                 srv.kill();
         });
         it("inits",function(done) {
-            fs.writeFileSync(iniFn,JSON.stringify([['rr',{name:['fred','co'],type:1,cls:1,rd:'6.6.7.7'}]]));
+            fs.writeFileSync(iniFn,JSON.stringify([['rr',{q:{name:['fred','co'],type:1,cls:1},rds:['6.6.7.7']}]]));
             srv = new testutil.ExtServer('malaya',
                                          {
                                              dir,
