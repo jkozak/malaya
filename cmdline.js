@@ -82,8 +82,6 @@ const addSubcommand = exports.addSubcommand = function(name,opts) {
     return subcommands[name];
 };
 
-const summariseJSON = tracing.summariseJSON;
-
 addSubcommand('browse',{addHelp:true});
 subcommands.browse.addArgument(
     ['what'],
@@ -828,6 +826,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
     subcommands.exec.exec = function() {
         args.source = args.source || findSource();
         const eng = createEngine({
+            debug:         args.debug,
             businessLogic: path.resolve(args.source) });
         eng.init();
         subcommands.run.exec();
@@ -1051,9 +1050,9 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
         if (args.debug) {
             sanityCheckChrjsAdds(eng.chrjs,source);
             traceChrjs(eng.chrjs,source);
-            eng.on('out',(dest,data)=>{ // we have clobbered the one in chrjs
-                console.log("%s %j",chalk.yellow('<'),summariseJSON(data.concat([{dst:dest}])));
-            });
+            //N.B. set up out tracking here if desired.  Currently we
+            // do this by pairing adds and dels in tracing.js.  This
+            // is quite a robust heuristic, but maybe Do It Properly?
         }
         installSignalHandlers(eng);
         eng.become(args.mode);

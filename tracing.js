@@ -2,6 +2,7 @@
 
 // execution tracing
 
+const        _ = require('underscore');
 const     path = require('path');
 const    chalk = require('chalk');
 const    JSON5 = require('json5');
@@ -38,7 +39,7 @@ const fmtFact = exports.fmtFact = (f,opts={})=>{
 };
 
 const isFactInteresting = f=>{              // what's worth tracing?
-    return ['_tick','_take-outputs','_output'].indexOf(f[0])===-1;
+    return !(f[0]==='tick' && f[2] && f[2].src==='timer');
 };
 const isAddInteresting = add=>{
     return isFactInteresting(add);
@@ -63,7 +64,7 @@ exports.trace = (chrjs,source_,opts={})=>{
     let   provoker = null;
     let    borings = 0;       // count of `add`s deemed not interesting
     chrjs.on('queue-rule',(id,bindings)=>{
-        const firing = {id:id,done:false,dels:[],adds:[],t:Date.now()};
+        const firing = {id:id,done:false,dels:[],adds:[],outs:[],t:Date.now()};
         stack.push(firing);
         outQ.push(firing);
     });
@@ -72,10 +73,10 @@ exports.trace = (chrjs,source_,opts={})=>{
             stack[stack.length-1].adds.push(f);
         else if (isAddInteresting(f)) {
             if (borings) {
-                print(chalk.yellow(`~~~ ${borings} boring adds ignored ~~~`));
+                print(chalk.yellow(`\n~~~ ${borings} boring adds ignored ~~~`));
                 borings = 0;
             }
-            print(`${chalk.yellow('>')} ${fmtFact(f,opts)}`);
+            print(`\n${chalk.yellow('>')} ${fmtFact(f,opts)}`);
             provoker = null;
         } else {
             borings++;
@@ -83,8 +84,17 @@ exports.trace = (chrjs,source_,opts={})=>{
         }
     });
     chrjs.on('del',(t,f)=>{
-        if (stack.length>0)
+        if (stack.length>0) {
+            const adds = stack[stack.length-1].adds;
+            for (let i=0;i<adds.length;i++)
+                if (_.isEqual(adds[i],f)) { // here today, gone today
+                    delete adds[i];
+                    if (f[2] && f[2].dst)   // output determination heuristic
+                        stack[stack.length-1].outs.push(f);
+                    return;
+                }
             stack[stack.length-1].dels.push(f);
+        }
     });
     chrjs.on('finish-rule',(id)=>{
         const firing = stack.pop();
@@ -93,8 +103,12 @@ exports.trace = (chrjs,source_,opts={})=>{
         while (outQ.length>0 && outQ[0].done) { /* eslint no-loop-func:0 */
             const firing1 = outQ.shift();
             if (isTraceInteresting(firing1)) {
+                if (borings) {
+                    print(chalk.yellow(`\n~~~ ${borings} boring adds ignored ~~~`));
+                    borings = 0;
+                }
                 if (provoker) {
-                    print(`${chalk.yellow('>')} ${fmtFact(provoker,opts)}`);
+                    print(`\n${chalk.yellow('>')} ${fmtFact(provoker,opts)}`);
                     provoker = null;
                 }
                 print(chalk.yellow(` rule ${mySource}:${ruleMap[firing1.id].start.line} took ${Date.now()-firing1.t}ms`));
@@ -104,11 +118,11 @@ exports.trace = (chrjs,source_,opts={})=>{
                 firing1.adds.forEach(a=>{
                     print(`  ${chalk.yellow('+')} ${fmtFact(a,opts)}`);
                 });
+                firing1.outs.forEach(a=>{
+                    print(`  ${chalk.yellow('<')} ${fmtFact(a,opts)}`);
+                });
             } else
                 borings++;
         }
-    });
-    chrjs.on('out',(dest,data)=>{
-        print("%s %j",chalk.yellow('<'),summariseJSON(data.concat([{dst:dest}])));
     });
 };
