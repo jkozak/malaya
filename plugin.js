@@ -50,16 +50,18 @@ class Plugin {
                 throw new Error(`dependent plugins must be attached to the same store`);
         });
     }
-    start(cb) {
+    _start(cb) {
         const pl = this;
         if (!pl.chrjs)
             cb(new Error(`plugin ${pl.name} started while not connected`));
         else
-            cb(null);
+            pl.start(cb);
     }
-    ready() {
-    }
-    stop(cb)          {cb(null);}
+    _ready() {return this.ready();}
+    _stop(cb) {this.stop(cb);}
+    start(cb) {cb(null);}
+    ready() {}
+    stop(cb) {cb(null);}
     out(js,name,addr) {}
     using(type,id) {
         const pl = this;
@@ -84,16 +86,24 @@ class StreamPlugin extends Plugin {
         pl.writer = opts.Writer ? new opts.Writer() : through2.obj();
         pl.writer.on('data',()=>{throw new Error("not ready to send data to engine");});
     }
-    ready() {
+    _ready() {
         const pl = this;
+        super._ready();
         pl.writer.removeAllListeners('data');
         pl.writer.on('data',js=>pl.update(js));
+        pl.ready();
     }
-    stop(cb) {
+    _stop(cb) {
         const pl = this;
-        pl.writer.removeAllListeners('data');
-        pl.writer.on('data',()=>{throw new Error("not ready to send data to engine");});
-        super.stop(cb);
+        pl.stop(err=>{
+            if (err)
+                cb(err);
+            else {
+                pl.writer.removeAllListeners('data');
+                pl.writer.on('data',()=>{throw new Error("not ready to send data to engine");});
+                super._stop(cb);
+            }
+        });
     }
     out(js,name,addr) {
         const   pl = this;
@@ -142,7 +152,7 @@ exports.registerEngine = eng=>{
                 };
                 if (pl.eps)             // back compat with 0.7.x
                     pl.eps.update = pl.update;
-                pl.ready();
+                pl._ready();
             });
         }
     });
@@ -276,7 +286,7 @@ exports.start = (cb=()=>{})=>{
         cb();
     else {
         const done = _.after(plugins.length,cb);
-        plugins.forEach(pl=>pl.start(done));
+        plugins.forEach(pl=>pl._start(done));
     }
 };
 exports.stop = (cb=()=>{})=>{
@@ -284,7 +294,7 @@ exports.stop = (cb=()=>{})=>{
         cb();
     else {                      // stop plugins in reverse order to starting them
         const done = _.after(plugins.length,cb);
-        plugins.slice().reverse().forEach(pl=>pl.stop(done));
+        plugins.slice().reverse().forEach(pl=>pl._stop(done));
     }
 };
 
