@@ -82,7 +82,7 @@ class StreamPlugin extends Plugin {
         const pl = this;
         pl.reader = opts.Reader ? new opts.Reader() : through2.obj();
         pl.writer = opts.Writer ? new opts.Writer() : through2.obj();
-        pl.writer.on('data',()=>{throw new Error("not ready to send data from engine");});
+        pl.writer.on('data',()=>{throw new Error("not ready to send data to engine");});
     }
     ready() {
         const pl = this;
@@ -92,7 +92,7 @@ class StreamPlugin extends Plugin {
     stop(cb) {
         const pl = this;
         pl.writer.removeAllListeners('data');
-        pl.writer.on('data',()=>{throw new Error("not ready to send data from engine");});
+        pl.writer.on('data',()=>{throw new Error("not ready to send data to engine");});
         super.stop(cb);
     }
     out(js,name,addr) {
