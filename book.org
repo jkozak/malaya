@@ -3,31 +3,146 @@
 
 * Introduction
 ** Basics
-** Prerequisites
-* Installation
-** General instructions
-Malaya requires nodejs, and should run on any platform nodejs supports.
 
-It can be installed from =npm=.
+There's a category of software that runs forever, responding to events
+in light of previous ones.  Malaya is designed to be useful here.
+
+It consists of a programming language and runtime environment.
+
+The programming language is a purely functional subset of javascript,
+augmented with an implementation of a [[https://en.wikipedia.org/wiki/Constraint_Handling_Rules][novel logic programming paradigm]]
+called [[CHR][Constraint Handling Rules]].  All data is in JSON and the
+language has [[JSON-pattern-matching][JSON pattern matching]] built in,
+
+The runtime environment organises the compilation of malaya code to
+javascript and running it, usually glued to the outside world via
+[[plugins][plugins]].  Data can be persistedd via a [[prevalence][prevalence]] layer (alias Event
+Sourcing).  A [[CLI][command line interface]] is provided to manage the runtime
+environment.
+
+The original motivation for this work was my experiences designing and
+implementing trading systems, for which it is well suited.  However,
+in the interests of reaching a larger audience, examples are given in
+
+** A foretaste - DNS resolver
+
+This is a [[https://en.wikipedia.org/wiki/Domain_Name_System#Recursive_and_caching_name_server][caching DNS server]]: it will answer dns queries from either
+its cache or by consulting an upstream server.
+
+#+begin_src malaya
+module.exports.main = store {
+    ['config',{}];
+    ['counters',{dnsId:8888}];
+
+    rule (-['query',   {id,flags:{opcode,...}, q,...},    {src:['udp',...addr]}],
+           ['rr',      {q,rds,...}],
+          +['response',{id,flags:{opcode,rc:0},q,
+                        ans:rds.map(rdObj) },             {dst:['udp',...addr]}] );
+
+    rule ( ['query',   {id,flags:{opcode,...}, q,...},    {src:['udp',...addr]}],
+           ['config',  {dnsUpstream,...}],
+          +['query',   {id,flags:{opcode,ra:1},q},        {dst:['udp',...dnsUpstream]}] );
+
+    rule (-['response',{id,flags:{opcode,...}, q,ans,...},{src:['udp',...dnsUpstream]}],
+           ttd = ans.length>0 ? ans[0].ttl*1000+Date.now() : 60000,
+          +['rr',      {q,rds:ans.map(function(an){return an.rd;}),ttd}] );
+
+    rule ( ['rr',{q,...}],      // only one RR record per name/class/type, poss with multiple rd
+          -['rr',{q,...}] );
+
+    rule ( ['tick',{t,...},{src:'timer'}],
+          -['rr',{ttd,...}],
+           t>=ttd );
+
+    rule (-['tick',{...},{src:'timer'}])
+
+    rule (-['restart',{dnsUpstream,...config},{src:'restart'}],
+           dnsU = (typeof dnsUpstream=='string') ? [dnsUpstream,53] : dnsUpstream,
+          +['configChange',{dnsUpstream:dnsU,...config}] );
+
+    rule (-['configChange',{...config1}],
+          -['config',{...config0}],
+          +['config',Object.assign({},config0,config1)] );
+}
+    .plugin('restart',{dnsUpstream:['8.8.8.8',53]})
+    .plugin('timer',{interval:10000})
+    .plugin('fifo',{path:'control'})
+    .plugin('udp',{
+        port:    53,
+        encoder: {
+            pack:   packDNS,
+            unpack: unpackDNS
+        }
+    });
+#+end_src
+
+Code for unpacking and packing JSON into binary format has been
+omitted for brevity.  Complete code can be found in the distribution
+as [[file:./examples/dns.malaya][examples/dns.malaya]].
+
+If you know DNS, this might make some sense, and you'll spot that
+there are some errors and omissions which we'll deal with when we
+revisit this at greater length [[DNS example][below]].
+
+It can be run like this (assuming [[install][source distribution]] at =~/malaya=):
+#+begin_example
+~/malaya$ ./malaya -O udp.port=10053 exec -D examples/dns.malaya
+#+end_example
+
+And will answer queries (might not work if not linux):
+#+begin_example
+~$ dig -p10053 @localhost example.com
+#+end_example
+
+** Prerequisites
+Malaya requires =nodejs=, and should run on any platform =nodejs= supports.
+
+It is developed on linux, and (will be) tested on current versions of =nodejs=
+on linux, windows and macOS.
+
+* Installation
+<<install>>
+** General instructions
+Install =nodejs= and =npm=; see [[https://nodejs.org/][the main =nodejs= site]] if in doubt
+about this.
+
+To install Malaya with a bundle of plugins, examples and
+documentation, clone the source code repository and run =npm install=:
+#+begin_example
+~$ git clone https://github.com/jkozak/malaya
+~$ cd malaya
+~/malaya$ npm install
+#+end_example
+
+A more minimal installation can be had via =npm=:
+#+begin_example
+~$ npm install -g malaya
+#+end_example
+Note that some plugins are distributed as separate npm modules.
 
 * JSON pattern matching
+<<JSON-pattern-matching>>
 * Constraint Handler Rules
+<<CHR>>
 * Malaya fact stores
 * Other language features
 * Example 1 - turing machine
 * Prevalence
-* The malaya command
-** =init=
-** =run=
-** =fsck=
-** =kill=
-** =save=
+<<prevalence>>
+* The =malaya= command
+<<CLI>>
 ** =cat=
+** =exec=
+** =fsck=
+** =init=
+** =kill=
+** =run=
+** =save=
 ** =status=
 ** =query=
 * Engines - running the system
 * Plugins - talking to the world
-
+<<plugins>>
 ** introduction
 
 A malaya system communicates with the outside world via plugins
@@ -65,7 +180,6 @@ matching its instance name.
 ** other plugins
 *** =bpf=
 *** =dbus=
-*** =DNS=
 *** =email=
 *** =inotify=
 *** =LDAP=
@@ -79,7 +193,8 @@ matching its instance name.
 *** Cloud provider APIs, e.g. AWS, GCloud, Azure
 *** eBPF
 
-* Example 2
+* Example 2 DNS
+<<DNS example>>
 * Example 3
 * Updating the schema
 * Example 4 - going international with multi-currency support
