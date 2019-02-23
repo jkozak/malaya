@@ -224,7 +224,7 @@ module.exports.main = store {
            ttd = ans.length>0 ? ans[0].ttl*1000+Date.now() : 60000,
           +['rr',      {q,rds:ans.map(function(an){return an.rd;}),ttd}] );
 
-    rule ( ['rr',{q,...}],      // only one RR record per name/class/type, poss with muoltiple rd
+    rule ( ['rr',{q,...}],      // only one RR record per name/class/type, poss with multiple rd
           -['rr',{q,...}] );
 
     rule ( ['tick',{t,...},{src:'timer'}],
@@ -243,6 +243,7 @@ module.exports.main = store {
 }
     .plugin('restart',{dnsUpstream:['8.8.8.8',53]})
     .plugin('timer',{interval:10000})
+    .plugin('fifo',{path:'control'})
     .plugin('udp',{
         port:    53,
         encoder: {
