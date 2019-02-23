@@ -18,8 +18,56 @@ Yes - joins and so on.  But see below.
 ** Is it SQL?
 
 No, not at all. There is a plan for a tool to translate the malaya
-notation to SQL plus the glue needed to run s a server, but that's not
-implemented yet.
+notation to SQL plus the glue needed to run as a server, but that's
+not implemented yet.
+
+** Is it a programming language?
+
+Yes.  It consists of a dynaically typed purely functional language
+combined with an implementation of a logic programming system and JSON
+pattern matching.
+
+** Is it javascript?
+
+It's related: it's basically a purely functional subset of javacript,
+minus ~undefined~ plus ~store~ (CHR) and ~rule~ (JSON pattern matching).
+
+This is of course because present versions of Malaya are built on
+nodejs and the Malaya language compiles to javascript.  Future
+versions may not work this way.
+
+** What JSON formats are used
+
+In principle, anything; but there are conventions imposed by the
+runtime system.  Inputs and outputs are marked, and indices are built
+assuming these formats, so it's sensible to stil with them.
+
+They are:
+- Fact stored in the fact store
+  - two-element array of string, object.
+    #+begin_example
+    ['fact',{truthy:true,contents:{size:97,weight:12,seq:[2,3,4]}}]
+    #+end_example
+- input or output
+ - three-element array of string, object, object.  The first two can
+   be used freely; the third is metadata field which denotes the
+   source or destination.
+   #+begin_example
+   ['connect',{port:1234},{src:'tcp'}]
+   #+end_example
+   #+begin_example
+   ['data',{msg:"well, hello"},{src:['tcp',1234]}]
+   #+end_example
+   #+begin_example
+   ['data',{msg:"nice weather"},{dst:['tcp',1234]}]
+   #+end_example
+   #+begin_example
+   ['disconnect',{port:1234},{dst:'tcp'}]
+   #+end_example
+
+Machine readable data is always stored as JSON, but a relaxed form is
+available in the programming language and as output from the runtime
+system; it is essentially [[https://json5.org/][JSON5]].
 
 ** Can it be used in connection with a standard database?
 
@@ -46,12 +94,15 @@ John Kozak <jk@thameslighter.net> is the principal author.
 
 See [[https://en.wikipedia.org/wiki/System_Prevalence][wikipedia]]
 
-** If prevalence is so great why doesn't everyone use it?
+** If prevalence is so great why doesn't everyone use it all the time?
 ** What's the performance like?
 
 Fine for the application types recommended here.
 
 ** Distributed?
+
+Support of a consensus protocol like ePaxos is planned.
+
 ** Sharded?
 ** Is it web-scale?
 
@@ -69,8 +120,10 @@ Extremely.
 ** The journal history doesn't contain /en clair/ passwords, does it?
 ** What about schema changes?
 ** Does it offer replication?
+
 A previous version offered this.  We'd like to get ot back in, perhaps
 as part of a more general distributed-sytem model
+
 ** Does it have debugging or visualisation tools?
 
 An OpenGL visualiser was available and will be revived at some point.
@@ -94,3 +147,9 @@ stream will maintain back-compatibility.
 Anywhere ~nodejs~ runs, in principle.  Most deployments are expected
 to be on linux, but we'll run CI tests on linux, macOS and windows
 against current and LTS versions of ~nodejs~.
+** What support arrangements are there?
+
+Support contracts are available, please email.
+
+Also considering a Patreon or similar page if only to gauge the
+sincere interest.

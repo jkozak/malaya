@@ -1,11 +1,11 @@
 * Introduction
 
-Malaya is a logic-based relational data manipulation and storage
-system.
+Malaya is a logic-based relational data storage and processing system.
 
 There's a class of applications which are about taking in data from a
 variety of sources, weaving them together with past data and sending
-appropriate data out.
+appropriate data out. They typically run forever and are often called
+daemons or services.
 
 Such applications include:
  - trading systems
@@ -16,7 +16,7 @@ Such applications include:
 Malaya is designed to make this easier.  It is a system for the
 concise and rapid expression, implementation and deployment of
 rule-based persistent reactive systems.  Data is everywhere JSON;
-Persistent storage is based around a hash-chained journal of updates
+persistent storage is based around a hash-chained journal of updates
 which is tamper-proof and maintains the system's entire history; it is
 thus eminently auditable.
 
@@ -30,7 +30,7 @@ It consists of:
   - websocket
   - REST
   - file I/O
-  - slack, matrix, SSb, IRC, &c
+  - slack, matrix, SSB, IRC, &c
   - stripe
   - email
 

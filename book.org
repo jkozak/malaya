@@ -4,27 +4,43 @@
 * Introduction
 ** Basics
 
-There's a category of software that runs forever, responding to events
-in light of previous ones.  Malaya is designed to be useful here.
+Malaya is a logic-based relational data storage and processing system.
 
-It consists of a programming language and runtime environment.
+There's a class of applications which are about taking in data from a
+variety of sources, weaving them together with past data and sending
+appropriate data out.  They typically run forever and are often called
+daemons or services.
 
-The programming language is a purely functional subset of javascript,
-augmented with an implementation of a [[https://en.wikipedia.org/wiki/Constraint_Handling_Rules][novel logic programming paradigm]]
-called [[CHR][Constraint Handling Rules]].  All data is in JSON and the
-language has [[JSON-pattern-matching][JSON pattern matching]] built in,
+Such applications include:
+ - trading systems
+ - messaging systems, client/server and distributed
+ - instrumentation and control, e.g. IoT
+ - CI systems, chat bots
 
-The runtime environment organises the compilation of malaya code to
-javascript and running it, usually glued to the outside world via
-[[plugins][plugins]].  Data can be persistedd via a [[prevalence][prevalence]] layer (alias Event
-Sourcing).  A [[CLI][command line interface]] is provided to manage the runtime
-environment.
+Malaya is designed to make this easier.  It is a language and runtime
+for the concise and rapid expression, implementation and deployment of
+rule-based persistent reactive systems.  Data is everywhere JSON;
+[[prevalence][persistent storage]] is based around a hash-chained journal of updates
+which is tamper-proof and maintains the system's entire history; it is
+thus eminently auditable.
 
-The original motivation for this work was my experiences designing and
-implementing trading systems, for which it is well suited.  However,
-in the interests of reaching a larger audience, examples are given in
+It consists of:
+ - [[JSON pattern matching]]
+ - a [[Constraint Handler Rules][logic programming system]] based on [[https://en.wikipedia.org/wiki/Constraint_Handling_Rules][CHR]]
+ - a persistence layer based on [[prevalence][prevalence]]
+ - a [[CLI][runtime system]]
+ - [[plugins][plugins]] to implement
+  - timers
+  - tcp and udp sockets
+  - http, https
+  - websockets
+  - file I/O
+  - slack, matrix, SSB, IRC, &c
+  - ssh
+  - stripe
+  - email
 
-** A foretaste - DNS resolver
+** A foretaste - tiny DNS server
 
 This is a [[https://en.wikipedia.org/wiki/Domain_Name_System#Recursive_and_caching_name_server][caching DNS server]]: it will answer dns queries from either
 its cache or by consulting an upstream server.
@@ -82,14 +98,14 @@ as [[file:./examples/dns.malaya][examples/dns.malaya]].
 
 If you know DNS, this might make some sense, and you'll spot that
 there are some errors and omissions which we'll deal with when we
-revisit this at greater length [[DNS example][below]].
+revisit this at greater length [[DNS example][below]].  It is usable as-is, though.
 
-It can be run like this (assuming [[install][source distribution]] at =~/malaya=):
+Run it like this (assuming [[Installation][source distribution]] at =~/malaya=):
 #+begin_example
 ~/malaya$ ./malaya -O udp.port=10053 exec -D examples/dns.malaya
 #+end_example
 
-And will answer queries (might not work if not linux):
+And will answer queries (you'll need [[https://en.wikipedia.org/wiki/Dig_(command)][=dig=]], obviously):
 #+begin_example
 ~$ dig -p10053 @localhost example.com
 #+end_example
@@ -101,7 +117,7 @@ It is developed on linux, and (will be) tested on current versions of =nodejs=
 on linux, windows and macOS.
 
 * Installation
-<<install>>
+
 ** General instructions
 Install =nodejs= and =npm=; see [[https://nodejs.org/][the main =nodejs= site]] if in doubt
 about this.
@@ -121,9 +137,7 @@ A more minimal installation can be had via =npm=:
 Note that some plugins are distributed as separate npm modules.
 
 * JSON pattern matching
-<<JSON-pattern-matching>>
 * Constraint Handler Rules
-<<CHR>>
 * Malaya fact stores
 * Other language features
 * Example 1 - turing machine
