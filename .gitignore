@@ -5,6 +5,8 @@
 
 .bash_history
 
+.ccache/
+
 *.chrjs.js
 *.chrjs.json
 
