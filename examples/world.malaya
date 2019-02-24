@@ -1,0 +1,6 @@
+module.exports.main = store {
+    rule (-['request', {id,method:'GET',url:'/',...},                {src:'http'}],
+          +['response',{id,statusCode:200,body:'"hello, world"',
+                        headers:{'Content-Type':'application/json'}},{dst:'http'}] );
+}
+    .plugin('http',{port:8280});
