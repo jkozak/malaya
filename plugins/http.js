@@ -16,12 +16,12 @@ exports.http = plugin.add('http',class extends plugin.Plugin {
     }
     start(cb) {
         const pl = this;
-        pl.server = http.createServer({port:pl.port0});
+        pl.server = http.createServer();
         pl.server.on('listening',()=>{
             pl.port = pl.server.address().port;
             super.start(cb);
         });
-        pl.server.listen();
+        pl.server.listen(pl.port0);
     }
     ready() {
         const pl = this;
