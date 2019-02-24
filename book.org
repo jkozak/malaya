@@ -1,31 +1,35 @@
 #+TITLE: Malaya
 #+AUTHOR: John Kozak
+#+OPTIONS: html-style:nil
+#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="org-style.css"/>
 
 * Introduction
 ** Basics
 
 Malaya is a logic-based relational data storage and processing system.
 
-There's a class of applications which are about taking in data from a
-variety of sources, weaving them together with past data and sending
-appropriate data out.  They typically run forever and are often called
-daemons or services.
+There's a class of applications which are about taking in data from
+one or more sources, weaving it together with past data and sending
+appropriate data out.  They typically without stopping and are usually
+called daemons or services.
 
 Such applications include:
  - trading systems
  - messaging systems, client/server and distributed
- - instrumentation and control, e.g. IoT
+ - instrumentation and control, e.g. [[https://en.wikipedia.org/wiki/Internet_of_Things][IoT]]
  - CI systems, chat bots
+ - system daemons: DNS, DHCP, LDAP &c
 
 Malaya is designed to make this easier.  It is a language and runtime
 for the concise and rapid expression, implementation and deployment of
 rule-based persistent reactive systems.  Data is everywhere JSON;
 [[prevalence][persistent storage]] is based around a hash-chained journal of updates
 which is tamper-proof and maintains the system's entire history; it is
-thus eminently auditable.
+thus eminently auditable.  It is also intended to be very amenable to
+formal methods.
 
 It consists of:
- - [[JSON pattern matching]]
+ - [[JSON pattern matching][JSON pattern matching]]
  - a [[Constraint Handler Rules][logic programming system]] based on [[https://en.wikipedia.org/wiki/Constraint_Handling_Rules][CHR]]
  - a persistence layer based on [[prevalence][prevalence]]
  - a [[CLI][runtime system]]
@@ -42,7 +46,7 @@ It consists of:
 
 ** A foretaste - tiny DNS server
 
-This is a [[https://en.wikipedia.org/wiki/Domain_Name_System#Recursive_and_caching_name_server][caching DNS server]]: it will answer dns queries from either
+This is a [[https://en.wikipedia.org/wiki/Domain_Name_System#Recursive_and_caching_name_server][caching DNS server]]: it will answer DNS queries from either
 its cache or by consulting an upstream server.
 
 #+begin_src malaya
@@ -63,7 +67,7 @@ module.exports.main = store {
            ttd = ans.length>0 ? ans[0].ttl*1000+Date.now() : 60000,
           +['rr',      {q,rds:ans.map(function(an){return an.rd;}),ttd}] );
 
-    rule ( ['rr',{q,...}],      // only one RR record per name/class/type, poss with multiple rd
+    rule ( ['rr',{q,...}],      // one RR per name/class/type, poss with multiple rd
           -['rr',{q,...}] );
 
     rule ( ['tick',{t,...},{src:'timer'}],
@@ -137,27 +141,93 @@ A more minimal installation can be had via =npm=:
 Note that some plugins are distributed as separate npm modules.
 
 * JSON pattern matching
-* Constraint Handler Rules
 * Malaya fact stores
-* Other language features
-* Example 1 - turing machine
+* Constraint Handler Rules
+* Other differences from javascript
+
+Malaya is embedded in a subset of javascript.  This section will
+summarise the features dropped from javascript to make Malaya.
+
+(At the time of writing, the Malaya language parser is based on =ES5=,
+a fairly old version of javascript; there are no arrow functions, for
+example.  This will change.)
+
+State may not be mutated globally.  Facts in the store are [[https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/freeze][frozen]] to
+ensure this.  This is needed for the prevalence mechanism , as
+untracked global state cannot, by definition, be persisted and
+restored..
+
+Global variables must be defined via ~const~.
+
+Variables wholly local to a function and not closed over may be
+defined via ~let~ and mutated. (The closure restriction is to stop the
+backdoor creation of global mutable state)
+
+~var~ is not supported at all.
+
+~require~ is fully supported and there should probably be a
+module white-listing mechanism.
+
+Async additions such as ~async~ ~await~ and so on are not supported at
+all.
+
+* Example 1 - hello world
+#+include: "examples/world.malaya" src malaya
+
+Run it like this:
+#+begin_example
+~/malaya$ ./malaya exec -D examples/world.malaya
+#+end_example
+
+If you have =curl= available you can now do:
+#+begin_example
+~/malaya$ curl http://localhost:8280/
+#+end_example
+
 * Prevalence
 <<prevalence>>
 * The =malaya= command
-<<CLI>>
-** =cat=
-** =exec=
-** =fsck=
-** =init=
-** =kill=
-** =run=
-** =save=
-** =status=
-** =query=
+<<CLI>> The Malaya CLI is a single command which has a number of
+subcommands which perform various tasks (like [[https://git-scm.com/][git]]).
+
+The command itself is (imaginatively) called =malaya= and will be put
+on the system path by =npm install -g malaya= or can be found in the
+top level directory of a [[Installation][source install]].
+
+** global arguments
+
+Global arguments deal with things that concern most or all
+subcommands, like the location of the prevalence directory, or the
+verbosity level.
+
+- =-l=, =--long-lines= :: don't shorten JSON output
+- =-p=, =--prevalence-directory= /dir/ :: specify  the prevalence directory
+     defaults to =./.prevalence=
+- =-q=, =--quiet= :: be more quiet
+- =-v=, =--verbose= :: be more verbose
+- =-P=, =--plugin= :: load a plugin and create an instance,
+     cannot be used to create multiple instances of a single plugin.
+- =-O=, =--override= /plugin.option=JSON/ ::
+     set /plugin/'s /option/ value to /JSON/, no unquoted spaces allowed.
+
+The =-P= and =-O= commands appear here (global arguments) because they
+can add extra sucommands to the =malaya= command.  Because of this,
+they must occur first in the argument list.
+
+** subcomands
+*** =cat=
+*** =exec=
+*** =fsck=
+*** =init=
+*** =kill=
+*** =run=
+*** =save=
+*** =status=
+*** =query=
 * Engines - running the system
 * Plugins - talking to the world
 <<plugins>>
-** introduction
+** Introduction
 
 A malaya system communicates with the outside world via plugins
 
@@ -166,17 +236,17 @@ A malaya system communicates with the outside world via plugins
 Plugins are attached to stores and can receive and send facts between
 them.  A fact sent by a plugin instance called =garden= might look like this:
 
-#BEGIN_SRC malaya
+#+begin_src malaya
 ['bloom',{plant:'crocus'},{src:'garden'}]
-#END_SRC
+#+end_src
 
 The =src= item identifies the plugin sending the fact.
 
 Malaya code can send to the plugin like this:
 
-#BEGIN_SRC malaya
+#+begin_src malaya
 ['re-pot',{plant:'crocus'},{dst:'garden'}]
-#END_SRC
+#+end_src
 
 Here the =dst= item identifies to which plugin instance the fact is to
 be sent.  Effectively, the plugin adds an extra rule at the end of the
@@ -209,12 +279,13 @@ matching its instance name.
 
 * Example 2 DNS
 <<DNS example>>
-* Example 3
+* Example 3 turing machine
 * Updating the schema
 * Example 4 - going international with multi-currency support
 * Working with the journal
 * Example 5 - GDPR
-* Example 6 - installing a malaya server under linux
+* Example 6 - installing a Malaya server under linux
+* Embedding Malaya
 * Future directions
 
 ** compile to SQL
@@ -242,3 +313,4 @@ Avoid cost of binary->JSON->binary translation by compiling the
 rules to work on binary data directly.
 
 * Language reference
+#+include: "./FAQ.org" :minlevel 1

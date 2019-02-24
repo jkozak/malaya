@@ -50,7 +50,7 @@ They are:
     #+end_example
 - input or output
  - three-element array of string, object, object.  The first two can
-   be used freely; the third is metadata field which denotes the
+   be used freely; the third is a metadata field which denotes the
    source or destination.
    #+begin_example
    ['connect',{port:1234},{src:'tcp'}]
@@ -151,5 +151,5 @@ against current and LTS versions of ~nodejs~.
 
 Support contracts are available, please email.
 
-Also considering a Patreon or similar page if only to gauge the
+Also considering a Patreon or similar page if only to gauge
 sincere interest.
