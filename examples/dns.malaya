@@ -19,7 +19,7 @@ function unpackDNSname(buf,off) {
 function packDNSname(buf,v,off) {
     v.forEach(function(n){
         buf.writeUInt8(n.length,off++);
-        for (var i=0;i<n.length;i++)
+        for (let i=0;i<n.length;i++)
             buf.writeUInt8(n.charCodeAt(i),off++);
     });
     buf.writeUInt8(0,off++);
