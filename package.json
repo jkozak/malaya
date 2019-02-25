@@ -25,6 +25,7 @@
     "morgan": "^1.9.1",
     "multistream": "^2.1.1",
     "node-sockjs-client": "^1.0.7",
+    "pegjs": "^0.10.0",
     "random-js": "^1.0.8",
     "reactify": "^1.1.1",
     "recast": "=0.9.5",
