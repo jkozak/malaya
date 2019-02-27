@@ -20,70 +20,126 @@ describe("PEG parser for malaya language XXX", function() {
     describe("arrow functions", function() {
         it("parses an arrow function with no parms", function() {
             const js = parser.parse("()=>1");
-            console.log("*** %j",js.body[0].expression);
+            assert.deepEqual(js.body[0].expression,
+                             {type:  "FunctionExpression",
+                              id:    null,
+                              params:[],
+                              body:  {type:"BlockStatement",body:[
+                                  {type:"ReturnStatement",argument:{type:"Literal",value:1}} ]} });
         });
         it("parses an arrow function with one parm", function() {
             const js = parser.parse("err=>1");
-            console.log("*** %j",js.body[0].expression);
+            assert.deepEqual(js.body[0].expression,
+                             {type:  "FunctionExpression",
+                              id:    null,
+                              params:[{type:'Identifier',name:'err'}],
+                              body:  {type:"BlockStatement",body:[
+                                  {type:"ReturnStatement",argument:{type:"Literal",value:1}} ]} });
         });
         it("parses an arrow function with (one) parm", function() {
             const js = parser.parse("(err)=>1");
-            console.log("*** %j",js.body[0].expression);
+            assert.deepEqual(js.body[0].expression,
+                             {type:  "FunctionExpression",
+                              id:    null,
+                              params:[{type:'Identifier',name:'err'}],
+                              body:  {type:"BlockStatement",body:[
+                                  {type:"ReturnStatement",argument:{type:"Literal",value:1}} ]} });
         });
         it("parses an arrow function with no parms and clunky body", function() {
             const js = parser.parse("()=>{}");
-            console.log("*** %j",js.body[0].expression);
+            assert.deepEqual(js.body[0].expression,
+                             {type:  "FunctionExpression",
+                              id:    null,
+                              params:[],
+                              body:  {type:"BlockStatement",body:[]} });
         });
         it("parses lovely curry", function() {
             const js = parser.parse("a=>b=>a+b");
-            console.log("*** %j",js.body[0].expression);
+            assert.deepEqual(js.body[0].expression,
+                             {type:"FunctionExpression",
+                              id:null,
+                              params:[{"type":"Identifier","name":"a"}],
+                              body:{type:"BlockStatement",body:[
+                                  {type:"ReturnStatement",
+                                   argument:{type:"FunctionExpression",
+                                             id:  null,
+                                             params:[
+                                                 {type:"Identifier",
+                                                  name:"b"}],
+                                             body:{type:"BlockStatement",
+                                                   body:[{type:"ReturnStatement",
+                                                          argument:{type:"BinaryExpression",
+                                                                    operator:"+",
+                                                                    left:{type:"Identifier",
+                                                                          name:"a"},
+                                                                    right:{type:"Identifier",
+                                                                           name:"b"} } }] } } } ]} });
         });
     });
 
     describe("JsonMatch rule", function() {
         it("parses array matcher", function() {
             const js = parser.parse("['b']",{startRule:'JsonMatch'});
-            assert.deepEqual(js,{type:"JsonArray",elements:[{type:"Literal",value:"b"}]});
+            assert.deepEqual(js,{type:"ArrayExpression",elements:[{type:"Literal",value:"b"}]});
         });
         it("parses more complex array matcher", function() {
             const js = parser.parse("['b',['a']]",{startRule:'JsonMatch'});
-            assert.deepEqual(js,{type:"JsonArray",elements:[
+            assert.deepEqual(js,{type:"ArrayExpression",elements:[
                 {type:"Literal",value:"b"},
-                {type:"JsonArray",elements:[{type:"Literal",value:"a"}]} ]});
+                {type:"ArrayExpression",elements:[{type:"Literal",value:"a"}]} ]});
         });
         it("parses canonical fact format", function() {
             const js = parser.parse("['b',{x:88}]",{startRule:'JsonMatch'});
-            assert.deepEqual(js,{type:"JsonArray",elements:[
+            assert.deepEqual(js,{type:"ArrayExpression",elements:[
                 {type:"Literal",value:"b"},
-                {type:"JsonObject",members:[
-                    {type:"KeyValue",
-                     key:  {type:'Identifier',name:'x'},
+                {type:"ObjectExpression",properties:[
+                    {key:  {type:'Identifier',name:'x'},
                      value:{type:'Literal',value:88} } ]} ]});
         });
         it("parses array with named ellipsis", function() {
-            const js = parser.parse("['b',['a',...rs]]",{startRule:'JsonMatch'});
+            assert.deepEqual(parser.parse("['b',['a',...rs]]",{startRule:'JsonMatch'}),
+                             {type:"ArrayExpression",elements:[
+                                 {type:"Literal",value:"b"},
+                                 {type:"ArrayExpression",elements:[
+                                     {type:"Literal",value:"a"},
+                                     {type:"Ellipsis",id:{type:"Identifier",name:"rs"}} ]} ]} );
         });
         it("parses object with named ellipsis", function() {
-            const js = parser.parse("['b',{id,...rs}]",{startRule:'JsonMatch'});
+            assert.deepEqual(parser.parse("['b',{id,...rs}]",{startRule:'JsonMatch'}),
+                             {type:"ArrayExpression",elements:[
+                                 {type:"Literal",value:"b"},
+                                 {type:"ObjectExpression",properties:[
+                                     {key:{type:"Identifier",name:"id"},value:{type:"Identifier",name:"id"}},
+                                     {key:null,value:{type:"Ellipsis",name:{type:"Identifier",name:"rs"}}} ]} ]} );
         });
         it("parses array with anonymous ellipsis", function() {
-            const js = parser.parse("['b',['a',...]]",{startRule:'JsonMatch'});
+            assert.deepEqual(parser.parse("['b',['a',...]]",{startRule:'JsonMatch'}),
+                             {type:"ArrayExpression",elements:[
+                                 {type:"Literal",value:"b"},
+                                 {type:"ArrayExpression",elements:[
+                                     {type:"Literal",value:"a"},
+                                     {type:"Ellipsis",id:null} ]} ]} );
         });
         it("parses object with anonymous ellipsis", function() {
-            const js = parser.parse("['b',{id,...}]",{startRule:'JsonMatch'});
+            assert.deepEqual(parser.parse("['b',{id,...}]",{startRule:'JsonMatch'}),
+                             {type:"ArrayExpression",elements:[
+                                 {type:"Literal",value:"b"},
+                                 {type:"ObjectExpression",properties:[
+                                     {key:{type:"Identifier",name:"id"},value:{type:"Identifier",name:"id"}},
+                                     {key:null,value:{type:"Ellipsis",name:null}} ]} ]} );
         });
     });
 
     describe("RuleItem rule", function() {
         it("parses delete rule item", function() {
             const js = parser.parse("-['b']",{startRule:'RuleItem'});
-            assert.deepEqual(js,{type:"DelItem",expr:{type:"JsonArray",elements:[{type:"Literal",value:"b"}]}});
+            assert.deepEqual(js,{type:"DelItem",expr:{type:"ArrayExpression",elements:[{type:"Literal",value:"b"}]}});
         });
         it("parses another delete rule item", function() {
             const js = parser.parse("-['a',{}]",{startRule:'RuleItem'});
-            assert.deepEqual(js,{type:"DelItem",expr:{type:"JsonArray",elements:[
+            assert.deepEqual(js,{type:"DelItem",expr:{type:"ArrayExpression",elements:[
                 {type:"Literal",value:"a"},
-                {type:'JsonObject',members:[]} ]}});
+                {type:'ObjectExpression',properties:[]} ]}});
         });
         it("parses eccentric expression", function() {
             const js = parser.parse("['b','c'].includes(a)",{startRule:'RuleItem'});
@@ -100,91 +156,82 @@ describe("PEG parser for malaya language XXX", function() {
 
     describe("main entry point", function() {
         it("parses empty store statement", function() {
-            const js = parser.parse("store {}");
-            assert.deepEqual(js,{type:"Program",body:[
-                {type:'ExpressionStatement',
-                 expression:{type:"StoreExpression",body:[]} } ]});
+            assert.deepEqual(parser.parse("store {}"),
+                             {type:"Program",body:[
+                                 {type:'ExpressionStatement',
+                                  expression:{type:"StoreExpression",body:[]} } ]});
         });
         it("parses standard empty store statement module", function() {
-            const js = parser.parse("exports.main = store {}");
-            assert.deepEqual(js,{type:"Program",body:[
-                {type:'ExpressionStatement',
-                 expression:{type:    'AssignmentExpression',
-                             operator:'=',
-                             left:    {type:'MemberExpression',
-                                       object:{type:'Identifier',name:'exports'},
-                                       property:{type:'Identifier',name:'main'},
-                                       computed:false},
-                             right:    {type:"StoreExpression",body:[]} } } ]});
+            assert.deepEqual(parser.parse("exports.main = store {}"),
+                             {type:"Program",body:[
+                                 {type:'ExpressionStatement',
+                                  expression:{type:    'AssignmentExpression',
+                                              operator:'=',
+                                              left:    {type:'MemberExpression',
+                                                        object:{type:'Identifier',name:'exports'},
+                                                        property:{type:'Identifier',name:'main'},
+                                                        computed:false},
+                                              right:    {type:"StoreExpression",body:[]} } } ]});
         });
         it("parses store statement with datum", function() {
-            const js = parser.parse("store {['a',{}];}");
-            assert.deepEqual(js,{type:"Program",body:[
-                {type:'ExpressionStatement',
-                 expression:{type:"StoreExpression",body:[
-                     {type:  "InitialValue",
-                      value: {type:"ArrayExpression",elements:[
-                          {type:"Literal",value:"a"},
-                          {type:"ObjectExpression",properties:[]} ]} } ]} } ]});
+            assert.deepEqual(parser.parse("store {['a',{}];}"),
+                             {type:"Program",body:[
+                                 {type:'ExpressionStatement',
+                                  expression:{type:"StoreExpression",body:[
+                                      {type:  "InitialValue",
+                                       value: {type:"ArrayExpression",elements:[
+                                           {type:"Literal",value:"a"},
+                                           {type:"ObjectExpression",properties:[]} ]} } ]} } ]});
         });
         it("parses store statement with datum and rule", function() {
-            const js = parser.parse("store {['a',{}];\nrule (-['a',{}]);}");
-            assert.deepEqual(js,{type:"Program",body:[
-                {type:'ExpressionStatement',
-                 expression:{type:"StoreExpression",body:[
-                     {type:  "InitialValue",
-                      value: {type:"ArrayExpression",elements:[
-                          {type:"Literal",value:"a"},
-                          {type:"ObjectExpression",properties:[]} ]} },
-                     {type:'RuleStatement',body:[
-                         {type:"DelItem",
-                          expr:{type:'JsonArray',elements:[
-                              {type:"Literal",value:'a'},
-                              {type:'JsonObject',members:[]} ]} }
-                     ]} ]} } ]});
+            assert.deepEqual(parser.parse("store {['a',{}];\nrule (-['a',{}]);}").body[0].expression,
+                             {type:"StoreExpression",body:[
+                                 {type:  "InitialValue",
+                                  value: {type:"ArrayExpression",elements:[
+                                      {type:"Literal",value:"a"},
+                                      {type:"ObjectExpression",properties:[]} ]} },
+                                 {type:'RuleStatement',body:[
+                                     {type:"DelItem",
+                                      expr:{type:'ArrayExpression',elements:[
+                                          {type:"Literal",value:'a'},
+                                          {type:'ObjectExpression',properties:[]} ]} } ]} ]} );
         });
         it("parses simplest rule", function() {
-            const js = parser.parse("store {rule (a);}");
-            assert.deepEqual(js,{type:"Program",body:[
-                {type:'ExpressionStatement',
-                 expression:{type:"StoreExpression",body:[
-                     {type:"RuleStatement",body:[
-                         {type:"MatchItem",
-                          expr:{type:"Identifier",name:"a"} } ]} ]} } ]});
+            assert.deepEqual(parser.parse("store {rule (a);}").body[0].expression,
+                             {type:"StoreExpression",body:[
+                                 {type:"RuleStatement",body:[
+                                     {type:"MatchItem",
+                                      expr:{type:"Identifier",name:"a"} } ]} ]} );
         });
         it("parses simpler rule", function() {
-            const js = parser.parse("store {rule (a,[b]);}");
-            assert.deepEqual(js,{type:"Program",body:[
-                {type:'ExpressionStatement',
-                 expression:{type:"StoreExpression",body:[
-                     {type:"RuleStatement",body:[
-                         {type:"MatchItem",
-                          expr:{type:"Identifier",name:"a"} },
-                         {type:"MatchItem",
-                          expr:{type:'JsonArray',elements:[{type:"Identifier",name:"b"}]} }]} ]} } ]});
+            assert.deepEqual(parser.parse("store {rule (a,[b]);}").body[0].expression,
+                             {type:"StoreExpression",body:[
+                                 {type:"RuleStatement",body:[
+                                     {type:"MatchItem",
+                                      expr:{type:"Identifier",name:"a"} },
+                                     {type:"MatchItem",
+                                      expr:{type:'ArrayExpression',elements:[
+                                          {type:"Identifier",name:"b"}]} }]} ]} );
         });
         it("parses delete rule", function() {
-            const js = parser.parse("store {rule (a,-[b]);}");
-            assert.deepEqual(js,{type:"Program",body:[
-                {type:'ExpressionStatement',
-                 expression:{type:"StoreExpression",body:[
-                     {type:"RuleStatement",body:[
-                         {type:"MatchItem",
-                          expr:{type:"Identifier",name:"a"} },
-                         {type:"DelItem",
-                          expr:{type:'JsonArray',elements:[{type:"Identifier",name:"b"}]} }]} ]} } ]});
+            assert.deepEqual(parser.parse("store {rule (a,-[b]);}").body[0].expression,
+                             {type:"StoreExpression",body:[
+                                 {type:"RuleStatement",body:[
+                                     {type:"MatchItem",
+                                      expr:{type:"Identifier",name:"a"} },
+                                     {type:"DelItem",
+                                      expr:{type:'ArrayExpression',elements:[
+                                          {type:"Identifier",name:"b"} ]} } ]} ]} );
         });
         it("parses bind rule", function() {
-            const js = parser.parse("store {rule (x = 10);}");
-            assert.deepEqual(js,{type:"Program",body:[
-                {type:'ExpressionStatement',
-                 expression:{type:"StoreExpression",body:[
-                     {type:"RuleStatement",body:[
-                         {type:"BindItem",
-                          dest:{type:'Identifier',name:'x'},
-                          expr:{type:"Literal",value:10} } ]} ]} } ]});
+            assert.deepEqual(parser.parse("store {rule (x = 10);}").body[0].expression,
+                             {type:"StoreExpression",body:[
+                                 {type:"RuleStatement",body:[
+                                     {type:"BindItem",
+                                      dest:{type:'Identifier',name:'x'},
+                                      expr:{type:"Literal",value:10} } ]} ]} );
         });
-        // name capture not in nodejs as of version 8
+        // regexp name capture not in nodejs as of version 8
         // it("parses malaya code", function() {
         //     const js = parser.parse("store {rule (/(?<xxx>ABC)/);};");
         //     console.log("*** %j",js);

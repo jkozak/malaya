@@ -523,6 +523,7 @@ PrimaryExpression
   / ObjectLiteral
   / "(" __ expression:Expression __ ")" { return expression; }
   / StoreExpression
+  / Ellipsis
 
 ArrayLiteral
   = "[" __ elision:(Elision __)? "]" {
@@ -574,8 +575,14 @@ PropertyNameAndValueList
     }
 
 PropertyAssignment
-  = key:PropertyName __ ":" __ value:ConditionalExpression {
+  = id:Identifier &(__ ("," / "}")) {      // Malaya
+      return { key: id, value: id };
+    }
+  / key:PropertyName __ ":" __ value:ConditionalExpression {
       return { key: key, value: value };
+    }
+  / el:Ellipsis {
+      return { key: null, value: {type: 'Ellipsis', name:el.id}}  // Malaya
     }
 
 PropertyName
@@ -1422,69 +1429,16 @@ RuleItemTerminator
   = __ ","
   / __ ")"
 
-JsonMatch
-  = "[" __ head:JsonMatchInner __ tail:("," __ JsonMatchInner __ )* "]" {
-      return {
-        type: 'JsonArray',
-        elements: buildList(head,tail,2)
-      };
-    }
-  / "{" __ head:JsonObjectKV? tail:("," __ JsonObjectKV __ )* "}" {
-      return {
-        type: 'JsonObject',
-        members: head===null ? [] : buildList(head,tail,2)
-      };
-    }
-  / id:Identifier {
+JsonMatch 
+  = id:Identifier &RuleItemTerminator {
       return id;
     }
-
-JsonMatchInner
-  = s:StringLiteral {
-      return s;
+  / ar:ArrayLiteral  {
+      return ar;
     }
-  / n:NumericLiteral {
-      return n;
-  }
-  / re:RegularExpressionLiteral {
-      return re;
+  / ob:ObjectLiteral {
+      return ob;
     }
-  / el:Ellipsis {
-      return el;
-    }
-  / jm:JsonMatch {
-      return jm;
-    }      
-
-JsonObjectKV
-  = __ id:Identifier __ ":" __ jm:JsonMatchInner &JsonObjectKVTerminator {
-      return {
-        type:  "KeyValue",
-        key:   id,
-        value: jm
-      };
-    }
-  / __ id:Identifier __ ":" __ cond:ConditionalExpression {
-      return {
-        type:  "KeyValue",
-        key:   id,
-        value: cond
-      };
-    }
-  / id:Identifier {
-      return {
-        type:  "KeyValue",
-        key:   id,
-        value: id
-      };
-    }
-  / el:Ellipsis {
-      return el;
-    }
-    
-JsonObjectKVTerminator
- = _ ","
- / _ "}"
     
 Ellipsis
   = "..." id:MemberExpression? {
@@ -1502,5 +1456,3 @@ PluginIdentifier
  / Identifier    {}
 
 // +++ TemplatedString +++
-// +++ make Ellipsis and Empty more first-class +++
-// +++ put `new` back pro tem (for Error in bit-twiddling code) +++
