@@ -574,8 +574,8 @@ PropertyNameAndValueList
     }
 
 PropertyAssignment
-  = key:PropertyName __ ":" __ value:AssignmentExpression {
-      return { key: key, value: value, kind: "init" };
+  = key:PropertyName __ ":" __ value:ConditionalExpression {
+      return { key: key, value: value };
     }
 
 PropertyName
