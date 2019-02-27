@@ -152,8 +152,14 @@ summarise the features dropped from javascript to make Malaya.
 a fairly old version of javascript; there are no arrow functions, for
 example.  This will change.)
 
+~undefined~ and ~void~ are not in the language.
+
+No getters or setters.
+
+Semicolons may not be omitted.
+
 State may not be mutated globally.  Facts in the store are [[https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/freeze][frozen]] to
-ensure this.  This is needed for the prevalence mechanism , as
+ensure this.  This is needed for the prevalence mechanism, as
 untracked global state cannot, by definition, be persisted and
 restored..
 
@@ -163,13 +169,15 @@ Variables wholly local to a function and not closed over may be
 defined via ~let~ and mutated. (The closure restriction is to stop the
 backdoor creation of global mutable state)
 
+~class~ and ~new~ are not supported at all.  ~function~ is now
+equivalent to ~=>~ which is preferred.
+
 ~var~ is not supported at all.
 
 ~require~ is fully supported and there should probably be a
 module white-listing mechanism.
 
-Async additions such as ~async~ ~await~ and so on are not supported at
-all.
+Async additions such as ~async~ and ~await~ are not supported at all.
 
 * Example 1 - hello world
 #+include: "examples/world.malaya" src malaya
