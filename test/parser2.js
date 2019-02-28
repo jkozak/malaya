@@ -5,7 +5,7 @@ const parser = require("../parser2.js");
 const     fs = require('fs');
 const assert = require('assert').strict;
 
-describe("PEG parser for malaya language XXX", function() {
+describe("PEG parser for malaya language", function() {
 
     it("parses very simple javascript", function() {
         const js = parser.parse("const i=17;");
@@ -23,6 +23,7 @@ describe("PEG parser for malaya language XXX", function() {
             assert.deepEqual(js.body[0].expression,
                              {type:  "FunctionExpression",
                               id:    null,
+                              arrow: true,
                               params:[],
                               body:  {type:"BlockStatement",body:[
                                   {type:"ReturnStatement",argument:{type:"Literal",value:1}} ]} });
@@ -32,6 +33,7 @@ describe("PEG parser for malaya language XXX", function() {
             assert.deepEqual(js.body[0].expression,
                              {type:  "FunctionExpression",
                               id:    null,
+                              arrow: true,
                               params:[{type:'Identifier',name:'err'}],
                               body:  {type:"BlockStatement",body:[
                                   {type:"ReturnStatement",argument:{type:"Literal",value:1}} ]} });
@@ -41,6 +43,7 @@ describe("PEG parser for malaya language XXX", function() {
             assert.deepEqual(js.body[0].expression,
                              {type:  "FunctionExpression",
                               id:    null,
+                              arrow: true,
                               params:[{type:'Identifier',name:'err'}],
                               body:  {type:"BlockStatement",body:[
                                   {type:"ReturnStatement",argument:{type:"Literal",value:1}} ]} });
@@ -50,6 +53,7 @@ describe("PEG parser for malaya language XXX", function() {
             assert.deepEqual(js.body[0].expression,
                              {type:  "FunctionExpression",
                               id:    null,
+                              arrow: true,
                               params:[],
                               body:  {type:"BlockStatement",body:[]} });
         });
@@ -58,11 +62,13 @@ describe("PEG parser for malaya language XXX", function() {
             assert.deepEqual(js.body[0].expression,
                              {type:"FunctionExpression",
                               id:null,
+                              arrow: true,
                               params:[{"type":"Identifier","name":"a"}],
                               body:{type:"BlockStatement",body:[
                                   {type:"ReturnStatement",
                                    argument:{type:"FunctionExpression",
                                              id:  null,
+                                             arrow: true,
                                              params:[
                                                  {type:"Identifier",
                                                   name:"b"}],

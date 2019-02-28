@@ -11,7 +11,8 @@ Malaya is a logic-based relational data storage and processing system.
 There's a class of applications which are about taking in data from
 one or more sources, weaving it together with past data and sending
 appropriate data out.  They typically without stopping and are usually
-called daemons or services.
+called daemons or services.  Malaya is a micro-kernel for this class
+of software.
 
 Such applications include:
  - trading systems

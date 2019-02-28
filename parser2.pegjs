@@ -1212,7 +1212,7 @@ DefaultClause
 
 LabelledStatement
   = label:Identifier __ ":" __ body:Statement {
-      return { type: "LabeledStatement", label: label, body: body };
+      return { type: "LabelledStatement", label: label, body: body };
     }
 
 ThrowStatement
@@ -1268,6 +1268,7 @@ FunctionDeclaration
       return {
         type:   "FunctionDeclaration",
         id:     id,
+        arrow:  false,
         params: optionalList(extractOptional(params, 0)),
         body:   body
       };
@@ -1281,6 +1282,7 @@ FunctionExpression
       return {
         type:   "FunctionExpression",
         id:     extractOptional(id, 0),
+        arrow:  false,
         params: optionalList(extractOptional(params, 0)),
         body:   body
       };
@@ -1289,6 +1291,7 @@ FunctionExpression
       return {
         type:   "FunctionExpression",
         id:     null,
+        arrow:  true,
         params: optionalList(extractOptional(params, 0)),
         body:   body
       };
@@ -1297,6 +1300,7 @@ FunctionExpression
       return {
         type:   "FunctionExpression",
         id:     null,
+        arrow:  true,
         params: optionalList(extractOptional(params, 0)),
         body:   {
           type: 'BlockStatement',

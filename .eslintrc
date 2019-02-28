@@ -14,6 +14,7 @@
         "no-console": 0,        // !!! review this later !!!
         "no-unused-vars": [2, {"vars": "all", "args": "none"}],
         "security/detect-non-literal-fs-filename": 0,
-        "security/detect-object-injection": 0
+        "security/detect-object-injection": 0,
+        "node/no-unsupported-features/node-builtins": ["error",{ignores:['assert.strict']}]
     }
 }
