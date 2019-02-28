@@ -1389,39 +1389,39 @@ StoreItem
 RuleItem
   = "+" _ jm:JsonMatch {
     return {
-      type: "AddItem",
-      expr: jm
+      type:       "AddItem",
+      expression: jm
       };
     }
   / "-" _ jm:JsonMatch {
     return {
-      type: "DelItem",
-      expr: jm
+      type:       "DelItem",
+      expression: jm
       };
     }
   / jm:JsonMatch &RuleItemTerminator {
     return {
-      type: "MatchItem",
-      expr: jm
+      type:       "MatchItem",
+      expression: jm
       };
     }
   / id:Identifier _ "=" _ cond:ConditionalExpression {
     return {
-      type: "BindItem",
-      dest: id,
-      expr: cond
+      type:       "BindItem",
+      id:         id,
+      expression: cond
       };
     }
   / expr:ConditionalExpression {
     return {
-      type: "TestItem",
-      expr: expr
+      type:       "TestItem",
+      expression: expr
       };
     }
   / FailToken expr:ConditionalExpression {
     return {
-      type: "FailItem",
-      expr: expr
+      type:       "FailItem",
+      expression: expr
       };
     }
     

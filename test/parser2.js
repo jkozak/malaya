@@ -133,17 +133,17 @@ describe("PEG parser for malaya language XXX", function() {
     describe("RuleItem rule", function() {
         it("parses delete rule item", function() {
             const js = parser.parse("-['b']",{startRule:'RuleItem'});
-            assert.deepEqual(js,{type:"DelItem",expr:{type:"ArrayExpression",elements:[{type:"Literal",value:"b"}]}});
+            assert.deepEqual(js,{type:"DelItem",expression:{type:"ArrayExpression",elements:[{type:"Literal",value:"b"}]}});
         });
         it("parses another delete rule item", function() {
             const js = parser.parse("-['a',{}]",{startRule:'RuleItem'});
-            assert.deepEqual(js,{type:"DelItem",expr:{type:"ArrayExpression",elements:[
+            assert.deepEqual(js,{type:"DelItem",expression:{type:"ArrayExpression",elements:[
                 {type:"Literal",value:"a"},
                 {type:'ObjectExpression',properties:[]} ]}});
         });
         it("parses eccentric expression", function() {
             const js = parser.parse("['b','c'].includes(a)",{startRule:'RuleItem'});
-            assert.deepEqual(js,{type:"TestItem",expr:{
+            assert.deepEqual(js,{type:"TestItem",expression:{
                 type:"CallExpression",
                 callee:{type:    "MemberExpression",
                         object:  {type:"ArrayExpression",
@@ -192,7 +192,7 @@ describe("PEG parser for malaya language XXX", function() {
                                       {type:"ObjectExpression",properties:[]} ]} },
                                  {type:'RuleStatement',body:[
                                      {type:"DelItem",
-                                      expr:{type:'ArrayExpression',elements:[
+                                      expression:{type:'ArrayExpression',elements:[
                                           {type:"Literal",value:'a'},
                                           {type:'ObjectExpression',properties:[]} ]} } ]} ]} );
         });
@@ -201,16 +201,16 @@ describe("PEG parser for malaya language XXX", function() {
                              {type:"StoreExpression",body:[
                                  {type:"RuleStatement",body:[
                                      {type:"MatchItem",
-                                      expr:{type:"Identifier",name:"a"} } ]} ]} );
+                                      expression:{type:"Identifier",name:"a"} } ]} ]} );
         });
         it("parses simpler rule", function() {
             assert.deepEqual(parser.parse("store {rule (a,[b]);}").body[0].expression,
                              {type:"StoreExpression",body:[
                                  {type:"RuleStatement",body:[
                                      {type:"MatchItem",
-                                      expr:{type:"Identifier",name:"a"} },
+                                      expression:{type:"Identifier",name:"a"} },
                                      {type:"MatchItem",
-                                      expr:{type:'ArrayExpression',elements:[
+                                      expression:{type:'ArrayExpression',elements:[
                                           {type:"Identifier",name:"b"}]} }]} ]} );
         });
         it("parses delete rule", function() {
@@ -218,9 +218,9 @@ describe("PEG parser for malaya language XXX", function() {
                              {type:"StoreExpression",body:[
                                  {type:"RuleStatement",body:[
                                      {type:"MatchItem",
-                                      expr:{type:"Identifier",name:"a"} },
+                                      expression:{type:"Identifier",name:"a"} },
                                      {type:"DelItem",
-                                      expr:{type:'ArrayExpression',elements:[
+                                      expression:{type:'ArrayExpression',elements:[
                                           {type:"Identifier",name:"b"} ]} } ]} ]} );
         });
         it("parses bind rule", function() {
@@ -228,8 +228,8 @@ describe("PEG parser for malaya language XXX", function() {
                              {type:"StoreExpression",body:[
                                  {type:"RuleStatement",body:[
                                      {type:"BindItem",
-                                      dest:{type:'Identifier',name:'x'},
-                                      expr:{type:"Literal",value:10} } ]} ]} );
+                                      id:{type:'Identifier',name:'x'},
+                                      expression:{type:"Literal",value:10} } ]} ]} );
         });
         // regexp name capture not in nodejs as of version 8
         // it("parses malaya code", function() {
