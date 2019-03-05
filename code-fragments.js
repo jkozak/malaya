@@ -170,7 +170,6 @@
         INSERT_RULES:;
 
         // `queries` is an object {name:query,...}
-        // +++ queries should not be able to call `out` +++
         INSERT_QUERIES:;
 
         // initial store contents

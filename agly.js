@@ -8,6 +8,7 @@ const    recast = require('recast');
 
 
 const      util = require('./util.js');
+const     types = require('./types.js');
 const    assert = require('assert').strict;
 const    parser = require('./parser.js');
 
@@ -263,12 +264,27 @@ exports.makeTree = ()=>new Tree({
         get accessor() {
             return this.parent.accessor.concat([{type:'Array'}]);
         }
+        get type() {
+            // +++ either a List or a Tuple +++
+            throw new Error('NYI');
+        }
     },
-    AssignmentExpression:class extends MyNode {},
-    BinaryExpression:class extends MyNode {},
+    AssignmentExpression:class extends MyNode {
+        get type() {
+            return this.right.type;
+        }
+    },
+    BinaryExpression:class extends MyNode {
+        get type() {
+            throw new Error('NYI');
+        }
+    },
     BindItem:class extends MyNode {
         get boundHere() {
             return [this.est.id];
+        }
+        get type() {
+            throw new Error('NYI');
         }
     },
     BlockStatement:class extends MyNode {
@@ -281,11 +297,24 @@ exports.makeTree = ()=>new Tree({
                                        .concat([this.parent.bindings])
                                        .concat(bodyN.map(n=>n.boundHere).filter(x=>x) ) );
         }
+        get type() {
+            return types.unify(this.body
+                               .filter(n=>estFor(n).type==='ReturnStatement')
+                               .map(n=>n.type) );
+        }
     },
     BreakStatement:class extends MyNode {},
-    CallExpression:class extends MyNode {},
+    CallExpression:class extends MyNode {
+        get type() {
+            throw new Error('NYI');
+        }
+    },
     CatchClause:class extends MyNode {},
-    ConditionalExpression:class extends MyNode {},
+    ConditionalExpression:class extends MyNode {
+        get type() {
+            throw new Error('NYI');
+        }
+    },
     ContinueStatement:class extends MyNode {},
     DelItem:class extends MyNode {},
     DoWhileStatement:class extends MyNode {},
@@ -299,7 +328,11 @@ exports.makeTree = ()=>new Tree({
             return {[estFor(this).id.name]:{}};
         }
     },
-    FunctionExpression:class extends MyNode {},
+    FunctionExpression:class extends MyNode {
+        get type() {
+            throw new Error('NYI');
+        }
+    },
     Identifier:class extends MyNode {
         get mangling() {
             if (this.isInStore) {
@@ -320,8 +353,25 @@ exports.makeTree = ()=>new Tree({
     Literal:class extends MyNode {},
     LogicalExpression:class extends MyNode {},
     MatchItem:class extends MyNode {},
-    MemberExpression:class extends MyNode {},
-    NewExpression:class extends MyNode {},
+    MemberExpression:class extends MyNode {
+        get type() {
+            if (this.object.type instanceof types.List)
+                return this.object.type.type;
+            else if (this.object.type instanceof types.Tuple && this.computed && this.property.type==='Literal')
+                return this.object.type.types[this.property.value];
+            else if (this.object.type instanceof types.Record && !this.computed)
+                return this.object.type.fields[this.property.name];
+            else if (this.object.type instanceof types.Map)
+                return this.object.type.type;
+            else
+                throw new Error('NoType');
+        }
+    },
+    NewExpression:class extends MyNode {
+        get type() {
+            throw new Error('NYI');
+        }
+    },
     ObjectExpression:class extends MyNode {
         get accessor() {
             const  pa = this.parent.accessor;
@@ -330,6 +380,9 @@ exports.makeTree = ()=>new Tree({
             if (this.index && !('index' in pa0))
                 acc = acc.slice(0,pa.length-1).concat([{type:pa0.type,index:this.index}]);
             return acc.concat([{type:'Object'}]);
+        }
+        get type() {
+            throw new Error('NYI');
         }
     },
     ObjectProperty:class extends MyNode {
@@ -349,17 +402,23 @@ exports.makeTree = ()=>new Tree({
                                        .concat(bodyN.map(n=>n.boundHere).filter(x=>x)) );
         }
     },
-    ReturnStatement:class extends MyNode {},
+    ReturnStatement:class extends MyNode {
+        // +++ set containing type, negotiated across multiple ReturnStatements +++
+    },
     RuleStatement:class extends MyNode {
         get accessor() {
             return [{type:'Rule'}];
         }
     },
-    SequenceExpression:class extends MyNode {},
+    SequenceExpression:class extends MyNode {
+        get type() {
+            return types.Null;  // ??? is this right? ???
+        }
+    },
     StoreExpression:class extends MyNode {
+        get isInStore() {return true;}
         // get rewrite() {
         //     const cf = makeCodeFragment('store',{
-
         //     });
         //     // +++
         //     return cf;
@@ -367,20 +426,30 @@ exports.makeTree = ()=>new Tree({
         get storeOutsideBindings() {
             return this.parent ? this.parent.bindings : {};
         }
-        get isInStore() {return true;}
+        get type() {
+            throw new Error('NYI');
+        }
     },
     SwitchCase:class extends MyNode {},
     SwitchStatement:class extends MyNode {},
     TestItem:class extends MyNode {},
     ThrowStatement:class extends MyNode {},
     TryStatement:class extends MyNode {},
-    UpdateExpression:class extends MyNode {},
+    UpdateExpression:class extends MyNode {
+        get type() {
+            return this.argument.type;
+        }
+    },
     VariableDeclaration:class extends MyNode {
         get boundHere() {
             return _.object(estFor(this).declarations.map(vd=>[vd.id.name,{}]));
         }
     },
-    VariableDeclarator:class extends MyNode {},
+    VariableDeclarator:class extends MyNode {
+        get type() {
+            throw new Error('NYI');
+        }
+    },
     WhileStatement:class extends MyNode {},
 },MyNode);
 

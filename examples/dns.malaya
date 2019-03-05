@@ -1,4 +1,5 @@
 const assert = require('assert').strict;
+const  types = require('../types.js');
 const   util = require('../util.js');
 
 function unpackDNSname(buf,off) {
@@ -42,6 +43,22 @@ function unpackIPv4(buf,off) {
         quad.push(buf.readUInt8(off+i).toString());
     return [quad.join('.'),off+4];
 }
+
+const rr2n = {
+    a:       1,
+    ptr:    12,
+    cname:   5,
+    txt:    16,
+    opt:    41,
+    aaaa:   28,
+    soa:     6,
+    srv:    33,
+    sshfp:  44,
+    uri:   256
+};
+const n2rr = function(){const ans = {};
+                        Object.entries(rr2n).forEach(function(k,v){ans[v]=k;});
+                        return ans;}();
 
 function packDNSrr(buf,rr,q,off) {
     off = packDNSname(buf,  rr.name || q.name,off);
@@ -98,9 +115,11 @@ function unpackDNSrr(buf,off) {
     case 5:                     // CNAME
         rr.rd = unpackDNSname(buf,off)[0];
         break;
-    case 16:                    // TXT
-        rr.rd = buf.readUInt16BE(off);
+    case 16: {                  // TXT
+        const len = buf.readUInt16BE(off);
+        rr.rd = buf.read(off+2,len).toString('utf8');
         break;
+    }
     case 41:                    // OPT
     case 28:                    // AAAA
     case 15:                    // MX
@@ -202,6 +221,32 @@ function unpackDNS(buf) {
     }
     return [dnsqr.flags.qr ? 'response' : 'query',dnsqr];
 }
+
+// new type RR = types.Or([types.Bytes,types.String])
+// unpackDNS.types = packDNS.types = [
+//     new types.Tuple([
+//         new types.Or(new types.Const('query'),new types.Const('response')),
+//         new types.Record({
+//             flags: new types.Record({
+//                 qr:     new types.Int(false,1), // +++ check widths +++
+//                 opcode: new types.Int(false,4),
+//                 aa:     new types.Int(false,1),
+//                 tc:     new types.Int(false,1),
+//                 rd:     new types.Int(false,1),
+//                 ra:     new types.Int(false,1),
+//                 rc:     new types.Int(false,4)
+//             }),
+//             ans: new types.List(RR),
+//             nss: new types.List(RR),
+//             ars: new types.List(RR),
+//             q: new types.Record({
+//                 name: new types.String,
+//                 type: new types.Int(false,16),
+//                 cls:  new types.Int(false,16)
+//             }),
+//         }),
+//     ])
+// ];
 
 function rdObj(rd) {
     return {rd:rd};

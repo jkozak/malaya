@@ -21,7 +21,7 @@ function estStrip(est) {        // remove stuff that gets in the way when testin
     return est;
 }
 
-describe("agly XXX", function() {
+describe("agly", function() {
     describe("simple case", function() {
         it("defines an agly context", function() {
             new agly.Tree({

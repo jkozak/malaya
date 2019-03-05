@@ -1,13 +1,14 @@
-Visualisation
--------------
+* Visualisation
 
 CHR should visualise quite well:
 
+#+begin_example
  store         rule
-  ...       ... ... ... 
+  ...       ... ... ...
   ...       ... ...
   ...       ... ... ... ....
            (one ... per term)
+#+end_example
 
 Highlight active term in store and rule in red
 and matching terms in store in other colours.
@@ -42,8 +43,7 @@ Perhaps I should use `immutable-js` for the fact store:
  https://github.com/facebook/immutable-js
 
 
-Performance
------------
+* Performance
 
 Using an SSD (the one on `renn`) get just below 1k updates/sec
 journalised (as opposed to about 20 on a rotary drive!).  Using the
@@ -52,32 +52,57 @@ the technique in ticket b2594b10848c4aec, so expect 4k updates/sec on
 cheap stock hardware.
 
 
-Type Inference
---------------
+* Type Inference
 
-could have input definitions to supply type info:
+Plugins have (enforced) type signatures.
 
-store {
+Data objects have no user-defined methods in Malaya.  This allows us
+to define useful methods.
 
-   rule (['Permissions',
-}
+/tuple/s and /list/s are conflated because of JSON syntax limitations.
+They are quite distinct in the type system though.
 
+Objects similarly can be either a /map/:
+#+begin_example
+{<arbitrary-string>:T}
+#+end_example
+The type of this is =map<T>=
+or, a /record/ e.g.:
+#+begin_example
+{name1:T1,name2:T2,name3:T3}
+#+end_example
+The type of this is =<record<[[name1,T1],[name2,T2],[name3,T3]]>=
 
-Plugins
--------
+The type API used by plugins distinguishes these cases.
 
-systemd
-=======
+No mutation (d'oh!).
 
-random
-======
+This all applies to javascript-like code (e.g. the "procedural" stuff
+in ~dns.malaya~) too.
+
+Data operations:
+
+- {<string>:T,...}.concat(<string>,T)
+- [T,...].concat(T)
+- {...}.drop(<string>)
+- {...}.drop([])
+- [...].drop(<number>)
+- [...].drop([<number>])
+- {<string>:T,...}.<string> = T
+
+Types are only active at "boundaries" - a JSON structure can be
+assembled and won't be checked until it's passed on to the next stage.
+Its intermediate stages don't matter.
+
+* Plugins
+
+** systemd
+** random
 
 Source of cryptographically random numbers, deterministic enough (i.e.
 shipped in as updates).
 
-
-HTTP
-====
+** HTTP
 
 Small piece of express code to wrap a ~(req,res)~ tuple, attach an ID
 to it and punt into Malaya.
@@ -90,6 +115,4 @@ gives update:
  `['body',{id,key},{port:'http'}]`
 
 
-email
-=====
-
+** email
