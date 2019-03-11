@@ -4,7 +4,7 @@ const  types = require('../types.js');
 
 const assert = require('assert').strict;
 
-describe("types XXX", function() {
+describe("types", function() {
     const Js = JSON.stringify;
     describe("stringTo", function() {
         [[    types.Null,                          'Null'],

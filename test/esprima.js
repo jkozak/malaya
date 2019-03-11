@@ -29,7 +29,12 @@
   THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-var testFixture = {
+const parser = require('../esprima.js');
+
+const      _ = require('underscore');
+const assert = require('assert').strict;
+
+const testFixture = {
 
     'Primary Expression': {
 
@@ -7553,7 +7558,7 @@ var testFixture = {
                     },
                     init: {
                         type: 'Literal',
-                        value: null,
+                        value: '/[a-z]/y',
                         raw: '/[a-z]/y',
                         regex: {
                             pattern: '[a-z]',
@@ -7639,7 +7644,7 @@ var testFixture = {
                     },
                     init: {
                         type: 'Literal',
-                        value: null,
+                        value: '/[a-z]/u',
                         raw: '/[a-z]/u',
                         regex: {
                             pattern: '[a-z]',
@@ -7725,7 +7730,7 @@ var testFixture = {
                     },
                     init: {
                         type: 'Literal',
-                        value: null,
+                        value: '/[\\u{0000000000000061}-\\u{7A}]/u',
                         raw: '/[\\u{0000000000000061}-\\u{7A}]/u',
                         regex: {
                             pattern: '[\\u{0000000000000061}-\\u{7A}]',
@@ -29993,3 +29998,316 @@ var testFixture = {
 
     }
 };
+
+// this code adapted from esprima/test/runner.js
+
+// Special handling for regular expression literals: remove their `value`
+// property since it may be `null` if it represents a regular expression
+// that is not supported in the current environment. The `regex` property
+// will be compared instead.
+function adjustRegexLiteral(key, value) {
+    'use strict';
+    if (key === 'value' && value instanceof RegExp) {
+        value = value.toString();
+    }
+    return value;
+}
+
+function NotMatchingError(expected, actual) {
+    'use strict';
+    Error.call(this, 'Expected ');
+    this.expected = expected;
+    this.actual = actual;
+}
+NotMatchingError.prototype = new Error();
+
+function errorToObject(e) {
+    'use strict';
+    var msg = e.toString();
+
+    // Opera 9.64 produces an non-standard string in toString().
+    if (msg.substr(0, 6) !== 'Error:') {
+        if (typeof e.message === 'string') {
+            msg = 'Error: ' + e.message;
+        }
+    }
+
+    return {
+        index: e.index,
+        lineNumber: e.lineNumber,
+        column: e.column,
+        message: msg
+    };
+}
+
+function sortedObject(o) {
+    if (o === null) {
+        return o;
+    }
+    if (o instanceof Array) {
+        return o.map(sortedObject);
+    }
+    if (typeof o !== 'object') {
+        return o;
+    }
+    if (o instanceof RegExp) {
+        return o;
+    }
+    var keys = Object.keys(o);
+    var result = {
+        range: undefined,
+        loc: undefined
+    };
+    keys.forEach(function (key) {
+        if (o.hasOwnProperty(key)){
+            result[key] = sortedObject(o[key]);
+        }
+    });
+    return result;
+}
+
+function hasAttachedComment(syntax) {
+    var key;
+    for (key in syntax) {
+        if (key === 'leadingComments' || key === 'trailingComments') {
+            return true;
+        }
+       if (typeof syntax[key] === 'object' && syntax[key] !== null) {
+           if (hasAttachedComment(syntax[key])) {
+               return true;
+           }
+       }
+    }
+    return false;
+}
+
+function testParse(esprima, code, syntax) {
+    'use strict';
+    var expected, tree, actual, options, StringObject, i, len;
+
+    // alias, so that JSLint does not complain.
+    StringObject = String;
+
+    options = {
+        comment: (typeof syntax.comments !== 'undefined'),
+        range: true,
+        loc: true,
+        tokens: (typeof syntax.tokens !== 'undefined'),
+        raw: true,
+        tolerant: (typeof syntax.errors !== 'undefined'),
+        source: null
+    };
+
+    if (options.comment) {
+        options.attachComment = hasAttachedComment(syntax);
+    }
+
+    if (typeof syntax.tokens !== 'undefined') {
+        if (syntax.tokens.length > 0) {
+            options.range = (typeof syntax.tokens[0].range !== 'undefined');
+            options.loc = (typeof syntax.tokens[0].loc !== 'undefined');
+        }
+    }
+
+    if (typeof syntax.comments !== 'undefined') {
+        if (syntax.comments.length > 0) {
+            options.range = (typeof syntax.comments[0].range !== 'undefined');
+            options.loc = (typeof syntax.comments[0].loc !== 'undefined');
+        }
+    }
+
+    if (options.loc) {
+        options.source = syntax.loc.source;
+    }
+
+    syntax = sortedObject(syntax);
+    expected = JSON.stringify(syntax, adjustRegexLiteral, 4);
+    try {
+        // Some variations of the options.
+        tree = esprima.parse(code, { tolerant: options.tolerant });
+        tree = esprima.parse(code, { tolerant: options.tolerant, range: true });
+        tree = esprima.parse(code, { tolerant: options.tolerant, loc: true });
+
+        tree = esprima.parse(code, options);
+        tree = (options.comment || options.tokens || options.tolerant) ? tree : tree.body[0];
+
+        if (options.tolerant) {
+            for (i = 0, len = tree.errors.length; i < len; i += 1) {
+                tree.errors[i] = errorToObject(tree.errors[i]);
+            }
+        }
+        tree = sortedObject(tree);
+        actual = JSON.stringify(tree, adjustRegexLiteral, 4);
+
+        // Only to ensure that there is no error when using string object.
+        esprima.parse(new StringObject(code), options);
+
+    } catch (e) {
+        throw new NotMatchingError(expected, e.toString());
+    }
+    if (expected !== actual) {
+        throw new NotMatchingError(expected, actual);
+    }
+
+    function filter(key, value) {
+        if (key === 'value' && value instanceof RegExp) {
+            value = value.toString();
+        }
+        return (key === 'loc' || key === 'range') ? undefined : value;
+    }
+
+    if (options.tolerant) {
+        return;
+    }
+
+
+    // Check again without any location info.
+    options.range = false;
+    options.loc = false;
+    syntax = sortedObject(syntax);
+    expected = JSON.stringify(syntax, filter, 4);
+    try {
+        tree = esprima.parse(code, options);
+        tree = (options.comment || options.tokens) ? tree : tree.body[0];
+
+        if (options.tolerant) {
+            for (i = 0, len = tree.errors.length; i < len; i += 1) {
+                tree.errors[i] = errorToObject(tree.errors[i]);
+            }
+        }
+        tree = sortedObject(tree);
+        actual = JSON.stringify(tree, filter, 4);
+    } catch (e) {
+        throw new NotMatchingError(expected, e.toString());
+    }
+    if (expected !== actual) {
+        throw new NotMatchingError(expected, actual);
+    }
+}
+
+function testTokenize(esprima, code, tokens) {
+    'use strict';
+    var options, expected, actual, tree;
+
+    options = {
+        comment: true,
+        tolerant: true,
+        loc: true,
+        range: true
+    };
+
+    expected = JSON.stringify(tokens, null, 4);
+
+    try {
+        tree = esprima.tokenize(code, options);
+        actual = JSON.stringify(tree, null, 4);
+    } catch (e) {
+        throw new NotMatchingError(expected, e.toString());
+    }
+    if (expected !== actual) {
+        throw new NotMatchingError(expected, actual);
+    }
+}
+
+function testError(esprima, code, exception) {
+    'use strict';
+    var i, options, expected, actual, err, handleInvalidRegexFlag, tokenize;
+
+    // Different parsing options should give the same error.
+    options = [
+        {},
+        { comment: true },
+        { raw: true },
+        { raw: true, comment: true }
+    ];
+
+    // If handleInvalidRegexFlag is true, an invalid flag in a regular expression
+    // will throw an exception. In some old version of V8, this is not the case
+    // and hence handleInvalidRegexFlag is false.
+    handleInvalidRegexFlag = false;
+    try {
+        'test'.match(new RegExp('[a-z]', 'x'));
+    } catch (e) {
+        handleInvalidRegexFlag = true;
+    }
+
+    exception.description = exception.message.replace(/Error: Line [0-9]+: /, '');
+
+    if (exception.tokenize) {
+        tokenize = true;
+        exception.tokenize = undefined;
+    }
+    expected = JSON.stringify(exception);
+
+    for (i = 0; i < options.length; i += 1) {
+
+        try {
+            if (tokenize) {
+                esprima.tokenize(code, options[i]);
+            } else {
+                esprima.parse(code, options[i]);
+            }
+        } catch (e) {
+            err = errorToObject(e);
+            err.description = e.description;
+            actual = JSON.stringify(err);
+        }
+
+        if (expected !== actual) {
+
+            // Compensate for old V8 which does not handle invalid flag.
+            if (exception.message.indexOf('Invalid regular expression') > 0) {
+                if (typeof actual === 'undefined' && !handleInvalidRegexFlag) {
+                    return;
+                }
+            }
+
+            throw new NotMatchingError(expected, actual);
+        }
+
+    }
+}
+
+function testAPI(esprima, code, result) {
+    'use strict';
+    var expected, res, actual;
+
+    expected = JSON.stringify(result.result, null, 4);
+    try {
+        if (typeof result.property !== 'undefined') {
+            res = esprima[result.property];
+        } else {
+            res = esprima[result.call].apply(esprima, result.args);
+        }
+        actual = JSON.stringify(res, adjustRegexLiteral, 4);
+    } catch (e) {
+        throw new NotMatchingError(expected, e.toString());
+    }
+    if (expected !== actual) {
+        throw new NotMatchingError(expected, actual);
+    }
+}
+
+describe("esprima XXX", function() {
+    Object.keys(testFixture).forEach(group=>describe(`${group}`, function() {
+        Object.keys(testFixture[group]).forEach(code=>{
+            const result = testFixture[group][code];
+            if (result.hasOwnProperty('lineNumber'))
+                it(`error ${JSON.stringify(code)}`, function() {
+                    testError(parser, code, result);
+                });
+            else if (result.hasOwnProperty('result'))
+                it(`api ${JSON.stringify(code)}`, function() {
+                    testAPI(parser, code, result);
+                });
+            else if (result instanceof Array)
+                it(`tokens ${JSON.stringify(code)}`, function() {
+                    testTokenize(parser, code, result);
+                });
+            else
+                it(`parse ${JSON.stringify(code)}`, function() {
+                    testParse(parser, code, result);
+                });
+        });
+    }));
+});
