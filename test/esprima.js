@@ -31,8 +31,7 @@
 
 const parser = require('../esprima.js');
 
-const      _ = require('underscore');
-const assert = require('assert').strict;
+const JSON5 = require('json5');
 
 const testFixture = {
 
@@ -3402,8 +3401,6 @@ const testFixture = {
                 end: { line: 1, column: 77 }
             }
         }
-
-
     },
 
     'Comments': {
@@ -20107,7 +20104,7 @@ const testFixture = {
                             expression: {
                                 type: 'Literal',
                                 value: 'use strict',
-                                raw: '\"use strict\"',
+                                raw: '"use strict"',
                                 range: [37, 49],
                                 loc: {
                                     start: { line: 1, column: 37 },
@@ -25556,11 +25553,13 @@ const testFixture = {
         'Syntax': {
             property: 'Syntax',
             result: {
+                AddItem: 'AddItem',
                 AssignmentExpression: 'AssignmentExpression',
                 ArrayExpression: 'ArrayExpression',
                 ArrowFunctionExpression: 'ArrowFunctionExpression',
                 BlockStatement: 'BlockStatement',
                 BinaryExpression: 'BinaryExpression',
+                BindItem: 'BindItem',
                 BreakStatement: 'BreakStatement',
                 CallExpression: 'CallExpression',
                 CatchClause: 'CatchClause',
@@ -25568,8 +25567,11 @@ const testFixture = {
                 ContinueStatement: 'ContinueStatement',
                 DoWhileStatement: 'DoWhileStatement',
                 DebuggerStatement: 'DebuggerStatement',
+                DelItem: 'DelItem',
+                Ellipsis: 'Ellipsis',
                 EmptyStatement: 'EmptyStatement',
                 ExpressionStatement: 'ExpressionStatement',
+                FailItem: 'FailItem',
                 ForStatement: 'ForStatement',
                 ForInStatement: 'ForInStatement',
                 FunctionDeclaration: 'FunctionDeclaration',
@@ -25579,15 +25581,21 @@ const testFixture = {
                 Literal: 'Literal',
                 LabeledStatement: 'LabeledStatement',
                 LogicalExpression: 'LogicalExpression',
+                MatchItem: 'MatchItem',
                 MemberExpression: 'MemberExpression',
                 NewExpression: 'NewExpression',
                 ObjectExpression: 'ObjectExpression',
+                PluginStatement: 'PluginStatement',
                 Program: 'Program',
                 Property: 'Property',
+                QueryStatement: 'QueryStatement',
                 ReturnStatement: 'ReturnStatement',
+                RuleStatement: 'RuleStatement',
                 SequenceExpression: 'SequenceExpression',
+                StoreExpression: 'StoreExpression',
                 SwitchStatement: 'SwitchStatement',
                 SwitchCase: 'SwitchCase',
+                TestItem: 'TestItem',
                 ThisExpression: 'ThisExpression',
                 ThrowStatement: 'ThrowStatement',
                 TryStatement: 'TryStatement',
@@ -29995,7 +30003,273 @@ const testFixture = {
                 message: "Error: Line 1: Unexpected token ILLEGAL"
             }]
         }
-
+    },
+    'Malaya XXX': {
+        '({...})': [
+           {
+               type: 'Punctuator',
+               value: '(',
+               range: [ 0, 1],
+               loc: { start: { line: 1, column: 0 }, end: { line: 1, column: 1 } }
+           },
+           {
+               type: 'Punctuator',
+               value: '{',
+               range: [ 1, 2 ],
+               loc: { start: { line: 1, column: 1 }, end: { line: 1, column: 2 } }
+           },
+           {
+               type: 'Punctuator',
+               value: '...',
+               range: [ 2, 5 ],
+               loc: { start: { line: 1, column: 2 }, end: { line: 1, column: 5 } }
+           },
+           {
+               type: 'Punctuator',
+               value: '}',
+               range: [ 5, 6 ],
+               loc: { start: { line: 1, column: 5 }, end: { line: 1, column: 6 } }
+           },
+           {
+               type: 'Punctuator',
+               value: ')',
+               range: [ 6, 7 ],
+               loc: {start: { line: 1, column: 6 }, end: { line: 1, column: 7 } }
+           }
+        ],
+        '({a,...})': {
+            range: [ 0, 9 ],
+            loc: { start: { line: 1, column: 0 }, end: { line: 1, column: 9 } },
+            type: "ExpressionStatement",
+            expression: {
+                range: [ 1, 8 ],
+                loc: {start: { line: 1, column: 1 }, end: { line: 1, column: 8 } },
+                type: "ObjectExpression",
+                properties: [
+                    {
+                        range: [ 2, 3 ],
+                        loc: { start: { line: 1, column: 2 }, end: { line: 1, column: 3 } },
+                        type: "Property",
+                        key: {
+                            range: [ 2, 3 ],
+                            loc: { start: { line: 1, column: 2 }, end: { line: 1, column: 3 } },
+                            type: "Identifier",
+                            name: "a"
+                        },
+                        value: {
+                            range: [ 2, 3 ],
+                            loc: { start: { line: 1, column: 2 }, end: { line: 1, column: 3 } },
+                            type: "Identifier",
+                            name: "a"
+                        },
+                        kind: "init",
+                        method: false,
+                        shorthand: true
+                    },
+                    {
+                        range: [ 4, 7 ],
+                        loc: { start: { line: 1, column: 4 }, end: { line: 1, column: 7 } },
+                        type: "Property",
+                        key: {
+                            range:[4,7],
+                            loc:{start:{line:1,column:4},end:{line:1,column:7}},
+                            type:'Ellipsis',
+                            id:null
+                        },
+                        value: null,
+                        kind: "ellipsis",
+                        method: false,
+                        shorthand: false
+                    }
+                ]
+            }
+        },
+        '({a,...r})': {
+            range: [ 0, 10 ],
+            loc: { start: { line: 1, column: 0 }, end: { line: 1, column: 10 } },
+            type: "ExpressionStatement",
+            expression: {
+                range: [ 1, 9 ],
+                loc: {start: { line: 1, column: 1 }, end: { line: 1, column: 9 } },
+                type: "ObjectExpression",
+                properties: [
+                    {
+                        range: [ 2, 3 ],
+                        loc: { start: { line: 1, column: 2 }, end: { line: 1, column: 3 } },
+                        type: "Property",
+                        key: {
+                            range: [ 2, 3 ],
+                            loc: { start: { line: 1, column: 2 }, end: { line: 1, column: 3 } },
+                            type: "Identifier",
+                            name: "a"
+                        },
+                        value: {
+                            range: [ 2, 3 ],
+                            loc: { start: { line: 1, column: 2 }, end: { line: 1, column: 3 } },
+                            type: "Identifier",
+                            name: "a"
+                        },
+                        kind: "init",
+                        method: false,
+                        shorthand: true
+                    },
+                    {
+                        range: [ 4, 8],
+                        loc: { start: { line: 1, column: 4 }, end: { line: 1, column: 8 } },
+                        type: "Property",
+                        key: {
+                            range: [4, 8],
+                            loc: {start:{line:1,column:4},end:{line:1,column:8}},
+                            type:'Ellipsis',
+                            id:{
+                                range: [7, 8],
+                                loc: {start:{line:1,column:7},end:{line:1,column:8}},
+                                type: 'Identifier',
+                                name: 'r'
+                            }
+                        },
+                        value: null,
+                        kind: "ellipsis",
+                        method: false,
+                        shorthand: false
+                    }
+                ]
+            }
+        },
+        '([...])': {
+            range: [0,7],
+            loc: {start:{line:1,column:0},end:{line:1,column:7}},
+            type:'ExpressionStatement',
+            expression: {
+                range: [1,6],
+                loc:{start:{line:1,column:1},end:{line:1,column:6}},
+                type: 'ArrayExpression',
+                elements: [
+                    {
+                        range: [2,5],
+                        loc:{start:{line:1,column:2},end:{line:1,column:5}},
+                        type:'Ellipsis',
+                        id: null
+                    }
+                ]
+            }
+        },
+        '([...r])': {
+            range: [0,8],
+            loc: {start:{line:1,column:0},end:{line:1,column:8}},
+            type:'ExpressionStatement',
+            expression: {
+                range: [1,7],
+                loc:{start:{line:1,column:1},end:{line:1,column:7}},
+                type: 'ArrayExpression',
+                elements: [
+                    {
+                        range: [2,6],
+                        loc:{start:{line:1,column:2},end:{line:1,column:6}},
+                        type:'Ellipsis',
+                        id: {
+                            range:[5,6],
+                            loc:{start:{line:1,column:5},end:{line:1,column:6}},
+                            type:'Identifier',
+                            name:'r'
+                        }
+                    }
+                ]
+            }
+        },
+        '(store {})': {
+            range: [0,10],
+            loc: {start:{line:1,column:0},end:{line:1,column:10}},
+            type:'ExpressionStatement',
+            expression:{
+                range:[1,9],
+                loc:{start:{line:1,column:1},end:{line:1,column:9}},
+                type:'StoreExpression',
+                body:[]
+            }
+        },
+        'store {}': {
+            range: [0,8],
+            loc: {start:{line:1,column:0},end:{line:1,column:8}},
+            type:'ExpressionStatement',
+            expression:{
+                range:[0,8],
+                loc:{start:{line:1,column:0},end:{line:1,column:8}},
+                type:'StoreExpression',
+                body:[]
+            }
+        },
+        'store {[];}': {
+            range:[0,11],
+            loc:{start:{line:1,column:0},end:{line:1,column:11}},
+            type:'ExpressionStatement',
+            expression:{
+                range:[0,11],
+                loc:{start:{line:1,column:0},end:{line:1,column:11}},
+                type:'StoreExpression',
+                body:[
+                    {
+                        range:[7,9],
+                        loc:{start:{line:1,column:7},end:{line:1,column:9}},
+                        type:'ArrayExpression',
+                        elements:[]
+                    }
+                ]
+            }
+        },
+        'store {rule();}': {
+            range:[0,15],
+            loc:{start:{line:1,column:0},end:{line:1,column:15}},
+            type:'ExpressionStatement',
+            expression:{
+                range:[0,15],
+                loc:{start:{line:1,column:0},end:{line:1,column:15}},
+                type:'StoreExpression',
+                body:[
+                    {
+                        range:[7,13],
+                        loc:{start:{line:1,column:7},end:{line:1,column:13}},
+                        type:'RuleStatement',
+                        name:null,
+                        body:[]
+                    }
+                ]
+            }
+        },
+        'store {rule([v]);}': {
+            range:[0,18],
+            loc:{start:{line:1,column:0},end:{line:1,column:18}},
+            type:'ExpressionStatement',
+            expression:{
+                range:[0,18],
+                loc:{start:{line:1,column:0},end:{line:1,column:18}},
+                type:'StoreExpression',
+                body:[
+                    {
+                        range:[7,16],
+                        loc:{start:{line:1,column:7},end:{line:1,column:16}},
+                        type:'RuleStatement',
+                        name:null,
+                        body:[{
+                            range:[12,15],
+                            loc:{start:{line:1,column:12},end:{line:1,column:15}},
+                            type:'MatchItem',
+                            expression:{
+                                range:[12,15],
+                                loc:{start:{line:1,column:12},end:{line:1,column:15}},
+                                type:'ArrayExpression',
+                                elements:[{
+                                    range:[13,14],
+                                    loc:{start:{line:1,column:13},end:{line:1,column:14}},
+                                    type:'Identifier',
+                                    name:'v'
+                                }]
+                            }
+                        }]
+                    }
+                ]
+            }
+        }
     }
 };
 
@@ -30146,6 +30420,7 @@ function testParse(esprima, code, syntax) {
         throw new NotMatchingError(expected, e.toString());
     }
     if (expected !== actual) {
+        console.log("*** failing: %s",JSON5.stringify(JSON.parse(actual)));
         throw new NotMatchingError(expected, actual);
     }
 
@@ -30226,7 +30501,7 @@ function testError(esprima, code, exception) {
     // and hence handleInvalidRegexFlag is false.
     handleInvalidRegexFlag = false;
     try {
-        'test'.match(new RegExp('[a-z]', 'x'));
+        'test'.match(new RegExp('[a-z]', 'x')); // eslint-disable-line no-invalid-regexp
     } catch (e) {
         handleInvalidRegexFlag = true;
     }
@@ -30288,7 +30563,7 @@ function testAPI(esprima, code, result) {
     }
 }
 
-describe("esprima XXX", function() {
+describe("esprima", function() {
     Object.keys(testFixture).forEach(group=>describe(`${group}`, function() {
         Object.keys(testFixture[group]).forEach(code=>{
             const result = testFixture[group][code];
