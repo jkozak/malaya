@@ -3,11 +3,16 @@
 const   agly = require('../agly.js');
 
 const   util = require('../util.js');
-const parser = require('../parser2.js');
+const parser = require('../esprima.js');
 
 const assert = require('assert').strict;
 
 const  {estFor,nodeFor,b} = agly;
+
+//N.B. esprima parser does not return parse trees
+//     compatible with their JSON equivalants.
+//     The difference is not shown by `util.inspect`
+const parse = s=>JSON.parse(JSON.stringify(parser.parse(s)));
 
 function estStrip(est) {        // remove stuff that gets in the way when testing
     est = util.deepClone(est);
@@ -59,7 +64,7 @@ describe("agly", function() {
     });
 
     describe("code fragment handling", function() {
-        const frags = parser.parse(`({
+        const frags = parse(`({
             rep:function(){return REPLACE_VALUE;},
             ins:function(){INSERT_STUFF:;}
         })`);
@@ -82,7 +87,7 @@ describe("agly", function() {
     describe("agly", function() {
         let  est;
         let tree;
-        before(()=>{est=parser.parse(`function fred(){const i=3;log(i);}`);});
+        before(()=>{est=parse(`function fred(){const i=3;log(i);}`);});
         it("creates a tree", function() {
             tree = agly.makeTree();
         });
@@ -112,7 +117,7 @@ describe("agly", function() {
         let  est;
         let tree;
         before(()=>{
-            est  = parser.parse(`function fred(){const i=3;log(i);}`);
+            est  = parse(`function fred(){const i=3;log(i);}`);
             tree = agly.makeTree();
             tree.build(est);
             assert(tree.root);
@@ -141,7 +146,7 @@ describe("agly", function() {
                 assert.equal(estFor(ans).type,'FunctionDeclaration');
             });
             it("finds the function another way", function() {
-                const ans = tree.findSole({arrow:false});
+                const ans = tree.findSole({params:[]});
                 assert.equal(estFor(ans).type,'FunctionDeclaration');
             });
             it("finds multiple things", function() {
@@ -150,7 +155,7 @@ describe("agly", function() {
             });
             it("finds by value", function() {
                 assert.deepEqual(estStrip(estFor(tree.findSole({value:3}))),
-                                 {type:'Literal',value:3});
+                                 {type:'Literal',value:3,raw:'3'});
             });
             it("finds nested structure", function() {
                 const ans = tree.findSole({type:'VariableDeclarator',id:{name:'i'}});
@@ -165,7 +170,7 @@ describe("agly", function() {
         describe("match and find", function() {
             before(()=>{
                 tree = agly.makeTree();
-                tree.build(parser.parse(`store {rule (-[a]);}`));
+                tree.build(parse(`store {rule (-[a]);}`));
             });
             it("matches an array element", function() {
                 const est = estFor(tree.root).body[0].expression.body[0].body[0].expression;
@@ -181,12 +186,16 @@ describe("agly", function() {
         describe("tree.find(Sole)?", function() {
             before(()=>{
                 tree = agly.makeTree();
-                tree.build(parser.parse(`store {rule (-['a',{p:[v],w}]);}`));
+                tree.build(parse(`store {rule (-['a',{p:[v],w}]);}`));
             });
             it("finds `w`", function() {
                 assert.deepEqual(estStrip(estFor(tree.findSole({value:{name:'w'}}))),
-                                 {key:  {type:'Identifier',name:'w'},
-                                  value:{type:'Identifier',name:'w'} } );
+                                 {key:       {type:'Identifier',name:'w'},
+                                  value:     {type:'Identifier',name:'w'},
+                                  kind:      'init',
+                                  method:    false,
+                                  type:      'Property',
+                                  shorthand: true} );
             });
         });
     });
@@ -195,7 +204,7 @@ describe("agly", function() {
         let  est;
         let tree;
         let ruleOrig;
-        before(()=>{est=parser.parse(`store {rule (a);}`);});
+        before(()=>{est=parse(`store {rule (a);}`);});
         it("creates a tree", function() {
             tree = agly.makeTree();
         });
@@ -226,7 +235,7 @@ describe("agly", function() {
         let tree;
         before(()=>{
             tree = agly.makeTree();
-            tree.build(parser.parse(`store {rule (-['a',{p:[v],w}]);}`));
+            tree.build(parse(`store {rule (-['a',{p:[v],w}]);}`));
         });
         it("w accessor is simple", function() {
             const w = tree.findSole({value:{name:'w'}});

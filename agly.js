@@ -70,7 +70,7 @@ const makeCodeFragment = exports.makeCodeFragment = (name,substs,frags)=>{ // es
             assert.ok(substs[est.name]);
             return substs[est.name];
         }
-        if (est.type==='LabelledStatement' && est.label.name.startsWith('INSERT_')) {
+        if (est.type==='LabeledStatement' && est.label.name.startsWith('INSERT_')) {
             assert.equal(est.body.type,'EmptyStatement');
             assert.ok(substs[est.label.name]);
             est = substs[est.label.name];
@@ -155,7 +155,7 @@ const Tree = exports.Tree = class {
             if (!['type'].includes(k)) {
                 if (Array.isArray(est[k]))
                     est[k].forEach((e,i)=>tree._build(e,node,k,i));
-                else if (typeof est[k]==='object')
+                else if (typeof est[k]==='object' && est[k]!==null)
                     tree._build(est[k],node,k);
             }
         });
@@ -176,7 +176,7 @@ const Tree = exports.Tree = class {
                     fn(n,node,k,i);
                     this._walk(fn,n);
                 });
-            } else if (typeof v==='object') {
+            } else if (typeof v==='object' && v!==null) {
                 const n = nodeFor(v);
                 fn(n,node,k,null);
                 this._walk(fn,n);
@@ -222,6 +222,8 @@ class MyNode extends Node {
                                 const ke = est[k];
                                 if (Array.isArray(ke))
                                     return [k,ke.map(e=>nodeFor(e).rewrite)];
+                                else if (ke===null)
+                                    return [k,ke];
                                 else if (typeof ke==='object')
                                     return [k,nodeFor(ke).rewrite];
                                 else

@@ -10,7 +10,7 @@ const assert = require('assert').strict;
 //     The difference is not shown by `util.inspect`
 const parse = s=>JSON.parse(JSON.stringify(parser.parse(s)));
 
-describe("parser for malaya language XXX", function() {
+describe("parser for malaya language", function() {
 
     it("parses very simple javascript", function() {
         const js = parse("const i=17;");
