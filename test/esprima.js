@@ -30004,7 +30004,7 @@ const testFixture = {
             }]
         }
     },
-    'Malaya XXX': {
+    'Malaya': {
         '({...})': [
            {
                type: 'Punctuator',
