@@ -491,7 +491,7 @@ describe("Engine",function() {
         let clock;
         before(()=>{clock=sinon.useFakeTimers();});
         after(()=>{clock.restore();});
-        const mkOutChrjs = require(path.join(__dirname,'bl','out.chrjs')); // eslint-disable-line security/detect-non-literal-require
+        const mkOutChrjs = require(path.join(__dirname,'bl','out.malaya')); // eslint-disable-line security/detect-non-literal-require
         it("sends input, receives output",function(done) {
             const eng = new Engine({dir:   temp.mkdirSync(),
                                     chrjs: mkOutChrjs() });
@@ -563,7 +563,7 @@ describe("Engine",function() {
     describe("replication",function() {
         it("streams out the journal",function(done) {
             const eng = new Engine({dir:           temp.mkdirSync(),
-                                    businessLogic: path.join(__dirname,'bl','null.chrjs') });
+                                    businessLogic: path.join(__dirname,'bl','null.malaya') });
             const io = createIO('replication');
             eng.init();
             eng.start();
@@ -592,7 +592,7 @@ describe("Engine",function() {
     describe("administration",function() {
         it("supplies handy info on connect",function(done) {
             const eng = new Engine({dir:           temp.mkdirSync(),
-                                    businessLogic: path.join(__dirname,'bl','null.chrjs') });
+                                    businessLogic: path.join(__dirname,'bl','null.malaya') });
             const  io = createIO('admin');
             let    ok = false;
             eng.init();
@@ -628,7 +628,7 @@ describe("Engine",function() {
             srv = new testutil.ExtServer('malaya',{prevalenceDir:path.join(dir,'.prevalence')});
             this.timeout(10000);
             assert.strictEqual(git("init",{cwd:dir}).code,0);
-            srv.init(['--git','commit','test/bl/null.chrjs'],(err)=>{
+            srv.init(['--git','commit','test/bl/null.malaya'],(err)=>{
                 if (err)
                     done();
                 else
@@ -639,7 +639,7 @@ describe("Engine",function() {
             dir = temp.mkdirSync();
             srv = new testutil.ExtServer('malaya',{prevalenceDir:path.join(dir,'.prevalence')});
             this.timeout(10000);
-            srv.init(['--git','commit','test/bl/null.chrjs'],done);
+            srv.init(['--git','commit','test/bl/null.malaya'],done);
         });
         it("has an initial commit...",function(){
             const log = git("log --oneline");
@@ -657,7 +657,7 @@ describe("Engine",function() {
         });
         it("commits again when engine cycled",function(done){
             this.timeout(10000);
-            srv.run(['test/bl/null.chrjs'],(err)=>{
+            srv.run(['test/bl/null.malaya'],(err)=>{
                 if (err)
                     done(err);
                 else {
@@ -691,7 +691,7 @@ describe("Engine",function() {
         let    eng;
         before(()=>{
             eng = new Engine({dir:           temp.mkdirSync(),
-                              businessLogic: path.join(__dirname,'bl','null.chrjs') });
+                              businessLogic: path.join(__dirname,'bl','null.malaya') });
         });
         after(()=>{plugin._private.forgetAll();});
         it("provides special out destination",function(done) {

@@ -1,5 +1,0 @@
-module.exports = store {
-    rule (-[x,{...},{keep:false}],
-          x[0]!=='_',
-          +[x,{}] );
-};

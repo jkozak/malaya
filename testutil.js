@@ -43,7 +43,7 @@ if (util.env==='test')  {
                 opts.main(eng);
         });
     };
-    exports.runInCountEngine = function(opts) {runInEngine(path.join(__dirname,'test/bl/count.chrjs'),opts);};
+    exports.runInCountEngine = function(opts) {runInEngine(path.join(__dirname,'test/bl/count.malaya'),opts);};
 
     exports.createIO = function(type) { // make a "terminal" which can be connected to an Engine
         const ee = new events.EventEmitter();

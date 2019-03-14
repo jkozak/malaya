@@ -18,7 +18,7 @@ store IDB {
           ['Permissions',{ApplicationName:user,Password:password,LoggedOn:1}],
           +['msg',user,"already logged on"] );
     rule (-['logon',      {user}],
-          ['Permissions',{ApplicationName:user}],
+           ['Permissions',{ApplicationName:user}],
           +['msg',user,"bad password"] );
     rule (-['logon',      {user}],
           +['msg',user,"user unknown"] );
@@ -77,7 +77,7 @@ store IDB {
 }
 
 var json = JSON.parse(fs.readFileSync(path.join(__dirname,'../../examples/idb/data/idb.json')));
-for (var i in json) 
+for (var i in json)
     IDB.add(json[i]);
 
 suite('toy idb with real data',function() {

@@ -22,7 +22,7 @@ const fillDirWithSomeData = function(dir,data,cb) {
                     "-p",path.join(dir,'.prevalence'),
                     "init",
                     '-d',dfn,
-                    'bl.chrjs'];
+                    'bl.malaya'];
     cmdline.run({callback:cb});
     return dir;
 };
@@ -73,7 +73,7 @@ describe("cmdline",function() {
             process.argv = [null,null,
                             "-p",path.join(dir,'.prevalence'),
                             "init",
-                            'bl.chrjs'];
+                            'bl.malaya'];
             cmdline.run();
             assert(fs.statSync(path.join(dir,'.prevalence')).isDirectory());
             assert(fs.statSync(path.join(dir,'.prevalence','state')).isDirectory());
@@ -107,7 +107,7 @@ describe("cmdline",function() {
         };
         it("removes all facts by default",function(done) {
             transform([['a',{}]],
-                      "null.chrjs",
+                      "null.malaya",
                       function(eng) {
                           let err = null;
                           try {
@@ -118,7 +118,7 @@ describe("cmdline",function() {
         });
         it("keeps explicitly requested facts",function(done) {
             transform([['b',{}],['c',{}]],
-                      "keep_b.chrjs",
+                      "keep_b.malaya",
                       function(eng) {
                           let err = null;
                           try {
@@ -130,7 +130,7 @@ describe("cmdline",function() {
         });
         it("has `_transform` for global operations",function(done) {
             transform([['b',{}],['c',{}]],
-                      "global.chrjs",
+                      "global.malaya",
                       function(eng) {
                           let err = null;
                           try {
@@ -142,7 +142,7 @@ describe("cmdline",function() {
         });
         it("makes entry in journal",function(done) {
             transform([['b',{}],['c',{}]],
-                      "null.chrjs",
+                      "null.malaya",
                       function(eng) {
                           eng.buildHistoryStream(function(err,history) {
                               if (err)

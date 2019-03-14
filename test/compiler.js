@@ -5,6 +5,7 @@
 var compiler = require('../compiler.js');
 var   parser = require('../parser.js');
 var   assert = require('assert').strict;
+var   plugin = require("../plugin.js");
 var   recast = require("recast");
 var     util = require('../util.js');
 var     temp = require('temp');
@@ -872,7 +873,7 @@ describe("type checking",function(){
 describe("compile hook",function() {
     var tdir = temp.mkdirSync();
     it("should be run when a chrjs file is compiled",function() {
-        var fn = path.join(tdir,'a.chrjs');
+        var fn = path.join(tdir,'a.malaya');
         var ok = false;
         compiler.once('compile',function(filename) {
             ok = true;
@@ -887,7 +888,7 @@ describe("rule maps",function() {
     var tdir = temp.mkdirSync();
     it("should build rule maps when asked",function() {
         try {
-            var fn = path.join(tdir,'a.chrjs');
+            var fn = path.join(tdir,'a.malaya');
             var ok = false;
             compiler.debug = true;
             compiler.once('compile',function(filename) {
@@ -902,7 +903,7 @@ describe("rule maps",function() {
         }
     });
     it("should not build rule maps unless asked",function() {
-        var fn = path.join(tdir,'b.chrjs');
+        var fn = path.join(tdir,'b.malaya');
         fs.writeFileSync(fn,"store {\nrule (['1']);}");
         require(fn);            // eslint-disable-line security/detect-non-literal-require
         assert.throws(function() {
@@ -936,8 +937,8 @@ describe("caching",function(){
     describe("implicit compilation",function(){
         this.bail(true);
         const tdir = temp.mkdirSync();
-        const  fn1 = path.join(tdir,'a.chrjs');
-        const  fn2 = path.join(tdir,'b.chrjs');
+        const  fn1 = path.join(tdir,'a.malaya');
+        const  fn2 = path.join(tdir,'b.malaya');
         let     js1;
         let     js2;
         fs.mkdirSync(path.join(tdir,'.ccache'));
@@ -985,12 +986,13 @@ describe("caching",function(){
 
 describe("load",function(){
     let st;
+    afterEach(()=>{plugin._private.forgetAll();});
     describe("non-debug",function(){
         it("loads a malaya source file",function(){
-            st = compiler.load('test/bl/count.chrjs',{debug:false});
+            st = compiler.load('test/bl/count.malaya',{debug:false});
         });
         it("which has a __file__ property",function(){
-            assert.strictEqual(st.__file__,path.resolve('test/bl/count.chrjs'));
+            assert.strictEqual(st.__file__,path.resolve('test/bl/count.malaya'));
         });
         it("which works",function(){
             st.update(['x',{}]);
@@ -1002,10 +1004,10 @@ describe("load",function(){
     });
     describe("debug",function(){
         it("loads a malaya source file",function(){
-            st = compiler.load('test/bl/count.chrjs',{debug:true});
+            st = compiler.load('test/bl/count.malaya',{debug:true});
         });
         it("which has a __file__ property",function(){
-            assert.strictEqual(st.__file__,path.resolve('test/bl/count.chrjs'));
+            assert.strictEqual(st.__file__,path.resolve('test/bl/count.malaya'));
         });
         it("which works",function(){
             st.update(['x',{}]);

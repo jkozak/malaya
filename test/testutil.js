@@ -7,7 +7,6 @@ const          path = require('path');
 const            fs = require('fs');
 
 const makeTimestamp = testutil.makeTimestamp;
-//const    mkOutChrjs = require(path.join(__dirname,'bl','out.chrjs'));
 
 describe("testutil",function() {
 

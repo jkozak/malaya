@@ -1999,7 +1999,7 @@ exports.load = function(filename,opts){
     }
 };
 
-require.extensions['.malaya'] = require.extensions['.chrjs'] = function(module,filename) {
+require.extensions['.malaya'] = function(module,filename) {
     exports.load(filename,{module:module,debug:exports.debug});
 };
 

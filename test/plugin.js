@@ -31,7 +31,7 @@ describe("old style (v0.7) plugins",function(){
         };
         eng = new engine.Engine({dir:           temp.mkdirSync(),
                                  ports:         {},
-                                 businessLogic: path.join(__dirname,'bl','null.chrjs') });
+                                 businessLogic: path.join(__dirname,'bl','null.malaya') });
         eng.addPlugin('twiddle',eps);
         eng.init();
         eng.start();
@@ -114,7 +114,7 @@ describe("dolce stil novista",function(){
         plugin.instantiate('twiddle');
         eng = new engine.Engine({dir:           temp.mkdirSync(),
                                  ports:         {},
-                                 businessLogic: path.join(__dirname,'bl','null.chrjs') });
+                                 businessLogic: path.join(__dirname,'bl','null.malaya') });
         eng.init();
         eng.start();
         eng.out('twiddle',jsOut);
@@ -147,7 +147,7 @@ describe("multiple instance of plugin",function(){
         plugin.instantiate('twiddle','twiddle1',{});
         eng = new engine.Engine({dir:           temp.mkdirSync(),
                                  ports:         {},
-                                 businessLogic: path.join(__dirname,'bl','null.chrjs') });
+                                 businessLogic: path.join(__dirname,'bl','null.malaya') });
         eng.init();
         eng.start();
         eng.out('twiddle', jsOut);
@@ -182,7 +182,7 @@ describe("subaddressing :-style",function(){
         plugin.instantiate('twoddle');
         eng = new engine.Engine({dir:           temp.mkdirSync(),
                                  ports:         {},
-                                 businessLogic: path.join(__dirname,'bl','null.chrjs') });
+                                 businessLogic: path.join(__dirname,'bl','null.malaya') });
         eng.init();
         eng.start();
         eng.out('twoddle:1854:aq',jsOut);
@@ -214,7 +214,7 @@ describe("subaddressing array style",function(){
         plugin.instantiate('twoddle');
         eng = new engine.Engine({dir:           temp.mkdirSync(),
                                  ports:         {},
-                                 businessLogic: path.join(__dirname,'bl','null.chrjs') });
+                                 businessLogic: path.join(__dirname,'bl','null.malaya') });
         eng.init();
         eng.start();
         eng.out(['twoddle','1854','aq'],jsOut);
@@ -459,7 +459,7 @@ describe("restart plugin added dynamically",function(){
     it("starts engine",function(done){
         eng = new engine.Engine({dir:           temp.mkdirSync(),
                                  ports:         {},
-                                 businessLogic: path.join(__dirname,'bl','null.chrjs') });
+                                 businessLogic: path.join(__dirname,'bl','null.malaya') });
         eng.init();
         plugin.get('restart').connect(eng.chrjs);
         eng.start();

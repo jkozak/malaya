@@ -1,6 +1,0 @@
-module.exports = store {
-    ['stats',{xCount:0}];
-    rule(-['x',...],
-         -['stats',{xCount,...rs}],
-         +['stats',{xCount:xCount+1,...rs}] );
-};

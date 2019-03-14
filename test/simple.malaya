@@ -50,7 +50,7 @@ describe("match example",function() {
             rule (['instrument', {name}], -['instrument', {name}]);
         };
 
-        assert.strictEqual(Object.keys(match._private.rawFacts).length,3); // 3 facts from the match.chrjs source
+        assert.strictEqual(match._private.orderedFacts.length,3); // 3 facts from the match.malaya source
         var r1 = match.add(['match-price',{user:"John Kozak", instrument:"IL21",volume:10000000,isBuy:true, t:1}]);
         assert.equal(r1.adds.length,1);
         assert.deepEqual(match._private.rawFacts[r1.adds[0]],
@@ -68,7 +68,7 @@ describe("match example",function() {
                          ['match-price',{user:"John Kozak", instrument:"IL21",volume:10000000,isBuy:true, t:1}] );
         assert(r2.dels.every(function(t){return r2.refs[t][0]==='match-price';}));
         assert(r2.adds.every(function(x){return (typeof parseInt(x))==='number';}));
-        assert.strictEqual(Object.keys(match._private.rawFacts).length,5); // original 3, trade and residual price
+        assert.strictEqual(match._private.orderedFacts.length,5); // original 3, trade and residual price
     });
     it("should reset",function() {
         var match = store {
@@ -279,7 +279,7 @@ describe("matching",function() {
         assert.equal(st.size,4);
         st.add(['a',0]);
         assert.equal(st.size,1);
-        assert.deepEqual(Object.values(st._private.rawFacts)[0],['a',4]);
+        assert.deepEqual(st._private.orderedFacts[0],['a',4]);
     });
     it("should match correctly given deletion during iteration",function() {
         var st = store {
@@ -291,7 +291,7 @@ describe("matching",function() {
         };
         assert.equal(st.size,4);
         st.add(['c']);
-        assert.deepEqual(Object.values(st._private.rawFacts),[['c']]);
+        assert.deepEqual(st._private.orderedFacts,[['c']]);
     });
     it("does not match nothing to something in object",function(){
         var st = store {
@@ -369,7 +369,7 @@ describe("in-store `for` expression",function() {
                   +['_ans',{sum:for(0;['a',{p}];a=>a+p)}] );
         };
         st.add(['accumulate']);
-        assert.equal(Object.values(st._private.rawFacts).filter(f=>f[0]==='_ans')[0][1].sum,3);
+        assert.equal(st._private.orderedFacts.filter(f=>f[0]==='_ans')[0][1].sum,3);
     });
     it("should nest",function() {
         var st = store {
@@ -381,7 +381,7 @@ describe("in-store `for` expression",function() {
                   +['_ans',{sum:for(0;['a',{p}];a=>a+for(0;['b',{p,q}];b=>b+q))}] );
         };
         st.add(['accumulate']);
-        assert.equal(Object.values(st._private.rawFacts).filter(f=>f[0]==='_ans')[0][1].sum,11);
+        assert.equal(st._private.orderedFacts.filter(f=>f[0]==='_ans')[0][1].sum,11);
     });
 });
 
@@ -527,14 +527,14 @@ describe("regression tests",function() {
         };
         st.add(['a',[]]);
         assert.equal(st.size,1);
-        assert.deepEqual(Object.values(st._private.rawFacts),[['a',[]]]);
+        assert.deepEqual(st._private.orderedFacts,[['a',[]]]);
     });
     it("should have fixed [9e15c3b9134c259c] (['a',{b}] should not match ['a'])",function() {
         var st = store {
             rule (-['a',{b}]);
         };
         st.add(['a']);
-        assert.deepEqual(Object.values(st._private.rawFacts),[['a']]); // i.e. not consumed
+        assert.deepEqual(st._private.orderedFacts,[['a']]); // i.e. not consumed
     });
     it("should have fixed problem observed in the wild",function() {
         var IDB = store {
@@ -554,9 +554,9 @@ describe("regression tests",function() {
         IDB.add(['InstrumentClass',{InstSubClassID:777,AuctionVolumes:"10 20 30"}]);
         assert.equal(IDB.size,2);
         IDB.add(['annotatePrepareAuction',{instruments:[],_children:[{AInst:{InstID:999}}],phases:'A',id:8}]);
-        assert.deepEqual(Object.values(IDB._private.rawFacts).map(function(f){return f[0];}).sort(),
+        assert.deepEqual(IDB._private.orderedFacts.map(function(f){return f[0];}).sort(),
                          ["Instrument","InstrumentClass","_o","auction"] );
-        Object.values(IDB._private.rawFacts).forEach(function(f) {
+        IDB._private.orderedFacts.forEach(function(f) {
             if (f[0]==='auction')
                 assert.deepEqual(f[1].instruments,[{AInst:{InstID:999,AuctVols:"10 20 30"}}]);
             else if (f[0]==='_o')

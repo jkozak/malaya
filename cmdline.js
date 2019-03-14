@@ -10,7 +10,7 @@ const    util = require('./util.js');
 const  execCP = require('child_process').exec; // eslint-disable-line security/detect-child-process
 const   chalk = require('chalk');
 
-const tracing = require('./tracing');
+const tracing = require('./tracing.js');
 
 // configure main arg parser
 
