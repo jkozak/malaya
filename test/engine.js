@@ -5,7 +5,6 @@ const   Engine = engine.Engine;
 const compiler = require('../compiler.js');
 const   plugin = require('../plugin.js');
 
-const        _ = require('underscore');
 const   assert = require('assert').strict;
 const    sinon = require('sinon');
 const    shell = require('shelljs');
@@ -398,7 +397,7 @@ describe("Engine",function() {
             const   dir = temp.mkdirSync();
             const   eng = new Engine({dir:dir});
             const    hs = [];
-            const done2 = _.after(2,done);
+            const done2 = util.after(2,done);
             eng.init();
             eng.start();
             eng.startPrevalence(function(e1) {
@@ -440,10 +439,10 @@ describe("Engine",function() {
             eng.start();
             eng.startPrevalence(function(err) {
                 assert(!err);
-                assert.deepEqual(_.values(eng.chrjs._private.orderedFacts),[]);
+                assert.deepEqual(eng.chrjs._private.orderedFacts,[]);
                 eng.loadData(dfn,function(err1) {
                     assert(!err1);
-                    assert.deepEqual(_.values(eng.chrjs._private.orderedFacts),data);
+                    assert.deepEqual(eng.chrjs._private.orderedFacts,data);
                     eng.stopPrevalence(true,done);
                 });
             });
@@ -458,10 +457,10 @@ describe("Engine",function() {
             eng.start();
             eng.startPrevalence(function(err) {
                 assert(!err);
-                assert.deepEqual(_.values(eng.chrjs._private.orderedFacts),[]);
+                assert.deepEqual(eng.chrjs._private.orderedFacts,[]);
                 eng.loadData(dfn,function(err1) {
                     assert(!err1);
-                    assert.deepEqual(_.values(eng.chrjs._private.orderedFacts),data);
+                    assert.deepEqual(eng.chrjs._private.orderedFacts,data);
                     eng.stopPrevalence(true,done);
                 });
             });
@@ -519,7 +518,7 @@ describe("Engine",function() {
             const io3 = createIO();
             let     n = 0;
             let  err1 = null;
-            const dun = _.after(3,()=>eng.stopPrevalence(true,(e)=>{
+            const dun = util.after(3,()=>eng.stopPrevalence(true,(e)=>{
                 if (!err1)
                     assert.strictEqual(n,3);
                 done(err1);
@@ -617,9 +616,9 @@ describe("Engine",function() {
         let       srv;
         const jHashes = [];
         const     git = (args,opts)=>shell.exec("git "+args,
-                                                _.extend({cwd:   srv.prevalenceDir,
-                                                          silent:true},
-                                                         opts));
+                                                Object.assign({cwd:   srv.prevalenceDir,
+                                                               silent:true},
+                                                              opts));
         after(()=>{
             if (srv)
                 srv.kill();

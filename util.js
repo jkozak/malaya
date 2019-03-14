@@ -146,6 +146,18 @@ exports.readToEnd = (stream,cb)=>{
     });
 };
 
+exports.after = function(times,fn) {
+    if (times<0)
+        throw new Error("after called with negative count");
+    else if (times<1)
+        return fn();
+    else
+        return ()=>{
+            if (--times<1)
+                fn();
+        };
+};
+
 
 // environmental stuff
 

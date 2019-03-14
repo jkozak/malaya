@@ -1,5 +1,4 @@
 var assert = require("assert");
-var      _ = require('underscore');
 
 describe("shallow equality [=== and !==]",function() {
     it("compares numbers",function(){
@@ -175,7 +174,7 @@ describe("deep equality [== and !=]",function() {
     });
     it("compares equivalent non-identical objects",function(){
         const o1 = {p:1,q:2};
-        const o2 = _.extend({p:1},{q:2});
+        const o2 = Object.assign({p:1},{q:2});
         assert(o1==o2);
         assert(!(o1!=o2));
     });

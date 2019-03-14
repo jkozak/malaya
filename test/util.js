@@ -102,3 +102,31 @@ describe("string utils",function() {
         });
     });
 });
+
+describe("after",function() {
+    it("fails if called with negative count", function() {
+        assert.throws(()=>{util.after(-1);});
+    });
+    it("calls immediately if count is zero", function(done) {
+        util.after(0,done);
+    });
+    describe("multiple calls",function() {
+        let called = false;
+        let  after;
+        it("creates an after function needing 3 calls", function() {
+            after = util.after(3,()=>{called=true;});
+        });
+        it("does not fire after 1 call", function() {
+            after();
+            assert.ok(!called);
+        });
+        it("does not fire after 2 calls", function() {
+            after();
+            assert.ok(!called);
+        });
+        it("fires after 3 calls", function() {
+            after();
+            assert.ok(called);
+        });
+    });
+});

@@ -2,10 +2,10 @@
 
 const   plugin = require('../plugin.js');
 
+const     util = require('../util.js');
 const   engine = require('../engine.js');
 const  whiskey = require('../whiskey.js');
 
-const        _ = require('underscore');
 const       fs = require('fs');
 const     temp = require('temp').track();
 const     path = require('path');
@@ -134,7 +134,7 @@ describe("multiple instance of plugin",function(){
     after(()=>{plugin._private.reset();});
     after(()=>(eng && eng.stop()));
     it("provides special out destinations",function(done) {
-        const done1 = _.after(2,done);
+        const done1 = util.after(2,done);
         plugin.add('twiddle',class extends plugin.Plugin {
             out(js,name,addr) {
                 assert.deepEqual(js,  jsOut);

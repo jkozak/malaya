@@ -1,6 +1,5 @@
 "use strict";
 
-const        _ = require('underscore');
 const       fs = require('fs');
 const   stream = require('stream');
 const through2 = require('through2');
@@ -142,7 +141,7 @@ exports.registerEngine = eng=>{
                         src += ':'+addr;
                     else if (Array.isArray(addr))
                         src = [src,...addr];
-                    const js2 = js.concat([_.extend({src},misc)]);
+                    const js2 = js.concat([Object.assign({src},misc)]);
                     if (pl.chrjs===eng.chrjs)
                         eng.update(js2);
                     else if (pl.chrjs)
@@ -282,20 +281,13 @@ exports.instantiateReadStream = s=>{   // JSON -> chars
 };
 
 exports.start = (cb=()=>{})=>{
-    if (plugins.length===0)
-        cb();
-    else {
-        const done = _.after(plugins.length,cb);
-        plugins.forEach(pl=>pl._start(done));
-    }
+    const done = util.after(plugins.length,cb);
+    plugins.forEach(pl=>pl._start(done));
 };
 exports.stop = (cb=()=>{})=>{
-    if (plugins.length===0)
-        cb();
-    else {                      // stop plugins in reverse order to starting them
-        const done = _.after(plugins.length,cb);
-        plugins.slice().reverse().forEach(pl=>pl._stop(done));
-    }
+    // stop plugins in reverse order to starting them
+    const done = util.after(plugins.length,cb);
+    plugins.slice().reverse().forEach(pl=>pl._stop(done));
 };
 
 function setStandardClasses() {

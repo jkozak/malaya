@@ -1,6 +1,5 @@
 "use strict";
 
-const _       = require('underscore');
 const crypto  = require('crypto');
 const stream  = require('stream');
 const fs      = require('fs');
@@ -91,7 +90,7 @@ module.exports = function(algorithm) {
                     const hstream = crypto.createHash(algorithm);
                     const fstream = fs.createWriteStream(fn);
                     const wstream = stream.PassThrough();
-                    const   done2 = _.after(2,function() {
+                    const   done2 = util.after(2,function() {
                         const   h = hstream.read().toString('hex');
                         const hfn = store.makeFilename(h);
                         fs.rename(fn,hfn,function(err1) {
