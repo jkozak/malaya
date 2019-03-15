@@ -263,13 +263,15 @@ store to consume anything with a =dst= field in its third slot
 matching its instance name.
 
 ** bundled plugins
-*** =tcp=
-*** =ws=
-*** =udp=
-*** =process=
-*** =http=
 *** =file=
+*** =hash=
+Provides access to Malaya's internal hash store for stashing [[http://wikipedia.org/wiki/Binary Large Object][BLOB]]s and so on.
+*** =http=
+*** =tcp=
+*** =process=
+*** =udp=
 *** =unix=
+*** =ws=
 ** other plugins
 *** =bpf=
 *** =dbus=
@@ -283,6 +285,12 @@ matching its instance name.
 *** =stripe=
 *** =syslog=
 *** =systemd=
+*** =udev=
+- Linux only
+
+Provides information about hardware attached to the system, including
+updates (e.g. USB devices attached or removed).
+
 *** Cloud provider APIs, e.g. AWS, GCloud, Azure
 *** eBPF
 
