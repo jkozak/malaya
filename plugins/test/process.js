@@ -21,11 +21,13 @@ describe("process plugin",function(){
         const src = path.join(dir,'proc.malaya');
         fs.writeFileSync(src,`
 module.exports = store {
-    rule (-['restart',{...},{...}],
+    rule (-['go',{},{src:'test'}],
           +['spawn',{command:'ls',args:['-al','${dir}'],opts:{}},{dst:'process'}] );
+    rule ( ['exit',{...},{src:['process',pid]}],
+          +['done',{},{dst:'dummy'}] );
 }
-    .plugin('restart')
-    .plugin('process');
+    .plugin('process')
+    .plugin('dummy');
 `);
         eng = new engine.Engine({
             prevalenceDir: path.join(dir,'.prevalence'),
@@ -37,6 +39,10 @@ module.exports = store {
         eng.init();
         eng.start();
         eng.become('master');
+    });
+    it("performs the command", function(done) {
+        plugin.get('dummy').reader.once('data',()=>done());
+        eng.update(['go',{},{src:'test'}]);
     });
     it("has listed files in test dir",function() {
         const facts = eng.chrjs._private.orderedFacts;
