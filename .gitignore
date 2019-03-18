@@ -17,10 +17,13 @@ examples/idb/*.log
 idbfe-*.log
 
 doc/*.png
-doc/*.html
 
 npm-debug.log
 
 .tern-port
 
-book.html
+*.html
+*.tex
+*.pdf
+
+auto/

@@ -11,7 +11,7 @@ It provides persistent storage of application data, so yes.  But see
 below.  We've been using the term "fact-store" to make this a bit
 clearer.
 
-** Is It relational?
+** Is it relational?
 
 Yes - joins and so on.  But see below.
 
@@ -23,24 +23,24 @@ not implemented yet.
 
 ** Is it a programming language?
 
-Yes.  It consists of a dynaically typed purely functional language
-combined with an implementation of a logic programming system and JSON
-pattern matching.
+Yes.  It's a dynamically typed purely functional language combined
+with an implementation of a logic programming system and JSON pattern
+matching.
 
 ** Is it javascript?
 
-It's related: it's basically a purely functional subset of javacript,
+It's related: it's essentially a purely functional subset of javacript,
 minus ~undefined~ plus ~store~ (CHR) and ~rule~ (JSON pattern matching).
 
-This is of course because present versions of Malaya are built on
-nodejs and the Malaya language compiles to javascript.  Future
-versions may not work this way.
+This is because present versions of Malaya are built on nodejs and the
+Malaya language compiles to javascript.  Future versions may have
+different compilation targets.
 
-** What JSON formats are used
+** What JSON formats are used?
 
 In principle, anything; but there are conventions imposed by the
 runtime system.  Inputs and outputs are marked, and indices are built
-assuming these formats, so it's sensible to stil with them.
+assuming these formats, so it's sensible to stick with them.
 
 They are:
 - Fact stored in the fact store
@@ -88,7 +88,7 @@ of 10s of gigabytes (the size of the ~nodejs~ heap).
 
 ** Who's writing it?
 
-John Kozak <jk@thameslighter.net> is the principal author.
+=John Kozak <jk@thameslighter.net>= is the principal author.
 
 ** What is prevalence?
 
@@ -101,32 +101,53 @@ Fine for the application types recommended here.
 
 ** Distributed?
 
-Support of a consensus protocol like ePaxos is planned.
+Planned, maybe:
+ - consensus protocol like ePaxos
+ - confluence-based
 
 ** Sharded?
+
+Planned
+
 ** Is it web-scale?
 
 Not yet.
 
 ** Is it HA?
 
-Support of a consensus protocol like ePaxos is planned.
+Planned, see [[Distributed?]]
 
 ** How auditable is it?
 
 Extremely.
 
-** If the journal history is untamperable what about GDPR?
+** If the journal history is untamperable what about GDPR forgetting?
+
+Replay the transaction log through a filter to logivally erase details
+to be forgotten.
+
 ** The journal history doesn't contain /en clair/ passwords, does it?
+
+It might if you aren't careful!  Suggested approach here is to use two
+=store=s one which does not persist data which hashes the incoming
+password and passes the modified request onto another which is
+persistent.
+
 ** What about schema changes?
+
+Do this in-app:
+ - restart sends app version
+ - database rewrite rule triggered by particular version change
+
 ** Does it offer replication?
 
-A previous version offered this.  We'd like to get ot back in, perhaps
-as part of a more general distributed-sytem model
+A previous version offered this.  We'd like to get ot back in, as part
+of a more general distributed-sytem model.
 
 ** Does it have debugging or visualisation tools?
 
-An OpenGL visualiser was available and will be revived at some point.
+An OpenGL visualiser was available in an earlier version and will be
+revived at some point.
 
 ** Much documentation?
 
@@ -142,11 +163,15 @@ is planned for before the end of 2019; future releases within the 1.*
 stream will maintain back-compatibility.
 
 ** Can the on-disk fact-store be encrypted?
+
+RSN (pretty easy, just haven't felt the need yet).
+
 ** What plaforms does it run on?
 
 Anywhere ~nodejs~ runs, in principle.  Most deployments are expected
 to be on linux, but we'll run CI tests on linux, macOS and windows
 against current and LTS versions of ~nodejs~.
+
 ** What support arrangements are there?
 
 Support contracts are available, please email.

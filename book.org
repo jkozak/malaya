@@ -8,11 +8,15 @@
 
 Malaya is a logic-based relational data storage and processing system.
 
+It is a language and runtime for the concise and rapid expression,
+implementation and deployment of rule-based persistent reactive
+systems.
+
 There's a class of applications which are about taking in data from
 one or more sources, weaving it together with past data and sending
-appropriate data out.  They typically without stopping and are usually
-called daemons or services.  Malaya is a micro-kernel for this class
-of software.
+appropriate data out.  They typically run without stopping and are
+usually called daemons or services.  Malaya is a micro-kernel for this
+class of software.
 
 Such applications include:
  - trading systems
@@ -21,20 +25,18 @@ Such applications include:
  - CI systems, chat bots
  - system daemons: DNS, DHCP, LDAP &c
 
-Malaya is designed to make this easier.  It is a language and runtime
-for the concise and rapid expression, implementation and deployment of
-rule-based persistent reactive systems.  Data is everywhere JSON;
-[[prevalence][persistent storage]] is based around a hash-chained journal of updates
-which is tamper-proof and maintains the system's entire history; it is
-thus eminently auditable.  It is also intended to be very amenable to
-formal methods.
+Malaya is designed to facilitate building such systems.  All data is
+JSON; [[prevalence][persistent storage]] is based around a hash-chained journal of
+updates which is tamper-proof and maintains the system's entire
+history; it is thus eminently auditable.  It is also intended to be
+very amenable to formal methods.
 
 It consists of:
  - [[JSON pattern matching][JSON pattern matching]]
  - a [[Constraint Handler Rules][logic programming system]] based on [[https://en.wikipedia.org/wiki/Constraint_Handling_Rules][CHR]]
  - a persistence layer based on [[prevalence][prevalence]]
  - a [[CLI][runtime system]]
- - [[plugins][plugins]] to implement
+ - [[plugins][plugins]] currently available implement
   - timers
   - tcp and udp sockets
   - http, https
@@ -45,6 +47,11 @@ It consists of:
   - stripe
   - email
 
+It is available under the [[https://www.gnu.org/licenses/agpl-3.0.en.html][AGPL]] licence.
+
+The initial reference implementation is layered on top of the familiar
+[[http://nodejs.org/][nodejs]] framework.
+
 ** A foretaste - tiny DNS server
 
 This is a [[https://en.wikipedia.org/wiki/Domain_Name_System#Recursive_and_caching_name_server][caching DNS server]]: it will answer DNS queries from either
@@ -52,13 +59,24 @@ its cache or by consulting an upstream server.
 
 #+begin_src malaya
 module.exports.main = store {
+
+    plugin ('restart') {dnsUpstream:['8.8.8.8',53]}
+    plugin ('timer') {interval:10000}
+    plugin ('udp') {
+        port:    53,
+        encoder: {
+            pack:   packDNS,
+            unpack: unpackDNS
+        }
+    }
+
     ['config',{}];
     ['counters',{dnsId:8888}];
 
     rule (-['query',   {id,flags:{opcode,...}, q,...},    {src:['udp',...addr]}],
            ['rr',      {q,rds,...}],
           +['response',{id,flags:{opcode,rc:0},q,
-                        ans:rds.map(rdObj) },             {dst:['udp',...addr]}] );
+                        ans:rds.map(rd=>{rd}) },          {dst:['udp',...addr]} ] );
 
     rule ( ['query',   {id,flags:{opcode,...}, q,...},    {src:['udp',...addr]}],
            ['config',  {dnsUpstream,...}],
@@ -66,7 +84,7 @@ module.exports.main = store {
 
     rule (-['response',{id,flags:{opcode,...}, q,ans,...},{src:['udp',...dnsUpstream]}],
            ttd = ans.length>0 ? ans[0].ttl*1000+Date.now() : 60000,
-          +['rr',      {q,rds:ans.map(function(an){return an.rd;}),ttd}] );
+          +['rr',      {q,rds:ans.map(an=>an.rd),ttd}] );
 
     rule ( ['rr',{q,...}],      // one RR per name/class/type, poss with multiple rd
           -['rr',{q,...}] );
@@ -78,28 +96,21 @@ module.exports.main = store {
     rule (-['tick',{...},{src:'timer'}])
 
     rule (-['restart',{dnsUpstream,...config},{src:'restart'}],
-           dnsU = (typeof dnsUpstream=='string') ? [dnsUpstream,53] : dnsUpstream,
+           dnsU = (typeof dnsUpstream==='string') ? [dnsUpstream,53] : dnsUpstream,
           +['configChange',{dnsUpstream:dnsU,...config}] );
 
     rule (-['configChange',{...config1}],
           -['config',{...config0}],
           +['config',Object.assign({},config0,config1)] );
 }
-    .plugin('restart',{dnsUpstream:['8.8.8.8',53]})
-    .plugin('timer',{interval:10000})
-    .plugin('fifo',{path:'control'})
-    .plugin('udp',{
-        port:    53,
-        encoder: {
-            pack:   packDNS,
-            unpack: unpackDNS
-        }
-    });
 #+end_src
 
 Code for unpacking and packing JSON into binary format has been
 omitted for brevity.  Complete code can be found in the distribution
 as [[file:./examples/dns.malaya][examples/dns.malaya]].
+
+Whitespace is not significant, but is used here to show grouping by
+alignment.
 
 If you know DNS, this might make some sense, and you'll spot that
 there are some errors and omissions which we'll deal with when we
@@ -162,7 +173,7 @@ Semicolons may not be omitted.
 State may not be mutated globally.  Facts in the store are [[https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/freeze][frozen]] to
 ensure this.  This is needed for the prevalence mechanism, as
 untracked global state cannot, by definition, be persisted and
-restored..
+restored.
 
 Global variables must be defined via ~const~.
 
@@ -193,6 +204,8 @@ If you have =curl= available you can now do:
 ~/malaya$ curl http://localhost:8280/
 #+end_example
 
+# +++ Explain the code +++
+
 * Prevalence
 <<prevalence>>
 * The =malaya= command
@@ -212,8 +225,8 @@ verbosity level.
 - =-l=, =--long-lines= :: don't shorten JSON output
 - =-p=, =--prevalence-directory= /dir/ :: specify  the prevalence directory
      defaults to =./.prevalence=
-- =-q=, =--quiet= :: be more quiet
-- =-v=, =--verbose= :: be more verbose
+- =-q=, =--quiet= :: produce less output
+- =-v=, =--verbose= :: produce more output
 - =-P=, =--plugin= :: load a plugin and create an instance,
      cannot be used to create multiple instances of a single plugin.
 - =-O=, =--override= /plugin.option=JSON/ ::
@@ -238,7 +251,7 @@ they must occur first in the argument list.
 <<plugins>>
 ** Introduction
 
-A malaya system communicates with the outside world via plugins
+A malaya system communicates with the outside world via plugins.
 
 # example
 
@@ -269,6 +282,7 @@ Provides access to Malaya's internal hash store for stashing [[http://wikipedia.
 *** =http=
 *** =tcp=
 *** =process=
+*** =random=
 *** =udp=
 *** =unix=
 *** =ws=
@@ -292,8 +306,6 @@ Provides information about hardware attached to the system, including
 updates (e.g. USB devices attached or removed).
 
 *** Cloud provider APIs, e.g. AWS, GCloud, Azure
-*** eBPF
-
 * Example 2 DNS
 <<DNS example>>
 * Example 3 turing machine

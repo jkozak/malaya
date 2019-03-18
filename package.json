@@ -5,10 +5,18 @@
         "dump.js",
         "repl.js"
     ],
+    "config":{
+        "ssh": "malaya.site"
+    },
     "main": "index.js",
     "scripts": {
+        "buildHtmlBook": "emacs book.org --batch -f org-html-export-to-html --kill",
+        "buildHtmlFAQ": "emacs FAQ.org --batch -f org-html-export-to-html --kill",
+        "buildHtmlDocs": "npm run buildHtmlFAQ && npm run buildHtmlBook",
+        "deploy": "echo \"cd /malaya.git && git push deploy new-compiler:master && git tag DEPLOY--$(date +%Y-%m-%d_%H.%M.%S)\" | ssh -AT $npm_package_config_ssh sh",
         "start": "node malaya run",
         "init": "node malaya init",
+        "install": "npm run buildHtmlDocs",
         "test:XXX": "cross-env NODE_ENV=test mocha --exit --require compiler -C test plugins/test examples/test --grep XXX",
         "test": "npm run test:js --silent && npm run test:malaya --silent",
         "test:malaya": "cross-env NODE_ENV=test mocha -R min --require compiler -C test/*.malaya",
