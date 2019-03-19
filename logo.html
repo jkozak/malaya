@@ -1,0 +1,61 @@
+<html>
+  <head>
+    <title>Malaya logo</title>
+  </head>
+  <body>
+    <canvas id="logo" width="1600" height="300"></canvas>
+    <script>
+      const context = document.getElementById('logo').getContext('2d');
+
+      context.scale(0.3,0.3);
+
+      context.beginPath();
+
+      context.moveTo(100,200)
+
+      context.lineTo(200,100) // M
+      context.lineTo(300,200)
+      context.lineTo(400,100)
+      context.lineTo(500,200)
+
+      context.moveTo(500,100);
+
+      context.lineTo(600,200); // A
+      context.lineTo(700,100);
+      context.moveTo(550,150);
+      context.lineTo(650,150);
+
+      context.moveTo(700,200);
+
+      context.lineTo(800,100); // L
+      context.lineTo(900,200);
+
+      context.moveTo(900,100);
+
+      context.lineTo(1000,200); // A
+      context.lineTo(1100,100);
+      context.moveTo( 950,150);
+      context.lineTo(1050,150);
+
+      context.moveTo(1100,200);
+
+      context.lineTo(1200,100); // Y
+      context.lineTo(1300,200);
+      context.moveTo(1200,100);
+      context.lineTo(1200,  0);
+
+      context.moveTo(1300,100);
+
+      context.lineTo(1400,200); // A
+      context.lineTo(1500,100);
+      context.moveTo(1350,150);
+      context.lineTo(1450,150);
+
+      context.moveTo(2000,200);
+
+      context.closePath();
+      context.lineWidth = 7;
+      context.stroke();
+    </script>
+  </body>
+</html>
