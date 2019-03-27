@@ -1,0 +1,28 @@
+{
+    "name": "malaya-example-dogfood",
+    "version": "0.8.99",
+    "description": "dogfood collaboration",
+    "peerDependencies": {
+        "malaya": "^0.8.99",
+        "malaya-plugin-systemd": "^0.8.99"
+    },
+    "main": "index.js",
+    "scripts": {
+        "init": "malaya init index.malaya",
+        "prestart": "[ -d .prevalence ] || npm run init",
+        "start": "malaya run index.malaya",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "dependencies": {
+        "malaya": "../..",
+        "malaya-plugin-systemd": "../../plugins/systemd"
+    },
+    "keywords": [
+        "collaboration",
+        "dogfood",
+        "example",
+        "malaya"
+    ],
+    "author": "John Kozak <jk@malaya.site>",
+    "license": "AGPL3"
+}
