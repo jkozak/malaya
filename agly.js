@@ -10,7 +10,7 @@ const    recast = require('recast');
 const      util = require('./util.js');
 const     types = require('./types.js');
 const    assert = require('assert').strict;
-const    parser = require('./parser.js');
+const    parser = require('./esprima.js');
 
 const fragments = parser.parse(fs.readFileSync('./code-fragments.js','utf8'));
 
@@ -393,6 +393,8 @@ exports.makeTree = ()=>new Tree({
             return pa.slice(0,pa.length-1).concat([{type:'Object',index:this.index}]);
         }
     },
+    PluginStatement:class extends MyNode {
+    },
     Program:class extends MyNode {
         get globals() {
             return {};          // +++ get these from somewhere +++
@@ -425,6 +427,9 @@ exports.makeTree = ()=>new Tree({
         //     // +++
         //     return cf;
         // }
+        get plugins() {
+            return this.body.filter(n=>estFor(n).type==='PluginStatement');
+        }
         get storeOutsideBindings() {
             return this.parent ? this.parent.bindings : {};
         }

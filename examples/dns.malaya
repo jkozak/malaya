@@ -222,31 +222,31 @@ function unpackDNS(buf) {
     return [dnsqr.flags.qr ? 'response' : 'query',dnsqr];
 }
 
-// new type RR = types.Or([types.Bytes,types.String])
-// unpackDNS.types = packDNS.types = [
-//     new types.Tuple([
-//         new types.Or(new types.Const('query'),new types.Const('response')),
-//         new types.Record({
-//             flags: new types.Record({
-//                 qr:     new types.Int(false,1), // +++ check widths +++
-//                 opcode: new types.Int(false,4),
-//                 aa:     new types.Int(false,1),
-//                 tc:     new types.Int(false,1),
-//                 rd:     new types.Int(false,1),
-//                 ra:     new types.Int(false,1),
-//                 rc:     new types.Int(false,4)
-//             }),
-//             ans: new types.List(RR),
-//             nss: new types.List(RR),
-//             ars: new types.List(RR),
-//             q: new types.Record({
-//                 name: new types.String,
-//                 type: new types.Int(false,16),
-//                 cls:  new types.Int(false,16)
-//             }),
-//         }),
-//     ])
-// ];
+const typeRR = new types.Record({type:types.UInt8,data:types.String})
+unpackDNS.types = packDNS.types = [
+    new types.Tuple([
+        new types.Or(new types.Const('query'),new types.Const('response')),
+        new types.Record({
+            flags: new types.Record({
+                qr:     new types.Int(false,1), // +++ check widths +++
+                opcode: new types.Int(false,4),
+                aa:     new types.Int(false,1),
+                tc:     new types.Int(false,1),
+                rd:     new types.Int(false,1),
+                ra:     new types.Int(false,1),
+                rc:     new types.Int(false,4)
+            }),
+            ans: new types.List(typeRR),
+            nss: new types.List(typeRR),
+            ars: new types.List(typeRR),
+            q: new types.Record({
+                name:     types.String,
+                type: new types.Int(false,16),
+                cls:  new types.Int(false,16)
+            }),
+        }),
+    ])
+];
 
 function rdObj(rd) {
     return {rd:rd};

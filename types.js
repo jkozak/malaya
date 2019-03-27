@@ -19,6 +19,9 @@ const   _ = require('underscore');
 class TypeError extends Error {}
 
 const Type = exports.Type = class {
+    constructor() {
+        this.bindings = null;
+    }
     toString() {
         return this.constructor.name || '??type';
     }
@@ -34,6 +37,28 @@ const Type = exports.Type = class {
             return this;
         else
             return type.unify(this);
+    }
+};
+
+const Var = exports.Var = new class Var extends Type {
+    constructor(name) {
+        super();
+        this.name = name;
+    }
+    instancedBy(x) {
+        const type = this.bindings[this.name];
+        if (type)
+            return type.instancedBy(x);
+        throw new Error('NYI');
+    }
+    unify(type) {
+        const type1 = this.bindings[this.name];
+        if (type1)
+            return type1.unify(type);
+        else {
+            this.bindings[this.name] = type;
+            return type;
+        }
     }
 };
 
@@ -251,6 +276,40 @@ const Function = exports.Function = class extends Type {      // eslint-disable-
         throw new Error('NYI');
     }
 };
+
+function walk(type,fn) {
+    fn(type);
+    Object.keys(type).forEach(k=>{
+        const v = type[k];
+        if (v instanceof Type)
+            walk(v,fn);
+        else if (Array.isArray(v))
+            v.forEach(w=>{
+                if (w instanceof Type)
+                    walk(w,fn);
+            });
+        else if (typeof v==='object' && v!==null)
+            Object.keys(v).forEach(k1=>{
+                if (v[k1] instanceof Type)
+                    walk(v[k1],fn);
+            });
+    });
+}
+
+const findVars = type=>{
+    const o = {};
+    walk(type,t=>{
+        if (t instanceof Var)
+            o[t.name] = true;
+    });
+    return Object.keys(o);
+}
+
+const reset = exports.reset = type=>{                         // eslint-disable-line no-unused-vars
+    const bindings = {};
+    findVars(type).forEach(v=>{bindings[v]=null;});
+    walk(type,t=>{t.bindings=bindings;});
+}
 
 const NoMatch = exports.NoMatch = class extends TypeError {}; // eslint-disable-line no-unused-vars
 
