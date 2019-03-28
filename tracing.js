@@ -2,15 +2,12 @@
 
 // execution tracing
 
-const        _ = require('underscore');
 const     path = require('path');
 const    chalk = require('chalk');
-const    JSON5 = require('json5');
 const   assert = require('assert');
 
-const compiler = require('./compiler.js');
-
 const summariseJSON = exports.summariseJSON = (js,{n=12,long=false}={})=>{
+    const JSON5 = require('json5');
     if (long)
         return JSON.stringify(js);
     else {
@@ -29,6 +26,7 @@ const summariseJSON = exports.summariseJSON = (js,{n=12,long=false}={})=>{
 
 const fmtJSON = exports.fmtJSON = (js,opts={})=>summariseJSON(js,opts);
 const fmtFact = exports.fmtFact = (f,opts={})=>{
+    const JSON5 = require('json5');
     if (Array.isArray(f) && [2,3].includes(f.length) && typeof f[0]==='string') {
         if (f.length===2)
             return `['${chalk.blue(f[0])}',${fmtJSON(f[1],opts)}]`;
@@ -58,7 +56,7 @@ exports.trace = (chrjs,source_,opts={})=>{
     const    stack = [];
     const     outQ = [];
     const   source = chrjs.__file__;
-    const  ruleMap = compiler.getRuleMap(path.resolve(source));
+    const  ruleMap = require('./compiler.js').getRuleMap(path.resolve(source));
     const mySource = path.relative(process.cwd(),source);
     const    print = opts.print || console.log;
     let   provoker = null;
@@ -84,6 +82,7 @@ exports.trace = (chrjs,source_,opts={})=>{
         }
     });
     chrjs.on('del',(t,f)=>{
+        const _ = require('underscore');
         if (stack.length>0) {
             const adds = stack[stack.length-1].adds;
             for (let i=0;i<adds.length;i++)

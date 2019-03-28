@@ -2,6 +2,6 @@
 // -*- mode:javascript -*-
 "use strict";
 
-var cmdline = require('./cmdline.js');
+const cmdline = require('./cmdline.js');
 
 cmdline.run();

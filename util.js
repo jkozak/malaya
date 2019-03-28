@@ -2,7 +2,6 @@
 /*eslint-disable no-extend-native*/
 
 const _util = require('util');
-const shell = require('shelljs');
 const    os = require('os');
 const    fs = require('fs');
 
@@ -161,12 +160,13 @@ exports.after = function(times,fn) {
 
 // environmental stuff
 
-exports.sourceVersion = (function() {
-    let   ans = '';
-    const com = shell.exec("git status --porcelain",{silent:true});
-    const tag = shell.exec("git describe --tags",{silent:true});
-    const rev = shell.exec("git rev-parse HEAD",{silent:true});
-    const ver = require('./package.json').version;
+exports.getSourceVersion = function() {
+    const shell = require('shelljs');
+    let     ans = '';
+    const   com = shell.exec("git status --porcelain",{silent:true});
+    const   tag = shell.exec("git describe --tags",{silent:true});
+    const   rev = shell.exec("git rev-parse HEAD",{silent:true});
+    const   ver = require('./package.json').version;
     if (tag.code===0)
         ans = tag.stdout.trim();
     else if (rev.code===0)
@@ -176,7 +176,7 @@ exports.sourceVersion = (function() {
     if (com.code!==0 || com.stdout.trim()!=='')
         ans += '?';
     return ans;
-})();
+};
 
 exports.onWindows = /^win/.test(os.platform());
 
@@ -198,5 +198,5 @@ if (exports.env==='test')
         deserialise: deserialise
     };
 
-if (exports.env==='prod' && exports.sourceVersion().slice(-1)==='?')
+if (exports.env==='prod' && exports.getSourceVersion().slice(-1)==='?')
     throw new exports.Fail("must run registered code in production");

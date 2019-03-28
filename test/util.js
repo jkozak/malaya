@@ -13,7 +13,7 @@ describe('constants',function() {
         assert.strictEqual(util.env,"test");
     });
     it("`source_version` will be a string",function() {
-        assert.strictEqual(typeof util.sourceVersion,'string');
+        assert.strictEqual(typeof util.getSourceVersion(),'string');
     });
 });
 

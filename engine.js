@@ -150,6 +150,7 @@ const Engine = exports.Engine = function(options) {
         dist:   random.real(0,1,false),
         seed:   null
     };
+    eng.sourceVersion  = util.getSourceVersion();
 
     eng.chrjs.on('error',(err)=>eng.emit('error',new VError(err,"chrjs: ")));
 
@@ -800,7 +801,7 @@ Engine.prototype.journaliseCodeSources = function(type,item2,always,cb) {
         eng.sources = {};
         for (const fn in srcs)
             srcs[fn] = this.hashes.putFileSync(fn);
-        this.journalise(type,[util.sourceVersion,item2,srcs],cb);
+        this.journalise(type,[eng.sourceVersion,item2,srcs],cb);
     } else
         cb(null);
 };
