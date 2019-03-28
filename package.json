@@ -13,7 +13,7 @@
         "buildHtmlBook": "emacs book.org --batch -f org-html-export-to-html --kill",
         "buildHtmlFAQ": "emacs FAQ.org --batch -f org-html-export-to-html --kill",
         "buildHtmlDocs": "npm run buildHtmlFAQ && npm run buildHtmlBook",
-        "deploy": "echo \"cd /malaya.git && git push deploy new-compiler:master && git tag DEPLOY--$(date +%Y-%m-%d_%H.%M.%S)\" | ssh -AT $npm_package_config_ssh sh",
+        "deploy": "echo \"cd /malaya.git && git push -f deploy new-compiler:master && git tag DEPLOY--$(date +%Y-%m-%d_%H.%M.%S)\" | ssh -AT $npm_package_config_ssh sh",
         "start": "node malaya run",
         "init": "node malaya init",
         "install": "npm run buildHtmlDocs",

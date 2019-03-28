@@ -2,7 +2,9 @@
 
 const  plugin = require('../plugin.js');
 
+const      fs = require('fs');
 const    http = require('http');
+const    path = require('path');
 
 exports.http = plugin.add('http',class extends plugin.Plugin {
     constructor({port=3000}) {
@@ -51,6 +53,9 @@ exports.http = plugin.add('http',class extends plugin.Plugin {
                 Object.keys(args.headers).forEach(k=>res.setHeader(k,args.headers[k]));
             if (args.body)
                 res.write(args.body);
+            if (args.sendfile)
+                res.write(fs.readFileSync(path.join(pl.engine.options.dir,args.sendfile),
+                                          'utf8')); // !!! s/be async !!!<
             res.end();
             break;
         }
