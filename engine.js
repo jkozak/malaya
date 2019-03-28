@@ -782,7 +782,7 @@ Engine.prototype.listenHttp = function(mode,port,done) {
 
     eng.http = eng.options.createHttpServer(eng);
 
-    eng.http.listen(port,()=>{
+    eng.http.listen(port,'127.0.0.1',()=>{
         eng.emit('listen','http',eng.http.address().port);
         done();
     });

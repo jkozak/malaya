@@ -13,7 +13,7 @@ function makeTcpPortName(s) {
 }
 
 plugin.add('tcp',class extends plugin.Plugin {
-    constructor({port=0,Reader=whiskey.JSONParseStream,Writer=whiskey.StringifyJSONStream}) {
+    constructor({port=0,host=null,Reader=whiskey.JSONParseStream,Writer=whiskey.StringifyJSONStream}) {
         super();
         const pl = this;
         pl.port0       = port;    // IP port requested
@@ -21,12 +21,13 @@ plugin.add('tcp',class extends plugin.Plugin {
         pl.Reader      = Reader;
         pl.Writer      = Writer;
         pl.port        = null;    // IP port allocated
+        pl.host        = host;
         pl.connections = {};
     }
     start(cb) {
         const pl = this;
         pl.server = net.createServer({});
-        pl.server.listen(pl.portReq,()=>{
+        pl.server.listen(pl.portReq,pl.host,()=>{
             pl.port = pl.server.address().port;
             super.start(cb);
         });
