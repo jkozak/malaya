@@ -1,7 +1,0 @@
-module.exports = store {
-    rule (-['request',{id,method:'GET',url:'/NotFound',...},{src:'http'}],
-          +['response',{id,statusCode:404},{dst:'http'}] );
-    rule (-['request',{id,method:'GET',url:'/SomeCrap',...},{src:'http'}],
-          +['response',{id,statusCode:200,body:'"SomeCrap"',headers:{'Content-Type':'application/json'}},{dst:'http'}] );
-}
-    .plugin('http',{port:3333});
