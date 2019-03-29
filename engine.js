@@ -864,6 +864,7 @@ Engine.prototype._become = function(mode,cb) {
                 eng.closeAllConnections('replication',done);
                 eng.options.endpoints.forEach(ep=>eng.closeAllConnections(ep,done));
                 plugin.stop(done);
+                //cb();  // !!! fix this !!!
                 break;
             }
             case 'slave':
