@@ -215,7 +215,7 @@ subcommands.exec.addArgument(
     {
         action:       'store',
         defaultValue: 3000,
-        type:         parseInt,
+        type:         util.parsePort,
         dest:         'webPort',
         help:         "http port to listen on",
         metavar:      "port"
@@ -369,8 +369,8 @@ subcommands.run.addArgument(
     ['-w','--web-port'],
     {
         action:       'store',
-        defaultValue: 3000,
-        type:         parseInt,
+        defaultValue: null,
+        type:         util.parsePort,
         dest:         'webPort',
         help:         "http port to listen on",
         metavar:      "port"
@@ -651,7 +651,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
     };
 
     const findSource = function(){
-        const possibilities = ['bl.chrjs','index.malaya'];
+        const possibilities = ['index.malaya'];
         for (const p of possibilities)
             if (fs.existsSync(p))
                 return p;
@@ -999,7 +999,9 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
         require('./compiler.js'); // for Malaya* globals
         if (args.adminUI)
             args.admin = true;
-        args.source = args.source || findSource();
+        args.source  = args.source  || findSource();
+        if (args.webPort===null)
+            args.webPort = path.join(prevalenceDir,'socket');   // !!! unix only !!!
         const   source = path.resolve(args.source);
         const  options = {businessLogic:   source,
                           admin:           args.admin,
@@ -1012,7 +1014,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
         const    ports = {};
         eng._bindGlobals();
         eng.on('listen',function(protocol,port) {
-            console.log("%s listening on *:%s",protocol,port);
+            console.log("%s listening on %s",protocol,port);
             if (args.adminUI && protocol==='http') {
                 execCP(util.format("chromium -disk-cache-dir=/dev/null -app='http://%s:%d/%s'",
                                    'localhost',
@@ -1038,7 +1040,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                 fs.writeFileSync(path.join(eng.prevalenceDir,'ports'),JSON.stringify(ports));
         });
         process.on('exit',()=>{
-            fs.unlinkSync(path.join(eng.prevalenceDir,'ports'));
+            fs.unlink(path.join(eng.prevalenceDir,'ports'),()=>{});
         });
         eng.on('saved',function(syshash,worldHash,journalHash) {
             console.log("closing hash:  %s",journalHash);
@@ -1151,7 +1153,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
             console.log("world:\t %d bytes, saved at %s",stWorld.size,  moment(stWorld.mtime).format(tfmt));
             console.log("journal: %d bytes, updated %s",stJournal.size,moment(stJournal.mtime).format(tfmt));
             for (const k in data.ports) {
-                console.log("%s:\t listening on *:%d",k,data.ports[k]);
+                console.log("%s:\t listening on %d",k,data.ports[k]);
             }
         }
     };
@@ -1190,8 +1192,11 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
     if (opts.tweakSubcommands)
         opts.tweakSubcommands({prevalenceDir});
 
-    if (subcommands[args.subcommandName]===undefined)
+    if (subcommands[args.subcommandName]===undefined) {
+        // +++ add plugins to lock data, look there +++
+        // +++ else look for plugin called subcommandName +++
         throw new VError("unknown subcommand: %s",args.subcommandName);
+    }
     if (subcommands[args.subcommandName].exec===undefined)
         throw new VError("NYI: subcommand `%s`",args.subcommandName);
 

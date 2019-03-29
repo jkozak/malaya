@@ -165,6 +165,8 @@ const Engine = exports.Engine = function(options) {
 
     plugin.registerEngine(eng);
 
+    options.plugins    = plugin.listPlugins();   // get this in the lock file data
+
     return eng;
 };
 
@@ -783,10 +785,16 @@ Engine.prototype.listenHttp = function(mode,port,done) {
 
     eng.http = eng.options.createHttpServer(eng);
 
-    eng.http.listen(port,'127.0.0.1',()=>{
-        eng.emit('listen','http',eng.http.address().port);
-        done();
-    });
+    if (typeof port==='number')
+        eng.http.listen(port,'127.0.0.1',()=>{
+            eng.emit('listen','http',eng.http.address().port);
+            done();
+        });
+    else
+        eng.http.listen(port,()=>{
+            eng.emit('listen','http',eng.http.address());
+            done();
+        });
 
     eng.http.once('close',()=>{
         eng.emit('unlisten','http',eng.options.ports.http);

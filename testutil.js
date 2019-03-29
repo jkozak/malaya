@@ -254,13 +254,13 @@ if (util.env==='test')  {
             });
             byline(srv.proc.stdout).on('data',(line)=>{
                 line = line.toString();
-                let m = /http listening on \*:([0-9]+)/.exec(line);
+                let m = /http listening on ([0-9a-zA-Z_/-]+)/.exec(line);
                 if (m)
-                    srv.port = parseInt(m[1]);
+                    srv.port = util.parsePort(m[1]);
                 else {
-                    m = /([a-zA-Z0-9$:_-]+) listening on \*:([0-9]+)/.exec(line);
+                    m = /([a-zA-Z0-9$:_-]+) listening on ([0-9a-zA-Z_/-]+)/.exec(line);
                     if (m)
-                        srv.plugins[m[1]] = {port:parseInt(m[2])};
+                        srv.plugins[m[1]] = {port:util.parsePort(m[2])};
                 }
                 m = /^mode now: ([a-z]+)$/.exec(line);
                 if (m && m[1]==='master')

@@ -157,6 +157,20 @@ exports.after = function(times,fn) {
         };
 };
 
+exports.parsePort = x=>{
+    const i = parseInt(x);
+    return isNaN(i) ? x : i;
+};
+
+exports.fmtSocketAddress = s=>{
+    const a = s.address();
+    if (typeof a==='string')
+        return a;
+    if (typeof a==='object' && a.family==='IPv4')
+        return `${a.address}:${a.port}`;
+    throw new Error(`unknown socket address type: ${JSON.stringify(a)}`);
+};
+
 
 // environmental stuff
 
