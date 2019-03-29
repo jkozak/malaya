@@ -26,4 +26,6 @@ npm-debug.log
 *.tex
 *.pdf
 
+!logo.html
+
 auto/
