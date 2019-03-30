@@ -1,0 +1,9 @@
+From: John Kozak
+Date: Sun, 31 Mar 2019 09:13:32 +0100
+State: new
+Subject: jsonlines support in admin
+Message-Id: <cbbdf01f7a6633ab-0-artemis@bisou>
+
+use HTTP Accept header to request output in jsonl format
+
+mimetype is application/x-jsonlines

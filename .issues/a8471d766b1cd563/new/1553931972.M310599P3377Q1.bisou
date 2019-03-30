@@ -1,0 +1,9 @@
+From: John Kozak
+Date: Sat, 30 Mar 2019 07:45:10 +0000
+State: new
+Subject: close from signal is untidy
+Message-Id: <a8471d766b1cd563-0-artemis@bisou>
+
+There is a missing callback invocation after become idle.
+
+The obvous fix breaks some plugin tests
