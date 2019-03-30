@@ -1,3 +1,4 @@
 module.exports.main = store {
     // dummy store
-};
+}
+    .plugin('restart');
