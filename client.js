@@ -3,16 +3,16 @@
 "use strict";
 /*eslint-disable no-process-exit*/
 
+const       fs = require('fs');
+const       ws = require('ws');
 const     argv = require('minimist')(process.argv.slice(2));
-const   SockJS = require('node-sockjs-client');
 const readline = require('readline');
 const     path = require('path');
 
 const     util = require('./util.js');
-const     lock = require('./lock.js');
 
 exports.repl = function(url) {
-    const sock = new SockJS(url);
+    const sock = new ws(url);
 
     const write = function(js) {
         sock.send(JSON.stringify(js)+'\n');
@@ -24,6 +24,9 @@ exports.repl = function(url) {
         input:  process.stdin,
         output: process.stdout
     });
+
+    console.log("*** repl: %j",url)
+
 
     function repl() {
         rl.question("> ",function(answer) {
@@ -72,7 +75,7 @@ exports.repl = function(url) {
 };
 
 exports.nonInteractive = function(url) {
-    const sock = new SockJS(url);
+    const sock = new ws(url);
 
     sock.onmessage = function(e) {
         process.stdout.write(e.data);
@@ -81,11 +84,15 @@ exports.nonInteractive = function(url) {
 
 exports.findURL = function(p) {
     p = p || 'data';
-    const data = lock.lockDataSync(path.join(process.cwd(),'.prevalence','lock'));
-    if (data===null)
+    const ports = JSON.parse(fs.readFileSync(path.join(process.cwd(),'.prevalence','ports'),'utf8'));
+    if (ports===null)
         return null;
+    else if (typeof ports.http==='number')
+        return util.format("ws://localhost:%d/%s",ports.http,p);
+    else if (typeof ports.http==='string')
+        return util.format("ws+unix://%s:/%s",path.resolve(ports.http),p);
     else
-        return util.format("http://localhost:%d/%s",data.ports.http,p);
+        throw new Error(`unknown http port spec: ${JSON.stringify(ports.http)}`);
 };
 
 if (require.main===module) {

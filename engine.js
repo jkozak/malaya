@@ -44,6 +44,7 @@ const       shell = require('shelljs');
 const      random = require('random-js');
 const   expressWS = require('express-ws');
 const    jmespath = require('jmespath');
+const   WebSocket = require('ws');
 
 const    compiler = require('./compiler.js');
 const         www = require('./www.js');
@@ -1296,8 +1297,7 @@ Engine.prototype._replicationSource = function() {
 
 Engine.prototype.replicateFrom = function(url) { // `url` is base e.g. http://localhost:3000/
     const       eng = this;
-    const    SockJS = require('node-sockjs-client');
-    const      sock = new SockJS(url+'replication/journal');
+    const      sock = new WebSocket(url+'replication/journal');
     let     started = false;
     let     pending = [];
     const      tidy = false;
