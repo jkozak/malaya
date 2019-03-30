@@ -82,6 +82,33 @@ const addSubcommand = exports.addSubcommand = function(name,opts) {
     return subcommands[name];
 };
 
+addSubcommand('admin',{addHelp:true});
+subcommands.admin.addArgument(
+    ['-m','--method'],
+    {
+        action:       'store',
+        defaultValue: 'GET',
+        type:         s=>s.toUpperCase(),
+        choices:      ['GET','PUT','POST'],
+        help:         "admin HTTP method"
+    }
+);
+subcommands.admin.addArgument(
+    ['--stdin'],
+    {
+        action:       'storeTrue',
+        defaultValue: false,
+        help:         "stream stdin to admin interface"
+    }
+);
+subcommands.admin.addArgument(
+    ['url'],
+    {
+        action:       'store',
+        help:         "admin url"
+    }
+);
+
 addSubcommand('browse',{addHelp:true});
 subcommands.browse.addArgument(
     ['what'],
@@ -200,6 +227,15 @@ subcommands.exec.addArgument(
         help:         "mode in which to start"
     }
 );
+subcommands.exec.addArgument(
+    ['--no-admin'],
+    {
+        action:       'storeFalse',
+        defaultValue: true,
+        help:         "start an admin UI browser session",
+        dest:         'admin'
+    }
+);
 if (util.env!=='prod')
     subcommands.exec.addArgument(
         ['--private-test-urls'],
@@ -297,7 +333,7 @@ subcommands.parse.addArgument(
     ['source'],
     {
         action:       'store',
-        help:         "chrjs source file to parse"
+        help:         "malaya source file to parse"
     }
 );
 
@@ -330,15 +366,6 @@ subcommands.run.addArgument(
     }
 );
 subcommands.run.addArgument(
-    ['-a','--admin'],
-    {
-        action:       'storeTrue',
-        defaultValue: false,
-        help:         "start an admin UI browser session",
-        dest:         'admin'
-    }
-);
-subcommands.run.addArgument(
     ['-D','--debug'],
     {
         action:       'storeTrue',
@@ -366,10 +393,19 @@ subcommands.run.addArgument(
     }
 );
 subcommands.run.addArgument(
+    ['--no-admin'],
+    {
+        action:       'storeFalse',
+        defaultValue: true,
+        help:         "start an admin UI browser session",
+        dest:         'admin'
+    }
+);
+subcommands.run.addArgument(
     ['-w','--web-port'],
     {
         action:       'store',
-        defaultValue: null,
+        defaultValue: 3000,
         type:         util.parsePort,
         dest:         'webPort',
         help:         "http port to listen on",
@@ -656,6 +692,23 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
             if (fs.existsSync(p))
                 return p;
         throw new VError("can't find a default malaya source file");
+    };
+
+    subcommands.admin.exec = function() {
+        const http = require('http');
+        const  req = http.request({
+            method:     args.method,
+            socketPath: path.join(prevalenceDir,'admin'),
+            path:       '/'+args.url
+        });
+        if (args.stdin)
+            process.stdin.pipe(req);
+        req.on('response',res=>{
+            if (res.statusCode!==200)
+                throw new util.Fail(`admin ${args.method} failed: ${res.statusCode}`);
+            res.pipe(process.stdout);
+        });
+        req.end();
     };
 
     subcommands.cat.exec = function() {
@@ -1192,16 +1245,10 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
     if (opts.tweakSubcommands)
         opts.tweakSubcommands({prevalenceDir});
 
-    if (subcommands[args.subcommandName]===undefined) {
-        // +++ add plugins to lock data, look there +++
-        // +++ else look for plugin called subcommandName +++
+    if (subcommands[args.subcommandName]===undefined)
         throw new VError("unknown subcommand: %s",args.subcommandName);
-    }
-    if (subcommands[args.subcommandName].exec===undefined)
-        throw new VError("NYI: subcommand `%s`",args.subcommandName);
 
     subcommands[args.subcommandName].exec(args);
-
     findCallback()(null);
 };
 

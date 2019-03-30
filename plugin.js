@@ -74,6 +74,9 @@ class Plugin {
             throw new Error(`using: don't know about resource type: ${type}`);
         }
     }
+    admin(req,res) {
+        res.statusCode = 404;
+    }
 }
 exports.Plugin = Plugin;
 
@@ -172,6 +175,12 @@ exports.add = (name,cl)=>{
         get verbosity()     {return cmdline.verbosity;},
         package:            require('./package.json').name
     });
+};
+
+exports.listPlugins = ()=>{
+    const ans = {};
+    plugins.forEach(pl=>ans[pl.name] = pl.opts);
+    return ans;
 };
 
 exports.require = name=>{

@@ -275,6 +275,19 @@ describe("cmd line interface [slow]",function() {
                        }
                    });
     });
+    it("queries running server via admin",function(done){
+        child.exec(util.format(`node malaya -p %j admin plugins`,pdir),
+                   {},
+                   (code,stdout,stderr)=>{
+                       if (code!==null)
+                           done(new VError("`malaya admin plugins` fails: %j",code));
+                       else {
+                           const js = JSON.parse(stdout.trim());
+                           assert.deepEqual(js,{restart:{}});
+                           done();
+                       }
+                   });
+    });
     it("fscks cleanly",function(done){
         child.exec(util.format(`node malaya -p %j fsck`,pdir),
                    {},

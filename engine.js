@@ -152,6 +152,7 @@ const Engine = exports.Engine = function(options) {
         seed:   null
     };
     eng.sourceVersion  = util.getSourceVersion();
+    eng.admin          = null;
 
     eng.chrjs.on('error',(err)=>eng.emit('error',new VError(err,"chrjs: ")));
 
@@ -165,8 +166,6 @@ const Engine = exports.Engine = function(options) {
     });
 
     plugin.registerEngine(eng);
-
-    options.plugins    = plugin.listPlugins();   // get this in the lock file data
 
     return eng;
 };
@@ -293,6 +292,7 @@ Engine.prototype.stop = function(unlock,cb) {
         unlock = unlock===undefined ? true : unlock;
         if (unlock)
             lock.unlockSync(path.join(eng.prevalenceDir,'lock'));
+        eng.stopAdmin();
         if (cb) cb();
     }
 };
@@ -472,6 +472,8 @@ Engine.prototype.start = function(cb) {
     eng.sanityCheck();
     lock.lockSync(path.join(eng.prevalenceDir,'lock'),eng.options);
     eng._makeHashes();
+    if (eng.options.admin)
+        eng.startAdmin();
     if (cb) cb();
 };
 
@@ -1385,18 +1387,18 @@ Engine.prototype.replicateFrom = function(url) { // `url` is base e.g. http://lo
     };
 };
 
-Engine.prototype.administer = function(port) {
+Engine.prototype._adminLoop = function(port,i,o) {
     const eng = this;
-    const  io = eng.conns[port];
-    io.o.write(['engine',{syshash:   eng.syshash,
+    o.write(['engine',{syshash:   eng.syshash,
                           mode:      eng.mode,
                           masterUrl: eng.masterUrl,
                           connects:  eng.connectionSummary(),
                           ip:        ip.address(),
                           tag:       eng.tag}]);
-    io.i.on('readable',function() {
+    i.on('readable',function() {
         let js;
-        while ((js=io.i.read())!==null) {
+        while ((js=i.read())!==null) {
+            console.log("*** admin: %j",js);
             try {
                 switch (js[0]){
                 case 'mode':
@@ -1414,11 +1416,14 @@ Engine.prototype.administer = function(port) {
                         }
                     }
                     break;
+                case 'plugins':
+                    o.write(plugin.listPlugins());
+                    break;
                 case 'facts': {
                     const res = js[1].jmespath ?
                         jmespath.search(eng.chrjs._private.orderedFacts,js[1].jmespath) :
                         eng.chrjs._private.orderedFacts;
-                    io.o.write(res);
+                    o.write(res);
                     break;
                 } }
             } catch (e) {
@@ -1427,6 +1432,62 @@ Engine.prototype.administer = function(port) {
             }
         }
     });
+};
+
+Engine.prototype.startAdmin = function() {
+    const  eng = this;
+    const port = path.join(eng.prevalenceDir,'admin');
+    try {
+        fs.unlinkSync(port);
+    } catch (e) {}
+    eng.admin = http.createServer();
+    eng.admin.listen(port,()=>{
+        console.log("admin listening on %s",port);
+        eng.admin.on('close',()=>{
+            // !!! why not called? !!!
+            fs.unlink(port);
+        });
+        eng.admin.on('request',(req,res)=>{
+            const send = js=>res.write(JSON.stringify(js));
+            res.setHeader('Content-Type','application/json');
+            res.statusCode = 200;
+            switch (req.url) {
+            case '/facts':
+                send(eng.chrjs._private.orderedFacts);
+                break;
+            case '/plugins':
+                if (req.method==='GET')
+                    send(plugin.listPlugins());
+                break;
+            default: {
+                const m = /\/plugin\/([^/]+)(.*)?/.exec(req.url); // eslint-disable-line security/detect-unsafe-regex
+                if (m) {
+                    const pl = plugin.get(m[1]);
+                    if (pl) {
+                        const url = m[2] || '/';
+                        pl.admin(Object.assign({},req,{url}),res);
+                    } else
+                        res.statusCode = 404;
+                }
+                else
+                    res.statusCode = 404;
+            } }
+            res.end();
+        });
+    });
+};
+
+Engine.prototype.stopAdmin = function() {
+    const eng = this;
+    if (eng.admin)
+        eng.admin.close();
+    eng.admin = null;
+};
+
+Engine.prototype.administer = function(port) {
+    const eng = this;
+    const  io = eng.conns[port];
+    eng._adminLoop(port,io.i,io.o);
 };
 
 Engine.prototype.addPlugin = function(name,eps) { // back compatibility with 0.7.x for MCI
