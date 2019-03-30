@@ -9,7 +9,7 @@ const     temp = require('temp').track();
 const   assert = require('assert').strict;
 const  request = require('superagent');
 
-describe("http plugin XXX",function(){
+describe("http plugin",function(){
     const   dir = temp.mkdirSync();
     const   dat = {data:123};
     let     eng;
