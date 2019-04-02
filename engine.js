@@ -45,6 +45,7 @@ const      random = require('random-js');
 const   expressWS = require('express-ws');
 const    jmespath = require('jmespath');
 const   WebSocket = require('ws');
+const       {URL} = require('url');
 
 const    compiler = require('./compiler.js');
 const         www = require('./www.js');
@@ -1448,31 +1449,45 @@ Engine.prototype.startAdmin = function() {
             fs.unlink(port);
         });
         eng.admin.on('request',(req,res)=>{
-            const send = js=>res.write(JSON.stringify(js));
+            const   url = new URL(req.url,'http://example.com/');
+            const  send = js=>res.write(JSON.stringify(js));
+            let endless = false;
             res.setHeader('Content-Type','application/json');
             res.statusCode = 200;
-            switch (req.url) {
+            switch (url.pathname) {
             case '/facts':
-                send(eng.chrjs._private.orderedFacts);
+                if (req.method==='GET')
+                    send(eng.chrjs._private.orderedFacts);
+                else
+                    res.statusCode = 404;
+                break;
+            case '/mode':
+                if (req.method==='GET')
+                    send(eng.mode);
+                else
+                    res.statusCode = 404;
                 break;
             case '/plugins':
                 if (req.method==='GET')
                     send(plugin.listPlugins());
+                else
+                    res.statusCode = 404;
                 break;
             default: {
                 const m = /\/plugin\/([^/]+)(.*)?/.exec(req.url); // eslint-disable-line security/detect-unsafe-regex
                 if (m) {
                     const pl = plugin.get(m[1]);
                     if (pl) {
-                        const url = m[2] || '/';
-                        pl.admin(Object.assign({},req,{url}),res);
+                        req.url = m[2] || '/';
+                        endless = pl.admin(req,res);
                     } else
                         res.statusCode = 404;
                 }
                 else
                     res.statusCode = 404;
             } }
-            res.end();
+            if (!endless)
+                res.end();
         });
     });
 };

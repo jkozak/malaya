@@ -3,6 +3,7 @@
 const       fs = require('fs');
 const   stream = require('stream');
 const through2 = require('through2');
+const    {URL} = require('url');
 
 const    util = require('./util.js');
 const cmdline = require('./cmdline.js');
@@ -75,7 +76,54 @@ class Plugin {
         }
     }
     admin(req,res) {
-        res.statusCode = 404;
+        const  pl = this;
+        const url = new URL(req.url,'http://example.com');
+        switch (req.method) {
+        case 'POST':
+            switch (url.pathname) {
+            case '/inject': {
+                let body = '';
+                req.on('data',chunk=>{
+                    body += chunk;
+                });
+                req.on('end',()=>{
+                    try {
+                        pl.update(JSON.parse(body));
+                    } catch (e) {
+                        console.log("inject of %j failed",body);
+                    }
+                });
+                req.on('error',e=>{
+                    console.log("HTTP request handling failed: %s",e);
+                    res.statusCode = 500;
+                });
+                break;
+            }
+            case 'divert': {
+                const saveOut = pl.out;
+                res.setHeader('Content-Type','application/x-jsonlines');
+                pl.out = (js,name,addr)=>{
+                    const meta = addr ? {addr} : {};
+                    res.write(JSON.stringify(js.concat(meta))+'\n');
+                };
+                req.on('end',()=>{
+                    pl.out = saveOut;
+                });
+                return false;
+            }
+            case '/tap':
+                // +++ url dst= param is the <url> to which to POST +++
+                // +++ url count= param is the number of msgs to intercept +++
+                // +++ url filter= parameter is whether to filter msgs or not +++
+                throw new Error('NYI');
+            default:
+                res.statusCode = 404;
+            }
+            break;
+        default:
+            res.statusCode = 404; // maybe 405 with allow header?
+        }
+        return true;
     }
 }
 exports.Plugin = Plugin;

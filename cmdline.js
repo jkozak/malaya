@@ -84,6 +84,15 @@ const addSubcommand = exports.addSubcommand = function(name,opts) {
 
 addSubcommand('admin',{addHelp:true});
 subcommands.admin.addArgument(
+    ['-b','--body'],
+    {
+        action:       'append',
+        defaultValue: [],
+        type:         s=>JSON.parse(s),
+        help:         "HTTP request body"
+    }
+);
+subcommands.admin.addArgument(
     ['-m','--method'],
     {
         action:       'store',
@@ -94,7 +103,7 @@ subcommands.admin.addArgument(
     }
 );
 subcommands.admin.addArgument(
-    ['--stdin'],
+    ['-s','--stdin'],
     {
         action:       'storeTrue',
         defaultValue: false,
@@ -695,6 +704,8 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
     };
 
     subcommands.admin.exec = function() {
+        if ((args.body.length+args.stdin)>1)
+            throw new util.Fail("specify no more than one JSON body item");
         const http = require('http');
         const  req = http.request({
             method:     args.method,
@@ -703,6 +714,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
         });
         if (args.stdin)
             process.stdin.pipe(req);
+        args.body.forEach(b=>req.write(JSON.stringify(b)));
         req.on('response',res=>{
             if (res.statusCode!==200)
                 throw new util.Fail(`admin ${args.method} failed: ${res.statusCode}`);
