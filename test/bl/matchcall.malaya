@@ -1,0 +1,6 @@
+module.exports = store {
+    ['a',{p:'abc'}];
+    rule (-['upd',{p}],
+          -['a',{p:p.slice(1)}],
+          +['a',{p:p.slice(1),q:true}] );
+}

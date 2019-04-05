@@ -956,6 +956,9 @@ function genMatch(term,genRest,bIdFact) { // genRest() >> [stmt,...]; returns Bl
             else
                 bools.push(genEqual(term,genAccessor(bIdFact,path)));
             break;
+        case 'CallExpression':
+            bools.push(genEqual(term,genAccessor(bIdFact,path)));
+            break;
         case 'MemberExpression': {
             if (term.computed)
                 throw new VError("NYI: computed member: %j",term);

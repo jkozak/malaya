@@ -1018,3 +1018,21 @@ describe("load",function(){
         });
     });
 });
+
+describe("CallExpression in match",function(){
+    let st;
+    before(()=>{
+        st = compiler.load('test/bl/matchcall.malaya');
+    });
+    it("matches via method call", function() {
+        st.update(['upd',{p:'/abc'}]);
+        _.chain(st._private.orderedFacts)
+            .tap(ff=>assert.strictEqual(ff.length,1))
+            .each(f=>assert.deepEqual(f,['a',{p:'abc',q:true}]));
+    });
+    it("doesn't matches via method call",function(){
+        st.update(['upd',{p:'/jkl'}]);
+        _.chain(st._private.orderedFacts)
+            .tap(ff=>assert.strictEqual(ff.length,2));
+    });
+});
