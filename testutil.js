@@ -206,6 +206,10 @@ if (util.env==='test')  {
 
     const ExtServer = function(serverJs,opts) {
         const srv = this;
+        if (opts===undefined) {
+            opts     = serverJs;
+            serverJs = null;
+        }
         opts = opts || {};
         srv.serverJs      = serverJs;
         srv.prevalenceDir = opts.prevalenceDir || path.join(temp.mkdirSync(),'.prevalence');
@@ -218,15 +222,15 @@ if (util.env==='test')  {
     };
     ExtServer.prototype._spawn = function(subcommand,args) {
         const srv = this;
-        return cp.spawn("node",
-                        [srv.serverJs,
-                         '-p',srv.prevalenceDir
-                        ]
-                        .concat(
-                            srv.preargs,
-                            [subcommand],
-                            args
-                        ) );
+        let cargs = ['-p',srv.prevalenceDir]
+            .concat(
+                srv.preargs,
+                [subcommand],
+                args
+            );
+        if (srv.serverJs)
+            cargs = [srv.serverJs].concat(cargs);
+        return cp.spawn(srv.serverJs?'node':'malaya',cargs);
     };
     ExtServer.prototype.init = function(args,done) {
         const srv = this;
