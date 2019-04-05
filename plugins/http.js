@@ -7,11 +7,12 @@ const    http = require('http');
 const    path = require('path');
 
 exports.http = plugin.add('http',class extends plugin.Plugin {
-    constructor({port=3000}) {
+    constructor({port=3000,host=null}) {
         super();
         const pl = this;
         pl.port0  = port;
         pl.port   = null;
+        pl.host   = host;
         pl.index  = 0;
         pl.reqs   = {};
         pl.server = null;
@@ -23,7 +24,7 @@ exports.http = plugin.add('http',class extends plugin.Plugin {
             pl.port = pl.server.address().port;
             super.start(cb);
         });
-        pl.server.listen(pl.port0);
+        pl.server.listen(pl.port0,pl.host);
     }
     ready() {
         const pl = this;
