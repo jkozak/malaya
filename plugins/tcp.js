@@ -27,7 +27,7 @@ plugin.add('tcp',class extends plugin.Plugin {
     start(cb) {
         const pl = this;
         pl.server = net.createServer({});
-        pl.server.listen(pl.portReq,pl.host,()=>{
+        pl.server.listen(pl.port0,pl.host,()=>{
             pl.port = pl.server.address().port;
             super.start(cb);
         });
