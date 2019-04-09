@@ -292,6 +292,7 @@ var chrGlobalVars = {           // only javascript globals allowed in CHRjs
     JSON:       {ext:true,mutable:false,type:'function'},
     Math:       {ext:true,mutable:false,type:'function',mangle:'MalayaMath'},
     Date:       {ext:true,mutable:false,type:'function',mangle:'MalayaDate'},
+    RegExp:     {ext:true,mutable:false,type:'function'},
     require:    {ext:true,mutable:false,type:'function'},
     module:     {ext:true,mutable:false,type:'function'},
     console:    {ext:true,mutable:false,type:'function'},
