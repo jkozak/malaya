@@ -72,6 +72,20 @@ plugin.add('tcp',class extends plugin.Plugin {
     }
     out(js,name,addr) {
         const pl = this;
-        pl.connections[addr[0]].ws.write(js);
+        if (addr) {
+            const cn = pl.connections[addr[0]];
+            if (!cn && addr)
+                console.log("Can't find port [%j,%j] to write %j",name,addr,js);
+            else
+                cn.ws.write(js);
+        } else {
+            if (!Array.isArray(js) || js.length!=2 || typeof js[0]!=='string')
+                throw new Error(`bad plugin msg: ${JSON.stringify(js)}`);
+            switch (js[0]){
+            case 'disconnect':
+                pl.connections[js[1].port].socket.destroy();
+                break;
+            }
+        }
     }
 });
