@@ -45,13 +45,12 @@ plugin.add('tcp',class extends plugin.Plugin {
             socket.pipe(rs);
             ws.pipe(socket);
             rs.on('data',js=>{
-                if (!Array.isArray(js) || js.length!==2 || typeof js[0]!=='string' || typeof js[1]!=='object') {
+                if (!Array.isArray(js) || js.length!==2 || typeof js[0]!=='string') {
                     console.log("dud input: %j",js);
                 } else {
                     pl.update(js,[portName]);
                 }
             });
-            pl.update(['connect',{port:portName}]);
             pl.connections[portName] = {socket,rs,ws};
             socket.on('close',err=>{
                 // +++ destroy reader and writer +++
