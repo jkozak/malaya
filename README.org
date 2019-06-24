@@ -1,5 +1,7 @@
 * Introduction
 
+*A major new version is coming.  Please wait for that before downloading.*
+
 Malaya is a logic-based relational data storage and processing system.
 
 There's a class of applications which are about taking in data from a
