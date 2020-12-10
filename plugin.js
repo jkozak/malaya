@@ -415,6 +415,17 @@ function setStandardClasses() {
 }
 setStandardClasses();
 
+// utils
+
+exports.makeTcpPortName = s=>{  // arg is socket; removes nasty aliasing
+    let a = s.remoteAddress;
+    if (a.startsWith('::ffff:'))
+        a = a.slice(7);         // ??? does this need more translation? ???
+    return `${a}:${s.remotePort}`;
+};
+
+// testing only
+
 if (util.env==='test')
     exports._private = {
         forgetAll: ()=>{

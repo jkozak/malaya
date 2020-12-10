@@ -5,13 +5,6 @@ const whiskey = require('../whiskey.js');
 
 const     net = require('net');
 
-function makeTcpPortName(s) {
-    let a = s.remoteAddress;
-    if (a.startsWith('::ffff:'))
-        a = a.slice(7);
-    return `${a}:${s.remotePort}`;
-}
-
 plugin.add('tcp',class extends plugin.Plugin {
     constructor({port=0,Reader=whiskey.JSONParseStream,Writer=whiskey.StringifyJSONStream}) {
         super();
@@ -38,7 +31,7 @@ plugin.add('tcp',class extends plugin.Plugin {
             pl.update(['error',{err}]);
         });
         pl.server.on('connection',socket=>{
-            const portName = makeTcpPortName(socket);
+            const portName = plugin.makeTcpPortName(socket);
             const       rs = plugin.instantiateReadStream(pl.Reader);
             const       ws = plugin.instantiateWriteStream(pl.Writer);
             socket.pipe(rs);
