@@ -2,4 +2,4 @@ module.exports = store {
     rule (-['ping',{...rest},{src}],
           out(src,['pong',{...rest}]) );
 }
-    .plugin('mw');
+    .plugin('middleware');

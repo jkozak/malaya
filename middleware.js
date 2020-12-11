@@ -21,7 +21,7 @@ const objectFromEntries = kvs=>Object.assign({},...Array.from(kvs,([k,v])=>({[k]
 
 exports.install = (server,path,source,opts)=>{
     const parseCookies = req=>cookieParser(req,null,()=>{});
-    plugin.add('mw',class extends plugin.Plugin {
+    plugin.add('middleware',class extends plugin.Plugin {
         constructor() {
             super();
             const pl = this;
@@ -80,7 +80,7 @@ exports.install = (server,path,source,opts)=>{
     eng.start();
     eng.become('master');
     server.on('close',()=>{
-        eng.stop(true);
+        eng.become('idle');
     });
     return eng;
 };
