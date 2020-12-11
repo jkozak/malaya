@@ -10,6 +10,8 @@ exports.load       = require('./compiler.js').load;
 exports.plugin     = require('./plugin.js');
 exports.Plugin     = require('./plugin.js').Plugin;
 
+exports.tracing    = require('./tracing.js');
+
 exports.middleware = require('./middleware.js');
 
 exports.add = thing=>{

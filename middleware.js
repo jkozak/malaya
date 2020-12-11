@@ -13,6 +13,7 @@
 
 const       engine = require('./engine.js');
 const       plugin = require('./plugin.js');
+const      tracing = require('./tracing.js');
 
 const    WebSocket = require('ws');
 const cookieParser = require('cookie-parser');
@@ -77,10 +78,16 @@ exports.install = (server,path,source,opts)=>{
         businessLogic: source,
         ports:         {}
     },opts||{} ));
+    if (opts.debug)
+        tracing.trace(eng.chrjs,'index.malaya',{long:false});
     eng.start();
     eng.become('master');
     server.on('close',()=>{
-        eng.become('idle');
+        eng.stopPrevalence(false,err=>{
+            if (err)
+                throw err;
+            eng.become('idle');
+        });
     });
     return eng;
 };

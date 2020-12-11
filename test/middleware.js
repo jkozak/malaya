@@ -24,16 +24,18 @@ describe("middleware XXX",function() {
         eng.init();
         done();
     });
+    let eng,srv,ws;
+    const abc = 21;
     it("creates a minimal connect app",function(done){
         const app = connect();
-        const srv = http.createServer(app);
-        const eng = middleware.install(srv,'/WebSocket','test/bl/middleware.malaya',{
+        srv = http.createServer(app);
+        eng = middleware.install(srv,'/WebSocket','test/bl/middleware.malaya',{
             prevalenceDir
         });
         eng.on('mode',mode=>{
             if (mode==='master') {
                 srv.listen(0,()=>{
-                    const ws = new WebSocket(`ws://127.0.0.1:${srv.address().port}/WebSocket?t=197`);
+                    ws = new WebSocket(`ws://127.0.0.1:${srv.address().port}/WebSocket?t=197`);
                     ws.on('open',()=>{
                         ws.send(JSON.stringify(['ping',{two:2}]));
                     });
@@ -70,6 +72,30 @@ describe("middleware XXX",function() {
         it("fourth record is 'ping' 'update'",function(){
             assert.equal(journal[3][1],'update');
             assert.equal(journal[3][2][0],'ping');
+        });
+    });
+    describe("ends",function(){
+        it("first closing websocket",function(done){
+            ws.on('close',()=>done());
+            ws.close();
+        });
+        it("via http server shutdown",function(done){
+            eng.on('saved',(s,w,j)=>{
+                assert.equal(typeof s,'string');
+                assert.equal(typeof w,'string');
+                assert.equal(typeof j,'string');
+                done();
+            });
+            srv.close();
+        });
+    });
+    describe("prevalence store",function(){
+        it("is nicely shut down",function(){
+            const journal = fs.readFileSync(path.join(prevalenceDir,'state/journal'),'utf8')
+                  .split('\n')
+                  .filter(l=>l!=='')
+                  .map(util.deserialise);
+            assert.equal(journal.length,1);
         });
     });
 });
