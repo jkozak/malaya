@@ -1287,7 +1287,7 @@ Engine.prototype._replicationSource = function() {
 
 Engine.prototype.replicateFrom = function(url) { // `url` is base e.g. http://localhost:3000/
     const       eng = this;
-    const    SockJS = require('node-sockjs-client');
+    const    SockJS = require('ws');
     const      sock = new SockJS(url+'replication/journal');
     let     started = false;
     let     pending = [];

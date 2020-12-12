@@ -4,7 +4,7 @@
 /*eslint-disable no-process-exit*/
 
 const     argv = require('minimist')(process.argv.slice(2));
-const   SockJS = require('node-sockjs-client');
+const   SockJS = require('ws');
 const readline = require('readline');
 const     path = require('path');
 
