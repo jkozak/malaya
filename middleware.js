@@ -4,9 +4,6 @@
 // all the web-serving logic, which was in practice tedious wrappers
 // round 'express'.
 
-// This version is for 'connect'
-// +++ 'express' +++
-
 // +++ REST +++
 
 "use strict";
@@ -16,12 +13,10 @@ const       plugin = require('./plugin.js');
 const      tracing = require('./tracing.js');
 
 const    WebSocket = require('ws');
-const cookieParser = require('cookie-parser');
 
 const objectFromEntries = kvs=>Object.assign({},...Array.from(kvs,([k,v])=>({[k]:v})));
 
 exports.install = (server,path,source,opts)=>{
-    const parseCookies = req=>cookieParser(req,null,()=>{});
     plugin.add('middleware',class extends plugin.Plugin {
         constructor() {
             super();
@@ -40,10 +35,13 @@ exports.install = (server,path,source,opts)=>{
         ready() {
             const pl = this;
             pl.ws.on('connection',(client,req)=>{
-                const   url = new URL(req.url,'http://example.com');
-                const  port = plugin.makeTcpPortName(req.socket);
-                const query = objectFromEntries(Array.from(url.searchParams));
-                parseCookies(req);
+                const     url = new URL(req.url,'http://example.com');
+                const    port = plugin.makeTcpPortName(req.socket);
+                const   query = objectFromEntries(Array.from(url.searchParams));
+                const cookies = objectFromEntries((req.headers.cookie||'')
+                                                  .split(';')
+                                                  .map(s=>s.trim())
+                                                  .map(s=>s.split('=')) );
                 pl.connections[port] = client;
                 client.onmessage = m=>{
                     const js = JSON.parse(m.data);
@@ -52,12 +50,12 @@ exports.install = (server,path,source,opts)=>{
                     pl.update(js,[port]);
                 };
                 client.onclose = ()=>{
-                    pl.update(['disconnect',{port}],[port]);
+                    pl.update(['disconnect',{port}]);
                 };
                 client.onerror = err=>{
-                    pl.update(['error',{port,err}],[port]);
+                    pl.update(['error',{port,err}]);
                 };
-                pl.update(['connect',{port,query,cookies:req.cookies}]);
+                pl.update(['connect',{port,query,cookies}]);
             });
         }
         stop(cb) {
