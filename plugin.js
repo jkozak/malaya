@@ -177,6 +177,10 @@ exports.add = (name,cl)=>{
 
 exports.require = name=>{
     /* eslint-disable security/detect-non-literal-require */
+    overrides.plugins.forEach(([inst,plugin1])=>{
+        if (inst===name)
+            name = plugin1;
+    });
     let cl = classes[name];
     if (!cl) {
         try {

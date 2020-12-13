@@ -55,7 +55,7 @@ argparse.addArgument(['-O','--override'],
                          action:       'append',
                          defaultValue: [],
                          type:          s=>{
-                             let m = s.match(/([^.]+).([^=]+)=(.*)/);
+                             let m = s.match(/([^.]+)\.([^=]+)=(.*)/);
                              if (m)
                                  return ['parameters',m[1],m[2],JSON.parse(m[3])];
                              m = s.match(/([^.]+)=(.*)/);
