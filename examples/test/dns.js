@@ -20,6 +20,7 @@ describe("dns example",function() {
 
     describe("ancillary functions", function() {
         before(()=>{
+            plugin._private.reset();
             plugin.setOverrides({
                 plugins:    [['udp','dummy']],
                 parameters: []
