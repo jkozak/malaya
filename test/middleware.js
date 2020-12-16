@@ -14,7 +14,7 @@ const       path = require('path');
 const       temp = require('temp').track();
 const         fs = require('fs');
 
-describe("middleware XXX",function() {
+describe("middleware",function() {
     const       testDir = temp.mkdirSync();
     const prevalenceDir = path.join(testDir,'prevalence');
     before(function(done){
