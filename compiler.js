@@ -74,15 +74,18 @@ function TEMPLATE_store() {
             var   ti = parseInt(t);  // use this in indices
             var    i = adds.indexOf(t);
             var fact = facts[t];
-            ee.emit('del',t,fact);   // +++ only if `debug` set +++
-            if (i!==-1)
-                adds.splice(i,1);    // here today, gone today
-            else {
-                refs[t] = facts[t];
-                dels.push(t);
+            if (fact) {                // maybe deleted already (plugin output)
+                ee.emit('del',t,fact);   // +++ only if `debug` set +++
+                if (i!==-1)
+                    adds.splice(i,1);    // here today, gone today
+                else {
+                    refs[t] = facts[t];
+                    dels.push(t);
+                }
+                // +++ replace with Array.indexOf +++
+                index[fact[0]].splice(_.indexOf(index[fact[0]],ti,true),1);
+                delete facts[t];
             }
-            index[fact[0]].splice(_.indexOf(index[fact[0]],ti,true),1); // +++ replace with Array.indexOf +++
-            delete facts[t];
         };
         var _rebuild = function() {
             index = {};

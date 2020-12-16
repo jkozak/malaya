@@ -695,4 +695,21 @@ describe("regression tests",function() {
         assert.strictEqual(st._private.orderedFacts.length,1);
         assert  .deepEqual(st._private.orderedFacts[0],['idea',{price:{amount:100000,currency:'GBP'}}]);
     });
+    it("plugin bug found while developing flatland XXX",function(){
+        var st = store {
+            ['session',{port:'port100',user:100}];
+            ['session',{port:'port101',user:101}];
+            rule (-['status',{...status},{src:'port100'}],
+                  -['session',{port,user,...session}],
+                  +['status',{user,...status}],
+                  +['session',{port,user,...session,status}] );
+            rule ( ['session',{port,user,...}],
+                   ['status',{...status}],
+                  +['status',{...status},{dst:'dummy'}] );
+            rule (-['status',...]);
+        }
+            .plugin('restart')
+            .plugin('dummy');
+        st.add(['status',{me:'OK'},{src:'port100'}]);
+    });
 });
