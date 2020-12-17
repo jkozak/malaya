@@ -68,8 +68,12 @@ exports.install = (server,path,source,opts)=>{
             pl.ws.close();
         }
         out(js,name,addr) {
-            const pl = this;
-            pl.connections[addr[0]].send(JSON.stringify(js));
+            const   pl = this;
+            const conn = pl.connections[addr[0]];
+            if (conn)
+                conn.send(JSON.stringify(js));
+            else
+                throw new Error(`${addr[0]} is not a port of ${pl.name}`);
         }
     });
     const eng = new engine.Engine(Object.assign({
