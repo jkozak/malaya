@@ -69,7 +69,7 @@ exports.install = (server,path,source,opts)=>{
         }
         out(js,name,addr) {
             const   pl = this;
-            if (typeof addr==='undefined') {
+            if (addr.length===0) { // talking to middleware, not its port
                 switch (js[0]) {
                 case 'disconnect': {
                     const conn = pl.connections[js[1].port];
