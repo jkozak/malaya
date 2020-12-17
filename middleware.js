@@ -69,11 +69,26 @@ exports.install = (server,path,source,opts)=>{
         }
         out(js,name,addr) {
             const   pl = this;
-            const conn = pl.connections[addr[0]];
-            if (conn)
-                conn.send(JSON.stringify(js));
-            else
-                throw new Error(`${addr[0]} is not a port of ${pl.name}`);
+            if (typeof addr==='undefined') {
+                switch (js[0]) {
+                case 'disconnect': {
+                    const conn = pl.connections[js[1].port];
+                    if (!conn)
+                        console.log(`middleware disconnect: port ${js[1].port} not known`);
+                    else
+                        conn.close();
+                    break;
+                }
+                default:
+                    console.log(`unknown instruction to middleware: ${js[0]}`);
+                }
+            } else {
+                const conn = pl.connections[addr[0]];
+                if (conn)
+                    conn.send(JSON.stringify(js));
+                else
+                    console.log(`${addr[0]} is not a port of ${pl.name}`);
+            }
         }
     });
     const eng = new engine.Engine(Object.assign({

@@ -65,6 +65,7 @@ plugin.add('tcp',class extends plugin.Plugin {
     }
     out(js,name,addr) {
         const pl = this;
+        // +++ disconnect instruction to plugin +++
         pl.connections[addr[0]].ws.write(js);
     }
 });

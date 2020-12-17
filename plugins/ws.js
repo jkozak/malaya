@@ -61,6 +61,7 @@ exports.ws = plugin.add('ws',class extends plugin.Plugin {
     }
     out(js,name,addr) {
         const pl = this;
+        // +++ disconnect instruction to plugin +++
         pl.connections[addr].send(js);
     }
 });
