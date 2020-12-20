@@ -289,6 +289,7 @@ Engine.prototype.stop = function(unlock,cb) {
         unlock = unlock===undefined ? true : unlock;
         if (unlock)
             lock.unlockSync(path.join(eng.prevalenceDir,'lock'));
+        eng.emit('stop');
         if (cb) cb();
     }
 };

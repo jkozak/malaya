@@ -340,6 +340,23 @@ function setStandardClasses() {
         }
     };
 
+    classes.lifecycle = class extends Plugin {
+        constructor(opts={}) {
+            super(opts);
+            const pl = this;
+            // +++ onstart? +++
+            pl.onstop = pl.opts.stop;
+            // +++ more key events +++
+        }
+        ready() {
+            const pl = this;
+            if (pl.onstop)
+                pl.engine.on('stop',()=>{
+                    pl.onstop(pl.engine.chrjs.getRoot());
+                });
+        }
+    };
+
     classes.fs = class extends Plugin {
         out([op,{filename,contents}],name,addr) {
             const pl = this;

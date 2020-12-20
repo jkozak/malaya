@@ -2,6 +2,7 @@
 
 const   plugin = require('../plugin.js');
 
+const     lock = require('../lock.js');
 const   engine = require('../engine.js');
 const  whiskey = require('../whiskey.js');
 
@@ -603,10 +604,27 @@ describe("restart and timer in concert",function(){
     this.bail(true);
     let eng;
     let clock;
-    before(()=>{clock=sinon.useFakeTimers();});
+    before(()=>{
+        clock = sinon.useFakeTimers();
+        lock._private.setOs({
+            uptime: ()=>10000   // up for 10 seconds
+        });
+        lock._private.setProcess({
+            uptime: ()=>0,      // running for zero seconds
+            pid: 1234,
+            kill: (p,s)=>{
+                if (s!==0)
+                    throw new Error(`can't mock killing`);
+            }
+        });
+    });
     after(()=>{plugin._private.reset();});
-    after(()=>(eng && eng.stop()));
-    after(()=>{clock.restore();});
+    after(cb=>eng.stop(true,err=>{
+        clock.restore();
+        lock._private.resetProcess();
+        lock._private.resetOs();
+        cb(err);
+    }));
     it("loads source file",function(done){
         eng = new engine.Engine({dir:           temp.mkdirSync(),
                                  ports:         {},
@@ -644,6 +662,38 @@ describe("restart and timer in concert",function(){
         ]);
     });
 });
+
+describe("lifecycle stop",function() {
+    this.bail(true);
+    let   eng;
+    const dir = temp.mkdirSync();
+    before(()=>{
+        fs.writeFileSync(path.join(dir,'test.malaya'),`
+module.exports = store {}
+    .plugin('lifecycle',{stop:world=>{
+    const   fs = require('fs');
+    const path = require('path');
+    fs.writeFileSync('${path.join(dir,"xxx")}','1234567890','utf8');
+}});
+`);
+    });
+    after(()=>{plugin._private.reset();});
+    it("loads source file",function(done){
+        eng = new engine.Engine({dir,
+                                 ports:         {},
+                                 businessLogic: path.join(dir,'test.malaya') });
+        eng.init();
+        eng.start();
+        eng.become('master',done);
+    });
+    it("stops",function(done) {
+        eng.stop(true,done);
+    });
+    it("file has been written",function() {
+        assert.equal(fs.readFileSync(path.join(dir,"xxx"),'utf8'),'1234567890');
+    });
+});
+
 
 describe("fs readFile",function() {
     this.bail(true);
