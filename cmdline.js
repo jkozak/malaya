@@ -20,8 +20,9 @@ const argparse = new (require('argparse').ArgumentParser)({
 });
 argparse.addArgument(['-l','--long-lines'],
                      {
-                         action:       'storeTrue',
-                         defaultValue: false,
+                         action:       'storeConst',
+                         constant:     true,
+                         defaultValue: null,
                          help:         "don't summarise JSON strings",
                          dest:         'long'
                      } );
@@ -96,7 +97,7 @@ subcommands.cat.addArgument(
     ['-f','--format'],
     {
         action:       'store',
-        defaultValue: 'pretty',
+        defaultValue: null,
         type:         s=>s.toLowerCase(),
         choices:      ['full','json','json5','pretty','yaml'],
         help:         "display format"
@@ -476,6 +477,8 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
     if (args.subcommandName==='exec') // !!! HACK !!!
         args.prevalence_directory = path.join(require('temp').mkdirSync(),'.prevalence');
 
+    args.long = args.long || !process.stdout.isTTY;
+
     const prevalenceDir = path.resolve(args.prevalence_directory);
     const hashAlgorithm = opts.hashAlgorithm || util.hashAlgorithm;
 
@@ -659,6 +662,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
     };
 
     subcommands.cat.exec = function() {
+        args.format = args.format!==null ? args.format : process.stdout.isTTY ? 'pretty' : 'full';
         const  engine = require('./engine.js');
         const whiskey = require('./whiskey.js');
         const   JSON5 = require('json5');
