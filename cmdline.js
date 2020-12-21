@@ -302,6 +302,15 @@ subcommands.parse.addArgument(
     }
 );
 
+addSubcommand('revisit',{addHelp:true});
+subcommands.revisit.addArgument(
+    ['source'],
+    {
+        action:       'store',
+        help:         "analysis source file"
+    }
+);
+
 addSubcommand('run',{addHelp:true});
 subcommands.run.addArgument(
     ['--no-prefetch-bundles'],
@@ -996,6 +1005,37 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
             process.stdout.write(out);
         else
             fs.writeFileSync(args.source+'.json',out);
+    };
+
+    subcommands.revisit.exec = function() {
+        const  byline = require('byline');
+        const    temp = require('temp');
+        const prevDir = path.join(temp.mkdirSync(),'prevalence'); // !!! CBB !!!
+        const     eng = _createEngine({
+            businessLogic: args.source,
+            prevalenceDir: prevDir,
+            ports:         {},
+            debug:         args.debug
+        });
+        eng.init();
+        eng.start();
+        eng.on('mode',m=>{
+            if (m==='master') {
+                byline(process.stdin)
+                    .on('data',l=>{
+                        const js = util.deserialise(l);
+                        eng.update([js[1],{time:js[0],body:js[2]}]);
+                    })
+                    .on('end',()=>{
+                        eng.on('mode',m=>{
+                            if (m==='idle')
+                                eng.stop(true);
+                        });
+                        eng.become('idle');
+                    });
+            }
+        });
+        eng.become('master');
     };
 
     subcommands.run.exec = function() {
