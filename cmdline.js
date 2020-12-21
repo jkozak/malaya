@@ -15,47 +15,47 @@ const tracing = require('./tracing');
 // configure main arg parser
 
 const argparse = new (require('argparse').ArgumentParser)({
-    addHelp:     true,
+    add_help:     true,
     description: require('./package.json').description
 });
-argparse.addArgument(['-l','--long-lines'],
+argparse.add_argument('-l','--long-lines',
                      {
-                         action:       'storeConst',
-                         constant:     true,
-                         defaultValue: null,
-                         help:         "don't summarise JSON strings",
-                         dest:         'long'
+                         action:  'store_const',
+                         const:   true,
+                         default: null,
+                         help:    "don't summarise JSON strings",
+                         dest:    'long'
                      } );
-argparse.addArgument(['-p','--prevalence-directory'],
+argparse.add_argument('-p','--prevalence-directory',
                      {
-                         action:       'store',
-                         defaultValue: '.prevalence',
-                         help:         "prevalence directory",
-                         metavar:      'dir'
+                         action:  'store',
+                         default: '.prevalence',
+                         help:    "prevalence directory",
+                         metavar: 'dir'
                      });
-argparse.addArgument(['-q','--quiet'],
+argparse.add_argument('-q','--quiet',
                      {
-                         action:       'count',
-                         defaultValue: 0,
-                         help:         "be less verbose"
+                         action:  'count',
+                         default: 0,
+                         help:    "be less verbose"
                      });
-argparse.addArgument(['-v','--verbose'],
+argparse.add_argument('-v','--verbose',
                      {
-                         action:       'count',
-                         defaultValue: 1,
-                         help:         "be more verbose"
+                         action:  'count',
+                         default: 1,
+                         help:    "be more verbose"
                      });
-argparse.addArgument(['-P','--plugin'],
+argparse.add_argument('-P','--plugin',
                      {
-                         action:       'append',
-                         defaultValue: [],
-                         help:         "plugin to load"
+                         action:  'append',
+                         default: [],
+                         help:    "plugin to load"
                      });
-argparse.addArgument(['-O','--override'],
+argparse.add_argument('-O','--override',
                      {
-                         action:       'append',
-                         defaultValue: [],
-                         type:          s=>{
+                         action:  'append',
+                         default: [],
+                         type:    s=>{
                              let m = s.match(/([^.]+)\.([^=]+)=(.*)/);
                              if (m)
                                  return ['parameters',m[1],m[2],JSON.parse(m[3])];
@@ -71,383 +71,382 @@ exports.argparse = argparse;
 
 // configure subcommand parsers
 
-const subparsers = argparse.addSubparsers({
+const subparsers = argparse.add_subparsers({
     title: 'subcommands',
     dest:  'subcommandName'
 });
 const subcommands = exports.subcommands = {};
 
 const addSubcommand = exports.addSubcommand = function(name,opts) {
-    subcommands[name] = subparsers.addParser(name,opts);
+    subcommands[name] = subparsers.add_parser(name,opts);
     assert.strictEqual(subcommands[name].exec,undefined); // we'll be using this later
     return subcommands[name];
 };
 
-addSubcommand('browse',{addHelp:true});
-subcommands.browse.addArgument(
-    ['what'],
+addSubcommand('browse',{add_help:true});
+subcommands.browse.add_argument(
+    'what',
     {
-        action:       'store',
-        help:         "path of URL"
+        action:  'store',
+        help:    "path of URL"
     }
 );
 
-addSubcommand('cat',{addHelp:true});
-subcommands.cat.addArgument(
-    ['-f','--format'],
+addSubcommand('cat',{add_help:true});
+subcommands.cat.add_argument(
+    '-f','--format',
     {
-        action:       'store',
-        defaultValue: null,
-        type:         s=>s.toLowerCase(),
-        choices:      ['full','json','json5','pretty','yaml'],
-        help:         "display format"
+        action:  'store',
+        default: null,
+        type:    s=>s.toLowerCase(),
+        choices: ['full','json','json5','pretty','yaml'],
+        help:    "display format"
     }
 );
-subcommands.cat.addArgument(
-    ['-j','--jmespath'],
+subcommands.cat.add_argument(
+    '-j','--jmespath',
     {
-        action:       'store',
-        defaultValue: null,
-        help:         "jmespath expression to pass total expression through"
+        action:  'store',
+        default: null,
+        help:    "jmespath expression to pass total expression through"
     }
 );
-subcommands.cat.addArgument(
-    ['what'],
+subcommands.cat.add_argument(
+    'what',
     {
-        action:       'store',
-        help:         "'journal', 'world', 'history' or <hash>"
-    }
-);
-
-addSubcommand('compile',{addHelp:true});
-subcommands.compile.addArgument(
-    ['-D','--debug'],
-    {
-        action:       'storeTrue',
-        defaultValue: false,
-        help:         "generate debug code",
-        dest:         'debug'
-    }
-);
-subcommands.compile.addArgument(
-    ['source'],
-    {
-        action:       'store',
-        help:         "chrjs source file to compile"
+        action:  'store',
+        help:    "'journal', 'world', 'history' or <hash>"
     }
 );
 
-addSubcommand('client',{addHelp:true});
-subcommands.client.addArgument(
-    ['-a','--admin'],
+addSubcommand('compile',{add_help:true});
+subcommands.compile.add_argument(
+    '-D','--debug',
     {
-        action:       'storeConst',
-        constant:     'admin',
-        dest:         'urlPath',
-        help:         "connect to an admin stream"
+        action:  'store_true',
+        default: false,
+        help:    "generate debug code",
+        dest:    'debug'
     }
 );
-subcommands.client.addArgument(
-    ['-n','--noninteractive'],
+subcommands.compile.add_argument(
+    'source',
     {
-        action:       'store',
-        nargs:        0,
-        help:         "just stream the output, ignore input"
-    }
-);
-subcommands.client.addArgument(
-    ['-r','--replication'],
-    {
-        action:       'storeConst',
-        constant:     'replication/journal',
-        dest:         'urlPath',
-        help:         "connect to a replication stream"
-    }
-);
-subcommands.client.addArgument(
-    ['url'],
-    {
-        action:       'store',
-        nargs:        '?',
-        help:         "URL to connect to: `ws://<host>:<port>/<path>`"
+        action:  'store',
+        help:    "chrjs source file to compile"
     }
 );
 
-addSubcommand('dump',{addHelp:true});
-subcommands.dump.addArgument(
-    ['-s','--serialise'],
+addSubcommand('client',{add_help:true});
+subcommands.client.add_argument(
+    '-a','--admin',
     {
-        action:       'storeTrue',
-        help:         "use malaya extended JSON serialisation format"
+        action:  'store_const',
+        const:   'admin',
+        dest:    'urlPath',
+        help:    "connect to an admin stream"
+    }
+);
+subcommands.client.add_argument(
+    '-n','--noninteractive',
+    {
+        action:  'store_true',
+        help:    "just stream the output, ignore input"
+    }
+);
+subcommands.client.add_argument(
+    '-r','--replication',
+    {
+        action:  'store_const',
+        const:   'replication/journal',
+        dest:    'urlPath',
+        help:    "connect to a replication stream"
+    }
+);
+subcommands.client.add_argument(
+    'url',
+    {
+        action:  'store',
+        nargs:   '?',
+        help:    "URL to connect to: `ws://<host>:<port>/<path>`"
     }
 );
 
-addSubcommand('exec',{addHelp:true});
-subcommands.exec.addArgument(
-    ['-D','--debug'],
+addSubcommand('dump',{add_help:true});
+subcommands.dump.add_argument(
+    '-s','--serialise',
     {
-        action:       'storeTrue',
-        defaultValue: false,
-        help:         "generate debug code",
-        dest:         'debug'
+        action:  'store_true',
+        help:    "use malaya extended JSON serialisation format"
     }
 );
-subcommands.exec.addArgument(
-    ['-m','--mode'],
+
+addSubcommand('exec',{add_help:true});
+subcommands.exec.add_argument(
+    '-D','--debug',
     {
-        action:       'store',
-        choices:      ['idle','master','slave'],
-        defaultValue: 'master',
-        help:         "mode in which to start"
+        action:  'store_true',
+        default: false,
+        help:    "generate debug code",
+        dest:    'debug'
+    }
+);
+subcommands.exec.add_argument(
+    '-m','--mode',
+    {
+        action:  'store',
+        choices: ['idle','master','slave'],
+        default: 'master',
+        help:    "mode in which to start"
     }
 );
 if (util.env!=='prod')
-    subcommands.exec.addArgument(
-        ['--private-test-urls'],
+    subcommands.exec.add_argument(
+        '--private-test-urls',
         {
-            action:       'storeTrue',
-            defaultValue: false,
-            dest:         'privateTestUrls',
-            help:         "not for you"
+            action:  'store_true',
+            default: false,
+            dest:    'privateTestUrls',
+            help:    "not for you"
         }
     );
-subcommands.exec.addArgument(
-    ['-w','--web-port'],
+subcommands.exec.add_argument(
+    '-w','--web-port',
     {
-        action:       'store',
-        defaultValue: 3000,
-        type:         parseInt,
-        dest:         'webPort',
-        help:         "http port to listen on",
-        metavar:      "port"
+        action:  'store',
+        default: 3000,
+        type:    parseInt,
+        dest:    'webPort',
+        help:    "http port to listen on",
+        metavar: "port"
     }
 );
-subcommands.exec.addArgument(
-    ['source'],
+subcommands.exec.add_argument(
+    'source',
     {
-        action:       'store',
-        help:         "chrjs source file to exec"
-    }
-);
-
-addSubcommand('fsck',{addHelp:true});
-
-addSubcommand('init',{addHelp:true});
-subcommands.init.addArgument(
-    ['-d','--data'],
-    {
-        action:       'store',
-        help:         "database to pilfer"
-    }
-);
-subcommands.init.addArgument(
-    ['--git'],
-    {
-        action:       'store',
-        choices:      ['commit','push'],
-        defaultValue: null,
-        help:         "git action on world save"
-    }
-);
-subcommands.init.addArgument(
-    ['--clone'],
-    {
-        action:       'store',
-        help:         "use the prevalence branch of named repo"
-    }
-);
-subcommands.init.addArgument(
-    ['--overwrite'],
-    {
-        action:       'storeTrue',
-        defaultValue: false,
-        help:         "reinit an existing prevalence directory"
-    }
-);
-subcommands.init.addArgument(
-    ['source'],
-    {
-        action:       'store',
-        nargs:        '?',
-        help:         "business logic source file"
+        action: 'store',
+        help:   "chrjs source file to exec"
     }
 );
 
-addSubcommand('kill',{addHelp:true});
-subcommands.kill.addArgument(
-    ['signal'],
+addSubcommand('fsck',{add_help:true});
+
+addSubcommand('init',{add_help:true});
+subcommands.init.add_argument(
+    '-d','--data',
     {
-        action:       'store',
-        nargs:        '?',
-        help:         "signal to send",
-        defaultValue: 'SIGQUIT'
+        action:  'store',
+        help:    "database to pilfer"
+    }
+);
+subcommands.init.add_argument(
+    '--git',
+    {
+        action:  'store',
+        choices: ['commit','push'],
+        default: null,
+        help:    "git action on world save"
+    }
+);
+subcommands.init.add_argument(
+    '--clone',
+    {
+        action:  'store',
+        help:    "use the prevalence branch of named repo"
+    }
+);
+subcommands.init.add_argument(
+    '--overwrite',
+    {
+        action:  'store_true',
+        default: false,
+        help:    "reinit an existing prevalence directory"
+    }
+);
+subcommands.init.add_argument(
+    'source',
+    {
+        action: 'store',
+        nargs:  '?',
+        help:   "business logic source file"
     }
 );
 
-addSubcommand('parse',{addHelp:true});
-subcommands.parse.addArgument(
-    ['-c','--stdout'],
+addSubcommand('kill',{add_help:true});
+subcommands.kill.add_argument(
+    'signal',
     {
-        action:       'storeTrue',
-        defaultValue: false,
-        help:         "output to stdout",
-        dest:         'stdout'
-    }
-);
-subcommands.parse.addArgument(
-    ['source'],
-    {
-        action:       'store',
-        help:         "chrjs source file to parse"
+        action:  'store',
+        nargs:   '?',
+        help:    "signal to send",
+        default: 'SIGQUIT'
     }
 );
 
-addSubcommand('revisit',{addHelp:true});
-subcommands.revisit.addArgument(
-    ['source'],
+addSubcommand('parse',{add_help:true});
+subcommands.parse.add_argument(
+    '-c','--stdout',
     {
-        action:       'store',
-        help:         "analysis source file"
+        action:  'store_true',
+        default: false,
+        help:    "output to stdout",
+        dest:    'stdout'
+    }
+);
+subcommands.parse.add_argument(
+    'source',
+    {
+        action:  'store',
+        help:    "chrjs source file to parse"
     }
 );
 
-addSubcommand('run',{addHelp:true});
-subcommands.run.addArgument(
-    ['--no-prefetch-bundles'],
+addSubcommand('revisit',{add_help:true});
+subcommands.revisit.add_argument(
+    'source',
     {
-        action:       'storeFalse',
-        defaultValue: true,
-        help:         "don't prefetch browserify bundles at startup",
-        dest:         'prefetchBundles'
+        action:  'store',
+        help:    "analysis source file"
     }
 );
-subcommands.run.addArgument(
-    ['--no-tag-check'],
+
+addSubcommand('run',{add_help:true});
+subcommands.run.add_argument(
+    '--no-prefetch-bundles',
     {
-        action:       'storeFalse',
-        defaultValue: true,
-        help:         "don't check tag",
-        dest:         'tagCheck'
+        action:  'store_false',
+        default: true,
+        help:    "don't prefetch browserify bundles at startup",
+        dest:    'prefetchBundles'
     }
 );
-subcommands.run.addArgument(
-    ['-U','--admin-ui'],
+subcommands.run.add_argument(
+    '--no-tag-check',
     {
-        action:       'storeTrue',
-        defaultValue: false,
-        help:         "start an admin UI browser session (implies --admin)",
-        dest:         'adminUI'
+        action:  'store_false',
+        default: true,
+        help:    "don't check tag",
+        dest:    'tagCheck'
     }
 );
-subcommands.run.addArgument(
-    ['-a','--admin'],
+subcommands.run.add_argument(
+    '-U','--admin-ui',
     {
-        action:       'storeTrue',
-        defaultValue: false,
-        help:         "start an admin UI browser session",
-        dest:         'admin'
+        action:  'store_true',
+        default: false,
+        help:    "start an admin UI browser session (implies --admin)",
+        dest:    'adminUI'
     }
 );
-subcommands.run.addArgument(
-    ['-D','--debug'],
+subcommands.run.add_argument(
+    '-a','--admin',
     {
-        action:       'storeTrue',
-        defaultValue: false,
-        help:         "run in debug mode",
-        dest:         'debug'
+        action:  'store_true',
+        default: false,
+        help:    "start an admin UI browser session",
+        dest:    'admin'
     }
 );
-subcommands.run.addArgument(
-    ['--git'],
+subcommands.run.add_argument(
+    '-D','--debug',
     {
-        action:       'store',
-        choices:      ['commit','push'],
-        defaultValue: null,
-        help:         "git action on world save"
+        action:  'store_true',
+        default: false,
+        help:    "run in debug mode",
+        dest:    'debug'
     }
 );
-subcommands.run.addArgument(
-    ['-m','--mode'],
+subcommands.run.add_argument(
+    '--git',
     {
-        action:       'store',
-        choices:      ['idle','master','slave'],
-        defaultValue: 'master',
-        help:         "mode in which to start"
+        action:  'store',
+        choices: ['commit','push'],
+        default: null,
+        help:    "git action on world save"
     }
 );
-subcommands.run.addArgument(
-    ['-w','--web-port'],
+subcommands.run.add_argument(
+    '-m','--mode',
     {
-        action:       'store',
-        defaultValue: 3000,
-        type:         parseInt,
-        dest:         'webPort',
-        help:         "http port to listen on",
-        metavar:      "port"
+        action:  'store',
+        choices: ['idle','master','slave'],
+        default: 'master',
+        help:    "mode in which to start"
+    }
+);
+subcommands.run.add_argument(
+    '-w','--web-port',
+    {
+        action:  'store',
+        default: 3000,
+        type:    parseInt,
+        dest:    'webPort',
+        help:    "http port to listen on",
+        metavar: "port"
     });
-subcommands.run.addArgument(
-    ['-u','--master-url'],
+subcommands.run.add_argument(
+    '-u','--master-url',
     {
-        action:       'store',
-        help:         "URL from which to replicate",
-        dest:         'masterUrl',
-        metavar:      'url'
+        action:  'store',
+        help:    "URL from which to replicate",
+        dest:    'masterUrl',
+        metavar: 'url'
     }
 );
 if (util.env!=='prod')
-    subcommands.run.addArgument(
-        ['--private-test-urls'],
+    subcommands.run.add_argument(
+        '--private-test-urls',
         {
-            action:       'storeTrue',
-            defaultValue: false,
-            dest:         'privateTestUrls',
-            help:         "not for you"
+            action:  'store_true',
+            default: false,
+            dest:    'privateTestUrls',
+            help:    "not for you"
         }
     );
-subcommands.run.addArgument(
-    ['source'],
+subcommands.run.add_argument(
+    'source',
     {
-        action:       'store',
-        nargs:        '?',
-        help:         "business logic source file"
+        action:  'store',
+        nargs:   '?',
+        help:    "business logic source file"
     }
 );
 
-addSubcommand('save',{addHelp:true});
+addSubcommand('save',{add_help:true});
 
-addSubcommand('status',{addHelp:true});
+addSubcommand('status',{add_help:true});
 
-addSubcommand('transform',{addHelp:true});
-subcommands.transform.addArgument(
-    ['-D','--debug'],
+addSubcommand('transform',{add_help:true});
+subcommands.transform.add_argument(
+    '-D','--debug',
     {
-        action:       'storeTrue',
-        defaultValue: false,
-        help:         "run transform in debug mode",
-        dest:         'debug'
+        action:  'store_true',
+        default: false,
+        help:    "run transform in debug mode",
+        dest:    'debug'
     }
 );
-subcommands.transform.addArgument(
-    ['--stdout'],
+subcommands.transform.add_argument(
+    '--stdout',
     {
-        action:       'storeTrue',
-        defaultValue: false,
-        help:         "print transformed facts to stdout"
+        action:  'store_true',
+        default: false,
+        help:    "print transformed facts to stdout"
     }
 );
-subcommands.transform.addArgument(
-    ['transform'],
+subcommands.transform.add_argument(
+    'transform',
     {
-        action:       'store',
-        help:         "chrjs source file for transform"
+        action:  'store',
+        help:    "chrjs source file for transform"
     }
 );
-subcommands.transform.addArgument(
-    ['source'],
+subcommands.transform.add_argument(
+    'source',
     {
-        action:       'store',
-        nargs:        '?',
-        help:         "business logic source file"
+        action:  'store',
+        nargs:   '?',
+        help:    "business logic source file"
     }
 );
 
@@ -481,7 +480,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
 
     plugins.forEach(p=>require('./plugin.js').require(p));
 
-    const args = argparse.parseArgs(argv2a);
+    const args = argparse.parse_args(argv2a);
 
     if (args.subcommandName==='exec') // !!! HACK !!!
         args.prevalence_directory = path.join(require('temp').mkdirSync(),'.prevalence');

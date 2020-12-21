@@ -5,7 +5,7 @@
     },
     "globals":{
         "bench":false,
-        "set":false
+        "set":false,
         "suite":false,
     },
     "rules": {
