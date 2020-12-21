@@ -120,10 +120,15 @@ function TEMPLATE_store() {
             get t()       {return t;},
             get size()    {return Object.keys(facts).length;},
             get queries() {return queries;},
+            get orderedFacts() {
+                var keys = Object.keys(facts).map(function(t){return parseInt(t);});
+                return keys.sort(function(p,q){return p-q;}).map(function(t){return facts[t];});
+            },
             reset: function(){t=1;index={};facts={};init();},
             out:   function(dest,data) {ee.emit('out',dest,data);},
 
             get __file__() {return __file__;},
+
 
             plugin: function(plugin,name,opts) {
                 malayaPlugin.require(plugin);
@@ -169,8 +174,7 @@ function TEMPLATE_store() {
             obj._private = {
                 get rawFacts() {return facts;},
                 get orderedFacts() {
-                    var keys = Object.keys(facts).map(function(t){return parseInt(t);});
-                    return keys.sort(function(p,q){return p-q;}).map(function(t){return facts[t];});
+                    return obj.orderedFacts;
                 },
                 facts: function(sel){
                     switch (typeof sel) {

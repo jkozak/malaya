@@ -584,7 +584,7 @@ describe("compile",function() {
         var   js = compiler.compile(ast);
         var   st = eval(recast.print(js).code);
         st.add(['a',17]);
-        assert.deepEqual(st._private.orderedFacts,[['b',0]]);
+        assert.deepEqual(st.orderedFacts,[['b',0]]);
         st.reset();
         assert.deepEqual(st._private.rawFacts,{});
         st.add(['c',1]);
@@ -596,19 +596,19 @@ describe("compile",function() {
         var  ast = parse("store {['b',0];};");
         var   js = compiler.compile(ast);
         var   st = eval(recast.print(js).code);
-        assert.deepEqual(st._private.orderedFacts,[['b',0]]);
+        assert.deepEqual(st.orderedFacts,[['b',0]]);
         st.reset();
-        assert.deepEqual(st._private.orderedFacts,[['b',0]]);
+        assert.deepEqual(st.orderedFacts,[['b',0]]);
     });
     it("should restore initial contents after update",function() {
         var  ast = parse("store {['b',0];};");
         var   js = compiler.compile(ast);
         var   st = eval(recast.print(js).code);
-        assert.deepEqual(st._private.orderedFacts,[['b',0]]);
+        assert.deepEqual(st.orderedFacts,[['b',0]]);
         st.add(['c',1]);
-        assert.deepEqual(st._private.orderedFacts,[['b',0],['c',1]]);
+        assert.deepEqual(st.orderedFacts,[['b',0],['c',1]]);
         st.reset();
-        assert.deepEqual(st._private.orderedFacts,[['b',0]]);
+        assert.deepEqual(st.orderedFacts,[['b',0]]);
     });
     it("should handle store containing `for` (non-deleting variant)",function() {
         var  ast = parse("store {rule(['a',p],+['b',for(0;['c',q];a=>a+p+q+1)]);};");
@@ -616,16 +616,16 @@ describe("compile",function() {
         var   st = eval(recast.print(js).code);
         st.add(['c',1]);
         st.add(['a',17]);
-        assert.deepEqual(st._private.orderedFacts,[['c',1],['a',17],['b',19]]);
+        assert.deepEqual(st.orderedFacts,[['c',1],['a',17],['b',19]]);
     });
     it("should handle guards starting with ! [cd50013ab17474a6]",function() {
         var ast = parse("store {rule(['a',b],!(b===0),+['c']);rule(-['a',...]);};");
         var  js = compiler.compile(ast);
         var  st = eval(recast.print(js).code);
         st.add(['a',0]);
-        assert.deepEqual(st._private.orderedFacts,[]);
+        assert.deepEqual(st.orderedFacts,[]);
         st.add(['a',1]);
-        assert.deepEqual(st._private.orderedFacts,[['c']]);
+        assert.deepEqual(st.orderedFacts,[['c']]);
     });
     it("should handle nuladic arrow functions",function() {
         var js = compiler.compile(parse("()=>23;"));
@@ -654,7 +654,7 @@ describe("compile",function() {
         var js = compiler.compile(parse("var t=fn=>fn(2,3);store {rule (-['a'],+['b',t((x,y)=>x+y+1)]);};"));
         var st = eval(recast.print(js).code);
         st.add(['a']);
-        assert.deepEqual(st._private.orderedFacts,[['b',6]]);
+        assert.deepEqual(st.orderedFacts,[['b',6]]);
     });
     it("should handle nested for-expressions",function() {
         compile("store{rule(['a'],+['b',for(0;['p'];a=>a+for(0;['q'];b=>b+1))]);}");
@@ -663,7 +663,7 @@ describe("compile",function() {
         var js = compile("store{rule(-['a',{p,...qs}],+['b',{p,...qs}]);}");
         var st = eval(recast.print(js).code);
         st.add(['a',{p:67,a:'a',b:23}]);
-        assert.deepEqual(st._private.orderedFacts,[['b',{p:67,a:'a',b:23}]]);
+        assert.deepEqual(st.orderedFacts,[['b',{p:67,a:'a',b:23}]]);
     });
     it("should accept decent `out`s",function(){
         compile("store{rule(['p'],out('a','b'));}");
@@ -784,15 +784,15 @@ describe("type checking",function(){
         });
         it("matches by type",function(){
             st.add(['a',{b:17}]);
-            assert.strictEqual(st._private.orderedFacts.length,0);
+            assert.strictEqual(st.orderedFacts.length,0);
         });
         it("doesn't match by type - string",function(){
             st.add(['a',{b:'17'}]);
-            assert.strictEqual(st._private.orderedFacts.length,1);
+            assert.strictEqual(st.orderedFacts.length,1);
         });
         it("doesn't match by type - null",function(){
             st.add(['a',{b:null}]);
-            assert.strictEqual(st._private.orderedFacts.length,1);
+            assert.strictEqual(st.orderedFacts.length,1);
         });
     });
     describe("Boolean",function(){
@@ -804,19 +804,19 @@ describe("type checking",function(){
         });
         it("matches by type - false",function(){
             st.add(['a',{b:false}]);
-            assert.strictEqual(st._private.orderedFacts.length,0);
+            assert.strictEqual(st.orderedFacts.length,0);
         });
         it("matches by type - true",function(){
             st.add(['a',{b:true}]);
-            assert.strictEqual(st._private.orderedFacts.length,0);
+            assert.strictEqual(st.orderedFacts.length,0);
         });
         it("doesn't match by type - number",function(){
             st.add(['a',{b:0}]);
-            assert.strictEqual(st._private.orderedFacts.length,1);
+            assert.strictEqual(st.orderedFacts.length,1);
         });
         it("doesn't match by type - null",function(){
             st.add(['a',{b:null}]);
-            assert.strictEqual(st._private.orderedFacts.length,1);
+            assert.strictEqual(st.orderedFacts.length,1);
         });
     });
     describe("Maybe Boolean",function(){
@@ -828,19 +828,19 @@ describe("type checking",function(){
         });
         it("matches by type - false",function(){
             st.add(['a',{b:false}]);
-            assert.strictEqual(st._private.orderedFacts.length,0);
+            assert.strictEqual(st.orderedFacts.length,0);
         });
         it("matches by type - true",function(){
             st.add(['a',{b:true}]);
-            assert.strictEqual(st._private.orderedFacts.length,0);
+            assert.strictEqual(st.orderedFacts.length,0);
         });
         it("doesn't match by type - number",function(){
             st.add(['a',{b:0}]);
-            assert.strictEqual(st._private.orderedFacts.length,1);
+            assert.strictEqual(st.orderedFacts.length,1);
         });
         it("matches by type - null",function(){
             st.add(['a',{b:null}]);
-            assert.strictEqual(st._private.orderedFacts.length,0);
+            assert.strictEqual(st.orderedFacts.length,0);
         });
     });
     describe("Boolean | Number",function(){
@@ -852,19 +852,19 @@ describe("type checking",function(){
         });
         it("matches by type - false",function(){
             st.add(['a',{b:false}]);
-            assert.strictEqual(st._private.orderedFacts.length,0);
+            assert.strictEqual(st.orderedFacts.length,0);
         });
         it("matches by type - true",function(){
             st.add(['a',{b:true}]);
-            assert.strictEqual(st._private.orderedFacts.length,0);
+            assert.strictEqual(st.orderedFacts.length,0);
         });
         it("matches by type - number",function(){
             st.add(['a',{b:0}]);
-            assert.strictEqual(st._private.orderedFacts.length,0);
+            assert.strictEqual(st.orderedFacts.length,0);
         });
         it("doesn't match by type - null",function(){
             st.add(['a',{b:null}]);
-            assert.strictEqual(st._private.orderedFacts.length,1);
+            assert.strictEqual(st.orderedFacts.length,1);
         });
     });
 });
@@ -994,7 +994,7 @@ describe("load",function(){
         });
         it("which works",function(){
             st.update(['x',{}]);
-            _.chain(st._private.orderedFacts)
+            _.chain(st.orderedFacts)
                 .tap(ff=>assert.strictEqual(ff.length,1))
                 .each(f=>assert.strictEqual(f[0],'stats'))
                 .each(f=>assert.strictEqual(f[1].xCount,1));
@@ -1009,7 +1009,7 @@ describe("load",function(){
         });
         it("which works",function(){
             st.update(['x',{}]);
-            _.chain(st._private.orderedFacts)
+            _.chain(st.orderedFacts)
                 .tap(ff=>assert.strictEqual(ff.length,1))
                 .each(f=>assert.strictEqual(f[0],'stats'))
                 .each(f=>assert.strictEqual(f[1].xCount,1));

@@ -111,7 +111,7 @@ describe("cmdline",function() {
                       function(eng) {
                           let err = null;
                           try {
-                              assert.deepEqual(eng.chrjs._private.orderedFacts,[]);
+                              assert.deepEqual(eng.chrjs.orderedFacts,[]);
                           } catch (e) {err=e;}
                           done(err);
                       });
@@ -122,7 +122,7 @@ describe("cmdline",function() {
                       function(eng) {
                           let err = null;
                           try {
-                              assert.deepEqual(eng.chrjs._private.orderedFacts,
+                              assert.deepEqual(eng.chrjs.orderedFacts,
                                                [['b',{}]] );
                           } catch (e) {err=e;}
                           done(err);
@@ -134,7 +134,7 @@ describe("cmdline",function() {
                       function(eng) {
                           let err = null;
                           try {
-                              assert.deepEqual(eng.chrjs._private.orderedFacts,
+                              assert.deepEqual(eng.chrjs.orderedFacts,
                                                [['theLot',{}]] );
                           } catch (e) {err=e;}
                           done(err);

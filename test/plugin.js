@@ -266,7 +266,7 @@ module.exports = store {
         pl.writer.write(['ping',{test:777}]);
     });
     it("not lodged in store", function() {
-        assert.deepEqual(eng.chrjs._private.orderedFacts,[]);
+        assert.deepEqual(eng.chrjs.orderedFacts,[]);
     });
     it("receives reply", function(done) {
         pl.reader.once('data',data=>{
@@ -282,13 +282,13 @@ module.exports = store {
         pl.writer.write(['ping',{test:888}]);
     });
     it("not lodged in store", function() {
-        assert.deepEqual(eng.chrjs._private.orderedFacts,[]);
+        assert.deepEqual(eng.chrjs.orderedFacts,[]);
     });
     it("sends a pang message", function() {
         pl.writer.write(['pang',{test:999}]);
     });
     it("NoneSuch plugin msg lodged in store", function() {
-        assert.deepEqual(eng.chrjs._private.orderedFacts,[['peng',{test:999},{dst:'NoneSuch'}]]);
+        assert.deepEqual(eng.chrjs.orderedFacts,[['peng',{test:999},{dst:'NoneSuch'}]]);
     });
 });
 
@@ -369,7 +369,7 @@ module.exports = store {
         ws.write(`["test",{}]\n`);
     });
     it("data lodged in store",function() {
-        assert.deepEqual(eng.chrjs._private.orderedFacts,
+        assert.deepEqual(eng.chrjs.orderedFacts,
                          [['test',{test2:111},{src:'tweddle'}]] );
     });
 });
@@ -471,7 +471,7 @@ describe("restart plugin added dynamically",function(){
         eng.become('master');
     });
     it("restart has been sent",function(){
-        assert.deepEqual(eng.chrjs._private.orderedFacts,[['restart',{},{src:'restart'}]]);
+        assert.deepEqual(eng.chrjs.orderedFacts,[['restart',{},{src:'restart'}]]);
     });
 });
 
@@ -493,7 +493,7 @@ describe("restart",function(){
         eng.become('master');
     });
     it("restart has been sent",function(){
-        assert.deepEqual(eng.chrjs._private.orderedFacts,[['restart',{},{src:'restart'}]]);
+        assert.deepEqual(eng.chrjs.orderedFacts,[['restart',{},{src:'restart'}]]);
     });
 });
 
@@ -518,31 +518,31 @@ describe("timer with default interval",function(){
         eng.become('master');
     });
     it("nothing sent yet",function(){
-        assert.deepEqual(eng.chrjs._private.orderedFacts,[]);
+        assert.deepEqual(eng.chrjs.orderedFacts,[]);
     });
     it("waits no time at all", function() {
         clock.tick(0);
     });
     it("nothing sent yet",function(){
-        assert.deepEqual(eng.chrjs._private.orderedFacts,[]);
+        assert.deepEqual(eng.chrjs.orderedFacts,[]);
     });
     it("waits not quite a second", function() {
         clock.tick(999);
     });
     it("nothing sent yet",function(){
-        assert.deepEqual(eng.chrjs._private.orderedFacts,[]);
+        assert.deepEqual(eng.chrjs.orderedFacts,[]);
     });
     it("waits just a second", function() {
         clock.tick(1);
     });
     it("one tick sent", function() {
-        assert.deepEqual(eng.chrjs._private.orderedFacts,[['tick',{t:1000},{src:'timer'}]]);
+        assert.deepEqual(eng.chrjs.orderedFacts,[['tick',{t:1000},{src:'timer'}]]);
     });
     it("waits another second", function() {
         clock.tick(1000);
     });
     it("two ticks sent", function() {
-        assert.deepEqual(eng.chrjs._private.orderedFacts,[
+        assert.deepEqual(eng.chrjs.orderedFacts,[
             ['tick',{t:1000},{src:'timer'}],
             ['tick',{t:2000},{src:'timer'}] ]);
     });
@@ -569,32 +569,32 @@ describe("timer explicit interval",function(){
         eng.become('master');
     });
     it("nothing sent yet",function(){
-        assert.deepEqual(eng.chrjs._private.orderedFacts,[]);
+        assert.deepEqual(eng.chrjs.orderedFacts,[]);
     });
     it("waits no time at all", function() {
         clock.tick(0);
-        assert.deepEqual(eng.chrjs._private.orderedFacts,[]);
+        assert.deepEqual(eng.chrjs.orderedFacts,[]);
     });
     it("nothing sent yet",function(){
-        assert.deepEqual(eng.chrjs._private.orderedFacts,[]);
+        assert.deepEqual(eng.chrjs.orderedFacts,[]);
     });
     it("waits not quite a second", function() {
         clock.tick(9999);
     });
     it("nothing sent yet",function(){
-        assert.deepEqual(eng.chrjs._private.orderedFacts,[]);
+        assert.deepEqual(eng.chrjs.orderedFacts,[]);
     });
     it("waits just a second", function() {
         clock.tick(1);
     });
     it("one tick sent", function() {
-        assert.deepEqual(eng.chrjs._private.orderedFacts,[['tick',{t:10000},{src:'timer'}]]);
+        assert.deepEqual(eng.chrjs.orderedFacts,[['tick',{t:10000},{src:'timer'}]]);
     });
     it("waits another second", function() {
         clock.tick(10000);
     });
     it("two ticks sent", function() {
-        assert.deepEqual(eng.chrjs._private.orderedFacts,[
+        assert.deepEqual(eng.chrjs.orderedFacts,[
             ['tick',{t:10000},{src:'timer'}],
             ['tick',{t:20000},{src:'timer'}] ]);
     });
@@ -638,25 +638,25 @@ describe("restart and timer in concert",function(){
         eng.become('master');
     });
     it("restart has been sent",function(){
-        assert.deepEqual(eng.chrjs._private.orderedFacts,[['restart',{},{src:'restart'}]]);
+        assert.deepEqual(eng.chrjs.orderedFacts,[['restart',{},{src:'restart'}]]);
     });
     it("waits no time at all", function() {
         clock.tick(0);
     });
     it("only restart sent",function(){
-        assert.deepEqual(eng.chrjs._private.orderedFacts,[['restart',{},{src:'restart'}]]);
+        assert.deepEqual(eng.chrjs.orderedFacts,[['restart',{},{src:'restart'}]]);
     });
     it("waits not quite a second", function() {
         clock.tick(999);
     });
     it("still only restart sent",function(){
-        assert.deepEqual(eng.chrjs._private.orderedFacts,[['restart',{},{src:'restart'}]]);
+        assert.deepEqual(eng.chrjs.orderedFacts,[['restart',{},{src:'restart'}]]);
     });
     it("waits just a second", function() {
         clock.tick(1);
     });
     it("restart and one tick sent", function() {
-        assert.deepEqual(eng.chrjs._private.orderedFacts,[
+        assert.deepEqual(eng.chrjs.orderedFacts,[
             ['restart',{},{src:'restart'}],
             ['tick',{t:1000},{src:'timer'}]
         ]);
@@ -729,7 +729,7 @@ module.exports = store {
         eng.update(['go',{},{}]);
     });
     it("file has been read",function() {
-        const facts = eng.chrjs._private.orderedFacts;
+        const facts = eng.chrjs.orderedFacts;
         assert.equal(facts.length,1);
         assert.equal(facts[0][0],         'readFile');
         assert.equal(facts[0][1].filename,xxx);
@@ -773,7 +773,7 @@ module.exports = store {
         assert.equal(fs.readFileSync(xxx,'utf8'),'xxx');
     });
     it("write has been notified",function() {
-        const facts = eng.chrjs._private.orderedFacts;
+        const facts = eng.chrjs.orderedFacts;
         assert.equal(facts.length,1);
         assert.equal(facts[0][0],         'writeFile');
         assert.equal(facts[0][1].filename,xxx);
@@ -815,7 +815,7 @@ module.exports = store {}
     it("data has been seen",function(done){
         // +++ resolve hacky use of setImmediate [e494983e74a66ced] +++
         setImmediate(()=>{
-            assert.deepEqual(eng.chrjs._private.orderedFacts,[
+            assert.deepEqual(eng.chrjs.orderedFacts,[
                 ['test',{id:1},{src:'file'}],
                 ['test',{id:2},{src:'file'}],
                 ['test',{id:3},{src:'file'}]

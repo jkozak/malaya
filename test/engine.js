@@ -183,7 +183,7 @@ describe("Engine",function() {
         after(()=>compiler._bindGlobals());
         it("loads from newly initted state directory",function(done) {
             runInCountEngine(function(eng) {
-                assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:0}]]);
+                assert.deepEqual(eng.chrjs.orderedFacts,[['stats',{xCount:0}]]);
                 eng.stopPrevalence(true,done);
             });
         });
@@ -191,7 +191,7 @@ describe("Engine",function() {
             runInCountEngine({
                 init: function(eng) {appendToJournal(eng,'update',['x',{}]);},
                 main: function(eng) {
-                    assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:1}]]);
+                    assert.deepEqual(eng.chrjs.orderedFacts,[['stats',{xCount:1}]]);
                     eng.stopPrevalence(true,done);
                 }
             });
@@ -200,12 +200,12 @@ describe("Engine",function() {
             runInCountEngine({
                 init: function(eng) {appendToJournal(eng,'update',['x',{}]);},
                 main: function(eng) {
-                    assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:1}]]);
+                    assert.deepEqual(eng.chrjs.orderedFacts,[['stats',{xCount:1}]]);
                     eng.stopPrevalence(false,function(err) {
                         assert(!err);
                         eng.startPrevalence(function(err1) {
                             assert(!err1);
-                            assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:1}]]);
+                            assert.deepEqual(eng.chrjs.orderedFacts,[['stats',{xCount:1}]]);
                             eng.stopPrevalence(true,done);
                         });
                     });
@@ -216,13 +216,13 @@ describe("Engine",function() {
             runInCountEngine({
                 init: function(eng) {appendToJournal(eng,'update',['x',{}]);},
                 main: function(eng) {
-                    assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:1}]]);
+                    assert.deepEqual(eng.chrjs.orderedFacts,[['stats',{xCount:1}]]);
                     eng.stopPrevalence(false,function(err) {
                         assert(!err);
                         appendToJournal(eng,'update',['x',{}]);
                         eng.startPrevalence(function(err1) {
                             assert(!err1);
-                            assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:2}]]);
+                            assert.deepEqual(eng.chrjs.orderedFacts,[['stats',{xCount:2}]]);
                             eng.stopPrevalence(true,done);
                         });
                     });
@@ -233,13 +233,13 @@ describe("Engine",function() {
             runInCountEngine({
                 init: function(eng) {appendToJournal(eng,'update',['x',{}]);},
                 main: function(eng) {
-                    assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:1}]]);
+                    assert.deepEqual(eng.chrjs.orderedFacts,[['stats',{xCount:1}]]);
                     eng.stopPrevalence(true,function(err) {
                         assert(!err);
                         appendToJournal(eng,'update',['x',{}]);
                         eng.startPrevalence(function(err1) {
                             assert(!err1);
-                            assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:2}]]);
+                            assert.deepEqual(eng.chrjs.orderedFacts,[['stats',{xCount:2}]]);
                             eng.stopPrevalence(true,done);
                         });
                     });
@@ -253,13 +253,13 @@ describe("Engine",function() {
                     appendStringToJournal(eng,"[1437635839892,\":upd"); // possible crash behaviour
                 },
                 main: function(eng) {
-                    assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:1}]]);
+                    assert.deepEqual(eng.chrjs.orderedFacts,[['stats',{xCount:1}]]);
                     eng.stopPrevalence(true,function(err) {
                         assert(!err);
                         appendToJournal(eng,'update',['x',{}]);
                         eng.startPrevalence(function(err1) {
                             assert(!err1);
-                            assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:2}]]);
+                            assert.deepEqual(eng.chrjs.orderedFacts,[['stats',{xCount:2}]]);
                             eng.stopPrevalence(true,done);
                         });
                     });
@@ -274,8 +274,8 @@ describe("Engine",function() {
                     appendToJournalWithTimestamp(eng,12345678,'update',['x',{}]);
                 },
                 main: function(eng) {
-                    assert.strictEqual(eng.chrjs._private.orderedFacts.length,1);
-                    assert.strictEqual(ts,eng.chrjs._private.orderedFacts[0][1].date);
+                    assert.strictEqual(eng.chrjs.orderedFacts.length,1);
+                    assert.strictEqual(ts,eng.chrjs.orderedFacts[0][1].date);
                     done();
                 }
             });
@@ -317,8 +317,8 @@ describe("Engine",function() {
                         appendToJournal(eng,'update',['r',{}]);
                     },
                     main: function(eng) {
-                        assert.strictEqual(eng.chrjs._private.orderedFacts.length,1);
-                        assert.strictEqual(r1,eng.chrjs._private.orderedFacts[0][1].random);
+                        assert.strictEqual(eng.chrjs.orderedFacts.length,1);
+                        assert.strictEqual(r1,eng.chrjs.orderedFacts[0][1].random);
                         eng.stopPrevalence(true,done);
                     }
                 });
@@ -329,13 +329,13 @@ describe("Engine",function() {
                     bind: true,
                     init: false,
                     main: function(eng) {
-                        assert.strictEqual(eng.chrjs._private.orderedFacts.length,1);
-                        assert.strictEqual(r1,eng.chrjs._private.orderedFacts[0][1].random);
+                        assert.strictEqual(eng.chrjs.orderedFacts.length,1);
+                        assert.strictEqual(r1,eng.chrjs.orderedFacts[0][1].random);
                         eng.update(['r',{}],(err)=>{
                             if (err)
                                 done(err);
                             else {
-                                assert.strictEqual(r2,eng.chrjs._private.orderedFacts[0][1].random);
+                                assert.strictEqual(r2,eng.chrjs.orderedFacts[0][1].random);
                                 eng.stopPrevalence(false,done);
                             }
                         });
@@ -348,13 +348,13 @@ describe("Engine",function() {
                     bind: true,
                     init: false,
                     main: function(eng) {
-                        assert.strictEqual(eng.chrjs._private.orderedFacts.length,1);
-                        assert.strictEqual(r2,eng.chrjs._private.orderedFacts[0][1].random);
+                        assert.strictEqual(eng.chrjs.orderedFacts.length,1);
+                        assert.strictEqual(r2,eng.chrjs.orderedFacts[0][1].random);
                         eng.update(['r',{}],(err)=>{
                             if (err)
                                 done(err);
                             else {
-                                assert.strictEqual(r3,eng.chrjs._private.orderedFacts[0][1].random);
+                                assert.strictEqual(r3,eng.chrjs.orderedFacts[0][1].random);
                                 eng.stopPrevalence(true,done);
                             }
                         });
@@ -368,7 +368,7 @@ describe("Engine",function() {
                     appendToJournal(eng,'update',['fail',{}]);
                 },
                 main: function(eng) {
-                    assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{failCount:1}]]);
+                    assert.deepEqual(eng.chrjs.orderedFacts,[['stats',{failCount:1}]]);
                     done();
                 }
             });
@@ -440,10 +440,10 @@ describe("Engine",function() {
             eng.start();
             eng.startPrevalence(function(err) {
                 assert(!err);
-                assert.deepEqual(_.values(eng.chrjs._private.orderedFacts),[]);
+                assert.deepEqual(_.values(eng.chrjs.orderedFacts),[]);
                 eng.loadData(dfn,function(err1) {
                     assert(!err1);
-                    assert.deepEqual(_.values(eng.chrjs._private.orderedFacts),data);
+                    assert.deepEqual(_.values(eng.chrjs.orderedFacts),data);
                     eng.stopPrevalence(true,done);
                 });
             });
@@ -458,10 +458,10 @@ describe("Engine",function() {
             eng.start();
             eng.startPrevalence(function(err) {
                 assert(!err);
-                assert.deepEqual(_.values(eng.chrjs._private.orderedFacts),[]);
+                assert.deepEqual(_.values(eng.chrjs.orderedFacts),[]);
                 eng.loadData(dfn,function(err1) {
                     assert(!err1);
-                    assert.deepEqual(_.values(eng.chrjs._private.orderedFacts),data);
+                    assert.deepEqual(_.values(eng.chrjs.orderedFacts),data);
                     eng.stopPrevalence(true,done);
                 });
             });
@@ -478,11 +478,11 @@ describe("Engine",function() {
             eng.start();
             eng.startPrevalence(function(err) {
                 assert(!err);
-                assert.strictEqual(eng.chrjs._private.orderedFacts.length,0);
+                assert.strictEqual(eng.chrjs.orderedFacts.length,0);
                 eng.loadData(dfn,function(err1) {
                     if (err1)
                         throw err1;
-                    assert.strictEqual(eng.chrjs._private.orderedFacts.length,n);
+                    assert.strictEqual(eng.chrjs.orderedFacts.length,n);
                     eng.stopPrevalence(true,done);
                 });
             });

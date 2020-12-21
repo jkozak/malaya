@@ -18,10 +18,10 @@ describe("testutil",function() {
                     const io = testutil.createIO();
                     eng.addConnection('test://',io);
                     eng.chrjs.once('fire',function() {
-                        assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:1}]]);
+                        assert.deepEqual(eng.chrjs.orderedFacts,[['stats',{xCount:1}]]);
                         eng.stopPrevalence(true,done);
                     });
-                    assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:0}]]);
+                    assert.deepEqual(eng.chrjs.orderedFacts,[['stats',{xCount:0}]]);
                     io.i.write(['x',{}]);
                 }
             });
@@ -31,10 +31,10 @@ describe("testutil",function() {
                 const io = testutil.createIO();
                 eng.addConnection('test://',io);
                 eng.chrjs.once('fire',function() {
-                    assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:1}]]);
+                    assert.deepEqual(eng.chrjs.orderedFacts,[['stats',{xCount:1}]]);
                     eng.stopPrevalence(true,done);
                 });
-                assert.deepEqual(eng.chrjs._private.orderedFacts,[['stats',{xCount:0}]]);
+                assert.deepEqual(eng.chrjs.orderedFacts,[['stats',{xCount:0}]]);
                 io.i.write(['x',{}]);
             });
         });

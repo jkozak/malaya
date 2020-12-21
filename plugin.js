@@ -352,7 +352,7 @@ function setStandardClasses() {
             const pl = this;
             if (pl.onstop)
                 pl.engine.on('stop',()=>{
-                    pl.onstop(pl.engine.chrjs.getRoot());
+                    pl.onstop(pl.engine.chrjs.orderedFacts);
                 });
         }
     };

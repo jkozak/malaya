@@ -93,14 +93,17 @@ exports.makeInertChrjs = function(opts) {
             return ans;
         },
         on: function(w,h) {},   // it's inert
-        get size()    {return Object.keys(this.facts).length;}
+        get size()    {return Object.keys(this.facts).length;},
+        get orderedFacts() {
+            const keys = Object.keys(obj.facts).map(function(t){return parseInt(t);});
+            return keys.sort(function(p,q){return p-q;}).map(function(t){return obj.facts[t];});
+        }
     };
     if (util.env!=='prod')
         obj._private = {
             get facts() {return obj.facts;},   // be compatible with real chrjs
             get orderedFacts() {
-                const keys = Object.keys(obj.facts).map(function(t){return parseInt(t);});
-                return keys.sort(function(p,q){return p-q;}).map(function(t){return obj.facts[t];});
+                return obj.orderedFacts;
             }
         };
     return obj;

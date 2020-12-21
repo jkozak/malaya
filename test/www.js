@@ -134,7 +134,7 @@ describe("web server",function() {
                         done(new VError("expected status 200, got %j",resp.statusCode));
                     else {
                         assert.deepEqual(util.deserialise(body),
-                                         eng.chrjs._private.orderedFacts.map(x=>x[0]));
+                                         eng.chrjs.orderedFacts.map(x=>x[0]));
                         done();
                     }
                 } );
