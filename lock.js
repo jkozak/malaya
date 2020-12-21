@@ -17,7 +17,7 @@ exports.lockSync = function(filename,data) {
     const tmp = temp.openSync({dir:path.dirname(filename)});
 
     data = Object.assign({},data||{},{pid:      process_.pid,
-                                      startTime:Date.now()-process.uptime()*1000 });
+                                      startTime:Date.now()-process_.uptime()*1000 });
 
     fs.writeSync(tmp.fd,JSON.stringify(data),null,null,null);
     fs.closeSync(tmp.fd);
@@ -64,6 +64,7 @@ exports.lockDataSync = function(filename) {
         process_.kill(data.pid,0);
         return data;
     } catch (e) {
+        console.log(`!!! ${e}`);
         return null;
     }
 };
@@ -85,7 +86,7 @@ exports.unlockSync = function(filename) {
 if (util.env==='test')
     exports._private = {
         setProcess:   function(p) {process_=p;},
-        resetProcess: function(p) {process_=process;},
+        resetProcess: function()  {process_=process;},
         setOs:        function(o) {os_=o;},
-        resetOs:      function(o) {os_=os;}
+        resetOs:      function()  {os_=os;}
     };

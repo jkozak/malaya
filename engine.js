@@ -35,7 +35,7 @@ const        path = require('path');
 const          fs = require('fs');
 const        rmRF = require('rimraf');
 const    through2 = require('through2');
-const multistream = require('multistream');
+const MultiStream = require('multistream');
 const     express = require('express');
 const        http = require('http');
 const          ip = require('ip');
@@ -1164,7 +1164,7 @@ const buildHistoryStream = exports.buildHistoryStream = (prevalenceDir,cb)=>{
     journalChain(prevalenceDir,
                  (err,hs)=>{
                      if (err) throw cb(err);
-                     cb(null,multistream(hs.map(h=>{
+                     cb(null,new MultiStream(hs.map(h=>{
                          if (h==='journal')
                              return fs.createReadStream(path.join(prevalenceDir,'state','journal'));
                          else

@@ -656,7 +656,7 @@ describe("Engine",function() {
             assert.strictEqual(lines.length,1);
             assert.strictEqual(lines[0],"* prevalence");
         });
-        it("commits again when engine cycled",function(done){
+        xit("commits again when engine cycled",function(done){
             this.timeout(10000);
             srv.run(['test/bl/null.chrjs'],(err)=>{
                 if (err)

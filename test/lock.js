@@ -69,8 +69,9 @@ describe("multiprocess locking",function() {
             throw new Error("no such bogus process");
     };
     const   proc = {
-        pid:  null,
-        kill: killer
+        uptime: ()=>0,
+        pid:    null,
+        kill:   killer
     };
 
     before(function() {

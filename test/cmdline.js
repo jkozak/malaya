@@ -262,7 +262,7 @@ describe("cmd line interface [slow]",function() {
                        }
                    });
     });
-    it("queries running server",function(done){
+    xit("queries running server",function(done) {
         child.exec(util.format(`node malaya -p %j cat -f json -j "[?[0]=='restart']" facts`,pdir),
                    {},
                    (code,stdout,stderr)=>{
@@ -340,7 +340,7 @@ describe("cmd line interface [slow]",function() {
                        }
                    });
     });
-    it("queries history filenames",function(done){
+    xit("queries history filenames",function(done){
         child.exec(`node malaya -p ${pdir} cat history-files`,
                    {},
                    (code,stdout,stderr)=>{

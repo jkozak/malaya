@@ -141,8 +141,11 @@ describe("web server",function() {
 
     });
     it("stops",function(done){
+        eng.on('mode',m=>{
+            if (m==='idle')
+                eng.stop(false,done);
+        });
         eng.become('idle');
-        eng.stop(false,done);
     });
 });
 // +++ tests for require/bundle +++

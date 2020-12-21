@@ -554,7 +554,7 @@ describe("timer explicit interval",function(){
     let clock;
     before(()=>{clock=sinon.useFakeTimers();});
     after(()=>{plugin._private.reset();});
-    after(()=>(eng && eng.stop()));
+    after(cb=>(eng && eng.stop(true,cb)));
     after(()=>{clock.restore();});
     it("loads source file",function(done){
         eng = new engine.Engine({dir:           temp.mkdirSync(),
