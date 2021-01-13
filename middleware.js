@@ -5,6 +5,13 @@
 // round 'express'.
 
 // +++ REST +++
+//     encode request id in src
+//     src is: ['middleware','REST',<id>]
+//     e.g. ['GET',{url,...},['middleware','REST',17]]
+
+// +++ WS +++
+// +++ auth: initial handshake on GET before UPGRADE +++
+//     don't open WS until known secure
 
 "use strict";
 
