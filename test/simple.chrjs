@@ -495,61 +495,61 @@ describe("where expression",function() {
     });
 });
 
-describe("constraint statement XXX",function(){
+describe("invariant statement XXX",function(){
     it("compiles unflinchingly",function(){
         var st = store {
-            constraint (true);
+            invariant (true);
         };
     });
     it("compiles named unflinchingly",function(){
         var st = store {
-            constraint c1 (true);
+            invariant c1 (true);
         };
     });
     it("checks trivial property of empty store",function(){
         var st = store {
-            constraint c1 [x where [x,...]].length===0;
+            invariant c1 [x where [x,...]].length===0;
         };
-        assert.strictEqual(st.constraints.c1(),true);
+        assert.strictEqual(st.invariants.c1(),true);
     });
     it("checks trivial property of empty store - paranoid variant",function(){
         var st = store {
-            constraint c1 ([x where [x,...]].length===1);
+            invariant c1 ([x where [x,...]].length===1);
         };
-        assert.strictEqual(st.constraints.c1(),false);
+        assert.strictEqual(st.invariants.c1(),false);
     });
     it("checks trivial property of store",function(){
         var st = store {
             ['one',{x:1}];
             ['one',{x:2}];
-            constraint c1 [x where ['one',{x}]].length===2;
+            invariant c1 [x where ['one',{x}]].length===2;
         };
-        assert.strictEqual(st.constraints.c1(),true);
+        assert.strictEqual(st.invariants.c1(),true);
     });
     it("checks trivial property of different store",function(){
         var st = store {
             ['one',{x:1}];
             ['one',{x:1}];
-            constraint c1 [x where ['one',{x}]].length===2;
+            invariant c1 [x where ['one',{x}]].length===2;
         };
-        assert.strictEqual(st.constraints.c1(),true);
+        assert.strictEqual(st.invariants.c1(),true);
     });
     it("checks in bulk",function(){
         var st = store {
             ['one',{x:1}];
             ['one',{x:1}];
-            constraint c1 [x where ['one',{x}]].length===2;
+            invariant c1 [x where ['one',{x}]].length===2;
         };
-        st.checkAllConstraints();
+        st.checkAllInvariants();
     });
     it("checks in bulk, throwing error on failure",function(){
         var st = store {
             ['one',{x:1}];
             ['one',{x:1}];
             ['one',{x:1}];
-            constraint c1 [x where ['one',{x}]].length===2;
+            invariant c1 [x where ['one',{x}]].length===2;
         };
-        assert.throws(function(){st.checkAllConstraints();});
+        assert.throws(function(){st.checkAllInvariants();});
     });
 });
 

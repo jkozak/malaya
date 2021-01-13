@@ -120,17 +120,17 @@ function TEMPLATE_store() {
             get t()       {return t;},
             get size()    {return Object.keys(facts).length;},
             get queries() {return queries;},
-            get constraints() {return constraints;},
+            get invariants() {return invariants;},
             get orderedFacts() {
                 var keys = Object.keys(facts).map(function(t){return parseInt(t);});
                 return keys.sort(function(p,q){return p-q;}).map(function(t){return facts[t];});
             },
             reset: function(){t=1;index={};facts={};init();},
             out:   function(dest,data) {ee.emit('out',dest,data);},
-            checkAllConstraints: function(){
-                Object.keys(constraints).forEach(function(k){
-                    if (!constraints[k]())
-                        throw new Error("constraint "+k+" failed");
+            checkAllInvariants: function(){
+                Object.keys(invariants).forEach(function(k){
+                    if (!invariants[k]())
+                        throw new Error("invariant "+k+" failed");
                 });
             },
 
@@ -206,9 +206,9 @@ function TEMPLATE_store() {
         // +++ queries should not be able to call `out` +++
         INSERT_QUERIES;
 
-        // `constraints` is an object {name:query,...}
-        // +++ constraints should not be able to call `out` +++
-        INSERT_CONSTRAINTS;
+        // `invariants` is an object {name:query,...}
+        // +++ invariants should not be able to call `out` +++
+        INSERT_INVARIANTS;
 
         // initial store contents
         INSERT_INIT;
@@ -542,10 +542,10 @@ function annotateParse1(js) {   // poor man's attribute grammar - pass one
             path.replace(bCode);
             return this.visitFunctionDeclaration(path);
         },
-        visitConstraintStatement: function(path) {
+        visitInvariantStatement: function(path) {
             var bBody = b.blockStatement([b.returnStatement(path.node.body)]);
             var bCode = b.functionDeclaration(path.node.id,[],bBody);
-            bCode.attrs = {was:'ConstraintStatement'};
+            bCode.attrs = {was:'InvariantStatement'};
             bCode.id.attrs = {was:bCode.id.name};
             path.replace(bCode);
             return this.visitFunctionDeclaration(path);
@@ -654,7 +654,7 @@ function annotateParse2(chrjs) {        // poor man's attribute grammar - pass t
             setBoundHereAttr(path.node,path.node.attrs.vars);
             this.traverse(path.get('body'));
         },
-        visitConstraintStatement: function(path) {
+        visitInvariantStatement: function(path) {
             setBoundHereAttr(path.node,path.node.attrs.vars);
             this.traverse(path.get('body'));
         },
@@ -716,7 +716,7 @@ function mangle(js) {           // `js` must have been previously annotated
         visitRuleStatement:       function(path) {return this.doVars(path);},
         visitQueryStatement:      function(path) {return this.doVars(path);},
         visitQueryWhereStatement: function(path) {return this.doVars(path);},
-        visitConstraintStatement: function(path) {return this.doVars(path);},
+        visitInvariantStatement: function(path) {return this.doVars(path);},
         visitSnapExpression:      function(path) {return this.doVars(path);},
         visitWhereExpression:     function(path) {return this.doVars(path);}, // not used yet
         visitFunctionExpression:  function(path) {return this.doVars(path);},
@@ -1381,7 +1381,7 @@ function generateJS(js,what) {
     };
 
     var genQuery = function(chr,args) {
-        // a constraint is a hacked-up query which is a hacked-up rule.  Do this better.
+        // a invariant is a hacked-up query which is a hacked-up rule.  Do this better.
         for (var item in chr.items)
             if (item.op=='+' || item.op=='-')
                 throw new Error("query statement must not modify the store");
@@ -1479,7 +1479,7 @@ function generateJS(js,what) {
         assert(templates['store'].body[0].type=='ExpressionStatement');
 
         var storeJS = deepClone(templates['store'].body[0].expression);
-        var    code = {rules:[],queries:{},inits:[],constraints:{}};
+        var    code = {rules:[],queries:{},inits:[],invariants:{}};
 
         // !!! just while I rewrite the compiler !!!
         assert.deepEqual(templates['indexed_matches'].body[0].type,'SwitchStatement');
@@ -1537,13 +1537,13 @@ function generateJS(js,what) {
                         return false;
                     }
                 });
-                assert([undefined,'QueryWhereStatement','ConstraintStatement']
+                assert([undefined,'QueryWhereStatement','InvariantStatement']
                        .includes(funjs.attrs.was) );
                 path.replace();
                 funjs.type         = 'FunctionExpression';
                 funjs.id           = null;
-                if (funjs.attrs.was==='ConstraintStatement')
-                    code.constraints[name] = funjs;
+                if (funjs.attrs.was==='InvariantStatement')
+                    code.invariants[name] = funjs;
                 else
                     code.queries[name] = funjs;
                 break;
@@ -1592,19 +1592,19 @@ function generateJS(js,what) {
                                                                    code.queries[k].params,
                                                                    bQueryReturn) ); }) )) ]) ),
                                                   []) ) ]));
-        findTag('INSERT_CONSTRAINTS').insertAfter(b.variableDeclaration('var',[
-            b.variableDeclarator(b.identifier('constraints'),
+        findTag('INSERT_INVARIANTS').insertAfter(b.variableDeclaration('var',[
+            b.variableDeclarator(b.identifier('invariants'),
                                  b.callExpression(b.functionExpression(
                                      null,
                                      [],
                                      b.blockStatement([
                                          b.variableDeclaration('var',
-                                                               Object.keys(code.constraints).map(function(k) {
+                                                               Object.keys(code.invariants).map(function(k) {
                                                                    return b.variableDeclarator(
                                                                        b.identifier(k),
-                                                                       code.constraints[k]); }) ),
+                                                                       code.invariants[k]); }) ),
                                          b.returnStatement(b.objectExpression(
-                                             Object.keys(code.constraints).map(function(k) {
+                                             Object.keys(code.invariants).map(function(k) {
                                                  return b.property(
                                                      'init',
                                                      b.identifier(k),
@@ -1618,7 +1618,7 @@ function generateJS(js,what) {
 
         findTag('INSERT_RULES').cut();
         findTag('INSERT_QUERIES').cut();
-        findTag('INSERT_CONSTRAINTS').cut();
+        findTag('INSERT_INVARIANTS').cut();
         findTag('INSERT_INIT').cut();
 
         var genInvokeRuleItem = function(ri) {
@@ -1875,9 +1875,9 @@ function buildStanzas(code,parsed) {
             this.traverse(path);
             currentRule = null;
         },
-        visitConstraintStatement: function(path) {
+        visitInvariantStatement: function(path) {
             var node = path.node;
-            for (var i=0;i<'constraint'.length;i++)
+            for (var i=0;i<'invariant'.length;i++)
                 lines1[node.loc.start.line] = setCharAt(lines1[node.loc.start.line],node.loc.start.column+i,'C');
             noteSource(node);
             currentRule = node;

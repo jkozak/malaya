@@ -82,7 +82,7 @@ const util = require('./util.js');
         state,
         extra,
         ruleGenId,
-        constraintId;           // chrjs
+        invariantId;           // chrjs
 
     Token = {
         BooleanLiteral: 1,
@@ -168,7 +168,7 @@ const util = require('./util.js');
         RuleStatement: 'RuleStatement',
         QueryStatement: 'QueryStatement',
         SnapExpression: 'SnapExpression',
-        ConstraintStatement: 'ConstraintStatement',
+        InvariantStatement: 'InvariantStatement',
         QueryWhereStatement: 'QueryWhereStatement',
         WhereExpression: 'WhereExpression',
         ItemExpression: 'ItemExpression',
@@ -228,7 +228,7 @@ const util = require('./util.js');
 
     ruleGenId = 1;
 
-    constraintId = 1;
+    invariantId = 1;
 
     // Ensure the condition is true, otherwise throw an error.
     // This is only to have a better contract semantic, i.e. another safety net
@@ -357,8 +357,10 @@ const util = require('./util.js');
             return (id === 'default') || (id === 'finally') || (id === 'extends');
         case 8:
             return (id === 'function') || (id === 'continue') || (id === 'debugger');
+        case 9:
+            return (id === 'invariant'); // chrjs
         case 10:
-            return (id === 'instanceof') || (id === 'constraint'); // chrjs
+            return (id === 'instanceof');
         default:
             return false;
         }
@@ -1921,9 +1923,9 @@ const util = require('./util.js');
             };
         },
 
-        createConstraintStatement: function(id, body) {
+        createInvariantStatement: function(id, body) {
             return {
-                type: Syntax.ConstraintStatement,
+                type: Syntax.InvariantStatement,
                 id: id,
                 body: body
             };
@@ -3962,8 +3964,8 @@ const util = require('./util.js');
             return parseRuleStatement();
         else if (matchKeyword('query'))
             return parseQueryStatement();
-        else if (matchKeyword('constraint'))
-            return parseConstraintStatement();
+        else if (matchKeyword('invariant'))
+            return parseInvariantStatement();
         else if (matchKeyword('function'))
             return parseFunctionDeclaration();
         else if (match('['))
@@ -4170,16 +4172,16 @@ const util = require('./util.js');
         }
     }
 
-    function parseConstraintStatement() {
+    function parseInvariantStatement() {
         var startToken = lookahead;
         var         id = null;
-        expectKeyword('constraint');
+        expectKeyword('invariant');
         if (!match('(') && !match('['))
             id = parseVariableIdentifier();
         else
-            id = delegate.createIdentifier("__constraint_"+constraintId++);
+            id = delegate.createIdentifier("__invariant_"+invariantId++);
         var expr = parseConditionalExpression();
-        return delegate.markEnd(delegate.createConstraintStatement(id,expr),
+        return delegate.markEnd(delegate.createInvariantStatement(id,expr),
                                 startToken);
     }
 
@@ -4275,7 +4277,7 @@ const util = require('./util.js');
             .field('id',     def('Identifier'))
             .field('args',   [def('Identifier')])
             .field('body',   def('ConditionalExpression'));
-        def('ConstraintStatement')
+        def('InvariantStatement')
             .bases('FunctionDeclaration')
             .build('id','body')
             .field('id',     def('Identifier'))
