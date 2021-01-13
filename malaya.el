@@ -2,9 +2,9 @@
 
 (require 'js)
 
-(define-derived-mode chrjs-mode js-mode
-  "chrjs-mode"
-  "chrjs mode is a major mode for editing chrjs files"
-  (font-lock-add-keywords nil '(("\\_<\\(store\\|query\\|where\\|rule\\|error\\)\\_>" . 'font-lock-keyword-face))) )
+(define-derived-mode malaya-mode js-mode
+  "malaya-mode"
+  "malaya mode is a major mode for editing malaya files"
+  (font-lock-add-keywords nil '(("\\_<\\(store\\|query\\|where\\|rule\\|constraint\\|fail\\)\\_>" . 'font-lock-keyword-face))) )
 
-(provide 'chrjs-mode)
+(provide 'malaya-mode)
