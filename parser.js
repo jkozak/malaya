@@ -81,7 +81,8 @@ const util = require('./util.js');
         lookahead,
         state,
         extra,
-        ruleGenId;
+        ruleGenId,
+        constraintId;           // chrjs
 
     Token = {
         BooleanLiteral: 1,
@@ -167,6 +168,7 @@ const util = require('./util.js');
         RuleStatement: 'RuleStatement',
         QueryStatement: 'QueryStatement',
         SnapExpression: 'SnapExpression',
+        ConstraintStatement: 'ConstraintStatement',
         QueryWhereStatement: 'QueryWhereStatement',
         WhereExpression: 'WhereExpression',
         ItemExpression: 'ItemExpression',
@@ -225,6 +227,8 @@ const util = require('./util.js');
     };
 
     ruleGenId = 1;
+
+    constraintId = 1;
 
     // Ensure the condition is true, otherwise throw an error.
     // This is only to have a better contract semantic, i.e. another safety net
@@ -354,7 +358,7 @@ const util = require('./util.js');
         case 8:
             return (id === 'function') || (id === 'continue') || (id === 'debugger');
         case 10:
-            return (id === 'instanceof');
+            return (id === 'instanceof') || (id === 'constraint'); // chrjs
         default:
             return false;
         }
@@ -1913,6 +1917,14 @@ const util = require('./util.js');
                 type: Syntax.QueryWhereStatement,
                 id: id,
                 args: args,
+                body: body
+            };
+        },
+
+        createConstraintStatement: function(id, body) {
+            return {
+                type: Syntax.ConstraintStatement,
+                id: id,
                 body: body
             };
         },
@@ -3950,6 +3962,8 @@ const util = require('./util.js');
             return parseRuleStatement();
         else if (matchKeyword('query'))
             return parseQueryStatement();
+        else if (matchKeyword('constraint'))
+            return parseConstraintStatement();
         else if (matchKeyword('function'))
             return parseFunctionDeclaration();
         else if (match('['))
@@ -4156,6 +4170,19 @@ const util = require('./util.js');
         }
     }
 
+    function parseConstraintStatement() {
+        var startToken = lookahead;
+        var         id = null;
+        expectKeyword('constraint');
+        if (!match('(') && !match('['))
+            id = parseVariableIdentifier();
+        else
+            id = delegate.createIdentifier("__constraint_"+constraintId++);
+        var expr = parseConditionalExpression();
+        return delegate.markEnd(delegate.createConstraintStatement(id,expr),
+                                startToken);
+    }
+
     function parseSnapExpression() {
         var       init;
         var      accum;
@@ -4243,10 +4270,15 @@ const util = require('./util.js');
             .field('element',def('Expression'))
             .field('items',  [def('ItemExpression')]);
         def('QueryWhereStatement')
-            .bases('Expression')
-            .build('id','args','value')
+            .bases('FunctionDeclaration')
+            .build('id','args','body')
             .field('id',     def('Identifier'))
             .field('args',   [def('Identifier')])
+            .field('body',   def('ConditionalExpression'));
+        def('ConstraintStatement')
+            .bases('FunctionDeclaration')
+            .build('id','body')
+            .field('id',     def('Identifier'))
             .field('body',   def('ConditionalExpression'));
         def('TypeSpecifier')
             .bases('Expression')

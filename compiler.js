@@ -120,12 +120,19 @@ function TEMPLATE_store() {
             get t()       {return t;},
             get size()    {return Object.keys(facts).length;},
             get queries() {return queries;},
+            get constraints() {return constraints;},
             get orderedFacts() {
                 var keys = Object.keys(facts).map(function(t){return parseInt(t);});
                 return keys.sort(function(p,q){return p-q;}).map(function(t){return facts[t];});
             },
             reset: function(){t=1;index={};facts={};init();},
             out:   function(dest,data) {ee.emit('out',dest,data);},
+            checkAllConstraints: function(){
+                Object.keys(constraints).forEach(function(k){
+                    if (!constraints[k]())
+                        throw new Error("constraint "+k+" failed");
+                });
+            },
 
             get __file__() {return __file__;},
 
@@ -198,6 +205,10 @@ function TEMPLATE_store() {
         // `queries` is an object {name:query,...}
         // +++ queries should not be able to call `out` +++
         INSERT_QUERIES;
+
+        // `constraints` is an object {name:query,...}
+        // +++ constraints should not be able to call `out` +++
+        INSERT_CONSTRAINTS;
 
         // initial store contents
         INSERT_INIT;
@@ -524,10 +535,18 @@ function annotateParse1(js) {   // poor man's attribute grammar - pass one
             path.replace(snap);
             return this.visitSnapExpression(path);
         },
-        visitQueryWhereStatement:      function(path) {
+        visitQueryWhereStatement: function(path) {
             var bBody = b.blockStatement([b.returnStatement(path.node.body)]);
             var bCode = b.functionDeclaration(path.node.id,path.node.args,bBody);
-            bCode.attrs = {};
+            bCode.attrs = {was:'QueryWhereStatement'};
+            path.replace(bCode);
+            return this.visitFunctionDeclaration(path);
+        },
+        visitConstraintStatement: function(path) {
+            var bBody = b.blockStatement([b.returnStatement(path.node.body)]);
+            var bCode = b.functionDeclaration(path.node.id,[],bBody);
+            bCode.attrs = {was:'ConstraintStatement'};
+            bCode.id.attrs = {was:bCode.id.name};
             path.replace(bCode);
             return this.visitFunctionDeclaration(path);
         },
@@ -631,7 +650,11 @@ function annotateParse2(chrjs) {        // poor man's attribute grammar - pass t
             setBoundHereAttr(path.node,path.node.attrs.vars);
             return false;
         },
-        visitQueryWhereStatement:      function(path) {
+        visitQueryWhereStatement: function(path) {
+            setBoundHereAttr(path.node,path.node.attrs.vars);
+            this.traverse(path.get('body'));
+        },
+        visitConstraintStatement: function(path) {
             setBoundHereAttr(path.node,path.node.attrs.vars);
             this.traverse(path.get('body'));
         },
@@ -693,6 +716,7 @@ function mangle(js) {           // `js` must have been previously annotated
         visitRuleStatement:       function(path) {return this.doVars(path);},
         visitQueryStatement:      function(path) {return this.doVars(path);},
         visitQueryWhereStatement: function(path) {return this.doVars(path);},
+        visitConstraintStatement: function(path) {return this.doVars(path);},
         visitSnapExpression:      function(path) {return this.doVars(path);},
         visitWhereExpression:     function(path) {return this.doVars(path);}, // not used yet
         visitFunctionExpression:  function(path) {return this.doVars(path);},
@@ -1357,7 +1381,7 @@ function generateJS(js,what) {
     };
 
     var genQuery = function(chr,args) {
-        // a query is a hacked-up rule.  Do this better.
+        // a constraint is a hacked-up query which is a hacked-up rule.  Do this better.
         for (var item in chr.items)
             if (item.op=='+' || item.op=='-')
                 throw new Error("query statement must not modify the store");
@@ -1455,7 +1479,7 @@ function generateJS(js,what) {
         assert(templates['store'].body[0].type=='ExpressionStatement');
 
         var storeJS = deepClone(templates['store'].body[0].expression);
-        var    code = {rules:[],queries:{},inits:[]};
+        var    code = {rules:[],queries:{},inits:[],constraints:{}};
 
         // !!! just while I rewrite the compiler !!!
         assert.deepEqual(templates['indexed_matches'].body[0].type,'SwitchStatement');
@@ -1504,18 +1528,24 @@ function generateJS(js,what) {
                 break;
             }
             case 'FunctionDeclaration': { // never a FunctionExpression (must be top level in `store`, no `var`)
+                // this was a QueryWhereStatement
                 var funjs = deepClone(storeCHR.body[i]);
-                var  name = funjs.id.attrs.was;
+                var  name = funjs.id ? funjs.id.attrs.was : null;
                 funjs = parser.visit(funjs,{
                     visitSnapExpression: function(path) {
                         path.replace(b.callExpression(genSnap(path.node,[]),[]));
                         return false;
                     }
                 });
+                assert([undefined,'QueryWhereStatement','ConstraintStatement']
+                       .includes(funjs.attrs.was) );
                 path.replace();
                 funjs.type         = 'FunctionExpression';
                 funjs.id           = null;
-                code.queries[name] = funjs;
+                if (funjs.attrs.was==='ConstraintStatement')
+                    code.constraints[name] = funjs;
+                else
+                    code.queries[name] = funjs;
                 break;
             }
             case 'ObjectExpression':
@@ -1562,12 +1592,33 @@ function generateJS(js,what) {
                                                                    code.queries[k].params,
                                                                    bQueryReturn) ); }) )) ]) ),
                                                   []) ) ]));
+        findTag('INSERT_CONSTRAINTS').insertAfter(b.variableDeclaration('var',[
+            b.variableDeclarator(b.identifier('constraints'),
+                                 b.callExpression(b.functionExpression(
+                                     null,
+                                     [],
+                                     b.blockStatement([
+                                         b.variableDeclaration('var',
+                                                               Object.keys(code.constraints).map(function(k) {
+                                                                   return b.variableDeclarator(
+                                                                       b.identifier(k),
+                                                                       code.constraints[k]); }) ),
+                                         b.returnStatement(b.objectExpression(
+                                             Object.keys(code.constraints).map(function(k) {
+                                                 return b.property(
+                                                     'init',
+                                                     b.identifier(k),
+                                                     bWrapFunction(b.identifier(k),
+                                                                   [],
+                                                                   b.returnStatement) ); }) )) ]) ),
+                                                  []) ) ]));
         findTag('INSERT_INIT').insertAfter(b.variableDeclaration('var',[
             b.variableDeclarator(b.identifier('init'),
                                  b.functionExpression(null,[],b.blockStatement(code.inits)) ) ]));
 
         findTag('INSERT_RULES').cut();
         findTag('INSERT_QUERIES').cut();
+        findTag('INSERT_CONSTRAINTS').cut();
         findTag('INSERT_INIT').cut();
 
         var genInvokeRuleItem = function(ri) {
@@ -1819,6 +1870,15 @@ function buildStanzas(code,parsed) {
             var node = path.node;
             for (var i=0;i<'query'.length;i++)
                 lines1[node.loc.start.line] = setCharAt(lines1[node.loc.start.line],node.loc.start.column+i,'Q');
+            noteSource(node);
+            currentRule = node;
+            this.traverse(path);
+            currentRule = null;
+        },
+        visitConstraintStatement: function(path) {
+            var node = path.node;
+            for (var i=0;i<'constraint'.length;i++)
+                lines1[node.loc.start.line] = setCharAt(lines1[node.loc.start.line],node.loc.start.column+i,'C');
             noteSource(node);
             currentRule = node;
             this.traverse(path);
