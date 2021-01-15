@@ -133,6 +133,9 @@ function TEMPLATE_store() {
                         throw new Error("invariant "+k+" failed");
                 });
             },
+            enforceInvariants: function() {
+                obj.on('fire',function(){obj.checkAllInvariants();});
+            },
 
             get __file__() {return __file__;},
 

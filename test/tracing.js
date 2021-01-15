@@ -1,10 +1,10 @@
 "use strict";
 
-const tracing  = require("../tracing.js");
+const  tracing = require("../tracing.js");
 
-const assert   = require("assert");
-const   chalk  = require("chalk");
-const    util  = require("util");
+const   assert = require("assert").strict;
+const    chalk = require("chalk");
+const     util = require("util");
 
 const compiler = require("../compiler.js");
 
@@ -61,5 +61,23 @@ describe("tracing of compiled code",function(){
         assert(out.includes('?????port?????'));
         assert(out.includes('ping'));
         assert(out.includes('pong'));
+    });
+});
+
+describe("tracing of compiled code, discarding of output",function(){
+    const saveDebug = compiler.debug;
+    const saveChalk = chalk.enabled;
+    before(()=>{compiler.debug=true;chalk.enabled=false;});
+    after(()=>{compiler.debug=saveDebug;chalk.enabled=saveChalk;});
+    it("traces execution, discarding output",function(){
+        const st = require("./bl/pingpong.malaya");
+        let  out = '';
+        tracing.trace(st,'dummy.malaya',{
+            isFactInteresting: f=>false, // everything bores me
+            print:             (...rest)=>{
+                out += util.format.apply(null,rest);
+            }} );
+        st.update(['ping',{p:'q'},{src:'?????port?????'}]);
+        assert.equal(out,'');
     });
 });

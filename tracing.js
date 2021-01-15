@@ -38,31 +38,30 @@ const fmtFact = exports.fmtFact = (f,opts={})=>{
         return chalk.red(JSON5.stringify(f));
 };
 
-const isFactInteresting = f=>{              // what's worth tracing?
-    return !(f[0]==='tick' && f[2] && f[2].src==='timer');
-};
-const isAddInteresting = add=>{
-    return isFactInteresting(add);
-};
-const isTraceInteresting = firing=>{
-    if (firing.adds.length!==0)
-        return true;
-    if (firing.dels.filter(d=>isFactInteresting(d)).length===0)
-        return false;
-    return true;
-};
-
 exports.trace = (chrjs,source_,opts={})=>{
     // rule invocations nest, but that's an implementation detail;
     // so we use `stack` and `outQ` to flatten out the display
-    const    stack = [];
-    const     outQ = [];
-    const   source = chrjs.__file__;
-    const  ruleMap = compiler.getRuleMap(path.resolve(source));
-    const mySource = path.relative(process.cwd(),source);
-    const    print = opts.print || console.log;
-    let   provoker = null;
-    let    borings = 0;       // count of `add`s deemed not interesting
+    const              stack = [];
+    const               outQ = [];
+    const             source = chrjs.__file__;
+    const            ruleMap = compiler.getRuleMap(path.resolve(source));
+    const           mySource = path.relative(process.cwd(),source);
+    const              print = opts.print || console.log;
+    const  isFactInteresting = opts.isFactInteresting || (f=>{ // what's worth tracing?
+        return !(f[0]==='tick' && f[2] && f[2].src==='timer');
+    });
+    const   isAddInteresting = opts.isAddInteresting || (add=>{
+        return isFactInteresting(add);
+    });
+    const isTraceInteresting = opts.isTraceInteresting || (firing=>{
+        if (firing.adds.length!==0)
+            return true;
+        if (firing.dels.filter(d=>isFactInteresting(d)).length===0)
+            return false;
+        return true;
+    });
+    let             provoker = null;
+    let              borings = 0; // count of `add`s deemed not interesting
     chrjs.on('queue-rule',(id,bindings)=>{
         const firing = {id:id,done:false,dels:[],adds:[],outs:[],t:Date.now()};
         stack.push(firing);

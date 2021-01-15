@@ -103,7 +103,7 @@ exports.install = (server,path,source,opts)=>{
         ports:         {}
     },opts||{} ));
     if (opts.debug)
-        tracing.trace(eng.chrjs,'index.malaya',{long:false});
+        tracing.trace(eng.chrjs,source,Object.assign({},{long:false},opts.tracing||{}));
     eng.start();
     eng.become('master');
     server.on('close',()=>{
