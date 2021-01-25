@@ -26,7 +26,14 @@ describe("dns example",function() {
                 parameters: []
             });
         });
-        before(()=>{dns=malaya.load('examples/dns.malaya');});
+        before(()=>{
+            process.chdir('examples');
+            try {
+                dns=malaya.load('dns.malaya');
+            } finally {
+                process.chdir('..');
+            }
+        });
 
         describe("DNS labels",function() {
             this.bail(true);
