@@ -237,7 +237,12 @@ if (util.env==='test')  {
         const proc = srv._spawn('init',args);
         proc
             .once('error',done)
-            .once('exit',done);
+            .once('exit',(code,signal)=>{
+                if (code===0)
+                    done();
+                else
+                    done(new Error(`exit ${code}`));
+            });
     };
     ExtServer.prototype._runOrExec = function(cmd,args,cb) {
         const srv = this;

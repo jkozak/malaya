@@ -344,9 +344,11 @@ function setStandardClasses() {
         constructor(opts={}) {
             super(opts);
             const pl = this;
-            // +++ onstart? +++
+            // +++  onstart?  +++
+            // +++ onprestop? +++
             pl.onstop = pl.opts.stop;
             // +++ more key events +++
+            // +++ restart should go here too
         }
         ready() {
             const pl = this;
