@@ -852,7 +852,7 @@ Engine.prototype._become = function(mode,cb) {
                     if (err)
                         cb(err);
                     else
-                        eng.stopPrevalence(true,cb);
+                        eng.stopPrevalence(false,cb);
                 });
                 if (eng.http)
                     eng.http.close();
