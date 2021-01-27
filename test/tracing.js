@@ -44,6 +44,18 @@ describe("summariseJSON",function() {
         assert.strictEqual(tracing.summariseJSON({dst:'ws://127.0.0.1:51594/data'}),
                            "{dst:'ws://127.0.0.1:51594/data'}");
     });
+    it("is bored easily",function(){
+        assert.strictEqual(tracing.summariseJSON({boring:"I can go on for hours you know"},{
+            isKeyInteresting: k=>k!=='boring'
+        }),
+                           "{boring:'...'}");
+    });
+    it("is bored indirectly",function(){
+        assert.strictEqual(tracing.summariseJSON([{boring:"You see, I'm just more patient"}],{
+            isKeyInteresting: k=>k!=='boring'
+        }),
+                           "[{boring:'...'}]");
+    });
 });
 
 describe("tracing of compiled code",function(){

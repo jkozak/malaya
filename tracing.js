@@ -10,12 +10,17 @@ const   assert = require('assert');
 
 const compiler = require('./compiler.js');
 
-const summariseJSON = exports.summariseJSON = (js,{n=12,long=false}={})=>{
+const summariseJSON = exports.summariseJSON = (js,opts={})=>{
+    const    n = opts.n || 12;
+    const long = opts.long===undefined ? false : opts.long;
+    const isKI = opts.isKeyInteresting || (k=>true);
     if (long)
         return JSON.stringify(js);
     else {
         return JSON5.stringify(js,(k,v)=>{
-            if (typeof v!=='string')
+            if (!isKI(k))
+                return '...';
+            else if (typeof v!=='string')
                 return v;
             else if (['src','dst'].includes(k))
                 return v;
@@ -62,6 +67,7 @@ exports.trace = (chrjs,source_,opts={})=>{
     });
     let             provoker = null;
     let              borings = 0; // count of `add`s deemed not interesting
+    opts.isKeyInteresting = opts.isKeyInteresting || (js=>true);
     chrjs.on('queue-rule',(id,bindings)=>{
         const firing = {id:id,done:false,dels:[],adds:[],outs:[],t:Date.now()};
         stack.push(firing);
