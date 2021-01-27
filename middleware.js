@@ -58,6 +58,8 @@ exports.install = (server,path,source,opts)=>{
                 };
                 client.onclose = ()=>{
                     pl.update(['disconnect',{port}]);
+                    delete pl.connections[port];
+                    client.emit('_malaya_close');
                 };
                 client.onerror = err=>{
                     pl.update(['error',{port,err}]);
@@ -69,7 +71,15 @@ exports.install = (server,path,source,opts)=>{
             const pl = this;
             pl.ws.once('close',()=>{
                 pl.ws = null;
-                super.stop(cb);
+                if (Object.keys(pl.connections).length===0)
+                    super.stop(cb);
+                else
+                    Object.keys(pl.connections).forEach(k=>{
+                        pl.connections[k].once('_malaya_close',()=>{
+                            if (Object.keys(pl.connections).length===0)
+                                super.stop(cb);
+                        });
+                    });
             });
             Object.values(pl.connections).forEach(c=>c.close());
             pl.ws.close();
