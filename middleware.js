@@ -109,11 +109,31 @@ exports.install = (server,path,source,opts)=>{
         }
     });
     const eng = new engine.Engine(Object.assign({
-        businessLogic: source,
-        ports:         {}
+        businessLogic:   source,
+        ports:           {},
+        httpIsLocal:     true,
+        privateTestUrls: opts.debug,
     },opts||{} ));
-    if (opts.debug)
+    eng._bindGlobals();
+    if (opts.debug) {
+        const  path = require('path');
+        const    fs = require('fs');
+        const ports = {};
         tracing.trace(eng.chrjs,source,Object.assign({},{long:false},opts.tracing||{}));
+        eng.on('listen',function(protocol,port) {
+            console.log("debug %s listening on *:%s",protocol,port);
+            ports[protocol] = port;
+            if (Object.keys(ports).length===Object.keys(eng.options.ports).length)
+                fs.writeFileSync(path.join(eng.prevalenceDir,'ports'),JSON.stringify(ports));
+        });
+        process.on('exit',()=>{
+            try {
+                fs.unlinkSync(path.join(eng.prevalenceDir,'ports'));
+            } catch (e) {
+                // ignore
+            }
+        });
+    }
     eng.start();
     eng.become('master');
     server.on('close',()=>{
