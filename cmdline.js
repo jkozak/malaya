@@ -450,6 +450,27 @@ subcommands.transform.add_argument(
     }
 );
 
+addSubcommand('wait',{add_help:true});
+subcommands.wait.add_argument(
+    '--timeout',
+    {
+        action:  'store',
+        type:    parseInt,
+        default: null,
+        help:    "wait for local malaya to change state",
+        dest:    'timeout'
+    }
+);
+subcommands.wait.add_argument(
+    'state',
+    {
+        action:  'store',
+        choices: ['stop'],
+        default: 'master',
+        help:    "event to await"
+    }
+);
+
 
 // now dispatch the subcommand
 
@@ -1199,6 +1220,24 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
         }
     };
 
+    subcommands.wait.exec = function() {
+        checkDirectoriesExist();
+        switch (args.state) {
+        case 'stop': {
+            const t0 = Date.now();
+            const interval = setInterval(()=>{
+                const lock = require("./lock.js");
+                const data = lock.lockDataSync(path.join(prevalenceDir,'lock'));
+                if (data===null || data.pid===null) {
+                    clearInterval(interval);
+                } else if (args.timeout!==null && Date.now()-t0>args.timeout) {
+                    console.log(`wait stop: timeout`);
+                    clearInterval(interval);
+                }
+            },1000);
+        }
+        }
+    };
     subcommands.dump.exec = function() {
         checkDirectoriesExist();
         const engine = require('./engine.js');

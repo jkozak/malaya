@@ -64,7 +64,6 @@ exports.lockDataSync = function(filename) {
         process_.kill(data.pid,0);
         return data;
     } catch (e) {
-        console.log(`!!! ${e}`);
         return null;
     }
 };
