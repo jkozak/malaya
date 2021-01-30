@@ -145,7 +145,8 @@ exports.populateApp = function(eng,app) {
     });
 
     app.get(/^\/_private\/facts(\.\w+)?$/,(req,res)=>{
-        let fmt = null;
+        let        fmt = null;
+        let   mimetype = 'application/json';
         switch (req.params[0]) {
         case '':
         case undefined:
@@ -157,6 +158,10 @@ exports.populateApp = function(eng,app) {
         case '.json5':
             fmt = JSON5.stringify; // will fail if the colon-string is ever used
             break;
+        case '.jsonl':
+            fmt      = fs=>fs.map(JSON.stringify).join('\n');
+            mimetype = 'application/json-lines';
+            break;
         }
         if (!fmt) {
             res.status(400);
@@ -166,7 +171,7 @@ exports.populateApp = function(eng,app) {
             if (req.query.q) {
                 try {
                     ans = jmespath.search(eng.chrjs._private.orderedFacts,req.query.q);
-                    res.writeHead(200,{'Content-Type':'application/json'});
+                    res.writeHead(200,{'Content-Type':mimetype});
                     res.write(fmt(ans));
                 } catch (e) {
                     res.writeHead(400,{'Content-Type':'text/plain'});
@@ -174,7 +179,7 @@ exports.populateApp = function(eng,app) {
                 }
             } else {
                 ans = eng.chrjs._private.orderedFacts;
-                res.writeHead(200,{'Content-Type':'application/json'});
+                res.writeHead(200,{'Content-Type':mimetype});
                 res.write(fmt(ans));
             }
         } else

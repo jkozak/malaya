@@ -12,7 +12,7 @@ const     util = require('../util.js');
 const   VError = require('verror');
 const  request = require('request');
 
-describe("web server",function() {
+describe("web server XXX",function() {
     const  dir = temp.mkdirSync();
     const wdir = path.join(dir,'www');
     const text = "What! Dead? and never called me Mother!";
@@ -135,7 +135,7 @@ describe("web server",function() {
                         done(new VError("expected status 200, got %j",resp.statusCode));
                     else {
                         assert.deepEqual(util.deserialise(body),
-                                         eng.chrjs.orderedFacts.map(x=>x[0]));
+                                         eng.chrjs.orderedFacts.map(x=>x[0]) );
                         done();
                     }
                 } );
@@ -150,7 +150,7 @@ describe("web server",function() {
                         done(new VError("expected status 200, got %j",resp.statusCode));
                     else {
                         assert.deepEqual(JSON.parse(body),
-                                         eng.chrjs.orderedFacts.map(x=>x[0]));
+                                         eng.chrjs.orderedFacts.map(x=>x[0]) );
                         done();
                     }
                 } );
@@ -165,7 +165,22 @@ describe("web server",function() {
                         done(new VError("expected status 200, got %j",resp.statusCode));
                     else {
                         assert.deepEqual(JSON5.parse(body),
-                                         eng.chrjs.orderedFacts.map(x=>x[0]));
+                                         eng.chrjs.orderedFacts.map(x=>x[0]) );
+                        done();
+                    }
+                } );
+
+    });
+    it("discretely queries the beans, but in jsonl",function(done){
+        request(`http://localhost:${port}/_private/facts.jsonl?q=[*][0]`,
+                (err,resp,body) => {
+                    if (err)
+                        done(err);
+                    else if (resp.statusCode!==200)
+                        done(new VError("expected status 200, got %j",resp.statusCode));
+                    else {
+                        assert.deepEqual(JSON.parse(`[${body.split('\n').join(',')}]`),
+                                         eng.chrjs.orderedFacts.map(x=>x[0]) );
                         done();
                     }
                 } );
