@@ -4,6 +4,7 @@ const   engine = require('../engine.js');
 const   Engine = engine.Engine;
 
 const   assert = require('assert').strict;
+const    JSON5 = require('json5');
 const     temp = require('temp').track();
 const       fs = require('fs');
 const     path = require('path');
@@ -134,6 +135,36 @@ describe("web server",function() {
                         done(new VError("expected status 200, got %j",resp.statusCode));
                     else {
                         assert.deepEqual(util.deserialise(body),
+                                         eng.chrjs.orderedFacts.map(x=>x[0]));
+                        done();
+                    }
+                } );
+
+    });
+    it("discretely queries the beans, but in normal JSON",function(done){
+        request(`http://localhost:${port}/_private/facts.json?q=[*][0]`,
+                (err,resp,body) => {
+                    if (err)
+                        done(err);
+                    else if (resp.statusCode!==200)
+                        done(new VError("expected status 200, got %j",resp.statusCode));
+                    else {
+                        assert.deepEqual(JSON.parse(body),
+                                         eng.chrjs.orderedFacts.map(x=>x[0]));
+                        done();
+                    }
+                } );
+
+    });
+    it("discretely queries the beans, but in JSON5",function(done){
+        request(`http://localhost:${port}/_private/facts.json5?q=[*][0]`,
+                (err,resp,body) => {
+                    if (err)
+                        done(err);
+                    else if (resp.statusCode!==200)
+                        done(new VError("expected status 200, got %j",resp.statusCode));
+                    else {
+                        assert.deepEqual(JSON5.parse(body),
                                          eng.chrjs.orderedFacts.map(x=>x[0]));
                         done();
                     }

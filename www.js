@@ -1,6 +1,7 @@
 "use strict";
 
 const       VError = require('verror');
+const        JSON5 = require('json5');
 const         path = require('path');
 const           fs = require('fs');
 const      express = require('express');
@@ -143,14 +144,30 @@ exports.populateApp = function(eng,app) {
         return doBrowserify(path.join(webDir,req.path.substr(1)))(req,res);
     });
 
-    app.get('/_private/facts',(req,res)=>{
-        if (eng._allowUnsafe({type:'www/private',request:req})) {
+    app.get(/^\/_private\/facts(\.\w+)?$/,(req,res)=>{
+        let fmt = null;
+        switch (req.params[0]) {
+        case '':
+        case undefined:
+            fmt = util.serialise;
+            break;
+        case '.json':
+            fmt = JSON.stringify; // will fail if the colon-string is ever used
+            break;
+        case '.json5':
+            fmt = JSON5.stringify; // will fail if the colon-string is ever used
+            break;
+        }
+        if (!fmt) {
+            res.status(400);
+            res.send(new Error(`unknown format type: ${req.params[0]}`));
+        } else if (eng._allowUnsafe({type:'www/private',request:req})) {
             let ans;
             if (req.query.q) {
                 try {
                     ans = jmespath.search(eng.chrjs._private.orderedFacts,req.query.q);
                     res.writeHead(200,{'Content-Type':'application/json'});
-                    res.write(util.serialise(ans));
+                    res.write(fmt(ans));
                 } catch (e) {
                     res.writeHead(400,{'Content-Type':'text/plain'});
                     res.write(e.toString());
@@ -158,7 +175,7 @@ exports.populateApp = function(eng,app) {
             } else {
                 ans = eng.chrjs._private.orderedFacts;
                 res.writeHead(200,{'Content-Type':'application/json'});
-                res.write(util.serialise(ans));
+                res.write(fmt(ans));
             }
         } else
             res.writeHead(404,{'Content-Type':'text/plain'});
