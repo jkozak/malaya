@@ -1015,4 +1015,19 @@ describe("load",function(){
                 .each(f=>assert.strictEqual(f[1].xCount,1));
         });
     });
+    describe("requiring JSON",function(){
+        it("loads a malaya source file",function(){
+            st = compiler.load('test/bl/req.malaya');
+        });
+        it("which accesses the required JSON",function(){
+            st.update(['configGet',{}]);
+        });
+        it("correctly",function(){
+            _.chain(st.orderedFacts)
+                .tap(ff=>assert.strictEqual(ff.length,1))
+                .each(f=>assert.strictEqual(f[0],'config'))
+                .each(f=>assert.strictEqual(f[1].external.test, true))
+                .each(f=>assert.strictEqual(f[1].external.value,457));
+        });
+    });
 });

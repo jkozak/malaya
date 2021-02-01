@@ -12,7 +12,7 @@ const     util = require('../util.js');
 const   VError = require('verror');
 const  request = require('request');
 
-describe("web server XXX",function() {
+describe("web server",function() {
     const  dir = temp.mkdirSync();
     const wdir = path.join(dir,'www');
     const text = "What! Dead? and never called me Mother!";

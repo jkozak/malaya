@@ -1,0 +1,6 @@
+const config = require('./test/bl/config.json');
+
+module.exports = store {
+    rule (-['configGet',{}],
+          +['config',{external:config}])
+};
