@@ -997,10 +997,12 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                         eng.loadData(args.data,function(err2) {
                             if (err2)
                                 cb(err2);
-                            else
+                            else {
+                                eng.chrjs.checkAllInvariants();
                                 eng.stopPrevalence(false,function(err3) {
                                     cb(err3);
                                 });
+                            }
                         });
                 });
             }
