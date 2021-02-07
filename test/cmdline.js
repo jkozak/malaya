@@ -81,6 +81,20 @@ describe("cmdline",function() {
             assert(fs.statSync(path.join(dir,'.prevalence','state','journal')).isFile());
         });
     });
+    describe("init with random seed",function() {
+        it("burns in the rng seed",function() {
+            const dir = temp.mkdirSync();
+            process.argv = [null,null,
+                            "-p",path.join(dir,'.prevalence'),
+                            "init",
+                            '-r','1234',
+                            'bl.chrjs'];
+            cmdline.run();
+            const ls = fs.readFileSync(path.join(dir,'.prevalence','state','world'),'utf8')
+                  .split('\n');
+            assert.strictEqual(JSON.parse(ls[1]).rng.seed,1234);
+        });
+    });
     describe("run",function() {
     });
     describe("slave",function() {

@@ -264,6 +264,25 @@ subcommands.init.add_argument(
     }
 );
 subcommands.init.add_argument(
+    '-r','--rng-seed',
+    {
+        action:  'store',
+        type:    parseInt,
+        default: null,
+        help:    "seed the random number generator",
+        dest:    'rngSeed'
+    }
+);
+subcommands.init.add_argument(
+    '-R','--rng-seed-random',
+    {
+        action:  'store_true',
+        default: false,
+        help:    "seed the random number generator",
+        dest:    'rngSeedRandom'
+    }
+);
+subcommands.init.add_argument(
     'source',
     {
         action: 'store',
@@ -976,12 +995,17 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
     };
 
     subcommands.init.exec = function() {
+        const crypto = require('crypto');
+        const   seed =
+              args.rngSeed!==null ? args.rngSeed :
+              args.rngSeedRandom  ? crypto.randomInt(256*256*256*256) : 0;
         args.source = args.source || findSource();
         if ((args.git || args.clone) && args.overwrite)
             throw new VError("git/clone and overwrite don't mix");
         const eng = createEngine({
             businessLogic:path.resolve(args.source),
             git:          args.git,
+            rngSeed:      seed,
             overwrite:    args.overwrite});
         const  cb = findCallback();
         if (args.clone)
@@ -1049,6 +1073,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                         eng.update([js[1],{time:js[0],body:js[2]}]);
                     })
                     .on('end',()=>{
+                        eng.update(['end',{}]);
                         eng.on('mode',m=>{
                             if (m==='idle')
                                 eng.stop(true);
