@@ -274,15 +274,6 @@ subcommands.init.add_argument(
     }
 );
 subcommands.init.add_argument(
-    '-R','--rng-seed-random',
-    {
-        action:  'store_true',
-        default: false,
-        help:    "seed the random number generator",
-        dest:    'rngSeedRandom'
-    }
-);
-subcommands.init.add_argument(
     'source',
     {
         action: 'store',
@@ -996,9 +987,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
 
     subcommands.init.exec = function() {
         const crypto = require('crypto');
-        const   seed =
-              args.rngSeed!==null ? args.rngSeed :
-              args.rngSeedRandom  ? crypto.randomInt(256*256*256*256) : 0;
+        const   seed = args.rngSeed===null ? crypto.randomInt(256*256*256*256) : args.rngSeed;
         args.source = args.source || findSource();
         if ((args.git || args.clone) && args.overwrite)
             throw new VError("git/clone and overwrite don't mix");
