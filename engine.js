@@ -404,7 +404,7 @@ Engine.prototype._overwriteExisting = function() {
         try {
             eng._ensureStateDir();
             eng._makeHashes();
-            fs.writeFileSync(jrnlFile,util.serialise([eng.timestamp(),'term',{}])+'\n');
+            fs.appendFileSync(jrnlFile,util.serialise([eng.timestamp(),'term',{}])+'\n');
             eng.hashes.putFileSync(jrnlFile);
         } catch (err) {
             if (err.code!=='ENOENT')
