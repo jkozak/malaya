@@ -49,22 +49,26 @@ exports.install = (server,path,source,opts)=>{
                                                   .split(';')
                                                   .map(s=>s.trim())
                                                   .map(s=>s.split('=')) );
-                pl.connections[port] = client;
-                client.onmessage = m=>{
-                    const js = JSON.parse(m.data);
-                    if (!Array.isArray(js) || js.length!==2)
-                        throw new Error(`bad ws msg: ${m.data}`);
-                    pl.update(js,[port]);
-                };
-                client.onclose = ()=>{
-                    pl.update(['disconnect',{port}]);
-                    delete pl.connections[port];
-                    client.emit('_malaya_close');
-                };
-                client.onerror = err=>{
-                    pl.update(['error',{port,err}]);
-                };
-                pl.update(['connect',{port,query,cookies}]);
+                if (port) {
+                    pl.connections[port] = client;
+                    client.onmessage = m=>{
+                        const js = JSON.parse(m.data);
+                        if (!Array.isArray(js) || js.length!==2)
+                            throw new Error(`bad ws msg: ${m.data}`);
+                        pl.update(js,[port]);
+                    };
+                    client.onclose = ()=>{
+                        pl.update(['disconnect',{port}]);
+                        delete pl.connections[port];
+                        client.emit('_malaya_close');
+                    };
+                    client.onerror = err=>{
+                        pl.update(['error',{port,err}]);
+                    };
+                    pl.update(['connect',{port,query,cookies}]);
+                } else {
+                    client.close(); // is this right?
+                }
             });
         }
         stop(cb) {

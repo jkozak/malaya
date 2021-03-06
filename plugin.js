@@ -442,9 +442,12 @@ setStandardClasses();
 
 exports.makeTcpPortName = s=>{  // arg is socket; removes nasty aliasing
     let a = s.remoteAddress;
-    if (a.startsWith('::ffff:'))
-        a = a.slice(7);         // ??? does this need more translation? ???
-    return `${a}:${s.remotePort}`;
+    if (a) {
+        if (a.startsWith('::ffff:'))
+            a = a.slice(7);         // ??? does this need more translation? ???
+        return `${a}:${s.remotePort}`;
+    } else                      // can happen if port is closed?
+        return null;
 };
 
 // testing only
