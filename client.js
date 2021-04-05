@@ -7,6 +7,7 @@ const     argv = require('minimist')(process.argv.slice(2));
 const   SockJS = require('ws');
 const readline = require('readline');
 const     path = require('path');
+const       fs = require('fs');
 
 const     util = require('./util.js');
 const     lock = require('./lock.js');
@@ -63,7 +64,8 @@ exports.repl = function(url) {
     sock.onopen = function() {
         repl();
     };
-    sock.onerror = function() {
+    sock.onerror = function(err) {
+        console.log(`error: ${err.message}`);
         sock.close();
     };
     sock.onclose = function() {
@@ -82,9 +84,13 @@ exports.nonInteractive = function(url) {
 exports.findURL = function(p) {
     p = p || 'data';
     const data = lock.lockDataSync(path.join(process.cwd(),'.prevalence','lock'));
-    if (data===null)
-        return null;
-    else
+    if (data===null || !data.ports.http) {
+        const ports = JSON.parse(fs.readFileSync(path.join(process.cwd(),'.prevalence','ports')));
+        if (!ports.http)
+            return null;
+        else
+            return `http://localhost:${ports.http}/${p}`;
+    } else
         return util.format("http://localhost:%d/%s",data.ports.http,p);
 };
 

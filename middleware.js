@@ -119,11 +119,12 @@ exports.install = (server,path,source,opts)=>{
         privateTestUrls: opts.debug,
     },opts||{} ));
     eng._bindGlobals();
-    if (opts.debug) {
+    if (opts.debug)
+        tracing.trace(eng.chrjs,source,Object.assign({},{long:false},opts.tracing||{}));
+    if (opts.ports && Object.keys(opts.ports).length>0) {
         const  path = require('path');
         const    fs = require('fs');
         const ports = {};
-        tracing.trace(eng.chrjs,source,Object.assign({},{long:false},opts.tracing||{}));
         eng.on('listen',function(protocol,port) {
             console.log("debug %s listening on *:%s",protocol,port);
             ports[protocol] = port;
