@@ -329,7 +329,7 @@ describe("cmd line interface [slow]",function() {
                    });
     });
     it("queries history",function(done){
-        child.exec(util.format(`node malaya -p %j cat -f json -j "[?[2][0]=='restart']" history`,pdir),
+        child.exec(`node malaya -p ${pdir} cat -f json -F "j[1]==='update' && j[2][0]==='restart'" history`,
                    {},
                    (code,stdout,stderr)=>{
                        if (code!==null)
@@ -342,7 +342,7 @@ describe("cmd line interface [slow]",function() {
                    });
     });
     it("queries journal",function(done){
-        child.exec(util.format(`node malaya -p %j cat -f json journal`,pdir),
+        child.exec(`node malaya -p ${pdir} cat -f json journal`,
                    {},
                    (code,stdout,stderr)=>{
                        if (code!==null)

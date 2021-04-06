@@ -43,7 +43,7 @@ const          vm = require('vm');
 const       shell = require('shelljs');
 const      random = require('random-js');
 const   expressWS = require('express-ws');
-const    jmespath = require('jmespath');
+const    safeEval = require('safe-eval');
 
 const    compiler = require('./compiler.js');
 const         www = require('./www.js');
@@ -1410,10 +1410,31 @@ Engine.prototype.administer = function(port) {
                     }
                     break;
                 case 'facts': {
-                    const res = js[1].jmespath ?
-                        jmespath.search(eng.chrjs._private.orderedFacts,js[1].jmespath) :
-                        eng.chrjs._private.orderedFacts;
-                    io.o.write(res);
+                    const   evalFn = (code,args)=>{
+                        if (code.indexOf('=>')===-1 && !code.startsWith('function'))
+                            code = `(${args})=>${code}`;
+                        return safeEval(code);
+                    }
+                    let      accum = js[1].accum || [];
+                    const   reduce = js[1].reduce ? evalFn(js[1].reduce,'a,j') : (a,j)=>a.concat([j]);
+                    const pipeline = (stages=>{
+                        stages = stages.map(([t,c])=>[t,evalFn(c,'j')]);
+                        return j=>{
+                            for (let i=0;i<stages.length;i++) {
+                                const st = stages[i];
+                                switch (st[0]) {
+                                case 'map':    j = st[1](j);          break;
+                                case 'filter': if (!st[1](j)) return; break;
+                                default: throw new Error(`SNO`);
+                                }
+                            }
+                            accum = reduce(accum,j);
+                        }
+                    })(js[1].pipeline||[]);
+                    eng.chrjs._private.orderedFacts.forEach(f=>{
+                        pipeline(f);
+                    });
+                    io.o.write(accum);
                     break;
                 } }
             } catch (e) {

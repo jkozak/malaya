@@ -2,15 +2,15 @@
 
 // all-in-one command to administer malaya
 
-const      fs = require('fs');
-const    path = require('path');
-const  VError = require('verror');
-const  assert = require('assert');
-const    util = require('./util.js');
-const  execCP = require('child_process').exec; // eslint-disable-line security/detect-child-process
-const   chalk = require('chalk');
+const       fs = require('fs');
+const     path = require('path');
+const   VError = require('verror');
+const   assert = require('assert');
+const     util = require('./util.js');
+const   execCP = require('child_process').exec; // eslint-disable-line security/detect-child-process
+const    chalk = require('chalk');
 
-const tracing = require('./tracing');
+const  tracing = require('./tracing');
 
 // configure main arg parser
 
@@ -104,11 +104,38 @@ subcommands.cat.add_argument(
     }
 );
 subcommands.cat.add_argument(
-    '-j','--jmespath',
+    '-M','--map',
+    {
+        action:  'append',
+        dest:    'pipeline',
+        type:    s=>['map',s],
+        help:    "add map element to result pipeline "
+    }
+);
+subcommands.cat.add_argument(
+    '-F','--filter',
+    {
+        action:  'append',
+        dest:    'pipeline',
+        type:    s=>['filter',s],
+        help:    "add filter element to result pipeline "
+    }
+);
+subcommands.cat.add_argument(
+    '-A','--accum',
     {
         action:  'store',
-        default: null,
-        help:    "jmespath expression to pass total expression through"
+        dest:    'accum',
+        type:    JSON.parse,
+        help:    "seed for reduce"
+    }
+);
+subcommands.cat.add_argument(
+    '-R','--reduce',
+    {
+        action:  'store',
+        dest:    'reduce',
+        help:    "add final reduce element to result pipeline "
     }
 );
 subcommands.cat.add_argument(
@@ -701,11 +728,39 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
     };
 
     subcommands.cat.exec = function() {
-        args.format = args.format!==null ? args.format : process.stdout.isTTY ? 'pretty' : 'full';
-        const  engine = require('./engine.js');
-        const whiskey = require('./whiskey.js');
-        const   JSON5 = require('json5');
-        const  getFmt = (s,what)=>{
+        args.pipeline = args.pipeline || [];
+        args.format = args.format!==null ?
+            args.format :
+            !process.stdout.isTTY ? 'full' :
+            args.reduce || args.pipeline.filter(j=>j[0]==='map').length>0 ? 'json5' :
+            'pretty';
+        const   engine = require('./engine.js');
+        const  whiskey = require('./whiskey.js');
+        const   stream = require('stream');
+        const safeEval = require('safe-eval');
+        const   evalFn = (code,args)=>{
+            if (code.indexOf('=>')===-1 && !code.startsWith('function'))
+                code = `(${args})=>${code}`;
+            return safeEval(code);
+        }
+        let      accum = args.accum;
+        const   reduce = args.reduce ? evalFn(args.reduce,'a,j') : (a,j)=>out1.write(j);
+        const pipeline = (stages=>{
+            stages = stages.map(([t,c])=>[t,evalFn(c,'j')]);
+            return j=>{
+                for (let i=0;i<stages.length;i++) {
+                    const st = stages[i];
+                    switch (st[0]) {
+                    case 'map':    j = st[1](j);          break;
+                    case 'filter': if (!st[1](j)) return; break;
+                    default: throw new Error(`SNO`);
+                    }
+                }
+                accum = reduce(accum,j);
+            }
+        })(args.pipeline);
+        const    JSON5 = require('json5');
+        const   getFmt = (s,what)=>{
             switch (s) {
             case 'full':
                 return new whiskey.StringifyObjectStream(util.serialise);
@@ -774,27 +829,19 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                 throw new Error("SNO");
             }
         };
-        const     out = new whiskey.LineStream(util.deserialise);
-        const     dst = getFmt(args.format,args.what);
+        const      out = new whiskey.LineStream(util.deserialise);
+        let       out1 = stream.PassThrough({objectMode:true});
+        const      dst = getFmt(args.format,args.what);
         dst.pipe(process.stdout);
         checkDirectoriesExist();
-        let out1 = out;
-        if (args.jmespath) {
-            const   stream = require('stream');
-            const jmespath = require('jmespath');
-            out1 = stream.PassThrough({objectMode:true});
-            require("stream-to-array")(out,(err,arr)=>{
-                if (err)
-                    throw err;
-                else {
-                    const ans = jmespath.search(arr,args.jmespath);
-                    if (!ans)
-                        throw new Error("jmespath failed");
-                    ans.forEach(e=>out1.write(e));
-                    out1.end();
-                }
-            });
-        }
+        out.on('data',js=>{
+            pipeline(js);
+        });
+        out.on('end',()=>{
+            if (args.reduce)
+                out1.write(accum);
+            out1.end();
+        });
         out1.pipe(dst);
         switch (args.what) {
         case 'journal':
@@ -815,7 +862,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                             throw new Error("bad first packet: %j",js);
                         break;
                     case 2: {
-                        const x = args.jmespath ? {jmespath:args.jmespath} : {};
+                        const x = {accum:args.accum,reduce:args.reduce,map:args.map,filter:args.filter};
                         if (js[0]!=='connection')
                             throw new Error("bad second packet: %j",js);
                         ws.write(JSON.stringify(['facts',x])+'\n');
