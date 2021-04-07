@@ -276,8 +276,8 @@ describe("cmd line interface [slow]",function() {
                        }
                    });
     });
-    xit("queries running server",function(done) {
-        child.exec(util.format(`node malaya -p %j cat -f json -j "[?[0]=='restart']" facts`,pdir),
+    it("queries running server",function(done) {
+        child.exec(util.format(`node malaya -p %j cat -f json -F "j[0]==='restart'" facts`,pdir),
                    {},
                    (code,stdout,stderr)=>{
                        if (code!==null)

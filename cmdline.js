@@ -855,24 +855,27 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                 let      n = 0;
                 ws.pipe(jsps);
                 jsps.on('readable',()=>{
-                    const js = jsps.read();
-                    switch (++n) {
-                    case 1:
-                        if (js[0]!=='engine')
-                            throw new Error("bad first packet: %j",js);
-                        break;
-                    case 2: {
-                        const x = {accum:args.accum,reduce:args.reduce,map:args.map,filter:args.filter};
-                        if (js[0]!=='connection')
-                            throw new Error("bad second packet: %j",js);
-                        ws.write(JSON.stringify(['facts',x])+'\n');
-                        break;
-                    }
-                    case 3:
-                        if (js!==null)
-                            js.forEach(j=>dst.write(j));
-                        ws.end();
-                        break;
+                    let js;
+                    while ((js=jsps.read())!=null) {
+                        switch (++n) {
+                        case 1:
+                            if (js[0]!=='engine')
+                                throw new Error("bad first packet: %j",js);
+                            break;
+                        case 2: {
+                            if (js[0]!=='connection')
+                                throw new Error("bad second packet: %j",js);
+                            ws.write(JSON.stringify(['facts',{accum:    args.accum,
+                                                              reduce:   args.reduce,
+                                                              pipeline: args.pipeline}])+'\n');
+                            break;
+                        }
+                        case 3:
+                            if (js!==null)
+                                js.forEach(j=>dst.write(j));
+                            ws.end();
+                            break;
+                        }
                     }
                 });
             }
