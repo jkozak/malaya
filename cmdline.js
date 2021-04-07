@@ -871,7 +871,9 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                             break;
                         }
                         case 3:
-                            if (js!==null)
+                            if (args.reduce)
+                                dst.write(js);
+                            else if (js!==null)
                                 js.forEach(j=>dst.write(j));
                             ws.end();
                             break;

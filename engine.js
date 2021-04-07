@@ -1415,7 +1415,7 @@ Engine.prototype.administer = function(port) {
                             code = `(${args})=>${code}`;
                         return safeEval(code);
                     }
-                    let      accum = js[1].accum || [];
+                    let      accum = js[1].accum===undefined ? [] : js[1].accum;
                     const   reduce = js[1].reduce ? evalFn(js[1].reduce,'a,j') : (a,j)=>a.concat([j]);
                     const pipeline = (stages=>{
                         stages = stages.map(([t,c])=>[t,evalFn(c,'j')]);
