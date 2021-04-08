@@ -348,8 +348,10 @@ global.malayaPlugin = plugin;
 global.MalayaDate = function(){
     if (arguments.length===0)
         return new Date(MalayaDate.now());
+    else if (arguments.length===1)
+        return new Date(arguments[0]);
     else
-        return new (Function.prototype.bind.apply(Date,arguments));
+        throw new Error('NYI');
 };
 Object.getOwnPropertyNames(Date).forEach(function(n){
     if (typeof Date[n]==='function')

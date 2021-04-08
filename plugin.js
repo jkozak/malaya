@@ -178,7 +178,7 @@ exports.add = (name,cl)=>{
 exports.require = name=>{
     /* eslint-disable security/detect-non-literal-require */
     overrides.plugins.forEach(([inst,plugin1])=>{
-        if (inst===name)
+        if (inst===name || inst===null)
             name = plugin1;
     });
     let cl = classes[name];
@@ -221,7 +221,7 @@ exports.instantiate = (plugin0,name,opts)=>{
             upds[k] = v;
     });
     overrides.plugins.forEach(([inst,plugin1])=>{
-        if (inst===name)
+        if (inst===name || inst===null)
             plugin = plugin1;
     });
     opts = Object.assign({},opts,upds);

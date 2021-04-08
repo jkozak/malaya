@@ -299,32 +299,36 @@ Engine.prototype.stop = function(unlock,cb) {
 
 Engine.prototype.loadData = function(data,cb) {
     const eng = this;
-    if (/.json$/.test(data)) {      // single json array-of-arrays
-        const  arr = JSON.parse(fs.readFileSync(data));
-        const take = function() {
-            if (arr.length===0)
-                cb(null);
-            else
-                eng.update(arr.shift(),take);
-        };
-        if (!(arr instanceof Array))
-            cb(new VError("bad format, expected an Array"));
-        else
-            take();
-    } else if (/.jsonl$/.test(data) || data==='-') {
-        const  istream = data==='-' ? process.stdin : fs.createReadStream(data);
-        const jpstream = whiskey.JSONParseStream();
-        const upstream = eng.createUpdateStream();
-        upstream.on('finish',(err)=>{
+    eng.journaliseCodeSources('code',eng.options.businessLogic,false,err=>{
+        if (err)
             cb(err);
-        });
-        istream.pipe(jpstream);
-        jpstream.on('data',(js)=>{
-            eng.update(js);
-        });
-        jpstream.on('end',cb);
-    } else
-        cb(new VError("can't handle data: %s",data));
+        else if (/.json$/.test(data)) {      // single json array-of-arrays
+            const  arr = JSON.parse(fs.readFileSync(data));
+            const take = function() {
+                if (arr.length===0)
+                    cb(null);
+                else
+                    eng.update(arr.shift(),take);
+            };
+            if (!(arr instanceof Array))
+                cb(new VError("bad format, expected an Array"));
+            else
+                take();
+        } else if (/.jsonl$/.test(data) || data==='-') {
+            const  istream = data==='-' ? process.stdin : fs.createReadStream(data);
+            const jpstream = whiskey.JSONParseStream();
+            const upstream = eng.createUpdateStream();
+            upstream.on('finish',(err)=>{
+                cb(err);
+            });
+            istream.pipe(jpstream);
+            jpstream.on('data',(js)=>{
+                eng.update(js);
+            });
+            jpstream.on('end',cb);
+        } else
+            cb(new VError("can't handle data: %s",data));
+    });
 };
 
 Engine.prototype._init = function() {

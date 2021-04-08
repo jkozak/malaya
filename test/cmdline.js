@@ -184,6 +184,7 @@ describe("cmdline",function() {
 describe("cmd line interface [slow]",function() {
     const   dir = temp.mkdirSync();
     const  pdir = path.join(dir,'.prevalence');
+    const   CMD = `node malaya -p ${pdir}`;
     let  malaya;
     const ports = {};
     //N.B. use "node malaya" in these tests (rather than ./malaya) to
@@ -206,7 +207,7 @@ describe("cmd line interface [slow]",function() {
     });
     it("inits prevalence store",function(done) {
         this.timeout(10000);
-        child.exec(util.format("node malaya -p %j init test/bl/restart.malaya",pdir),
+        child.exec(`${CMD} init test/bl/restart.malaya`,
                    {},
                    (code,stdout,stderr)=>{
                        if (code!==null)
@@ -219,7 +220,7 @@ describe("cmd line interface [slow]",function() {
     });
     it("rejects attempts to init twice",function(done) {
         this.timeout(10000);
-        child.exec(util.format("node malaya -p %j init test/bl/restart.malaya",pdir),
+        child.exec(`${CMD} init test/bl/restart.malaya`,
                    {},
                    (code,stdout,stderr)=>{
                        if (code===null)
@@ -230,7 +231,7 @@ describe("cmd line interface [slow]",function() {
     });
     it("shows as not running",function(done) {
         this.timeout(10000);
-        child.exec(util.format("node malaya -p %j status",pdir),
+        child.exec(`${CMD} status`,
                    {},
                    (code,stdout,stderr)=>{
                        if (code!==null)
@@ -263,7 +264,7 @@ describe("cmd line interface [slow]",function() {
         });
     });
     it("shows as running",function(done) {
-        child.exec(util.format("node malaya -p %j status",pdir),
+        child.exec(`${CMD} status`,
                    {},
                    (code,stdout,stderr)=>{
                        if (code!==null)
@@ -277,7 +278,7 @@ describe("cmd line interface [slow]",function() {
                    });
     });
     it("queries running server",function(done) {
-        child.exec(util.format(`node malaya -p %j cat -f json -F "j[0]==='restart'" facts`,pdir),
+        child.exec(`${CMD} cat -f json -F "j[0]==='restart'" facts`,
                    {},
                    (code,stdout,stderr)=>{
                        if (code!==null)
@@ -289,8 +290,21 @@ describe("cmd line interface [slow]",function() {
                        }
                    });
     });
+    it("queries running server for stats",function(done) {
+        child.exec(`${CMD} cat -f json -F "j[0]==='restart'" -A 0 -R "a+1" facts`,
+                   {},
+                   (code,stdout,stderr)=>{
+                       if (code!==null)
+                           done(new VError("`malaya cat facts` fails: %j",code));
+                       else {
+                           const js = JSON.parse(stdout.trim());
+                           assert.deepEqual(js,1);
+                           done();
+                       }
+                   });
+    });
     it("fscks cleanly",function(done){
-        child.exec(util.format(`node malaya -p %j fsck`,pdir),
+        child.exec(`${CMD} fsck`,
                    {},
                    (code,stdout,stderr)=>{
                        if (code!==null)
@@ -315,7 +329,7 @@ describe("cmd line interface [slow]",function() {
     });
     it("shows as not running",function(done) {
         this.timeout(10000);
-        child.exec(util.format("node malaya -p %j status",pdir),
+        child.exec(`${CMD} status`,
                    {},
                    (code,stdout,stderr)=>{
                        if (code!==null)
@@ -329,7 +343,7 @@ describe("cmd line interface [slow]",function() {
                    });
     });
     it("queries history",function(done){
-        child.exec(`node malaya -p ${pdir} cat -f json -F "j[1]==='update' && j[2][0]==='restart'" history`,
+        child.exec(`${CMD} cat -f json -F "j[1]==='update' && j[2][0]==='restart'" history`,
                    {},
                    (code,stdout,stderr)=>{
                        if (code!==null)
@@ -341,8 +355,21 @@ describe("cmd line interface [slow]",function() {
                        }
                    });
     });
+    it("queries history in a more modular way",function(done){
+        child.exec(`${CMD} cat -f json -F "j[1]==='update'" -M "j[2]" -F "j[0]==='restart'" history`,
+                   {},
+                   (code,stdout,stderr)=>{
+                       if (code!==null)
+                           done(new VError("`malaya cat history` fails: %j",code));
+                       else {
+                           const js = JSON.parse(stdout.trim());
+                           assert.deepEqual(js,['restart',{},{src:'restart'}]);
+                           done();
+                       }
+                   });
+    });
     it("queries journal",function(done){
-        child.exec(`node malaya -p ${pdir} cat -f json journal`,
+        child.exec(`${CMD} cat -f json journal`,
                    {},
                    (code,stdout,stderr)=>{
                        if (code!==null)
@@ -355,7 +382,7 @@ describe("cmd line interface [slow]",function() {
                    });
     });
     xit("queries history filenames",function(done){
-        child.exec(`node malaya -p ${pdir} cat history-files`,
+        child.exec(`${CMD} cat history-files`,
                    {},
                    (code,stdout,stderr)=>{
                        if (code!==null)

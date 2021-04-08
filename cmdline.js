@@ -62,6 +62,9 @@ argparse.add_argument('-O','--override',
                              m = s.match(/([^.]+)=(.*)/);
                              if (m)
                                  return ['plugins',m[1],m[2]];
+                             m = s.match(/=(.*)/);
+                             if (m)
+                                 return ['plugins',null,m[1]];
                              else
                                  throw new Error(`bad override spec: ${s}`);
                          },
@@ -337,6 +340,8 @@ subcommands.parse.add_argument(
         help:    "chrjs source file to parse"
     }
 );
+
+addSubcommand('replay',{add_help:true});
 
 addSubcommand('revisit',{add_help:true});
 subcommands.revisit.add_argument(
@@ -1092,6 +1097,124 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
             process.stdout.write(out);
         else
             fs.writeFileSync(args.source+'.json',out);
+    };
+
+    subcommands.replay.exec = function() {
+        const   engine = require('./engine.js');
+        const  whiskey = require('./whiskey.js');
+        const readline = require('readline');
+        const safeEval = require('safe-eval');
+        const    JSON5 = require('json5');
+        let        eng = null;
+        engine.buildHistoryStream(
+            prevalenceDir,
+            (err,history)=>{
+                if (err) throw err;
+
+                const     rj = new whiskey.LineStream(util.deserialise);
+                const     rl = readline.createInterface({
+                    input:  process.stdin,
+                    output: process.stdout
+                });
+                let     skip = ()=>false;
+                let  fmtOpts = {};
+                let       pc = 0;     // "program counter"
+                const myEval = x=>safeEval(x,{
+                    facts: eng.chrjs.orderedFacts,
+                    Date:  MalayaDate,
+                    pc,
+                    t:     eng._nextTimestamp
+                });
+                const   repl = (js)=>{
+                    let loop = true;
+                    if (js[1]!=='update')
+                        rj.resume();
+                    else {
+                        rl.question(`? `,cmd=>{
+                            cmd = cmd.trim();
+                            if (cmd.length>0) {
+                                const m = /^([a-z=]) *(.*)$/.exec(cmd);
+                                if (!m)
+                                    console.log(`??: ${cmd}`);
+                                else
+                                    switch (m[1]) {
+                                    case 'i':   // Inject <fact>
+                                        throw new Error(`NYI`);
+                                    case 'l':   // Long form
+                                        fmtOpts.long = !fmtOpts.long;
+                                        break;
+                                    case 'n': { // Next <n>?
+                                        let n = m[2].length>0 ? parseInt(m[2]) : 1;
+                                        if (n>0) {
+                                            skip = ()=>--n>0;
+                                            loop = false;
+                                        }
+                                        break;
+                                    }
+                                    case 'q':   // Quit
+                                        process.exit(0);
+                                    case 'u': { // Until <condition>
+                                        const test = m[2];
+                                        skip = ()=>!myEval(test);
+                                        loop = false;
+                                        break;
+                                    }
+                                    case 'x':   // eXamine
+                                        console.log(JSON5.stringify(myEval(m[2])));
+                                        break;
+                                    case '=':   // examine and pretty print facts
+                                        // +++ determine appropriate print format +++
+                                        myEval(m[2]).forEach(f=>
+                                            console.log(`= ${fmtFact(f)}`) );
+                                        break;
+                                    default:
+                                        console.log(`??: ${cmd}`);
+                                    }
+                            } else
+                                loop = false;
+                            if (loop)
+                                setImmediate(()=>repl(js));
+                            else
+                                rj.resume();
+                        });
+                    }
+                };
+                history.pipe(rj);
+                rj.on('data',js=>{
+                    pc++;
+                    switch (js[1]) {
+                    case 'init':
+                        if (eng)
+                            throw new Error(`multiple inits in this history [${pc}]`);
+                        require('./plugin.js').setOverrides({
+                            plugins:    [[null,'dummy']],
+                            parameters: [] });
+                        eng = new engine.Engine({
+                            businessLogic: js[2].businessLogic,
+                            debug:         true
+                        });
+                        eng._rng.seed = js[2].rngSeed || 0;
+                        eng._bindGlobals();
+                        traceChrjs(eng.chrjs,js[2].businessLogic);
+                        break;
+                    case 'code':
+                        // +++ filename and SHA1 of code +++
+                        // +++ change init to save code at start if data +++
+                        break;
+                    case 'update':
+                        eng._nextTimestamp = js[0];
+                        eng.chrjs.update(js[2]);
+                        console.log(chalk.yellow(`# ${new Date(js[0]).toISOString()} ${pc.toString().padStart(6,' ')}`));
+                        break;
+                    }
+                    rj.pause();
+                    if (skip())
+                        rj.resume();
+                    else
+                        repl(js);
+                });
+                rj.on('end',()=>process.exit(0));
+            });
     };
 
     subcommands.revisit.exec = function() {

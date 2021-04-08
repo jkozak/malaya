@@ -10,6 +10,9 @@
     },
     "plugins": ["security"],
     "extends": ["eslint:recommended","plugin:node/recommended","plugin:security/recommended"],
+    "globals": {
+        "MalayaDate": "readable"
+    },
     "rules": {
         "no-console": 0,        // !!! review this later !!!
         "no-unused-vars": [2, {"vars": "all", "args": "none"}],

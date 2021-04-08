@@ -1031,3 +1031,25 @@ describe("load",function(){
         });
     });
 });
+
+describe("MalayaDate",function(){
+    let saveNow;
+    before(()=>{
+        saveNow = MalayaDate.now;
+    });
+    before(()=>{
+        MalayaDate.now = saveNow;
+    });
+    it("constructs a Date per its `now` method",function(){
+        MalayaDate.now = ()=>12345;
+        const d = new MalayaDate();
+        assert.strictEqual(d.valueOf(),12345);
+        assert.strictEqual(d.toISOString(),'1970-01-01T00:00:12.345Z');
+    });
+    it("constructs a Date per its arg",function(){
+        MalayaDate.now = ()=>12345;
+        const d = new MalayaDate(0);
+        assert.strictEqual(d.valueOf(),0);
+        assert.strictEqual(d.toISOString(),'1970-01-01T00:00:00.000Z');
+    });
+});
