@@ -1105,6 +1105,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
         const readline = require('readline');
         const safeEval = require('safe-eval');
         const    JSON5 = require('json5');
+        const histfile = path.join(prevalenceDir,'replay.history');
         let        eng = null;
         engine.buildHistoryStream(
             prevalenceDir,
@@ -1113,8 +1114,15 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
 
                 const     rj = new whiskey.LineStream(util.deserialise);
                 const     rl = readline.createInterface({
-                    input:  process.stdin,
-                    output: process.stdout
+                    input:   process.stdin,
+                    output:  process.stdout,
+                    history: (()=>{ // doesn't work till node v15.8
+                        try {
+                            return JSON.parse(fs.readFileSync(histfile,'utf8'));
+                        } catch (e) {
+                            return [];
+                        }
+                    })()
                 });
                 let     skip = ()=>false;
                 let  fmtOpts = {};
@@ -1159,9 +1167,6 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                                         loop = false;
                                         break;
                                     }
-                                    case 'x':   // eXamine
-                                        console.log(JSON5.stringify(myEval(m[2])));
-                                        break;
                                     case '=': {  // examine and pretty print facts
                                         const res = myEval(m[2]);
                                         if (Array.isArray(res) &&
@@ -1187,6 +1192,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                         });
                     }
                 };
+                rl.on('history',h=>{fs.writeFileSync(histfile,h)});
                 history.pipe(rj);
                 rj.on('data',js=>{
                     pc++;
