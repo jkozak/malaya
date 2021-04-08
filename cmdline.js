@@ -1162,11 +1162,19 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                                     case 'x':   // eXamine
                                         console.log(JSON5.stringify(myEval(m[2])));
                                         break;
-                                    case '=':   // examine and pretty print facts
-                                        // +++ determine appropriate print format +++
-                                        myEval(m[2]).forEach(f=>
-                                            console.log(`= ${fmtFact(f)}`) );
+                                    case '=': {  // examine and pretty print facts
+                                        const res = myEval(m[2]);
+                                        if (Array.isArray(res) &&
+                                            res.every(x=>Array.isArray(x)      &&
+                                                      [2,3].includes(x.length) &&
+                                                      typeof x[0]==='string'   &&
+                                                      typeof x[1]==='object'   &&
+                                                      (x[2]===undefined || typeof x[2]==='object') ))
+                                            res.forEach(f=>console.log(`= ${fmtFact(f)}`));
+                                        else
+                                            console.log(JSON5.stringify(myEval(m[2])));
                                         break;
+                                    }
                                     default:
                                         console.log(`??: ${cmd}`);
                                     }
