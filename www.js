@@ -143,7 +143,7 @@ exports.populateApp = function(eng,app) {
         return doBrowserify(path.join(webDir,req.path.substr(1)))(req,res);
     });
 
-    app.get(/^\/_private\/facts(\.\w+)?$/,(req,res)=>{
+    app.get(/^\/_private\/facts([a-zA-Z0-9.]*)$/,(req,res)=>{
         let        fmt = null;
         let   mimetype = 'application/json';
         switch (req.params[0]) {

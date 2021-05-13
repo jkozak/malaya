@@ -1211,10 +1211,13 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                         eng._bindGlobals();
                         traceChrjs(eng.chrjs,js[2].businessLogic);
                         break;
-                    case 'code':
+                    case 'code': {
+                        //const   bl = js[2][1];
+                        //const srcs = js[2][2];
                         // +++ filename and SHA1 of code +++
                         // +++ change init to save code at start if data +++
                         break;
+                    }
                     case 'update':
                         eng._nextTimestamp = js[0];
                         eng.chrjs.update(js[2]);

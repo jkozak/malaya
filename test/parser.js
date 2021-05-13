@@ -251,7 +251,7 @@ describe("esprima-based parser",function() {
                 loc: undefined
             };
             keys.forEach(function (key) {
-                if (o.hasOwnProperty(key)){
+                if (Object.prototype.hasOwnProperty.call(o,key)){
                     result[key] = sortedObject(o[key]);
                 }
             });
@@ -474,9 +474,9 @@ describe("esprima-based parser",function() {
             }
         };
         const runTest = function(esprima,code,result) {
-            if (result.hasOwnProperty('lineNumber')) {
+            if (Object.prototype.hasOwnProperty.call(result,'lineNumber')) {
                 testError(esprima, code, result);
-            } else if (result.hasOwnProperty('result')) {
+            } else if (Object.prototype.hasOwnProperty.call(result,'result')) {
                 testAPI(esprima, code, result);
             } else if (result instanceof Array) {
                 testTokenize(esprima, code, result);

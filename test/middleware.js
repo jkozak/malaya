@@ -25,7 +25,6 @@ describe("middleware",function() {
         done();
     });
     let eng,srv,ws;
-    const abc = 21;
     it("creates a minimal connect app",function(done){
         const app = connect();
         srv = http.createServer(app);
