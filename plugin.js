@@ -130,10 +130,12 @@ exports.makeOldPlugin = eps=>{        // back compat with 0.7.x
 };
 
 exports.registerEngine = eng=>{
+    plugins.forEach(pl=>{
+        pl.engine = eng;
+    });
     eng.on('mode',mode=>{
         if (mode==='master') {
             plugins.forEach(pl=>{
-                pl.engine = eng;
                 pl.update = (js,addr,misc={})=>{
                     if (js.length!==2 && typeof js[0]!=='string' & typeof js[1]!=='object')
                         throw new Error(`bad update record type: ${JSON.stringify(js)}`);
