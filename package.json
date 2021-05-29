@@ -36,7 +36,7 @@
     "verror": "^1.6.0",
     "websocket": "^1.0.34",
     "websocket-stream": "^5.5.2",
-    "ws": "^7.4.5"
+    "ws": "^7.4.6"
   },
   "devDependencies": {
     "chai": "^4.3.4",
