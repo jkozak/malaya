@@ -102,3 +102,12 @@ describe("string utils",function() {
         });
     });
 });
+
+describe("eval",function(){
+    it("does sums",function(){
+        assert.equal(util.eval("2+2"),4);
+    });
+    it("has globals",function(){
+        assert.equal(util.eval("x",{x:429}),429);
+    });
+});

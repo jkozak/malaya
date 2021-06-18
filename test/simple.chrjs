@@ -495,7 +495,7 @@ describe("where expression",function() {
     });
 });
 
-describe("invariant statement XXX",function(){
+describe("invariant statement",function(){
     it("compiles unflinchingly",function(){
         var st = store {
             invariant (true);

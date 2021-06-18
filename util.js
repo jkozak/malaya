@@ -5,6 +5,7 @@ const _util = require('util');
 const shell = require('shelljs');
 const    os = require('os');
 const    fs = require('fs');
+const    VM = require('vm2').VM;
 
 exports.verbosity     = 3;
 exports.hashAlgorithm = 'sha1';
@@ -180,6 +181,14 @@ exports.env = (function() {
 })();
 
 exports.inspect = _util.inspect;
+
+exports.eval = (code,sandbox)=>{
+    const vm = new VM({
+        timeout: 100,
+        sandbox: sandbox||{}
+    });
+    return vm.run(code);
+};
 
 if (exports.env==='test')
     exports._private = {

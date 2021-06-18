@@ -43,7 +43,6 @@ const          vm = require('vm');
 const       shell = require('shelljs');
 const      random = require('random-js');
 const   expressWS = require('express-ws');
-const    safeEval = require('safe-eval');
 
 const    compiler = require('./compiler.js');
 const         www = require('./www.js');
@@ -1417,7 +1416,7 @@ Engine.prototype.administer = function(port) {
                     const   evalFn = (code,args)=>{
                         if (code.indexOf('=>')===-1 && !code.startsWith('function'))
                             code = `(${args})=>${code}`;
-                        return safeEval(code);
+                        return util.eval(code);
                     }
                     let      accum = js[1].accum===undefined ? [] : js[1].accum;
                     const   reduce = js[1].reduce ? evalFn(js[1].reduce,'a,j') : (a,j)=>a.concat([j]);
