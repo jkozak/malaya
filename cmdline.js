@@ -742,11 +742,10 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
         const   engine = require('./engine.js');
         const  whiskey = require('./whiskey.js');
         const   stream = require('stream');
-        const safeEval = require('safe-eval');
         const   evalFn = (code,args)=>{
             if (code.indexOf('=>')===-1 && !code.startsWith('function'))
                 code = `(${args})=>${code}`;
-            return safeEval(code);
+            return util.eval(code);
         }
         let      accum = args.accum;
         const   reduce = args.reduce ? evalFn(args.reduce,'a,j') : (a,j)=>out1.write(j);
@@ -1103,7 +1102,6 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
         const   engine = require('./engine.js');
         const  whiskey = require('./whiskey.js');
         const readline = require('readline');
-        const safeEval = require('safe-eval');
         const    JSON5 = require('json5');
         const histfile = path.join(prevalenceDir,'replay.history');
         let        eng = null;
@@ -1127,7 +1125,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                 let     skip = ()=>false;
                 let  fmtOpts = {};
                 let       pc = 0;     // "program counter"
-                const myEval = x=>safeEval(x,{
+                const myEval = x=>util.eval(x,{
                     facts: eng.chrjs.orderedFacts,
                     Date:  MalayaDate,
                     pc,
