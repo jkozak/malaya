@@ -97,6 +97,14 @@ subcommands.browse.add_argument(
 
 addSubcommand('cat',{add_help:true});
 subcommands.cat.add_argument(
+    '-e','--end',
+    {
+        action:  'store',
+        dest:    'end',
+        help:    "hash on which to end"
+    }
+);
+subcommands.cat.add_argument(
     '-f','--format',
     {
         action:  'store',
@@ -739,6 +747,8 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
             !process.stdout.isTTY ? 'full' :
             args.reduce || args.pipeline.filter(j=>j[0]==='map').length>0 ? 'json5' :
             'pretty';
+        if (args.end)
+            throw new Error(`NYI: end arg`);
         const   engine = require('./engine.js');
         const  whiskey = require('./whiskey.js');
         const   stream = require('stream');

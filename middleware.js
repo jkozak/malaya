@@ -23,6 +23,9 @@ const    WebSocket = require('ws');
 
 const objectFromEntries = kvs=>Object.assign({},...Array.from(kvs,([k,v])=>({[k]:v})));
 
+// +++ verifyClient see https://github.com/websockets/ws/issues/377#issuecomment-462152231 +++
+//                   (don't use the verifyClient parameter)
+
 exports.install = (server,path,source,opts)=>{
     plugin.add('middleware',class extends plugin.Plugin {
         constructor() {
