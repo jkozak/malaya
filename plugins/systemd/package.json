@@ -6,7 +6,7 @@
     "malaya": "0.8.99"
   },
   "dependencies": {
-    "sd-notify": "^2.5.1",
+    "sd-notify": "^2.8.0",
     "systemd": "^0.3.1"
   },
   "main": "index.js",
