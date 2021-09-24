@@ -60,8 +60,8 @@ exports.install = (server,path,source,opts)=>{
                             throw new Error(`bad ws msg: ${m.data}`);
                         pl.update(js,[port]);
                     };
-                    client.onclose = ()=>{
-                        pl.update(['disconnect',{port}]);
+                    client.onclose = ev=>{
+                        pl.update(['disconnect',{port,code:ev.code,reason:ev.reason}]);
                         delete pl.connections[port];
                         client.emit('_malaya_close');
                     };
@@ -76,20 +76,22 @@ exports.install = (server,path,source,opts)=>{
         }
         stop(cb) {
             const pl = this;
-            pl.ws.once('close',()=>{
-                pl.ws = null;
-                if (Object.keys(pl.connections).length===0)
-                    super.stop(cb);
-                else
-                    Object.keys(pl.connections).forEach(k=>{
-                        pl.connections[k].once('_malaya_close',()=>{
-                            if (Object.keys(pl.connections).length===0)
-                                super.stop(cb);
+            if (pl.ws) {
+                pl.ws.once('close',()=>{
+                    pl.ws = null;
+                    if (Object.keys(pl.connections).length===0)
+                        super.stop(cb);
+                    else
+                        Object.keys(pl.connections).forEach(k=>{
+                            pl.connections[k].once('_malaya_close',()=>{
+                                if (Object.keys(pl.connections).length===0)
+                                    super.stop(cb);
+                            });
                         });
-                    });
-            });
-            Object.values(pl.connections).forEach(c=>c.close());
-            pl.ws.close();
+                });
+                Object.values(pl.connections).forEach(c=>c.close());
+                pl.ws.close();
+            }
         }
         out(js,name,addr) {
             const   pl = this;
@@ -100,7 +102,7 @@ exports.install = (server,path,source,opts)=>{
                     if (!conn)
                         console.log(`middleware disconnect: port ${js[1].port} not known`);
                     else
-                        conn.close();
+                        conn.close(js[1].code,js[1].reason);
                     break;
                 }
                 default:

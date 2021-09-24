@@ -14,7 +14,7 @@ const       path = require('path');
 const       temp = require('temp').track();
 const         fs = require('fs');
 
-describe("middleware",function() {
+describe("middleware XXX",function() {
     const       testDir = temp.mkdirSync();
     const prevalenceDir = path.join(testDir,'prevalence');
     before(function(done){
@@ -71,6 +71,22 @@ describe("middleware",function() {
         it("fourth record is 'ping' 'update'",function(){
             assert.equal(journal[3][1],'update');
             assert.equal(journal[3][2][0],'ping');
+        });
+    });
+    describe("another session, a short one",function() {
+        it("can set a reason for close",function(done){
+            const ws = new WebSocket(`ws://127.0.0.1:${srv.address().port}/WebSocket?t=198`);
+            ws.on('open',()=>{
+                ws.send(JSON.stringify(['bye',{code:4000,reason:"too tired"}]));
+            });
+            ws.on('error',err=>{
+                done(err);
+            });
+            ws.on('close',(code,reason)=>{
+                assert.equal(code,4000);
+                assert.equal(reason,"too tired");
+                done();
+            });
         });
     });
     describe("ends",function(){

@@ -1,5 +1,7 @@
 module.exports = store {
     rule (-['ping',{...rest},{src}],
           +['pong',{...rest},{dst:src}] );
+    rule (-['bye',{code,reason},{src:['middleware',port]}],
+          +['disconnect',{port,code,reason},{dst:'middleware'}] );
 }
     .plugin('middleware');
