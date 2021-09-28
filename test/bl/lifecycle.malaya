@@ -1,0 +1,8 @@
+module.exports = store
+{
+    rule (-['shutdown',{...},{src:'lifecycle'}],
+          +['stop',{},{dst:'lifecycle'}] );
+}
+    .plugin('lifecycle',{
+        shutdown: 'SIGUSR2'
+    });

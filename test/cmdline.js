@@ -6,6 +6,7 @@ const util    = require("../util.js");
 const fs      = require("fs");
 const temp    = require("temp").track();
 const path    = require("path");
+const rmRF    = require('rimraf');
 const assert  = require('assert').strict;
 const VError  = require("verror");
 const child   = require('child_process');
@@ -395,5 +396,51 @@ describe("cmd line interface [slow]",function() {
                            done();
                        }
                    });
+    });
+    describe("lifecycle plugin",function(){
+        this.timeout(5000);
+        before(()=>rmRF.sync(pdir));
+        it("inits",function(done){
+            child.exec(`${CMD} init test/bl/lifecycle.malaya`,
+                       {},
+                       (code,stdout,stderr)=>{
+                           if (code!==null)
+                               done(new VError("`malaya init` failed code: %j",code));
+                           else if (!fs.statSync(pdir).isDirectory())
+                               done(new VError("prevalence dir not created"));
+                           else
+                               done();
+                       });
+        });
+        it("starts",function(done){
+            let buf = '';
+            malaya = child.spawn("node",['malaya','-p',pdir,'run','-w0','test/bl/lifecycle.malaya']);
+            malaya.stdout.on('data',(data)=>{
+                buf += data;
+                const lines = buf.split('\n');
+                buf = lines.slice(-1)[0];
+                lines.slice(0,-1).forEach((l)=>{
+                    const m = /([a-z0-9]+) listening on [^:]:([0-9]+)/.exec(l);
+                    if (m) {
+                        ports[m[1]] = parseInt(m[2]);
+                    } else if (/mode now: master/.exec(l)) {
+                        malaya.stdout.removeAllListeners();
+                        done();
+                    }
+                });
+            });
+        });
+        it("stops softly",function(done){
+            malaya.on('exit',(code,signal)=> {
+                if (util.onWindows && code===null)
+                    done();
+                else if (code===0)
+                    done();
+                else
+                    done(new Error(`bad return code: ${code}`));
+                malaya = null;
+            });
+            malaya.kill('SIGUSR2');
+        });
     });
 });

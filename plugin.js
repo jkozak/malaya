@@ -346,18 +346,35 @@ function setStandardClasses() {
         constructor(opts={}) {
             super(opts);
             const pl = this;
-            // +++  onstart?  +++
-            // +++ onprestop? +++
             pl.onstop = pl.opts.stop;
             // +++ more key events +++
-            // +++ restart should go here too
+            if (pl.opts.shutdown) {
+                const sd = pl.opts.shutdown;
+                if (typeof sd==='string' && sd.startsWith('SIG'))
+                    process.on(sd,function() {
+                        pl.update(['shutdown',{reason:sd}]);
+                    });
+                else
+                    throw new Error(`unknown lifecycle.shutdown specifier: ${pl.opts.shutdown}`);
+            }
         }
         ready() {
             const pl = this;
+            pl.update(['restart',{}]);
             if (pl.onstop)
                 pl.engine.on('stop',()=>{
                     pl.onstop(pl.engine.chrjs.orderedFacts);
                 });
+        }
+        out([op,{...args}],name,addr) {
+            const pl = this;
+            switch (op) {
+            case 'stop':
+                pl.engine.stop(true);
+                break;
+            default:
+                throw new Error(`unknown lifecycle plugin operation: ${op}`);
+            }
         }
     };
 
