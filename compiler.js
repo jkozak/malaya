@@ -1712,14 +1712,11 @@ function generateJS(js,what) {
 
     var bindRest = null;
     js = parser.visit(js,{ // post-processing
-        visitBinaryExpression: function(path){
-            if (path.node.operator=='==') {
-                warnOnce("== and != test for deep equality, not the javascript horror");
+        visitBinaryExpression: function(path) {
+            if (path.node.operator=='==')
                 path.replace(genEqual(path.node.left,path.node.right));
-            } else if (path.node.operator=='!=') {
-                warnOnce("== and != test for deep equality, not the javascript horror");
+            else if (path.node.operator=='!=')
                 path.replace(genNotEqual(path.node.left,path.node.right));
-            }
             this.traverse(path);
         },
         visitObjectExpression: function(path) {
