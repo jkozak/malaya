@@ -69,7 +69,7 @@ module.exports = function(algorithm) {
                     return fs.readFileSync(store.makeFilename(h),opts);
                 },
                 getHashes:function() {
-                    return fs.readdirSync(dirname).filter(f=>!f.endsWith('.tmp'));
+                    return fs.readdirSync(dirname).filter(f=>f.match(util.hashRegExp));
                 },
                 check: function(hash) {
                     const b = ans.hash(store.getSync(hash))===hash;

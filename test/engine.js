@@ -2,6 +2,8 @@
 
 const   engine = require('../engine.js');
 const   Engine = engine.Engine;
+
+const  history = require('../history.js');
 const compiler = require('../compiler.js');
 const   plugin = require('../plugin.js');
 
@@ -383,16 +385,16 @@ describe("Engine",function() {
             eng.init();
             eng.start();
             eng.stop();
-            engine.walkJournalFile(path.join(dir,'.prevalence','state','journal'),
-                                   false,
-                                   function(err,x,what) {
-                                       assert.strictEqual(err,null);
-                                       if (what==='journal')
-                                           hs.push(x);
-                                   },
-                                   function() {
-                                       assert.strictEqual(hs.length,1);
-                                       done(); });
+            history.walkJournalFile(path.join(dir,'.prevalence','state','journal'),
+                                    false,
+                                    (err,x,what)=>{
+                                        assert.strictEqual(err,null);
+                                        if (what==='journal')
+                                            hs.push(x);
+                                    },
+                                    ()=>{
+                                        assert.strictEqual(hs.length,1);
+                                        done(); });
         });
         it("traverses the journal file and hash store",function(done) {
             const   dir = temp.mkdirSync();
@@ -405,26 +407,26 @@ describe("Engine",function() {
                 assert(!e1);
                 eng.stopPrevalence(false,function(e2) {
                     assert(!e2);
-                    engine.walkJournalFile(path.join(dir,'.prevalence','state','journal'),
-                                           false,
-                                           function(err,x,what) {
-                                               assert.strictEqual(err,null);
-                                               if (what==='journal') {
-                                                   engine.walkHashes(eng.hashes,
-                                                                     x,
-                                                                     false,
-                                                                     function(err1,h,w) {
-                                                                         assert(!err1);
-                                                                         if (what==='journal')
-                                                                             hs.push(h);
-                                                                     },
-                                                                     function() {
-                                                                         done2();
-                                                                     });
-                                               }
-                                           },
-                                           function() {
-                                               done2(); });
+                    history.walkJournalFile(path.join(dir,'.prevalence','state','journal'),
+                                            false,
+                                            (err,x,what)=>{
+                                                assert.strictEqual(err,null);
+                                                if (what==='journal') {
+                                                    history.walkHashes(eng.hashes,
+                                                                       x,
+                                                                       false,
+                                                                       (err1,h,w)=>{
+                                                                           assert(!err1);
+                                                                           if (what==='journal')
+                                                                               hs.push(h);
+                                                                       },
+                                                                       ()=>{
+                                                                           done2();
+                                                                       });
+                                                }
+                                            },
+                                            ()=>{
+                                                done2(); });
                 });
             });
         });

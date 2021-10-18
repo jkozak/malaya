@@ -348,6 +348,7 @@ function setStandardClasses() {
             const pl = this;
             pl.onstop = pl.opts.stop;
             // +++ more key events +++
+            // ++++ history ++++
             if (pl.opts.shutdown) {
                 const sd = pl.opts.shutdown;
                 if (typeof sd==='string' && sd.startsWith('SIG'))

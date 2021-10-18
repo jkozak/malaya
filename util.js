@@ -10,6 +10,13 @@ const    VM = require('vm2').VM;
 exports.verbosity     = 3;
 exports.hashAlgorithm = 'sha1';
 
+exports.hashRegExp = {
+    sha1: /^[0-9a-z]{40}$/
+}[exports.hashAlgorithm];
+if (!exports.hashRegExp)
+    throw new Error(`supply RegExp for hash algorithm: ${exports.hashRegExp}`);
+
+
 exports.format = _util.format;
 
 exports.debug = function (msg) {

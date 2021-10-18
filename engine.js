@@ -35,7 +35,6 @@ const        path = require('path');
 const          fs = require('fs');
 const        rmRF = require('rimraf');
 const    through2 = require('through2');
-const MultiStream = require('multistream');
 const     express = require('express');
 const        http = require('http');
 const          ip = require('ip');
@@ -50,7 +49,7 @@ const     whiskey = require('./whiskey.js');
 const        hash = require('./hash.js');
 const        lock = require('./lock.js');
 const      plugin = require('./plugin.js');
-
+const     history = require('./history.js');
 
 const ourHash                 = hash(util.hashAlgorithm);
 const hashFileSync            = ourHash.hashFileSync;
@@ -152,6 +151,9 @@ const Engine = exports.Engine = function(options) {
         dist:   random.real(0,1,false),
         seed:   null
     };
+
+    // +++ make this work +++
+    // eng.sources[path.join(options.dir,'package-lock.json')] = null;
 
     eng.chrjs.on('error',(err)=>eng.emit('error',new VError(err,"chrjs: ")));
 
@@ -386,11 +388,8 @@ Engine.prototype._ensureStateDir = function() { // after calling successfully, `
     }
 };
 
-const makeHashes = exports.makeHashes = prevalenceDir=>
-      hash(util.hashAlgorithm).makeStore(path.join(prevalenceDir,'hashes'));
-
 Engine.prototype._makeHashes = function() {
-    this.hashes = makeHashes(this.prevalenceDir);
+    this.hashes = history.makeHashes(this.prevalenceDir);
 };
 
 Engine.prototype._overwriteExisting = function() {
@@ -1050,79 +1049,17 @@ Engine.prototype.createUpdateStream = function() {
     });
 };
 
-const walkJournalFile = exports.walkJournalFile = function(filename,deepCheck,cb,done) {
-    let i = 0;
-    util.readFileLinesSync(filename,function(line) {
-        const js = util.deserialise(line);
-        if (i++===0) {
-            switch (js[1]) {
-            case 'init':
-                break;
-            case 'previous':
-                cb(null,js[2],"journal");
-                break;
-            default:
-                cb(new VError("bad log file hash: %s",hash));
-            }
-        } else if (deepCheck) {
-            switch (js[1]) {
-            case 'code':
-                if (js[2][2][js[2][1]]) // hash from the bl src code filename
-                    cb(null,js[2][2][js[2][1]],'bl',js[2][1]);
-                for (const k in js[2][2])
-                    cb(null,js[2][2][k],"source code",k);
-                break;
-            case 'transform':
-                if (js[2][2][js[2][1]]) // hash from the transform src code filename
-                    cb(null,js[2][2][js[2][1]],'transform',js[2][1]);
-                for (const k in js[2][2])
-                    cb(null,js[2][2][k],"source code",k);
-                break;
-            case 'http':
-                cb(null,js[2][1],"http");
-                break;
-            }
-        }
-        return deepCheck; // only read whole file if checking `code` items
-    });
-    if (done!==undefined)
-        done();
-};
-
-const walkHashes = exports.walkHashes = (hashes,hash0,deepCheck,cb,done)=>{
-    // the structure of the hash store is a linear chain of journal files with
-    // other items hanging off them to a depth of one.  A recursive transversal
-    // is not needed to scan this exhaustively.
-    for (let h=hash0;h;) {
-        const fn = hashes.makeFilename(h);
-        /* eslint no-loop-func:0 */
-        cb(null,h,"journal");
-        h = null;
-        walkJournalFile(fn,deepCheck,function(err,hash1,what) {
-            if (err)
-                cb(new VError("walkJournalFile fails: %s",h));
-            else if (what==='journal') {
-                if (h!==null)
-                    cb(new VError("multiple journal backlinks in: %s",hash1));
-                else
-                    h = hash1;
-            }
-        });
-    }
-    if (done!==undefined)
-        done();
-};
 
 Engine.prototype.walkHashes = function(hash0,deepCheck,cb,done) {
     const eng = this;
-    walkHashes(eng.hashes,hash0,deepCheck,cb,done);
+    history.walkHashes(eng.hashes,hash0,deepCheck,cb,done);
 };
 
 Engine.prototype.checkHashes = function(hash0,cb) {
     const       eng = this;
     const deepCheck = true;
     eng.hashes.sanityCheck(cb);
-    walkHashes(eng.hashes,hash0,deepCheck,function(err,h,what) {
+    history.walkHashes(eng.hashes,hash0,deepCheck,function(err,h,what) {
         if (err)
             cb(new VError(err,"walkHashes(%s) fails: ",hash0));
         else if (!eng.hashes.contains(h))
@@ -1131,57 +1068,17 @@ Engine.prototype.checkHashes = function(hash0,cb) {
                    cb);
 };
 
-const journalChain = exports.journalChain = function(prevalenceDir,cb) {
-    // delivers list of journal files in chronological order
-    const hashes = makeHashes(prevalenceDir);
-    const     hs = [];
-    walkJournalFile(path.join(prevalenceDir,'state','journal'),
-                    false,
-                    function(err,x,what) {
-                        if (err)
-                            cb(err);
-                        else if (what==='journal')
-                            walkHashes(hashes,
-                                       x,
-                                       false,
-                                       function(err1,h,what1) {
-                                           if (what1==='journal')
-                                               hs.push(h);
-                                       },
-                                       function(err1) {
-                                           if (err1)
-                                               cb(err1);
-                                           else {
-                                               hs.reverse();
-                                               hs.push('journal');
-                                               cb(null,hs);
-                                           } } );
-                    } );
-};
-
 Engine.prototype.journalChain = function(cb) {
     // delivers list of journal files in chronological order
     const eng = this;
-    journalChain(eng.prevalenceDir,cb);
-};
-
-const buildHistoryStream = exports.buildHistoryStream = (prevalenceDir,cb)=>{
-    const hashes = makeHashes(prevalenceDir);
-    journalChain(prevalenceDir,
-                 (err,hs)=>{
-                     if (err) throw cb(err);
-                     cb(null,new MultiStream(hs.map(h=>{
-                         if (h==='journal')
-                             return fs.createReadStream(path.join(prevalenceDir,'state','journal'));
-                         else
-                             return fs.createReadStream(hashes.makeFilename(h));
-                     })));
-                 });
+    history.getIndex(eng.prevalenceDir,{fix:true}); // +++ don't need whole history, just current
+    history.journalChain(eng.prevalenceDir,null,cb);
 };
 
 Engine.prototype.buildHistoryStream = function(cb) {
     const eng = this;
-    buildHistoryStream(eng.prevalenceDir,cb);
+    history.getIndex(eng.prevalenceDir,{fix:true}); // +++ don't need whole history, just current
+    history.buildHistoryStream(eng.prevalenceDir,null,cb);
 };
 
 const createWorldReadStream = exports.createWorldReadStream = prevalenceDir=>{
@@ -1239,22 +1136,22 @@ Engine.prototype.replicateHashes = function(url,callback) {
         }
     };
     let              next;
-    const   doJournalFile = function(hash0) {
-        walkJournalFile(eng.hashes.makeFilename(hash0),
-                        true,
-                        function(err,h,what,x) {
-                            if (h!==null)
-                                hashes[h] = what;
-                            if (h===jrnlhash) { // !!! review this
-                                if (what==='journal')
-                                    syshash = h;
-                                else if (what==='source code')
-                                    hashSourceMap[x] = h;
-                                else if (what==='bl')
-                                    businessLogic = x;
-                            }
-                        },
-                        next);
+    const   doJournalFile = hash0=>{
+        history.walkJournalFile(eng.hashes.makeFilename(hash0),
+                                true,
+                                (err,h,what,x)=>{
+                                    if (h!==null)
+                                        hashes[h] = what;
+                                    if (h===jrnlhash) { // !!! review this
+                                        if (what==='journal')
+                                            syshash = h;
+                                        else if (what==='source code')
+                                            hashSourceMap[x] = h;
+                                        else if (what==='bl')
+                                            businessLogic = x;
+                                    }
+                                },
+                                next);
     };
     next = function() {
         const ks = Object.keys(hashes);

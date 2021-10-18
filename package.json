@@ -62,7 +62,7 @@
   },
   "engineStrict": true,
   "engines": {
-    "node": ">=10.0.0"
+    "node": ">=10.40.0"
   },
   "keywords": [
     "rules",

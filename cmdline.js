@@ -115,6 +115,15 @@ subcommands.cat.add_argument(
     }
 );
 subcommands.cat.add_argument(
+    '-r','--run',
+    {
+        action:  'store',
+        default: null,
+        type:    s=>s.toLowerCase(),
+        help:    "run id"
+    }
+);
+subcommands.cat.add_argument(
     '-M','--map',
     {
         action:  'append',
@@ -331,6 +340,8 @@ subcommands.kill.add_argument(
     }
 );
 
+addSubcommand('list-runs',{add_help:true});
+
 addSubcommand('parse',{add_help:true});
 subcommands.parse.add_argument(
     '-c','--stdout',
@@ -350,8 +361,26 @@ subcommands.parse.add_argument(
 );
 
 addSubcommand('replay',{add_help:true});
+subcommands.replay.add_argument(
+    '-r','--run',
+    {
+        action:  'store',
+        default: null,
+        type:    s=>s.toLowerCase(),
+        help:    "run id"
+    }
+);
 
 addSubcommand('revisit',{add_help:true});
+subcommands.revisit.add_argument(
+    '-r','--run',
+    {
+        action:  'store',
+        default: null,
+        type:    s=>s.toLowerCase(),
+        help:    "run id"
+    }
+);
 subcommands.revisit.add_argument(
     'source',
     {
@@ -474,6 +503,15 @@ subcommands.transform.add_argument(
         default: false,
         help:    "run transform in debug mode",
         dest:    'debug'
+    }
+);
+subcommands.transform.add_argument(
+    '-r','--run',
+    {
+        action:  'store',
+        default: null,
+        type:    s=>s.toLowerCase(),
+        help:    "run id"
     }
 );
 subcommands.transform.add_argument(
@@ -750,6 +788,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
         if (args.end)
             throw new Error(`NYI: end arg`);
         const   engine = require('./engine.js');
+        const  history = require('./history.js');
         const  whiskey = require('./whiskey.js');
         const   stream = require('stream');
         const   evalFn = (code,args)=>{
@@ -773,6 +812,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                 accum = reduce(accum,j);
             }
         })(args.pipeline);
+        const      run = args.run && history.findHashByPrefix(prevalenceDir,args.run);
         const    JSON5 = require('json5');
         const   getFmt = (s,what)=>{
             switch (s) {
@@ -898,8 +938,10 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
             break;
         }
         case 'history': {
-            engine.buildHistoryStream(
+            history.getIndex(prevalenceDir,{fix:true}); // +++ don't need whole history, just current
+            history.buildHistoryStream(
                 prevalenceDir,
+                run,
                 (err,history)=>{
                     if (err) throw err;
                     history.pipe(out);
@@ -907,8 +949,10 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
             break;
         }
         case 'history-files': {
-            engine.journalChain(
+            history.getIndex(prevalenceDir,{fix:true}); // +++ don't need whole history, just current
+            history.journalChain(
                 prevalenceDir,
+                run,
                 function(err,hs) {
                     if (err)
                         throw err;
@@ -944,10 +988,11 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
     subcommands.fsck.exec = function() {
         const    hash = require('./hash.js');
         const whiskey = require('./whiskey.js');
-        const  engine = require('./engine.js');
+        const history = require('./history.js');
         const  hashes = hash(util.hashAlgorithm).makeStore(path.join(prevalenceDir,'hashes'));
         let        ok = true;
         checkDirectoriesExist();
+        history.getIndex(prevalenceDir,{fix:true}); // +++ don't need whole history, just current
         try {
             const lines = fs.readFileSync(path.join(prevalenceDir,'state/world'),'utf8').split('\n');
             assert.strictEqual(lines[lines.length-1],'');
@@ -969,7 +1014,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
             ok = false;
         }
         hashes.sanityCheck(err=>{console.log(err);ok=false;}); // this is sync really
-        engine.buildHistoryStream(prevalenceDir,(err,rf)=>{    // this is sync really
+        history.buildHistoryStream(prevalenceDir,null,(err,rf)=>{    // this is sync really
             let first = true;
             if (err) {
                 console.log("error in journal chaining: %s",err.message);
@@ -1098,6 +1143,10 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
         kill(sig);
     };
 
+    subcommands['list-runs'].exec = function() {
+        throw new Error(`NYI`);
+    };
+
     subcommands.parse.exec = function() {
         const compiler = require('./compiler.js');
         args.source = args.source || findSource();
@@ -1110,13 +1159,16 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
 
     subcommands.replay.exec = function() {
         const   engine = require('./engine.js');
+        const  history = require('./history.js');
         const  whiskey = require('./whiskey.js');
         const readline = require('readline');
         const    JSON5 = require('json5');
         const histfile = path.join(prevalenceDir,'replay.history');
+        const      run = args.run && history.findHashByPrefix(prevalenceDir,args.run);
         let        eng = null;
-        engine.buildHistoryStream(
+        history.buildHistoryStream(
             prevalenceDir,
+            run,
             (err,history)=>{
                 if (err) throw err;
 
@@ -1252,6 +1304,8 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
             ports:         {},
             debug:         args.debug
         });
+        if (args.run)
+            throw new Error(`NYI: --run`);
         eng.init();
         eng.start();
         eng.on('mode',m=>{
@@ -1348,6 +1402,8 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
         const source = path.resolve(process.cwd(),args.transform);
         const  chrjs = require(source);
         const  print = args.stdout;
+        if (args.run)
+            throw new Error(`NYI: --run`);
         eng.chrjs = args.source ? require(path.resolve(args.source)) : engine.makeInertChrjs();
         eng.start();
         if (args.debug) {
