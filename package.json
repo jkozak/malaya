@@ -33,7 +33,7 @@
     "through2": "^4.0.2",
     "underscore": "^1.13.1",
     "verror": "^1.6.0",
-    "vm2": "^3.9.3",
+    "vm2": "^3.9.4",
     "websocket": "^1.0.34",
     "websocket-stream": "^5.5.2",
     "ws": "^7.5.5"
