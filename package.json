@@ -1,6 +1,6 @@
 {
   "name": "malaya",
-  "version": "0.8.991",
+  "version": "0.8.992",
   "description": "Logic programming with JSON pattern matching",
   "dependencies": {
     "argparse": "^2.0.1",
@@ -23,6 +23,7 @@
     "monotonic-timestamp": "0.0.9",
     "morgan": "^1.10.0",
     "multistream": "^4.1.0",
+    "pkg-up": "^3.1.0",
     "random-js": "^1.0.8",
     "reactify": "^1.1.1",
     "recast": "=0.9.5",

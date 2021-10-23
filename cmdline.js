@@ -992,7 +992,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
         const  hashes = hash(util.hashAlgorithm).makeStore(path.join(prevalenceDir,'hashes'));
         let        ok = true;
         checkDirectoriesExist();
-        history.getIndex(prevalenceDir,{fix:true}); // +++ don't need whole history, just current
+        history.getIndex(prevalenceDir,{fix:true});
         try {
             const lines = fs.readFileSync(path.join(prevalenceDir,'state/world'),'utf8').split('\n');
             assert.strictEqual(lines[lines.length-1],'');

@@ -42,6 +42,7 @@ const          vm = require('vm');
 const       shell = require('shelljs');
 const      random = require('random-js');
 const   expressWS = require('express-ws');
+const       pkgUp = require('pkg-up');
 
 const    compiler = require('./compiler.js');
 const         www = require('./www.js');
@@ -152,8 +153,11 @@ const Engine = exports.Engine = function(options) {
         seed:   null
     };
 
-    // +++ make this work +++
-    // eng.sources[path.join(options.dir,'package-lock.json')] = null;
+    try {
+        eng.sources[pkgUp.sync().replace('package.json','package-lock.json')] = null;
+    } catch (e) {
+        console.warn(`can't find package-lock file for code log: ${e}`);
+    }
 
     eng.chrjs.on('error',(err)=>eng.emit('error',new VError(err,"chrjs: ")));
 
