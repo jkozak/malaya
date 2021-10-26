@@ -370,6 +370,14 @@ subcommands.replay.add_argument(
         help:    "run id"
     }
 );
+subcommands.replay.add_argument(
+    'source',
+    {
+        action:  'store',
+        nargs:   '?',
+        help:    "business logic source file"
+    }
+);
 
 addSubcommand('revisit',{add_help:true});
 subcommands.revisit.add_argument(
@@ -628,6 +636,8 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
             throw new VError("can't find prevalence directory");
         if (!fs.existsSync(path.join(prevalenceDir,'state')))
             throw new VError("can't find state directory");
+        if (!fs.existsSync(path.join(prevalenceDir,'hashes')))
+            throw new VError("can't find hashes directory");
     };
 
     const installSignalHandlers = function(eng) {
@@ -900,6 +910,8 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
         switch (args.what) {
         case 'journal':
         case 'world':
+            if (run)
+                throw new Error(`NYI`);
             fs.createReadStream(path.join(prevalenceDir,'state',args.what)).pipe(out);
             break;
         case 'facts': {
@@ -1166,6 +1178,8 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
         const histfile = path.join(prevalenceDir,'replay.history');
         const      run = args.run && history.findHashByPrefix(prevalenceDir,args.run);
         let        eng = null;
+        checkDirectoriesExist();
+        history.getIndex(prevalenceDir,{fix:true});
         history.buildHistoryStream(
             prevalenceDir,
             run,
@@ -1188,14 +1202,16 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                 let  fmtOpts = {};
                 let       pc = 0;     // "program counter"
                 const myEval = x=>util.eval(x,{
-                    facts: eng.chrjs.orderedFacts,
-                    Date:  MalayaDate,
-                    pc,
-                    t:     eng._nextTimestamp
-                });
+                    sandbox: {
+                        facts: eng.chrjs.orderedFacts,
+                        Date:  MalayaDate,
+                        pc,
+                        t:     eng._nextTimestamp
+                    },
+                    timeout: 100000});
                 const   repl = (js)=>{
                     let loop = true;
-                    if (js[1]!=='update')
+                    if (js && js[1]!=='update')
                         rj.resume();
                     else {
                         rl.question(`? `,cmd=>{
@@ -1206,28 +1222,41 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                                     console.log(`??: ${cmd}`);
                                 else
                                     switch (m[1]) {
+                                    case 'D':   // toggle debug
+                                        throw new Error(`NYI`);
                                     case 'i':   // Inject <fact>
                                         throw new Error(`NYI`);
                                     case 'l':   // Long form
                                         fmtOpts.long = !fmtOpts.long;
                                         break;
-                                    case 'n': { // Next <n>?
-                                        let n = m[2].length>0 ? parseInt(m[2]) : 1;
-                                        if (n>0) {
-                                            skip = ()=>--n>0;
-                                            loop = false;
-                                        }
+                                    case 'n':   // Next <n>?
+                                        if (js) {
+                                            let n = m[2].length>0 ? parseInt(m[2]) : 1;
+                                            if (n>0) {
+                                                skip = ()=>--n>0;
+                                                loop = false;
+                                            }
+                                        } else
+                                            console.log(`log replayed`);
                                         break;
-                                    }
                                     case 'q':   // Quit
                                         process.exit(0);
-                                    case 'u': { // Until <condition>
-                                        const test = m[2];
-                                        skip = ()=>!myEval(test);
-                                        loop = false;
+                                    case 'r':   // Run to completion
+                                        if (js) {
+                                            skip = ()=>true;
+                                            loop = false;
+                                        } else
+                                            console.log(`log replayed`);
                                         break;
-                                    }
-                                    case '=': {  // examine and pretty print facts
+                                    case 'u':   // Until <condition>
+                                        if (js) {
+                                            const test = m[2];
+                                            skip = ()=>!myEval(test);
+                                            loop = false;
+                                        } else
+                                            console.log(`log replayed`);
+                                        break;
+                                    case '=': { // examine and pretty print facts
                                         const res = myEval(m[2]);
                                         if (Array.isArray(res) &&
                                             res.every(x=>Array.isArray(x)      &&
@@ -1252,25 +1281,27 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                         });
                     }
                 };
-                rl.on('history',h=>{fs.writeFileSync(histfile,h)});
+                rl.on('history',h=>{fs.writeFileSync(histfile,JSON.stringify(h))});
                 history.pipe(rj);
                 rj.on('data',js=>{
                     pc++;
                     switch (js[1]) {
-                    case 'init':
+                    case 'init': {
+                        const businessLogic = args.source || js[2].businessLogic;
                         if (eng)
                             throw new Error(`multiple inits in this history [${pc}]`);
                         require('./plugin.js').setOverrides({
                             plugins:    [[null,'dummy']],
                             parameters: [] });
                         eng = new engine.Engine({
-                            businessLogic: js[2].businessLogic,
+                            businessLogic,
                             debug:         true
                         });
                         eng._rng.seed = js[2].rngSeed || 0;
                         eng._bindGlobals();
-                        traceChrjs(eng.chrjs,js[2].businessLogic);
+                        traceChrjs(eng.chrjs,businessLogic);
                         break;
+                    }
                     case 'code': {
                         //const   bl = js[2][1];
                         //const srcs = js[2][2];
@@ -1290,7 +1321,10 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                     else
                         repl(js);
                 });
-                rj.on('end',()=>process.exit(0));
+                rj.on('end',()=>{
+                    console.log(`history fully replayed`);
+                    repl(null);
+                });
             });
     };
 

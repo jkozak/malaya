@@ -189,10 +189,10 @@ exports.env = (function() {
 
 exports.inspect = _util.inspect;
 
-exports.eval = (code,sandbox)=>{
+exports.eval = (code,{sandbox,timeout}={sandbox:{},timeout:100})=>{
     const vm = new VM({
-        timeout: 100,
-        sandbox: sandbox||{}
+        timeout,
+        sandbox
     });
     return vm.run(code);
 };

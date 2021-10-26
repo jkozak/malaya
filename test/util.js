@@ -108,6 +108,6 @@ describe("eval",function(){
         assert.equal(util.eval("2+2"),4);
     });
     it("has globals",function(){
-        assert.equal(util.eval("x",{x:429}),429);
+        assert.equal(util.eval("x",{sandbox:{x:429}}),429);
     });
 });
