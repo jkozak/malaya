@@ -1205,6 +1205,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                     sandbox: {
                         facts: eng.chrjs.orderedFacts,
                         Date:  MalayaDate,
+                        Math:  MalayaMath,
                         pc,
                         t:     eng._nextTimestamp
                     },
@@ -1217,10 +1218,10 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                         rl.question(`? `,cmd=>{
                             cmd = cmd.trim();
                             if (cmd.length>0) {
-                                const m = /^([a-z=]) *(.*)$/.exec(cmd);
+                                const m = /^([a-zA-Z=]) *(.*)$/.exec(cmd);
                                 if (!m)
                                     console.log(`??: ${cmd}`);
-                                else
+                                else try {
                                     switch (m[1]) {
                                     case 'D':   // toggle debug
                                         throw new Error(`NYI`);
@@ -1272,6 +1273,9 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                                     default:
                                         console.log(`??: ${cmd}`);
                                     }
+                                } catch (e) {
+                                    console.log(`user code failed: ${e}`);
+                                }
                             } else
                                 loop = false;
                             if (loop)
@@ -1298,6 +1302,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                             debug:         true
                         });
                         eng._rng.seed = js[2].rngSeed || 0;
+                        eng._rng.engine.seed(eng._rng.seed);
                         eng._bindGlobals();
                         traceChrjs(eng.chrjs,businessLogic);
                         break;

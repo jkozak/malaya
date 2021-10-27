@@ -11,7 +11,8 @@
     "plugins": ["security"],
     "extends": ["eslint:recommended","plugin:node/recommended","plugin:security/recommended"],
     "globals": {
-        "MalayaDate": "readable"
+        "MalayaDate": "readable",
+        "MalayaMath": "readable"
     },
     "rules": {
         "no-console": 0,        // !!! review this later !!!
