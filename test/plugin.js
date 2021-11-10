@@ -13,7 +13,7 @@ const     path = require('path');
 const    sinon = require('sinon');
 const   assert = require('assert').strict;
 const   stream = require('stream');
-
+const  express = require('express');
 
 const jsOut = {op:'munge',data:[3,4,5]};
 
@@ -863,5 +863,59 @@ module.exports = store {
             assert.deepEqual(JSON.parse(wd),['pong',{}]);
             done();
         });
+    });
+});
+
+describe("notify",function(){
+    this.bail(true);
+    let   eng;
+    let   app;
+    let   srv;
+    let  port;
+    const rqs = [];
+    const dir = temp.mkdirSync();
+    before(done=>{
+        app = express();
+        app.use(express.json());
+        app.use((req,res)=>{
+            rqs.push(req);
+            res.status(200).end();
+        });
+        srv = app.listen(0,err=>{
+            port = srv.address().port;
+            done(err);
+        });
+    });
+    before(()=>{
+        fs.writeFileSync(path.join(dir,'test.malaya'),`
+module.exports = store {
+    rule (-['restart',{...},{src:'restart'}],
+          +['init',{p:1,q:2},{dst:'notify'}] );
+}
+    .plugin('restart')
+    .plugin('notify',{sinks:['http://localhost:${port}']});
+`,
+                         {encoding:'utf8'} );
+    });
+    after(()=>{plugin._private.reset();});
+    after(()=>(eng && eng.stop()));
+    after(()=>srv.close());
+    it("loads source file",function(done){
+        eng = new engine.Engine({dir,
+                                 ports:         {},
+                                 businessLogic: path.join(dir,'test.malaya') });
+        eng.init();
+        eng.start();
+        eng.on('mode',mode=>{
+            if (mode==='master')
+                done();
+        });
+        eng.become('master');
+    });
+    it("has sent a notification",function(){
+        assert.equal(    rqs[0].method,'POST');
+        assert.equal(    rqs[0].path,  '/init');
+        assert.deepEqual(rqs[0].body,  {p:1,q:2});
+        rqs.length = 0;
     });
 });

@@ -30,6 +30,7 @@
     "rimraf": "^3.0.2",
     "shelljs": "^0.8.4",
     "stream-to-array": "^2.3.0",
+    "superagent": "^6.1.0",
     "temp": "^0.9.4",
     "through2": "^4.0.2",
     "underscore": "^1.13.1",
@@ -58,7 +59,6 @@
     "request": "^2.88.2",
     "resumer": "0.0.0",
     "sinon": "^11.1.2",
-    "superagent": "^6.1.0",
     "supertest": "^6.1.6"
   },
   "engineStrict": true,

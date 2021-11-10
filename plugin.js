@@ -3,6 +3,7 @@
 const        _ = require('underscore');
 const       fs = require('fs');
 const   stream = require('stream');
+const  request = require('superagent');
 const through2 = require('through2');
 
 const    util = require('./util.js');
@@ -376,6 +377,23 @@ function setStandardClasses() {
             default:
                 throw new Error(`unknown lifecycle plugin operation: ${op}`);
             }
+        }
+    };
+
+    classes.notify = class extends Plugin {
+        constructor(opts) {
+            super(opts);
+            const pl = this;
+            pl.sinks = opts.sinks.map(s=>s.endsWith('/')?s:(s+'/'));
+        }
+        out([op,{...args}],name,addr) {
+            const pl = this;
+            pl.sinks.forEach(s=>{
+                request
+                    .post(`${s}${op}`)
+                    .send(args)
+                    .then(()=>{});
+            });
         }
     };
 
