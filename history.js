@@ -192,7 +192,22 @@ exports.addToIndex = (prevDir,h)=>{
     throw new Error(`NYI - incrementally add new hash to index`);
 };
 
-exports.findHashByPrefix = (prevDir,r)=>{
+const findRunContainingHash = (prevDir,h)=>{
+    const index = getIndex(prevDir);
+    const    hs = [];
+    index.runs.forEach(r=>{
+        r.forEach(h1=>{
+            if (h1===h)
+                hs.push(r[0]);
+        });
+    });
+    if (hs.length===1)
+        return hs[0];
+    else if (hs.length>1)
+        throw new Error(`${h} ambiguous, matches: ${hs}`);
+};
+
+const findHashByPrefix = exports.findHashByPrefix = (prevDir,r)=>{
     const index = getIndex(prevDir);
     const    hs = [];
     Object.keys(index.contents).forEach(h=>{
@@ -203,8 +218,41 @@ exports.findHashByPrefix = (prevDir,r)=>{
         return hs[0];
     else if (hs.length>1)
         throw new Error(`${r} ambiguous, matches: ${hs}`);
-    // +++ search by date +++
-    throw new Error(`NYI`);
+    else
+        throw new Error(`not found: ${r}`);
+};
+
+const findHashByDate = exports.findHashByDate = (prevDir,r)=>{
+    const index = getIndex(prevDir);
+    const     t = new Date(r);
+    const    hs = [];
+    Object.keys(index.contents).forEach(h=>{
+        const when = index.contents[h].when;
+        if (when && (when[0]<=t && t<when[1]))
+            hs.push(h);
+    });
+    if (hs.length===1)
+        return hs[0];
+    else if (hs.length>1)
+        throw new Error(`${r} ambiguous, matches: ${hs}`);
+};
+
+
+const findHash = exports.findHash = (prevDir,r)=>{
+    if (r.match(/^[0-9a-z]+$/))
+        return findHashByPrefix(prevDir,r);
+    else if (r.match(/^[0-9]{4}-[0-9]{2}-[0-9]{2}t[0-9]{2}:[0-9]{2}:[0-9]{2}z/))
+        return findHashByDate(prevDir,r);
+    else if (r instanceof Date)
+        return findHashByDate(prevDir,r);
+    else if ((typeof r)==='number')
+        return findHashByDate(prevDir,r);
+    else
+        throw new Error(`don't know how to find run ${r}`);
+};
+
+exports.findRun = (prevDir,r)=>{
+    return findRunContainingHash(prevDir,findHash(prevDir,r));
 };
 
 if (require.main===module) {

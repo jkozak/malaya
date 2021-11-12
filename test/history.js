@@ -117,13 +117,45 @@ describe("history XXX",function() {
         const target = 2;
         const prefix = hashes[target].slice(0,10);
         for (let i=0;i<hashes.length;i++) {
-            if (i!==2)
+            if (i!==target)
                 if (hashes[i].startsWith(prefix)) {
-                    console.log(`this really shouldn't happen`);
+                    console.log(`hash prefix collision really shouldn't happen`);
                     return;
                 }
         }
         assert.equal(history.findHashByPrefix(prevDir,prefix),hashes[target]);
+    });
+    it("finds hash by date",function(){
+        const target = 1;
+        const      t = hashes[target][0];
+        assert.equal(history.findHash(prevDir,t),hashes[target]);
+    });
+    it("finds hash generically but by prefix",function(){
+        const target = 3;
+        const prefix = hashes[target].slice(0,10);
+        for (let i=0;i<hashes.length;i++) {
+            if (i!==target)
+                if (hashes[i].startsWith(prefix)) {
+                    console.log(`hash prefix collision really shouldn't happen`);
+                    return;
+                }
+        }
+        assert.equal(history.findHash(prevDir,prefix),hashes[target]);
+    });
+    it("finds hash generically but by date",function(){
+        const target = 2;
+        const      t = hashes[target][0];
+        assert.equal(history.findHash(prevDir,t),hashes[target]);
+    });
+    it("finds run generically but by date",function(){
+        const target = 2;
+        const      t = hashes[target][0];
+        assert.equal(history.findRun(prevDir,t),hashes.slice(-1)[0]);
+    });
+    it("finds run generically but by prefix",function(){
+        const target = 2;
+        const prefix = hashes[target].slice(0,10);
+        assert.equal(history.findRun(prevDir,prefix),hashes.slice(-1)[0]);
     });
     it("accesses history via a readable stream",function(done){
         history.buildHistoryStream(prevDir,hashes[3],(err,rs)=>{

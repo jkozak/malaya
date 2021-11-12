@@ -340,7 +340,23 @@ subcommands.kill.add_argument(
     }
 );
 
-addSubcommand('list-runs',{add_help:true});
+addSubcommand('list',{add_help:true});
+subcommands.list.add_argument(
+    '-r','--run',
+    {
+        action:  'store',
+        default: null,
+        type:    s=>s.toLowerCase(),
+        help:    "run id"
+    }
+);
+subcommands.list.add_argument(
+    'what',
+    {
+        action:  'store',
+        help:    "'history-files', 'runs'"
+    }
+);
 
 addSubcommand('parse',{add_help:true});
 subcommands.parse.add_argument(
@@ -361,6 +377,15 @@ subcommands.parse.add_argument(
 );
 
 addSubcommand('replay',{add_help:true});
+subcommands.replay.add_argument(
+    '-c','--command',
+    {
+        action:  'append',
+        default: [],
+        help:    "replay command to execute",
+        dest:    'commands'
+    }
+);
 subcommands.replay.add_argument(
     '-r','--run',
     {
@@ -502,6 +527,8 @@ subcommands.run.add_argument(
 addSubcommand('save',{add_help:true});
 
 addSubcommand('status',{add_help:true});
+
+addSubcommand('term',{add_help:true});
 
 addSubcommand('transform',{add_help:true});
 subcommands.transform.add_argument(
@@ -822,7 +849,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                 accum = reduce(accum,j);
             }
         })(args.pipeline);
-        const      run = args.run && history.findHashByPrefix(prevalenceDir,args.run);
+        const      run = args.run && history.findHash(prevalenceDir,args.run);
         const    JSON5 = require('json5');
         const   getFmt = (s,what)=>{
             switch (s) {
@@ -1155,8 +1182,29 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
         kill(sig);
     };
 
-    subcommands['list-runs'].exec = function() {
-        throw new Error(`NYI`);
+    subcommands.list.exec = function() {
+        const history = require('./history.js');
+        switch (args.what) {
+        case 'history-files':
+            throw new Error(`NYI`);
+        case 'runs': {
+            const index = history.getIndex(prevalenceDir,{fix:true});
+            Object.keys(index.contents).forEach(h=>{
+                //console.log(`${h} ${JSON.stringify(index.contents[h])}`);
+            });
+            index.runs.sort((p,q)=>index.contents[p[0]].when[0]-index.contents[q[0]].when[0]);
+            index.runs.forEach(r=>{
+                const start = new Date(index.contents[r.slice(-1)[0]].when[0])
+                const  stop = new Date(index.contents[r.slice( 0)[0]].when[1])
+                const stFmt = start.toLocaleString('en-GB').replace(', ',' ');
+                const drFmt = ('    '+((stop-start)/3600000).toFixed(1)).slice(-5)
+                console.log(`${stFmt} ${drFmt}  ${r.length.toString().padStart(2)} ${r[0]}`);
+            });
+            break;
+        }
+        default:
+            throw new Error(`unknown thing to list: ${args.what}`);
+        }
     };
 
     subcommands.parse.exec = function() {
@@ -1176,7 +1224,8 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
         const readline = require('readline');
         const    JSON5 = require('json5');
         const histfile = path.join(prevalenceDir,'replay.history');
-        const      run = args.run && history.findHashByPrefix(prevalenceDir,args.run);
+        const     cmds = Array.from(args.commands);
+        const      run = args.run && history.findHash(prevalenceDir,args.run);
         let        eng = null;
         checkDirectoriesExist();
         history.getIndex(prevalenceDir,{fix:true});
@@ -1199,7 +1248,6 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                     })()
                 });
                 let     skip = ()=>false;
-                let  fmtOpts = {};
                 let       pc = 0;     // "program counter"
                 const myEval = x=>util.eval(x,{
                     sandbox: {
@@ -1215,7 +1263,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                     if (js && js[1]!=='update')
                         rj.resume();
                     else {
-                        rl.question(`? `,cmd=>{
+                        const exec = cmd=>{
                             cmd = cmd.trim();
                             if (cmd.length>0) {
                                 const m = /^([a-zA-Z=]) *(.*)$/.exec(cmd);
@@ -1228,7 +1276,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                                     case 'i':   // Inject <fact>
                                         throw new Error(`NYI`);
                                     case 'l':   // Long form
-                                        fmtOpts.long = !fmtOpts.long;
+                                        args.long = !args.long;
                                         break;
                                     case 'n':   // Next <n>?
                                         if (js) {
@@ -1282,7 +1330,11 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                                 setImmediate(()=>repl(js));
                             else
                                 rj.resume();
-                        });
+                        };
+                        if (cmds.length>0)
+                            exec(cmds.shift());
+                        else
+                            rl.question(`? `,exec);
                     }
                 };
                 rl.on('history',h=>{fs.writeFileSync(histfile,JSON.stringify(h))});
@@ -1431,6 +1483,57 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
         eng.become(args.mode);
     };
 
+    subcommands.save.exec = function() {
+        kill('SIGHUP');
+    };
+
+    subcommands.status.exec = function() {
+        checkDirectoriesExist();
+        const   lock = require("./lock.js");
+        const moment = require('moment');
+        const  pLock = path.join(prevalenceDir,'lock');
+        const   data = lock.lockDataSync(pLock);
+        const   hash = require('./hash.js')(hashAlgorithm);
+        const hstore = hash.makeStore(path.join(prevalenceDir,'hashes'));
+        const   tfmt = "YYYY-MM-DD HH:mm:ss";
+        console.log("stashed: %d hashes",hstore.getHashes().length);
+        if (data===null || data.pid===null)
+            console.log("server:  not running");
+        else {
+            const    stLock = fs.statSync(pLock);
+            const    pWorld = path.join(prevalenceDir,'state','world');
+            const   stWorld = fs.statSync(pWorld);
+            const stJournal = fs.statSync(path.join(prevalenceDir,'state','journal'));
+            util.readFileLinesSync(pWorld,function(l) {
+                console.log("syshash: %s",util.deserialise(l));
+                return false;
+            });
+            console.log("server:\t running (pid %d) since %s",data.pid,moment(stLock.mtime).format(tfmt));
+            console.log("world:\t %d bytes, saved at %s",stWorld.size,  moment(stWorld.mtime).format(tfmt));
+            console.log("journal: %d bytes, updated %s",stJournal.size,moment(stJournal.mtime).format(tfmt));
+            for (const k in data.ports) {
+                console.log("%s:\t listening on *:%d",k,data.ports[k]);
+            }
+        }
+    };
+
+    subcommands.term.exec = function() {
+        checkDirectoriesExist();
+        const  lock = require("./lock.js");
+        if (lock.lockSync(path.join(prevalenceDir,'lock'))) {
+            // +++ engine should handle prevDir existing but not stateDir +++
+            // +++ sanity check, don't do anything if no state dir +++
+            throw new Error(`NYI`);
+            //const  hashes = hash(util.hashAlgorithm).makeStore(path.join(prevalenceDir,'hashes'));
+            //fs.appendFileSync(jrnlFile,util.serialise([eng.timestamp(),'term',{}])+'\n');
+            //hashes.putFileSync(jrnlFile);
+            // try {
+            //     rmRF.sync(path.join(eng.prevalenceDir,'state'));
+            // } catch (e) {/* eslint no-empty:0 */}
+            //lock.unlockSync(path.join(prevalenceDir,'lock'));
+        }
+    };
+
     subcommands.transform.exec = function() {
         /* eslint-disable security/detect-non-literal-require */
         checkDirectoriesExist();
@@ -1495,40 +1598,6 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
             eng.stopPrevalence(false,cb);
             return null;
         });
-    };
-
-    subcommands.save.exec = function() {
-        kill('SIGHUP');
-    };
-
-    subcommands.status.exec = function() {
-        checkDirectoriesExist();
-        const   lock = require("./lock.js");
-        const moment = require('moment');
-        const  pLock = path.join(prevalenceDir,'lock');
-        const   data = lock.lockDataSync(pLock);
-        const   hash = require('./hash.js')(hashAlgorithm);
-        const hstore = hash.makeStore(path.join(prevalenceDir,'hashes'));
-        const   tfmt = "YYYY-MM-DD HH:mm:ss";
-        console.log("stashed: %d hashes",hstore.getHashes().length);
-        if (data===null || data.pid===null)
-            console.log("server:  not running");
-        else {
-            const    stLock = fs.statSync(pLock);
-            const    pWorld = path.join(prevalenceDir,'state','world');
-            const   stWorld = fs.statSync(pWorld);
-            const stJournal = fs.statSync(path.join(prevalenceDir,'state','journal'));
-            util.readFileLinesSync(pWorld,function(l) {
-                console.log("syshash: %s",util.deserialise(l));
-                return false;
-            });
-            console.log("server:\t running (pid %d) since %s",data.pid,moment(stLock.mtime).format(tfmt));
-            console.log("world:\t %d bytes, saved at %s",stWorld.size,  moment(stWorld.mtime).format(tfmt));
-            console.log("journal: %d bytes, updated %s",stJournal.size,moment(stJournal.mtime).format(tfmt));
-            for (const k in data.ports) {
-                console.log("%s:\t listening on *:%d",k,data.ports[k]);
-            }
-        }
     };
 
     subcommands.wait.exec = function() {

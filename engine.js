@@ -399,7 +399,6 @@ Engine.prototype._makeHashes = function() {
 Engine.prototype._overwriteExisting = function() {
     const eng = this;
     if (eng.options.overwrite) {
-        const jrnlFile = path.join(eng.prevalenceDir,'state','journal');
         try {
             fs.statSync(eng.prevalenceDir);
         } catch (err) {
@@ -407,6 +406,9 @@ Engine.prototype._overwriteExisting = function() {
                 throw new VError(err,"trouble with prevalence dir");
             return false;
         }
+        // +++ allow for prevDir existing but not stateDir +++
+        //     which happens after `malaya term` cmd
+        const jrnlFile = path.join(eng.prevalenceDir,'state','journal');
         try {
             eng._ensureStateDir();
             eng._makeHashes();
