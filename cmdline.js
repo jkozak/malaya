@@ -1290,6 +1290,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                                         break;
                                     case 'q':   // Quit
                                         process.exit(0);
+                                        break;
                                     case 'r':   // Run to completion
                                         if (js) {
                                             skip = ()=>true;
