@@ -182,7 +182,7 @@ describe("cmdline",function() {
     });
 });
 
-describe("cmd line interface [slow]",function() {
+describe("cmd line interface [slow] XXX",function() {
     const   dir = temp.mkdirSync();
     const  pdir = path.join(dir,'.prevalence');
     const   CMD = `node malaya -p ${pdir}`;
@@ -229,6 +229,56 @@ describe("cmd line interface [slow]",function() {
                        else
                            done();
                    });
+    });
+    let stashedHash;
+    it("stashes data in the hash store",function(done) {
+        child.exec(`echo testing testing | ${CMD} tac`,
+                   {},
+                   (code,stdout,stderr)=>{
+                       if (code!==null)
+                           done(new VError(`\`malaya hash\` returned ${JSON.stringify(code)}`));
+                       else {
+                           stashedHash = stdout.trim();
+                           done();
+                       }
+                   } );
+    });
+    it("reads the stashed hash back from the store",function(done) {
+        child.exec(`${CMD} cat ${stashedHash}`,
+                   {},
+                   (code,stdout,stderr)=>{
+                       if (code!==null)
+                           done(new VError(`\`malaya cat\` returned ${JSON.stringify(code)}`));
+                       else {
+                           assert.equal(stdout,"testing testing\n"); // \n from echo
+                           done();
+                       }
+                   } );
+    });
+    it("stashes more data in the hash store",function(done) {
+        fs.writeFileSync(path.join(dir,'hash2'),"tasting tasting");
+        child.exec(`${CMD} tac ${path.join(dir,'hash2')}`,
+                   {},
+                   (code,stdout,stderr)=>{
+                       if (code!==null)
+                           done(new VError(`\`malaya hash\` returned ${JSON.stringify(code)}`));
+                       else {
+                           stashedHash = stdout.trim();
+                           done();
+                       }
+                   } );
+    });
+    it("reads the new stashed hash back from the store",function(done) {
+        child.exec(`${CMD} cat ${stashedHash}`,
+                   {},
+                   (code,stdout,stderr)=>{
+                       if (code!==null)
+                           done(new VError(`\`malaya cat\` returned ${JSON.stringify(code)}`));
+                       else {
+                           assert.equal(stdout,"tasting tasting");
+                           done();
+                       }
+                   } );
     });
     it("shows as not running",function(done) {
         this.timeout(10000);

@@ -528,6 +528,16 @@ addSubcommand('save',{add_help:true});
 
 addSubcommand('status',{add_help:true});
 
+addSubcommand('tac',{add_help:true});
+subcommands.tac.add_argument(
+    'file',
+    {
+        action: 'store',
+        nargs:  '?',
+        help:   "file to stash in hash store"
+    }
+);
+
 addSubcommand('term',{add_help:true});
 
 addSubcommand('transform',{add_help:true});
@@ -824,7 +834,6 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
             'pretty';
         if (args.end)
             throw new Error(`NYI: end arg`);
-        const   engine = require('./engine.js');
         const  history = require('./history.js');
         const  whiskey = require('./whiskey.js');
         const   stream = require('stream');
@@ -833,6 +842,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                 code = `(${args})=>${code}`;
             return util.eval(code);
         }
+        let       out1;
         let      accum = args.accum;
         const   reduce = args.reduce ? evalFn(args.reduce,'a,j') : (a,j)=>out1.write(j);
         const pipeline = (stages=>{
@@ -914,35 +924,43 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                     });
                 }
                 default:
-                    throw new Error('SNO');
+                    return null;    // this is a hash stream, no formatting
                 }
             default:
-                throw new Error("SNO");
+                throw new Error('SNO');
             }
         };
-        const      out = new whiskey.LineStream(util.deserialise);
-        let       out1 = stream.PassThrough({objectMode:true});
-        const      dst = getFmt(args.format,args.what);
-        dst.pipe(process.stdout);
-        checkDirectoriesExist();
-        out.on('data',js=>{
-            pipeline(js);
-        });
-        out.on('end',()=>{
-            if (args.reduce)
-                out1.write(accum);
-            out1.end();
-        });
-        out1.pipe(dst);
+        const mkDst = ()=>{
+            const      dst = getFmt(args.format,args.what);
+            dst.pipe(process.stdout);
+            return dst;
+        };
+        const mkOut = ()=>{
+            const      dst = mkDst();
+            const      out = new whiskey.LineStream(util.deserialise);
+            out1 = stream.PassThrough({objectMode:true}); // nasty side-effect
+            checkDirectoriesExist();
+            out.on('data',js=>{
+                pipeline(js);
+            });
+            out.on('end',()=>{
+                if (args.reduce)
+                    out1.write(accum);
+                out1.end();
+            });
+            out1.pipe(dst);
+            return out;
+        };
         switch (args.what) {
         case 'journal':
         case 'world':
             if (run)
                 throw new Error(`NYI`);
-            fs.createReadStream(path.join(prevalenceDir,'state',args.what)).pipe(out);
+            fs.createReadStream(path.join(prevalenceDir,'state',args.what)).pipe(mkOut());
             break;
         case 'facts': {
-            const ws = mkClientStream('admin');
+            const  ws = mkClientStream('admin');
+            const dst = mkDst();
             if (ws) {
                 const jsps = new whiskey.JSONParseStream();
                 let      n = 0;
@@ -983,11 +1001,12 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                 run,
                 (err,history)=>{
                     if (err) throw err;
-                    history.pipe(out);
+                    history.pipe(mkOut());
                 });
             break;
         }
         case 'history-files': {
+            const dst = mkDst();
             history.getIndex(prevalenceDir,{fix:true}); // +++ don't need whole history, just current
             history.journalChain(
                 prevalenceDir,
@@ -1003,8 +1022,10 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
             break;
         }
         default: {
-            const hstore = engine.makeHashes(prevalenceDir);
-            fs.createReadStream(hstore.makeFilename(args.what)).pipe(out);
+            const history = require('./history.js');
+            const  hstore = history.makeHashes(prevalenceDir);
+            fs.createReadStream(hstore.makeFilename(args.what))
+                .pipe(process.stdout);
             break;
         }
         }
@@ -1515,6 +1536,18 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
             for (const k in data.ports) {
                 console.log("%s:\t listening on *:%d",k,data.ports[k]);
             }
+        }
+    };
+
+    subcommands.tac.exec = function() {
+        const   hash = require('./hash.js');
+        const hashes = hash(util.hashAlgorithm).makeStore(path.join(prevalenceDir,'hashes'));
+        if (args.file)
+            process.stdout.write(hashes.putFileSync(args.file));
+        else {
+            const ws = hashes.createWriteStream();
+            ws.on('stored',h=>process.stdout.write(h));
+            process.stdin.pipe(ws);
         }
     };
 
