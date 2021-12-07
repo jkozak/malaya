@@ -10,20 +10,20 @@ exports.init = malaya=>{
                 user: args.auth.user,
                 pass: args.auth.pass} : undefined;
             request({
-                method: op.toUpperCase(),
+                method: op.toUpperCase() || 'GET',
                 url:    args.url,
                 auth,
             },
                     (err,resp,body)=>{
                         if (err)
                             setImmediate(()=>
-                                pl.update(['error',{id:args.id,error:err.toString()}]) );
+                                pl.update(['error',{id:args.id,error:err.toString()}],addr) );
                         else
                             pl.update(['response',{
                                 id:         args.id,
                                 statusCode: resp.statusCode,
                                 body:       JSON.parse(body)
-                            }]);
+                            }],addr);
                     });
         }
     });
