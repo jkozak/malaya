@@ -110,7 +110,7 @@ subcommands.cat.add_argument(
         action:  'store',
         default: null,
         type:    s=>s.toLowerCase(),
-        choices: ['full','json','json5','pretty','yaml'],
+        choices: ['full','json','json5','pretty','raw','yaml'],
         help:    "display format"
     }
 );
@@ -869,10 +869,6 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                 return new whiskey.StringifyJSONStream();
             case 'json5':
                 return new whiskey.StringifyObjectStream(JSON5.stringify);
-            case 'yaml': {
-                const yaml = require('js-yaml');
-                return new whiskey.StringifyObjectStream(yaml.safeDump);
-            }
             case 'pretty':
                 switch (what) {
                 case 'history':
@@ -926,6 +922,16 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                 default:
                     return null;    // this is a hash stream, no formatting
                 }
+            case 'raw':
+                return new whiskey.StringifyObjectStream(j=>{
+                    if ((typeof j)!=='string')
+                        throw new Error(`'raw' format expects strings, not: ${JSON.stringify(j)}`);
+                    return j;
+                });
+            case 'yaml': {
+                const yaml = require('js-yaml');
+                return new whiskey.StringifyObjectStream(yaml.safeDump);
+            }
             default:
                 throw new Error('SNO');
             }

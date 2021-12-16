@@ -419,6 +419,18 @@ describe("cmd line interface [slow] XXX",function() {
                        }
                    });
     });
+    it("queries history in a raw way with a long pipeline",function(done){
+        child.exec(`${CMD} cat -f raw -F "j[1]==='update'" -M "j[2]" -F "j[0]==='restart'" -M "j[0]" history`,
+                   {},
+                   (code,stdout,stderr)=>{
+                       if (code!==null)
+                           done(new VError("`malaya cat history` fails: %j",code));
+                       else {
+                           assert.equal(stdout.trim(),'restart');
+                           done();
+                       }
+                   });
+    });
     it("queries journal",function(done){
         child.exec(`${CMD} cat -f json journal`,
                    {},
