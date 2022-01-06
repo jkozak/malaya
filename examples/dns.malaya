@@ -231,7 +231,7 @@ module.exports.main = store {
           -['rr',{ttd,...}],
            t>=ttd );
 
-    rule (-['tick',{...},{src:'timer'}])
+    rule (-['tick',{...},{src:'timer'}]);
 
     rule (-['restart',{dnsUpstream,...config},{src:'restart'}],
            dnsU = (typeof dnsUpstream=='string') ? [dnsUpstream,53] : dnsUpstream,

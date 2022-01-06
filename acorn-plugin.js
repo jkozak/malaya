@@ -28,7 +28,8 @@ module.exports = function malaya(Parser) {
                 if (this.inStore && !this.inRule &&
                     this.type===tt.name && this.value==='where') {
                     this.next();
-                    node.rules = this.parseMalayaRuleBody(this.startNode());
+                    node.rules = this.parseRuleStatementBody(this.startNode());
+                    this.next();
                     return this.finishNode(node,'WhereExpression');
                 }
                 if (!first)
@@ -66,13 +67,14 @@ module.exports = function malaya(Parser) {
                     break;
                 case tt.name:
                     if (this.value==='rule')
-                        node.rules.push(this.parseMalayaRule(this.startNode()));
+                        node.rules.push(this.parseRuleStatement(this.startNode()));
                     else if (this.value==='query')
-                        node.queries.push(this.parseMalayaQuery(this.startNode()));
+                        node.queries.push(this.parseQueryWhereStatement(this.startNode()));
                     else if (this.value==='invariant')
-                        node.invariants.push(this.parseMalayaInvariant(this.startNode()));
+                        node.invariants.push(this.parseInvariantStatement(this.startNode()));
                     else
                         throw new Error(`??? ${JSON.stringify(this.type)}`);
+                    //console.log(`*** pSB: ${this.value}`,this.type)
                     this.expect(tt.semi);
                     break;
                 default:
@@ -89,25 +91,26 @@ module.exports = function malaya(Parser) {
                 return;
             return super.checkPropClash(prop,propHash,rDE);
         }
-        parseMalayaEllipsis(node) {
+        parseBindRest(node) {
             this.next();
-            node.bind = this.type===tt.name ? this.parseIdent() : null;
-            return this.finishNode(node,'MalayaEllipsis');
+            node.id = this.type===tt.name ? this.parseIdent() : null;
+            return this.finishNode(node,'BindRest');
         }
         parseProperty(iP,rDE) {
             if (this.inStore && this.type===tt.ellipsis)
-                return this.parseMalayaEllipsis(this.startNode());
+                return this.parseBindRest(this.startNode());
             return super.parseProperty(iP,rDE);
         }
         parseSpread(rDE) {
             if (this.inStore)
-                return this.parseMalayaEllipsis(this.startNode());
+                return this.parseBindRest(this.startNode());
             else
                 return super.parseSpread(rDE);
         }
-        importMalayaItem(node) {
+        importItemExpression(node) {
             const n = new acorn.Node(this,node.start,node.loc);
-            n.type = 'MalayaItem';
+            n.type = 'ItemExpression';
+            n.t    = null;      // WTF was this for?  +++ remove +++
             n.rank = null;
             switch (node.type) {
             case 'UnaryExpression':
@@ -125,6 +128,8 @@ module.exports = function malaya(Parser) {
                 break;
             case 'BinaryExpression':
             case 'CallExpression':
+            case 'Identifier':
+            case 'LogicalExpression':
                 n.op   = '?';
                 n.expr = node;
                 break;
@@ -134,39 +139,39 @@ module.exports = function malaya(Parser) {
             }
             return n;
         }
-        parseMalayaItem(node) {
-            node.item = this.importMalayaItem(this.parseExpression(false));
-            return this.finishNode(node,'MalayaItem');
+        parseItemExpression(node) {
+            node.expr = this.importItemExpression(this.parseExpression(false));
+            return this.finishNode(node,'ItemExpression');
         }
-        parseMalayaRuleBody() {
+        parseRuleStatementBody() {
             const expr = this.parseExpression(false);
             if (expr.type==='SequenceExpression')
-                return expr.expressions.map(this.importMalayaItem.bind(this));
+                return expr.expressions.map(this.importItemExpression.bind(this));
             else
-                return [this.importMalayaItem(expr)];
+                return [this.importItemExpression(expr)];
         }
-        parseMalayaRule(node) {
+        parseRuleStatement(node) {
             this.next();
             this.expect(tt.parenL);
             this.inRule = true;
-            node.items  = this.parseMalayaRuleBody();
+            node.items  = this.parseRuleStatementBody();
             this.inRule = false;
             this.expect(tt.parenR);
-            return this.finishNode(node,'MalayaRule');
+            return this.finishNode(node,'RuleStatement');
         }
-        parseMalayaQuery(node) {
+        parseQueryWhereStatement(node) {
             this.next();
             node.id = this.type===tt.name ? this.parseIdent(false,false) : null;
             this.expect(tt.parenL);
             node.args = this.parseExprList(tt.parenR);
             node.body = this.parseExpression(this.startNode());
-            return this.finishNode(node,'MalayaQuery');
+            return this.finishNode(node,'QueryWhereStatement');
         }
-        parseMalayaInvariant(node) {
+        parseInvariantStatement(node) {
             this.next();
             node.id   = this.type===tt.name ? this.parseIdent(false,false) : null;
-            node.expr = this.parseExpression(false);
-            return this.finishNode(node,'MalayaInvariant');
+            node.body = this.parseExpression(false);
+            return this.finishNode(node,'InvariantStatement');
         }
     };
 };
