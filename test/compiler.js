@@ -37,7 +37,7 @@ function findById(js,name,mangled) {    // find subtree of `js` with id `name`
 }
 
 var parseItem = function(code) {
-    var  ast = compiler._private.annotateParse2(compiler._private.annotateParse1(parse("store{rule RULE1("+code+")}")));
+    var  ast = compiler._private.annotateParse2(compiler._private.annotateParse1(parse("store{rule RULE1("+code+");}")));
     var rule = findById(ast,'RULE1');
     assert.strictEqual(rule.items.length,1);
     return rule.items[0].expr;
@@ -348,11 +348,6 @@ describe("first pass of new compiler",function() {
         var prs1 = pass1(prs0);
         assert.deepEqual(findById(prs1,'R').attrs.vars,{b:{},c:{},d:{},rs:{}});
     });
-    it("should find variables in simple query",function() {
-        var prs0 = parse("store {query Q (;['a',b,{p:c,d,...rs}];a=0) a+1;}");
-        var prs1 = pass1(prs0);
-        assert.deepEqual(findById(prs1,'Q').attrs.vars,{b:{},c:{},d:{},rs:{},a:{}});
-    });
     it("should find variables in multi-item rule",function() {
         var prs0 = parse("store {rule R (c=43,['a',b,c],['p',c]);}");
         var prs1 = pass1(prs0);
@@ -368,26 +363,12 @@ describe("first pass of new compiler",function() {
         var prs1 = pass1(prs0);
         assert.deepEqual(findById(prs1,'R').attrs.vars,{c:{},s:{}});
     });
-    it("should handle for-expressions",function() {
-        var prs0 = parse("store {rule R ([],b=0,+[for F(0;['a',...];a=>a+1)]);}");
-        var prs1 = pass1(prs0);
-        assert.deepEqual(findById(prs1,'R').attrs.vars['a'],undefined);
-        assert.deepEqual(findById(prs1,'F').attrs.vars['a'],undefined);
-    });
-    it("should moan about for-expressions in non-+= rule items",function() {
-        assert.throws(function() {
-            pass1(parse("store {rule R (['a',for(0;['a',...];b=>b+1)]);}"));
-        });
-        assert.throws(function() {
-            pass1(parse("store {rule R (['a',a],a==for(0;['a',...];b=>b+1));}"));
-        });
-    });
-    it("should give stores disjoint namespaces",function() {
-        var prs0 = parse("store st1 {query Q(a;[];a=[])a+1;};store st2 {query Q(a;[];a=[])a+1;}");
+    xit("should give stores disjoint namespaces",function() {
+        var prs0 = parse("store st1 {query Q() [a where [['a',{a}]]];};store st2 {query Q() [a where [['a',{a}]]];}");
         pass1(prs0);            // don't want complaint about Q being shadowed
     });
     it("should give unnamed stores disjoint namespaces",function() {
-        var prs0 = parse("var st1=store {query Q(a;[];a=[])a+1;};var st2=store {query Q(a;[];a=[])a+1;}");
+        var prs0 = parse("var st1=store {query Q() [a where [['a',{a}]]];};var st2=store {query Q() [a where [['a',{a}]]];}");
         pass1(prs0);            // don't want complaint about Q being shadowed
     });
     it("should catch misplaced () ",function() {
@@ -446,30 +427,30 @@ describe("second pass of new compiler",function() {
         });
     });
     it("should not complain about function names being unbound",function() {
-        p2("function fn(){return 1;};store{rule (a=fn())}");
+        p2("function fn(){return 1;};store{rule (a=fn());}");
     });
     it("should not complain about function names being unbound for object refs",function() {
-        p2("var _=require('lodash');store{rule (a=_.extend())}");
+        p2("var _=require('lodash');store{rule (a=_.extend());}");
     });
     it("should not complain about function names being unbound for object refs 2",function() {
-        p2("var _=require('lodash');store{rule (['p'],+['a',{a:call({X:_.extend({})})}])}");
+        p2("var _=require('lodash');store{rule (['p'],+['a',{a:call({X:_.extend({})})}]);}");
     });
     it("should not complain about constructors being unbound",function() {
-        p2("function fn(){return 1;};store{rule (a=new fn())}");
+        p2("function fn(){return 1;};store{rule (a=new fn());}");
     });
     it("should complain about function args being unbound",function() {
         assert.throws(function() {
-            p2("function fn(){return 1;};store{rule (a=fn(b))}");
+            p2("function fn(){return 1;};store{rule (a=fn(b));}");
         });
-    });
-    it("should not try to bind parameters in body",function() {
-        var q = findById(p2("store {query Q(p;['a',{p}];a) a+1;}"),'Q');
-        assert.strictEqual(q.type,'QueryStatement');
-        assert.strictEqual(q.items[0].expr.elements[1].properties[0].value.name,'p');
-        assert(!q.items[0].expr.elements[1].properties[0].value.attrs.boundHere);
     });
     it("should believe stores to be declared",function() {
         p2("store st{};st.add([]);");
+    });
+    xit("should not try to bind parameters in body",function() {
+        const q = findById(p2("store {query Q(p) [a where ['a',{p}]];}"),'Q');
+        assert.strictEqual(q.type,'QueryStatement');
+        assert.strictEqual(q.items[0].expr.elements[1].properties[0].value.name,'p');
+        assert(!q.items[0].expr.elements[1].properties[0].value.attrs.boundHere);
     });
 });
 
@@ -568,7 +549,12 @@ describe("mangle",function() {
 });
 
 describe("compile",function() {
-    it("should generate JS for trivial store via var",function() {
+    it("should generate JS for very trivial store",function() {
+        var js = compile("store {['user',{name:'sid'}];};");
+        var st = eval(recast.print(js).code);
+        assert.deepEqual(st._private.rawFacts,{"1":['user',{name:'sid'}]});
+    });
+    it("should generate JS for trivial store",function() {
         var js = compile("store {['user',{name:'sid'}];rule(['user',{name:a}]);rule(['company',{user:a,name:b}]);};");
         var st = eval(recast.print(js).code);
         assert.deepEqual(st._private.rawFacts,{"1":['user',{name:'sid'}]});
@@ -579,19 +565,6 @@ describe("compile",function() {
         eval(recast.print(js).code);
     });
     // ??? what about 'let' declarations? ???
-    it("should handle store containing `for`",function() {
-        var  ast = parse("store {rule(-['a',p],+['b',for(0;['c',q];a=>a+p+q+1)]);};");
-        var   js = compiler.compile(ast);
-        var   st = eval(recast.print(js).code);
-        st.add(['a',17]);
-        assert.deepEqual(st.orderedFacts,[['b',0]]);
-        st.reset();
-        assert.deepEqual(st._private.rawFacts,{});
-        st.add(['c',1]);
-        var ans = st.add(['a',17]);
-        assert.strictEqual(ans.adds.length,1);
-        assert.deepEqual(st.get(ans.adds[0]),['b',19]);
-    });
     it("should restore initial contents",function() {
         var  ast = parse("store {['b',0];};");
         var   js = compiler.compile(ast);
@@ -609,14 +582,6 @@ describe("compile",function() {
         assert.deepEqual(st.orderedFacts,[['b',0],['c',1]]);
         st.reset();
         assert.deepEqual(st.orderedFacts,[['b',0]]);
-    });
-    it("should handle store containing `for` (non-deleting variant)",function() {
-        var  ast = parse("store {rule(['a',p],+['b',for(0;['c',q];a=>a+p+q+1)]);};");
-        var   js = compiler.compile(ast);
-        var   st = eval(recast.print(js).code);
-        st.add(['c',1]);
-        st.add(['a',17]);
-        assert.deepEqual(st.orderedFacts,[['c',1],['a',17],['b',19]]);
     });
     it("should handle guards starting with ! [cd50013ab17474a6]",function() {
         var ast = parse("store {rule(['a',b],!(b===0),+['c']);rule(-['a',...]);};");
@@ -656,8 +621,12 @@ describe("compile",function() {
         st.add(['a']);
         assert.deepEqual(st.orderedFacts,[['b',6]]);
     });
-    it("should handle nested for-expressions",function() {
-        compile("store{rule(['a'],+['b',for(0;['p'];a=>a+for(0;['q'];b=>b+1))]);}");
+    it("should handle very simple object expression extensions on 'RHS' XXX",function() {
+        const js = compile("store{rule(-['a',{p}],+['b',{p}]);}");
+        console.log(recast.print(js).code)
+        const st = eval(recast.print(js).code);
+        st.add(['a',{p:67}]);
+        assert.deepEqual(st.orderedFacts,[['b',{p:67}]]);
     });
     it("should handle object expression extensions on 'RHS'",function() {
         var js = compile("store{rule(-['a',{p,...qs}],+['b',{p,...qs}]);}");
@@ -682,85 +651,6 @@ describe("compile",function() {
     // });
 });
 
-describe("function/for style query",function() {
-    // !!! for some reason, these tests don't work unless the odd !!!
-    // !!! definition for is used.  Don't care because they're on the way out !!!
-    it("should compile and run a simple query",function() {
-        var js = compile("var st = store {function q1(){return for([];['user',{name:n}];$=>$.concat(n));}};st;");
-        var st = eval(recast.print(js).code);
-        assert.equal(st.queries.q1().result.length,0);
-        st.add(['user',{name:'tyson'}]);
-        assert.equal(st.queries.q1().result.length,1);
-    });
-    it("should compile and run a parameterised query",function() {
-        var js = compile("var st = store {function q2(p){return for([];['user',{name:n}],n.length===p;a=>a.concat(n));}};st;");
-        var st = eval(recast.print(js).code);
-        st.add(['user',{name:'tyson'}]);
-        var qr1 = st.queries.q2(1);
-        var qr5 = st.queries.q2(5);
-        assert.equal(qr1.result.length,0);
-        assert.equal(qr5.result.length,1);
-        assert.equal(typeof qr1.t,'number');
-        assert.equal(qr1.t,qr5.t); // store has not been updated by queries
-    });
-    it("should run the 3-head benchmark",function() {
-        var js = compile("var st=store {function q3(){return for(0;['X',x,p],['X',x,q],['X',x,r],p>q && q>r;a=>a+p+q+r);};};st;");
-        var st = eval(recast.print(js).code);
-        var n = 100;
-        for (var i=0;i<n/3;i++) {
-            st.add(["X",i,10]);
-            st.add(["X",i,20]);
-            st.add(["X",i,30]);
-        }
-        st.queries.q3();
-    });
-    it("should work in nested function",function() {
-        var js = compile("var st = store {function q4(){return function(){return for([];['user',{name:n}];a=>a.concat(n));}();}};st;");
-        var st = eval(recast.print(js).code);
-        assert.equal(st.queries.q4().result.length,0);
-        st.add(['user',{name:'tyson'}]);
-        assert.equal(st.queries.q4().result.length,1);
-    });
-});
-
-describe("query statement",function() {
-    it("should compile and run a simple query",function() {
-        var js = compile("store {query q1(;['user',{name:n}];a=[]) a.concat(n);};");
-        var st = eval(recast.print(js).code);
-        assert.equal(st.queries.q1().result.length,0);
-        st.add(['user',{name:'tyson'}]);
-        assert.equal(st.queries.q1().result.length,1);
-    });
-    it("should compile and run a parameterized query",function() {
-        var js = compile("store {query q2(p;['user',{name:n}],n.length===p;a=[]) a.concat(n);};");
-        var st = eval(recast.print(js).code);
-        st.add(['user',{name:'tyson'}]);
-        var qr1 = st.queries.q2(1);
-        var qr5 = st.queries.q2(5);
-        assert.equal(qr1.result.length,0);
-        assert.equal(qr5.result.length,1);
-        assert.equal(typeof qr1.t,'number');
-        assert.equal(qr1.t,qr5.t); // store has not been updated by queries
-    });
-    it("should run the 3-head benchmark",function() {
-        var js = compile("store {query q3(;['X',x,p],['X',x,q],['X',x,r],p>q && q>r;a=0) a+p+q+r};");
-        var st = eval(recast.print(js).code);
-        var n = 100;
-        for (var i=0;i<n/3;i++) {
-            st.add(["X",i,10]);
-            st.add(["X",i,20]);
-            st.add(["X",i,30]);
-        }
-        st.queries.q3();
-    });
-    it("should compile multiple queries",function() {
-        var chrjs = "store {query q1(;['X',x,p];a=0) a+p;query q2(;['X',x,p],['X',x,q],p>q;a=0) a+p+q;query q3(;['X',x,p],['X',x,q],['X',x,r],p>q && q>r;a=0) a+p+q+r;}";
-        var js = compile(chrjs);
-        var st = eval(recast.print(js).code);
-        assert.equal(Object.keys(st.queries).length,3);
-    });
-});
-
 describe("fail statement",function(){
     it("should compile and emit error event",function(done){
         var js = compile("store {rule(['bollocks',{}],fail \"that's bollocks\");};");
@@ -771,101 +661,6 @@ describe("fail statement",function(){
             done();
         };
         st.add(['bollocks',{}]);
-    });
-});
-
-describe("type checking",function(){
-    describe("Number",function(){
-        var st;
-        afterEach(()=>st&&st.reset());
-        it("specification",function(){
-            var js = compile("store {rule(-['a',{b}],b::Number);};");
-            st = eval(recast.print(js).code);
-        });
-        it("matches by type",function(){
-            st.add(['a',{b:17}]);
-            assert.strictEqual(st.orderedFacts.length,0);
-        });
-        it("doesn't match by type - string",function(){
-            st.add(['a',{b:'17'}]);
-            assert.strictEqual(st.orderedFacts.length,1);
-        });
-        it("doesn't match by type - null",function(){
-            st.add(['a',{b:null}]);
-            assert.strictEqual(st.orderedFacts.length,1);
-        });
-    });
-    describe("Boolean",function(){
-        var st;
-        afterEach(()=>st&&st.reset());
-        it("specification",function(){
-            var js = compile("store {rule(-['a',{b}],b::Boolean);};");
-            st = eval(recast.print(js).code);
-        });
-        it("matches by type - false",function(){
-            st.add(['a',{b:false}]);
-            assert.strictEqual(st.orderedFacts.length,0);
-        });
-        it("matches by type - true",function(){
-            st.add(['a',{b:true}]);
-            assert.strictEqual(st.orderedFacts.length,0);
-        });
-        it("doesn't match by type - number",function(){
-            st.add(['a',{b:0}]);
-            assert.strictEqual(st.orderedFacts.length,1);
-        });
-        it("doesn't match by type - null",function(){
-            st.add(['a',{b:null}]);
-            assert.strictEqual(st.orderedFacts.length,1);
-        });
-    });
-    describe("Maybe Boolean",function(){
-        var st;
-        afterEach(()=>st&&st.reset());
-        it("specification",function(){
-            var js = compile("store {rule(-['a',{b}],b::Maybe Boolean);};");
-            st = eval(recast.print(js).code);
-        });
-        it("matches by type - false",function(){
-            st.add(['a',{b:false}]);
-            assert.strictEqual(st.orderedFacts.length,0);
-        });
-        it("matches by type - true",function(){
-            st.add(['a',{b:true}]);
-            assert.strictEqual(st.orderedFacts.length,0);
-        });
-        it("doesn't match by type - number",function(){
-            st.add(['a',{b:0}]);
-            assert.strictEqual(st.orderedFacts.length,1);
-        });
-        it("matches by type - null",function(){
-            st.add(['a',{b:null}]);
-            assert.strictEqual(st.orderedFacts.length,0);
-        });
-    });
-    describe("Boolean | Number",function(){
-        var st;
-        afterEach(()=>st&&st.reset());
-        it("specification",function(){
-            var js = compile("store {rule(-['a',{b}],b::Boolean|Number);};");
-            st = eval(recast.print(js).code);
-        });
-        it("matches by type - false",function(){
-            st.add(['a',{b:false}]);
-            assert.strictEqual(st.orderedFacts.length,0);
-        });
-        it("matches by type - true",function(){
-            st.add(['a',{b:true}]);
-            assert.strictEqual(st.orderedFacts.length,0);
-        });
-        it("matches by type - number",function(){
-            st.add(['a',{b:0}]);
-            assert.strictEqual(st.orderedFacts.length,0);
-        });
-        it("doesn't match by type - null",function(){
-            st.add(['a',{b:null}]);
-            assert.strictEqual(st.orderedFacts.length,1);
-        });
     });
 });
 

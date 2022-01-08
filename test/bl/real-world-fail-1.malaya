@@ -1,0 +1,5 @@
+module.exports = store {
+    query findUserByID(id) [{fullname,initials} where
+                             ['user',{id,fullname,initials,...}]];
+
+};

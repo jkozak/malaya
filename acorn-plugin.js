@@ -4,37 +4,75 @@ const acorn = require('acorn');
 
 const tt = acorn.tokTypes;
 
+class Node extends acorn.Node {
+    constructor(opts,pos,extensions) {
+        super(opts,pos,extensions);
+        this.attrs = {};
+    }
+}
+
 module.exports = function malaya(Parser) {
     return class extends Parser {
         constructor(opts,pos,extensions) {
             super(opts,pos,extensions);
             this.inStore = opts.inStore || false;
             this.inRule  = opts.inRule  || false;
+            this.genId   = 1;
+        }
+        genIdent(kind) {
+            const node = this.startNode();
+            node.name = `__${kind}_${this.genId++}`;
+            return this.finishNode(node,'Identifier');
+        }
+        parseOrGenIdent(kind) {
+            if (this.type===tt.name)
+                return this.parseIdent(false,false);
+            else
+                return this.genIdent(kind);
         }
         readToken(code) {
             super.readToken(code);
             //console.log(`*** read `,this.type.label);
         }
+        startNode() {
+            return new Node(this,this.start,this.loc);
+        }
+        startNodeAt(pos,loc) {
+            return new Node(this,pos,loc);
+        }
+        copyNode(node) {
+            let newNode = new Node(this,node.start,this.startLoc)
+            for (let prop in node)
+                newNode[prop] = node[prop];
+            return newNode;
+        }
         parseArrayOrWhereExpression(node,allowTrailingComma,allowEmpty,rDE) {
-            node.elements = []
+            node.elements = [];
             if (allowTrailingComma || allowEmpty)
                 throw new Error(`NYI`);
             if (this.type!==tt.bracketL)
                 throw new Error(`SNO`);
             this.next();
             for (let first=true;;first=false) {
+                let elt;
                 if (this.eat(tt.bracketR))
                     return this.finishNode(node,'ArrayExpression');
                 if (this.inStore && !this.inRule &&
                     this.type===tt.name && this.value==='where') {
+                    if (node.elements.length!==1)
+                        throw new Error(`NYI: other than one thing before 'where'`);
+                    else {
+                        node.element = node.elements[0];
+                        delete node.elements;
+                    }
                     this.next();
-                    node.rules = this.parseRuleStatementBody(this.startNode());
+                    node.id    = this.genIdent('where');
+                    node.items = this.parseRuleStatementBody(this.startNode());
                     this.next();
                     return this.finishNode(node,'WhereExpression');
                 }
                 if (!first)
                     this.expect(tt.comma);
-                let elt;
                 if (this.type===tt.ellipsis)
                     elt = this.parseSpread(rDE);
                  else
@@ -47,17 +85,21 @@ module.exports = function malaya(Parser) {
                 return this.parseArrayOrWhereExpression(this.startNode(),false,false,rDE);
             } else {
                 const node = super.parseExprAtom(rDE,fI);
-                if (node.type==='Identifier' && node.name==='store')
-                    return this.parseStoreBody(this.startNode(),0);
+                if (node.type==='Identifier' && node.name==='store') {
+                    let id = null;
+                    if (this.type==='Identifier')
+                        id = this.parseIdent();
+                    const se = this.parseStoreBody(this.startNode(),0);
+                    se.id = id;
+                    return se;
+                }
                 return node;
             }
         }
         parseStoreBody(node,statement) {
             let inside = true;
-            node.items      = [];
-            node.rules      = [];
-            node.queries    = [];
-            node.invariants = [];
+            node.id   = null;
+            node.body = [];
             this.expect(tt.braceL);
             this.inStore = true;
             while (inside) {
@@ -67,18 +109,18 @@ module.exports = function malaya(Parser) {
                     break;
                 case tt.name:
                     if (this.value==='rule')
-                        node.rules.push(this.parseRuleStatement(this.startNode()));
+                        node.body.push(this.parseRuleStatement(this.startNode()));
                     else if (this.value==='query')
-                        node.queries.push(this.parseQueryWhereStatement(this.startNode()));
+                        node.body.push(this.parseQueryWhereStatement(this.startNode()));
                     else if (this.value==='invariant')
-                        node.invariants.push(this.parseInvariantStatement(this.startNode()));
+                        node.body.push(this.parseInvariantStatement(this.startNode()));
                     else
                         throw new Error(`??? ${JSON.stringify(this.type)}`);
                     //console.log(`*** pSB: ${this.value}`,this.type)
                     this.expect(tt.semi);
                     break;
                 default:
-                    node.items.push(this.parseExpression(false));
+                    node.body.push(this.parseExpression(false));
                     this.expect(tt.semi);
                 }
             }
@@ -108,14 +150,20 @@ module.exports = function malaya(Parser) {
                 return super.parseSpread(rDE);
         }
         importItemExpression(node) {
-            const n = new acorn.Node(this,node.start,node.loc);
+            const n = new Node(this,node.start,node.loc);
             n.type = 'ItemExpression';
             n.t    = null;      // WTF was this for?  +++ remove +++
             n.rank = null;
             switch (node.type) {
             case 'UnaryExpression':
-                n.op   = node.operator;
-                n.expr = node.argument;
+                if ('+-'.includes(node.operator)) {
+                    n.op   = node.operator;
+                    n.expr = node.argument;
+                } else if (node.operator==='!') {
+                    n.op   = '?';
+                    n.expr = node;
+                } else
+                    throw new Error(`SNO: ${node.operator}`);
                 break;
             case 'AssignmentExpression':
                 n.op   = '=';
@@ -127,10 +175,13 @@ module.exports = function malaya(Parser) {
                 n.expr = node;
                 break;
             case 'BinaryExpression':
-            case 'CallExpression':
             case 'Identifier':
             case 'LogicalExpression':
                 n.op   = '?';
+                n.expr = node;
+                break;
+            case 'CallExpression':
+                n.op   = (node.callee.type==='Identifier' && node.callee.name==='out') ? 'O' : '?';
                 n.expr = node;
                 break;
             default:
@@ -140,8 +191,7 @@ module.exports = function malaya(Parser) {
             return n;
         }
         parseItemExpression(node) {
-            node.expr = this.importItemExpression(this.parseExpression(false));
-            return this.finishNode(node,'ItemExpression');
+            return this.importItemExpression(this.parseExpression(false));
         }
         parseRuleStatementBody() {
             const expr = this.parseExpression(false);
@@ -152,6 +202,7 @@ module.exports = function malaya(Parser) {
         }
         parseRuleStatement(node) {
             this.next();
+            node.id = this.parseOrGenIdent('rule');
             this.expect(tt.parenL);
             this.inRule = true;
             node.items  = this.parseRuleStatementBody();
@@ -161,7 +212,7 @@ module.exports = function malaya(Parser) {
         }
         parseQueryWhereStatement(node) {
             this.next();
-            node.id = this.type===tt.name ? this.parseIdent(false,false) : null;
+            node.id = this.parseOrGenIdent('query');
             this.expect(tt.parenL);
             node.args = this.parseExprList(tt.parenR);
             node.body = this.parseExpression(this.startNode());
@@ -169,7 +220,7 @@ module.exports = function malaya(Parser) {
         }
         parseInvariantStatement(node) {
             this.next();
-            node.id   = this.type===tt.name ? this.parseIdent(false,false) : null;
+            node.id   = this.parseOrGenIdent('invariant');
             node.body = this.parseExpression(false);
             return this.finishNode(node,'InvariantStatement');
         }

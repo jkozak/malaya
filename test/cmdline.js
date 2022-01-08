@@ -182,7 +182,7 @@ describe("cmdline",function() {
     });
 });
 
-describe("cmd line interface [slow] XXX",function() {
+describe("cmd line interface [slow]",function() {
     const   dir = temp.mkdirSync();
     const  pdir = path.join(dir,'.prevalence');
     const   CMD = `node malaya -p ${pdir}`;

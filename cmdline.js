@@ -168,6 +168,15 @@ subcommands.cat.add_argument(
 
 addSubcommand('compile',{add_help:true});
 subcommands.compile.add_argument(
+    '-c','--stdout',
+    {
+        action:  'store_true',
+        default: false,
+        help:    "print output to stdout",
+        dest:    'stdout'
+    }
+);
+subcommands.compile.add_argument(
     '-D','--debug',
     {
         action:  'store_true',
@@ -369,6 +378,15 @@ subcommands.parse.add_argument(
     }
 );
 subcommands.parse.add_argument(
+    '-u','--unannotated',
+    {
+        action:  'store_true',
+        default: false,
+        help:    "don't run annotation passes",
+        dest:    'unannotated'
+    }
+);
+subcommands.parse.add_argument(
     'source',
     {
         action:  'store',
@@ -560,7 +578,7 @@ subcommands.transform.add_argument(
     }
 );
 subcommands.transform.add_argument(
-    '--stdout',
+    '-c','--stdout',
     {
         action:  'store_true',
         default: false,
@@ -1039,7 +1057,10 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
 
     subcommands.compile.exec = function() {
         args.source = args.source || findSource();
-        fs.writeFileSync(args.source+'.js',compile(args.source));
+        if (args.stdout)
+            process.stdout.write(compile(args.source));
+        else
+            fs.writeFileSync(args.source+'.js',compile(args.source));
     };
 
     subcommands.exec.exec = function() {
@@ -1235,9 +1256,15 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
     };
 
     subcommands.parse.exec = function() {
-        const compiler = require('./compiler.js');
+        let out;
         args.source = args.source || findSource();
-        const out = JSON.stringify(compiler.parseFile(args.source));
+        if (args.unannotated) {
+            const parser = require('./parser.js');
+            out = JSON.stringify(parser.parse(fs.readFileSync(args.source)));
+        } else {
+            const compiler = require('./compiler.js');
+            out = JSON.stringify(compiler.parseFile(args.source));
+        }
         if (args.stdout)
             process.stdout.write(out);
         else

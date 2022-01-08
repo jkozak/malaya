@@ -274,7 +274,7 @@ function TEMPLATE_type() {
 var primitiveTypes = [];
 
 //??? why isn't `sourceFileName` doing anything? ???
-var autoparse = recast.parse(fs.readFileSync(__filename),{esprima:       require('esprima'),
+var autoparse = recast.parse(fs.readFileSync(__filename),{acorn:         require('acorn'),
                                                           sourceFileName:__filename});
 for (var i in autoparse.program.body) {
     var x = autoparse.program.body[i];
@@ -429,6 +429,7 @@ function annotateParse1(js) {   // poor man's attribute grammar - pass one
             return this.doFunction(path);
         },
         visitFunctionExpression:  function(path) {return this.doFunction(path);},
+        visitArrowFunctionExpression:  function(path) {return this.doFunction(path);},
         visitVariableDeclarator:  function(path) {
             var name = path.node.id.name;
             this.traverse(path);
@@ -676,7 +677,8 @@ function annotateParse2(chrjs) {        // poor man's attribute grammar - pass t
         },
         visitProgram:             function(path) {this.doVars(path);},
         visitFunctionExpression:  function(path) {this.doVars(path);},
-        visitFunctionDeclaration: function(path) {this.doVars(path);}
+        visitFunctionDeclaration: function(path) {this.doVars(path);},
+        visitArrowFunctionExpression: function(path) {this.doVars(path);},
     });
     return chrjs;
 }
@@ -721,10 +723,11 @@ function mangle(js) {           // `js` must have been previously annotated
         visitRuleStatement:       function(path) {return this.doVars(path);},
         visitQueryStatement:      function(path) {return this.doVars(path);},
         visitQueryWhereStatement: function(path) {return this.doVars(path);},
-        visitInvariantStatement: function(path) {return this.doVars(path);},
+        visitInvariantStatement:  function(path) {return this.doVars(path);},
         visitSnapExpression:      function(path) {return this.doVars(path);},
         visitWhereExpression:     function(path) {return this.doVars(path);}, // not used yet
         visitFunctionExpression:  function(path) {return this.doVars(path);},
+        visitArrowFunctionExpression: function(path) {return this.doVars(path);},
         visitFunctionDeclaration: function(path) {return this.doVars(path);},
         visitStoreExpression:     function(path) {return this.doVars(path);},
         visitStoreDeclaration:    function(path) {return this.doVars(path);},
