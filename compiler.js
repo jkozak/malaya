@@ -1802,18 +1802,29 @@ exports.getRuleMap = function(p) {
     return ruleMaps[path.resolve(p)];
 };
 
-function buildRuleMap(parsed) {
+function findLineNumberForOffset(code,offset) { // !!! SLOW !!!
+    let l = 1;
+    for (let i=0;i<code.length;i++) {
+        if (code[i]==='\n')
+            l++;
+        if (i===offset)
+            return l;
+    }
+    throw new Error(`can't find offset: ${offset}`);
+}
+
+function buildRuleMap(parsed,code) {
     var ruleMap = {};
     parsed = parser.visit(parsed,{
         visitRuleStatement: function(p) {
             ruleMap[p.node.id.name] = {
                 start:{
                     loc:  p.node.start,
-                    line: '???'
+                    line: findLineNumberForOffset(code,p.node.start)
                 },
                 end:{
                     loc:  p.node.end,
-                    line: '???'
+                    line: findLineNumberForOffset(code,p.node.end)
                 } };
             this.traverse(p);
         }
@@ -2058,7 +2069,7 @@ exports.load = function(filename,opts){
             var chrjs = parser.parse(content,parseOpts);
             var    js = generateJS(chrjs);
             var  code = recast.print(js).code;
-            ruleMaps[filename] = buildRuleMap(chrjs);
+            ruleMaps[filename] = buildRuleMap(chrjs,code);
             mod._compile(code,filename);
             try {
                 fs.writeFileSync(ccached,       code);
