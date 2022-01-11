@@ -6,7 +6,7 @@ suite('execution',function() {
     set('iterations',10);
     let store;
     before(function() {
-        store  = require('../test/bl/match.chrjs');
+        store  = require('../test/bl/match.malaya');
     });
     bench("match enter 10 prices",function () {
         store.reset();

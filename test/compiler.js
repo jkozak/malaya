@@ -790,10 +790,10 @@ describe("load",function(){
     let st;
     describe("non-debug",function(){
         it("loads a malaya source file",function(){
-            st = compiler.load('test/bl/count.chrjs',{debug:false});
+            st = compiler.load('test/bl/count0.malaya',{debug:false});
         });
         it("which has a __file__ property",function(){
-            assert.strictEqual(st.__file__,path.resolve('test/bl/count.chrjs'));
+            assert.strictEqual(st.__file__,path.resolve('test/bl/count0.malaya'));
         });
         it("which works",function(){
             st.update(['x',{}]);
@@ -805,10 +805,10 @@ describe("load",function(){
     });
     describe("debug",function(){
         it("loads a malaya source file",function(){
-            st = compiler.load('test/bl/count.chrjs',{debug:true});
+            st = compiler.load('test/bl/count0.malaya',{debug:true});
         });
         it("which has a __file__ property",function(){
-            assert.strictEqual(st.__file__,path.resolve('test/bl/count.chrjs'));
+            assert.strictEqual(st.__file__,path.resolve('test/bl/count0.malaya'));
         });
         it("which works",function(){
             st.update(['x',{}]);
