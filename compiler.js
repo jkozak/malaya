@@ -688,7 +688,7 @@ function mangleIdentifier(name) {
     return name+'_';
 }
 function unmangleIdentifier(id) {
-    return id.attrs ? id.attrs.was : id.name; // allow for genned ids without attrs
+    return (id.attrs && id.attrs.was) ? id.attrs.was : id.name; // allow for genned ids without attrs
 }
 function mangle(js) {           // `js` must have been previously annotated
     js = deepClone(js);
@@ -1615,7 +1615,7 @@ function generateJS(js,what) {
                                              Object.keys(code.invariants).map(function(k) {
                                                  return b.property(
                                                      'init',
-                                                     b.identifier(k),
+                                                     b.literal(k),
                                                      bWrapFunction(b.identifier(k),
                                                                    [],
                                                                    b.returnStatement) ); }) )) ]) ),
@@ -1813,7 +1813,15 @@ function buildRuleMap(parsed) {
     var ruleMap = {};
     parsed = parser.visit(parsed,{
         visitRuleStatement: function(p) {
-            ruleMap[p.node.id.name] = p.node.loc;
+            ruleMap[p.node.id.name] = {
+                start:{
+                    loc:  p.node.start,
+                    line: '???'
+                },
+                end:{
+                    loc:  p.node.end,
+                    line: '???'
+                } };
             this.traverse(p);
         }
     });
@@ -2055,7 +2063,8 @@ exports.load = function(filename,opts){
                 ruleMaps[filename] = JSON.parse(fs.readFileSync(ccached+'.map','utf8'));
         } catch(e1) {
             var chrjs = parser.parse(content,parseOpts);
-            var  code = recast.print(generateJS(chrjs)).code;
+            var    js = generateJS(chrjs);
+            var  code = recast.print(js).code;
             ruleMaps[filename] = buildRuleMap(chrjs);
             mod._compile(code,filename);
             try {
@@ -2088,6 +2097,7 @@ if (util.env==='test') {
         insertCode:        insertCode,
         annotateParse1:    annotateParse1,
         annotateParse2:    annotateParse2,
-        unsafeDates:       function(){MalayaDate.now=Date.now;}
+        unsafeDates:       function(){MalayaDate.now=Date.now;},
+        ruleMaps:          ruleMaps
     };
 }

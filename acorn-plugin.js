@@ -21,7 +21,7 @@ module.exports = function malaya(Parser) {
         }
         genIdent(kind) {
             const node = this.startNode();
-            node.name = `__${kind}_${this.genId++}`;
+            node.name = `%${kind}-${this.genId++}`;
             return this.finishNode(node,'Identifier');
         }
         parseOrGenIdent(kind) {
@@ -85,13 +85,21 @@ module.exports = function malaya(Parser) {
                 return this.parseArrayOrWhereExpression(this.startNode(),false,false,rDE);
             } else {
                 const node = super.parseExprAtom(rDE,fI);
-                if (node.type==='Identifier' && node.name==='store') {
-                    let id = null;
-                    if (this.type==='Identifier')
-                        id = this.parseIdent();
-                    const se = this.parseStoreBody(this.startNode(),0);
-                    se.id = id;
-                    return se;
+                if (node.type==='Identifier')
+                    switch (node.name) {
+                    case 'store': {
+                        let id = null;
+                        if (this.type===tt.name)
+                            id = this.parseIdent();
+                        const se = this.parseStoreBody(this.startNode(),0);
+                        se.id = id;
+                        return se;
+                    }
+                    case 'fail': {
+                        node.op   = 'F';
+                        node.expr = this.parseExpression();
+                        return this.finishNode(node,'ItemExpression');
+                    }
                 }
                 return node;
             }
@@ -141,7 +149,9 @@ module.exports = function malaya(Parser) {
         parseProperty(iP,rDE) {
             if (this.inStore && this.type===tt.ellipsis)
                 return this.parseBindRest(this.startNode());
-            return super.parseProperty(iP,rDE);
+            const node = super.parseProperty(iP,rDE);
+            node.shorthand = false; // ??? WTF do I need to set this? ???
+            return node;
         }
         parseSpread(rDE) {
             if (this.inStore)
@@ -154,6 +164,10 @@ module.exports = function malaya(Parser) {
             n.type = 'ItemExpression';
             n.t    = null;      // WTF was this for?  +++ remove +++
             n.rank = null;
+            if (node.type==='BinaryExpression' && node.operator==='^') {
+                n.rank = node.right;
+                node   = node.left;
+            }
             switch (node.type) {
             case 'UnaryExpression':
                 if ('+-'.includes(node.operator)) {
@@ -183,6 +197,10 @@ module.exports = function malaya(Parser) {
             case 'CallExpression':
                 n.op   = (node.callee.type==='Identifier' && node.callee.name==='out') ? 'O' : '?';
                 n.expr = node;
+                break;
+            case 'ItemExpression':
+                n.op   = node.op;
+                n.expr = node.expr;
                 break;
             default:
                 console.log(node);

@@ -29,7 +29,7 @@ describe("parser",function(){
         });
         it("should visit RuleStatement",function(){
             let n = 0;
-            parser.visit(parser.parse("store {rule (['a'])}"),
+            parser.visit(parser.parse("store {rule (['a']);}"),
                          {
                              visitStoreDeclaration: function(node) {
                                  n++;
@@ -43,7 +43,7 @@ describe("parser",function(){
         });
         it("should visit ItemExpressions",function(){
             let n = 0;
-            parser.visit(parser.parse("store {rule (['a',a],['b',a])}"),
+            parser.visit(parser.parse("store {rule (['a',a],['b',a]);}"),
                          {
                              visitStoreDeclaration: function(node) {
                                  n++;

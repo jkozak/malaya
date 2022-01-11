@@ -452,6 +452,13 @@ describe("second pass of new compiler",function() {
         assert.strictEqual(q.items[0].expr.elements[1].properties[0].value.name,'p');
         assert(!q.items[0].expr.elements[1].properties[0].value.attrs.boundHere);
     });
+    it("handles binding given sort",function(){
+        const code = `store {
+            rule (-['match-price', {volume:vB,  ...rB}]^rB.t,
+                  +['match-price', {volume:vB-1,...rB}] );
+        };`
+        p2(code);
+    });
 });
 
 describe("mangle",function() {
@@ -621,9 +628,8 @@ describe("compile",function() {
         st.add(['a']);
         assert.deepEqual(st.orderedFacts,[['b',6]]);
     });
-    it("should handle very simple object expression extensions on 'RHS' XXX",function() {
+    it("should handle very simple object expression extensions on 'RHS'",function() {
         const js = compile("store{rule(-['a',{p}],+['b',{p}]);}");
-        console.log(recast.print(js).code)
         const st = eval(recast.print(js).code);
         st.add(['a',{p:67}]);
         assert.deepEqual(st.orderedFacts,[['b',{p:67}]]);
@@ -641,7 +647,7 @@ describe("compile",function() {
         assert.throws(()=>{compile("store{rule(['p'],out('a','b')+1);}");});
     });
     it("should detect non top-level `out`s",function(){
-        assert.throws(()=>{compile("store{rule(['p'],(out('a','b')));}");});
+        assert.throws(()=>{compile("store{rule(['p'],1+out('a','b'));}");});
     });
     it("should handle try/catch (if only for testing) [9854c3d7a3291b37]",function(){
         compile("try {console.log('blah');} catch (e) {console.log(e);}");
@@ -686,10 +692,13 @@ describe("rule maps",function() {
             var ok = false;
             compiler.debug = true;
             compiler.once('compile',function(filename) {
-                assert.equal(Object.keys(compiler.getRuleMap(filename)).length,1); // one rule
+                const ruleMap = compiler.getRuleMap(filename);
+                assert.equal(Object.keys(ruleMap).length,1); // one rule
+                assert.equal(Object.keys(ruleMap)[0],'%rule-1');
+                assert.ok(ruleMap['%rule-1']);
                 ok = true;
             });
-            fs.writeFileSync(fn,"store {\nrule (['1'],+['2',for(0;[];a=>a+1)]);}");
+            fs.writeFileSync(fn,"store {\nrule (['1'],+['2',{}]);}");
             require(fn);        // eslint-disable-line security/detect-non-literal-require
             assert(ok);
         } finally {
@@ -705,7 +714,6 @@ describe("rule maps",function() {
         });
     });
 });
-
 describe("caching",function(){
     const cwd = process.cwd();
     after(()=>{process.chdir(cwd);});

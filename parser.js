@@ -128,9 +128,8 @@ exports.parse = LEGACY ? (s,opts)=>{
                                                node.expression.body);
                 bSD.attrs = {};
                 path.replace(bSD);
-                this.traverse(path);
-            } else
-                return false;
+            }
+            this.traverse(path);
         }
     });
     return prog;
