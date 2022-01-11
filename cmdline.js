@@ -189,7 +189,7 @@ subcommands.compile.add_argument(
     'source',
     {
         action:  'store',
-        help:    "chrjs source file to compile"
+        help:    "malaya source file to compile"
     }
 );
 
@@ -281,7 +281,7 @@ subcommands.exec.add_argument(
     'source',
     {
         action: 'store',
-        help:   "chrjs source file to exec"
+        help:   "malaya source file to exec"
     }
 );
 
@@ -390,7 +390,7 @@ subcommands.parse.add_argument(
     'source',
     {
         action:  'store',
-        help:    "chrjs source file to parse"
+        help:    "malaya source file to parse"
     }
 );
 
@@ -589,7 +589,7 @@ subcommands.transform.add_argument(
     'transform',
     {
         action:  'store',
-        help:    "chrjs source file for transform"
+        help:    "malaya source file for transform"
     }
 );
 subcommands.transform.add_argument(
