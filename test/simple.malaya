@@ -368,12 +368,11 @@ describe("output function",function(){
 
 
 describe("invariant statement",function(){
-    // +++ put this back when I fix silly names +++
-    // it("compiles unflinchingly",function(){
-    //     var st = store {
-    //         invariant (true);
-    //     };
-    // });
+    it("compiles unflinchingly",function(){
+        var st = store {
+            invariant (true);
+        };
+    });
     it("compiles named unflinchingly",function(){
         var st = store {
             invariant c1 (true);

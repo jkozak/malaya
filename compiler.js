@@ -1606,19 +1606,12 @@ function generateJS(js,what) {
                                      null,
                                      [],
                                      b.blockStatement([
-                                         b.variableDeclaration('var',
-                                                               Object.keys(code.invariants).map(function(k) {
-                                                                   return b.variableDeclarator(
-                                                                       b.identifier(k),
-                                                                       code.invariants[k]); }) ),
                                          b.returnStatement(b.objectExpression(
                                              Object.keys(code.invariants).map(function(k) {
                                                  return b.property(
                                                      'init',
                                                      b.literal(k),
-                                                     bWrapFunction(b.identifier(k),
-                                                                   [],
-                                                                   b.returnStatement) ); }) )) ]) ),
+                                                     code.invariants[k] ); }) )) ]) ),
                                                   []) ) ]));
         findTag('INSERT_INIT').insertAfter(b.variableDeclaration('var',[
             b.variableDeclarator(b.identifier('init'),
