@@ -1,12 +1,11 @@
 {
-    "parser": "espree",
     "env": {
         "browser": false,
         "node": true,
         "amd": false,
         "mocha": false,
         "jasmine": false,
-        "es6":true
+        "es2021":true
     },
     "plugins": ["security"],
     "extends": ["eslint:recommended","plugin:node/recommended","plugin:security/recommended"],
