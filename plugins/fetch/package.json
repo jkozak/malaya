@@ -1,9 +1,9 @@
 {
   "name": "malaya-plugin-fetch",
-  "version": "0.8.993",
+  "version": "0.8.994",
   "description": "HTTP fetch plugin for malaya",
   "peerDependencies": {
-    "malaya": "0.8.993"
+    "malaya": "0.8.994"
   },
   "dependencies": {
     "node-fetch": "^3.0.0",
