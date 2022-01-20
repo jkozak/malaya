@@ -652,9 +652,12 @@ describe("compile",function() {
     it("should handle try/catch (if only for testing) [9854c3d7a3291b37]",function(){
         compile("try {console.log('blah');} catch (e) {console.log(e);}");
     });
-    // it("should handle garden path conditions",function(){
-    //     compile("store {rule(-['w',{arg}],['one','two'].includes(arg));};");
-    // });
+    it("should handle garden path conditions",function(){
+        compile("store {rule(-['w',{arg}],['one','two'].includes(arg));};");
+    });
+    xit("should handle query/where in StoreDeclaration",function(){
+        compile("store {query q() [x where ['x',{x}]];};");
+    });
 });
 
 describe("fail statement",function(){
