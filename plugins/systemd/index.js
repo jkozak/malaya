@@ -25,6 +25,10 @@ exports.init = malaya=>{
                 }
             };
         }
+        constructor({standard=true}) {
+            super();
+            // +++ if `standard` get engine and relay interesting events emitted +++
+        }
         out([op,args],name,addr) {
             switch (op) {
             case 'ready':

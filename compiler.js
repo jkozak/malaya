@@ -1094,6 +1094,8 @@ function generateJS(js,what) {
     };
     var genForFacts = function(item,bv,body) { // >> [Statement]
         var bvx = genForFactsIndexVariable(item,bv);
+        if (item.t)
+            throw new Error(`NYI: t`);
         if (item.rank) {
             var        bSort = deepClone(templates['sort'].body);
             var bvCandidates = b.identifier(bv.name+'Candidates');

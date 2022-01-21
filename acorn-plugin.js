@@ -16,6 +16,7 @@ module.exports = function malaya(Parser) {
         constructor(opts,pos,extensions) {
             super(opts,pos,extensions);
             this.inStore = opts.inStore || false;
+            this.inQuery = opts.inQuery || false;
             this.inRule  = opts.inRule  || false;
             this.genId   = 1;
         }
@@ -162,11 +163,26 @@ module.exports = function malaya(Parser) {
         importItemExpression(node) {
             const n = new Node(this,node.start,node.loc);
             n.type = 'ItemExpression';
-            n.t    = null;      // WTF was this for?  +++ remove +++
-            n.rank = null;
-            if (node.type==='BinaryExpression' && node.operator==='^') {
-                n.rank = node.right;
-                node   = node.left;
+            n.t    = null;      // group by
+            n.rank = null;      // sort by
+            if (node.type==='BinaryExpression') {
+                let done = false;
+                while (!done)
+                    switch (node.operator) {
+                    case '^':
+                        n.rank = node.right;
+                        node   = node.left;
+                        break;
+                    case '%':
+                        n.t    = node.right;
+                        node   = node.left;
+                        break;
+                    default:
+                        done = true;
+                        break;
+                    }
+                if (!this.inQuery && !done)
+                    throw new Error(`sorting or grouping only allowed in queries`);
             }
             switch (node.type) {
             case 'UnaryExpression':
@@ -233,7 +249,9 @@ module.exports = function malaya(Parser) {
             node.id = this.parseOrGenIdent('query');
             this.expect(tt.parenL);
             node.args = this.parseExprList(tt.parenR);
+            this.inQuery = true;
             node.body = this.parseExpression(this.startNode());
+            this.inQuery = false;
             return this.finishNode(node,'QueryWhereStatement');
         }
         parseInvariantStatement(node) {
