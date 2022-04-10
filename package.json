@@ -18,7 +18,7 @@
     "js-yaml": "^4.1.0",
     "jsdom": "^19.0.0",
     "json5": "^2.2.0",
-    "minimist": "^1.2.5",
+    "minimist": "^1.2.6",
     "moment": "^2.29.1",
     "monotonic-timestamp": "0.0.9",
     "morgan": "^1.10.0",
