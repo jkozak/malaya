@@ -82,6 +82,8 @@ const visit = exports.visit = (function() {
     };
 })();
 
+const namedTypes = exports.namedTypes = require('recast').types.namedTypes;
+
 const parse = (s,opts)=>acornParser.parse(s,{ecmaVersion:2022}); // ignore opts
 
 exports.parse = LEGACY ? (s,opts)=>{
@@ -132,7 +134,6 @@ exports.parse = LEGACY ? (s,opts)=>{
             this.traverse(path);
         }
     });
+    namedTypes.Program.assert(prog);
     return prog;
 } : parse;
-
-exports.namedTypes = require('recast').types.namedTypes;

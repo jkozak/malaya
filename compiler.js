@@ -297,6 +297,7 @@ var warnOnce = (function(){
 //  console.log("parsed TEMPLATE_indexed_matches: %j",recast.parse(TEMPLATE_indexed_matches.toString()));
 
 var deepClone = util.deepClone;
+var  astClone = deepClone;
 
 var chrGlobalVars = {           // only javascript globals allowed in CHRjs
     Infinity:   {ext:true,mutable:false},
@@ -382,7 +383,7 @@ function annotateParse1(js) {   // poor man's attribute grammar - pass one
     var vars = null;
     var item = null;    // `op` of active item or `null`
     var stmt = null;
-    js = deepClone(js);
+    js = astClone(js);
     js = parser.visit(js,{
         markItemsWithIdAndSort:   function(node) {
             for (var i=0;i<node.items.length;i++)
@@ -646,7 +647,7 @@ function annotateParse2(chrjs) {        // poor man's attribute grammar - pass t
         });
         checkBound(vars);
     };
-    chrjs = deepClone(chrjs);
+    chrjs = astClone(chrjs);
     chrjs = parser.visit(chrjs,{
         visitRuleStatement:       function(path) {
             this.traverse(path); // may contain SnapExpressions
@@ -691,7 +692,7 @@ function unmangleIdentifier(id) {
     return (id.attrs && id.attrs.was) ? id.attrs.was : id.name; // allow for genned ids without attrs
 }
 function mangle(js) {           // `js` must have been previously annotated
-    js = deepClone(js);
+    js = astClone(js);
     js = parser.visit(js,{
         doVars:                   function(path) {
             for (var v in path.node.attrs.vars)
@@ -761,7 +762,7 @@ exports.parseFile = function(filename){
 exports.visit = parser.visit;
 
 function insertCode(chrjs,replaces,opts) {
-    var js = deepClone(chrjs);
+    var js = astClone(chrjs);
     var rs = {};
     opts = opts || {};
     opts.strict = opts.strict===undefined ? true : !!opts.strict;
@@ -1097,7 +1098,7 @@ function generateJS(js,what) {
         if (item.t)
             throw new Error(`NYI: t`);
         if (item.rank) {
-            var        bSort = deepClone(templates['sort'].body);
+            var        bSort = astClone(templates['sort'].body);
             var bvCandidates = b.identifier(bv.name+'Candidates');
             bSort = parser.visit(bSort,{
                 visitIdentifier: function(path) {
@@ -1205,7 +1206,7 @@ function generateJS(js,what) {
     };
 
     var genAdd = function(x) {
-        return parser.visit(deepClone(x),{
+        return parser.visit(astClone(x),{
             visitSnapExpression: visitSnapExpressionAndCompile
         });
     };
@@ -1234,7 +1235,7 @@ function generateJS(js,what) {
             case 'T': {
                 var   expr = chr.items[item_id].expr;
                 var bTypes = expr.specs.map(function(spec){
-                    var bType = deepClone(templates['type'].body[0].expression);
+                    var bType = astClone(templates['type'].body[0].expression);
                     parser.visit(bType,{
                         visitIdentifier: function(path) {
                             // +++ non-(primitive|union) types +++
@@ -1367,7 +1368,7 @@ function generateJS(js,what) {
         };
 
         assert.strictEqual(templates['rule'].body.length,1);
-        var    js = deepClone(templates['rule'].body[0].declarations[0].init);
+        var    js = astClone(templates['rule'].body[0].declarations[0].init);
         var binds = Object.keys(chr.attrs.vars)
             .filter(function(k){return !chr.attrs.vars[k].inherited && k[0]!=='%';})
             .map(function(k){return chr.attrs.vars[k].mangled;});
@@ -1488,13 +1489,13 @@ function generateJS(js,what) {
         assert(templates['store'].type=='BlockStatement' && templates['store'].body.length===1);
         assert(templates['store'].body[0].type=='ExpressionStatement');
 
-        var storeJS = deepClone(templates['store'].body[0].expression);
+        var storeJS = astClone(templates['store'].body[0].expression);
         var    code = {rules:[],queries:{},inits:[],invariants:{}};
 
         // !!! just while I rewrite the compiler !!!
         assert.deepEqual(templates['indexed_matches'].body[0].type,'SwitchStatement');
         storeJS = insertCode(storeJS,{
-            INDEXED_MATCHES:deepClone(templates['indexed_matches'].body[0])
+            INDEXED_MATCHES:astClone(templates['indexed_matches'].body[0])
         },
                              {strict:false});
 
@@ -1526,7 +1527,7 @@ function generateJS(js,what) {
                 for (var j=0;j<chr.items.length;j++) {
                     if (chr.items[j].op=='-' || chr.items[j].op=='M') {
                         noteDispatch(chr.items[j].expr,r,variants.length);  // variants.length will be...
-                        variants.push(genRuleVariant(deepClone(chr),j));    // ...allocated now
+                        variants.push(genRuleVariant(astClone(chr),j));    // ...allocated now
                     }
                 }
                 code.rules.push(b.arrayExpression(variants));
@@ -1539,7 +1540,7 @@ function generateJS(js,what) {
             }
             case 'FunctionDeclaration': { // never a FunctionExpression (must be top level in `store`, no `var`)
                 // this was a QueryWhereStatement
-                var funjs = deepClone(storeCHR.body[i]);
+                var funjs = astClone(storeCHR.body[i]);
                 var  name = funjs.id ? funjs.id.attrs.was : null;
                 funjs = parser.visit(funjs,{
                     visitSnapExpression: function(path) {
