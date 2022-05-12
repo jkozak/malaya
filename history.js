@@ -174,7 +174,7 @@ const buildIndex = (prevDir)=>{
 };
 
 const getIndex = exports.getIndex = (prevDir,opts)=>{
-    opts = opts || {};
+    opts = opts || {fix:true};
     try {
         const index = JSON.parse(fs.readFileSync(path.join(prevDir,'index.json'),'utf8'));
         if (index.hash!==totalStoreHash(prevDir))

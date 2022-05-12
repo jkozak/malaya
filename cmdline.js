@@ -424,6 +424,15 @@ subcommands.replay.add_argument(
 
 addSubcommand('revisit',{add_help:true});
 subcommands.revisit.add_argument(
+    '-D','--debug',
+    {
+        action:  'store_true',
+        default: false,
+        help:    "run in debug mode",
+        dest:    'debug'
+    }
+);
+subcommands.revisit.add_argument(
     '-r','--run',
     {
         action:  'store',
@@ -1279,7 +1288,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
         const    JSON5 = require('json5');
         const histfile = path.join(prevalenceDir,'replay.history');
         const     cmds = Array.from(args.commands);
-        const      run = args.run && history.findHash(prevalenceDir,args.run);
+        const      run = args.run && history.findRun(prevalenceDir,args.run);
         let        eng = null;
         checkDirectoriesExist();
         history.getIndex(prevalenceDir,{fix:true});
@@ -1441,37 +1450,47 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
     };
 
     subcommands.revisit.exec = function() {
+        // +++ merge this into replay above +++
+        require('./plugin.js').setOverrides({
+            plugins:    [[null,'dummy']],
+            parameters: [] });
         const  byline = require('byline');
-        const    temp = require('temp');
-        const prevDir = path.join(temp.mkdirSync(),'prevalence'); // !!! CBB !!!
         const     eng = _createEngine({
             businessLogic: args.source,
-            prevalenceDir: prevDir,
             ports:         {},
             debug:         args.debug
         });
         if (args.run)
             throw new Error(`NYI: --run`);
-        eng.init();
-        eng.start();
-        eng.on('mode',m=>{
-            if (m==='master') {
-                byline(process.stdin)
-                    .on('data',l=>{
-                        const js = util.deserialise(l);
-                        eng.update([js[1],{time:js[0],body:js[2]}]);
-                    })
-                    .on('end',()=>{
-                        eng.update(['end',{}]);
-                        eng.on('mode',m=>{
-                            if (m==='idle')
-                                eng.stop(true);
-                        });
-                        eng.become('idle');
-                    });
-            }
-        });
-        eng.become('master');
+        let  i = -1;
+        let ts = null;
+        byline(process.stdin)
+            .on('data',l=>{
+                const js = util.deserialise(l);
+                i++;
+                ts = js[0];
+                switch (js[1]) {
+                case 'init':
+                    if (i>0)
+                        throw new Error(`init must be first transaction`);
+                    eng._rng.seed = js[1].rngSeed; // !!! s/be a method of Engine !!!
+                    eng._rng.engine.seed(js[1].rngSeed);
+                    eng._timestamp = ()=>ts;
+                    eng._bindGlobals();
+                    if (args.debug)
+                        traceChrjs(eng.chrjs,eng.chrjs.source);
+                    break;
+                case 'update':
+                    if (i===0)
+                        throw new Error(`first transaction must be init`);
+                    eng.chrjs.update(js[2]);
+                    break;
+                }
+                //ts = null;
+            })
+            .on('end',()=>{
+                // anything to go here?
+            });
     };
 
     subcommands.run.exec = function() {

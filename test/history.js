@@ -72,7 +72,7 @@ describe("history",function() {
     });
     it("detects index staleness",function(){
         assert.throws(()=>{
-            index = history.getIndex(prevDir);
+            index = history.getIndex(prevDir,{fix:false});
         });
     });
     it("rebuilds index",function(){
