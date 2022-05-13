@@ -1473,8 +1473,8 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                 case 'init':
                     if (i>0)
                         throw new Error(`init must be first transaction`);
-                    eng._rng.seed = js[1].rngSeed; // !!! s/be a method of Engine !!!
-                    eng._rng.engine.seed(js[1].rngSeed);
+                    eng._rng.seed = js[2].rngSeed || 0;
+                    eng._rng.engine.seed(js[2].rngSeed);
                     eng._timestamp = ()=>ts;
                     eng._bindGlobals();
                     if (args.debug)
@@ -1483,10 +1483,10 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                 case 'update':
                     if (i===0)
                         throw new Error(`first transaction must be init`);
+                    eng._nextTimestamp = js[0];
                     eng.chrjs.update(js[2]);
                     break;
                 }
-                //ts = null;
             })
             .on('end',()=>{
                 // anything to go here?
