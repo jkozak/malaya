@@ -433,6 +433,14 @@ subcommands.revisit.add_argument(
     }
 );
 subcommands.revisit.add_argument(
+    '-O','--output',
+    {
+        action:  'store',
+        default: null,
+        help:    "dump facts into this jsonl file at end of run"
+    }
+);
+subcommands.revisit.add_argument(
     '-r','--run',
     {
         action:  'store',
@@ -1489,7 +1497,11 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                 }
             })
             .on('end',()=>{
-                // anything to go here?
+                if (args.output) {
+                    const fh = fs.openSync(args.output,'w');
+                    eng.chrjs.orderedFacts.forEach(f=>fs.writeSync(fh,JSON.stringify(f)+'\n'));
+                    fs.closeSync(fh);
+                }
             });
     };
 
