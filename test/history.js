@@ -21,7 +21,7 @@ function mkJournal(jss) {
     return jss.map(js=>util.serialise(js)+'\n').join('');
 }
 
-describe("history XXX",function() {
+describe("history",function() {
     const   prevDir = mkTempPrevDir();
     const hashStore = hash(util.hashAlgorithm).makeStore(path.join(prevDir,'hashes'));
     const journalFn = path.join(prevDir,'state','journal');
@@ -323,6 +323,29 @@ describe("history XXX",function() {
     });
     it("builds history of run including journal - 3",function(done){
         history.buildRunStream(prevDir,new Date(160),(err,rs)=>{
+            if (err)
+                done(err);
+            else {
+                const objs = [];
+                rs
+                    .on('data',js=>objs.push(js))
+                    .on('end',()=>{
+                        assert.deepEqual(objs,[
+                            [110,'init',{}],
+                            [120,'previous',hashes[4],''],
+                            [121,'update',['x',{}]],
+                            [130,'previous',hashes[5],''],
+                            [150,'previous',hashes[6],''],
+                            [160,'update',['x',{}]]
+                        ]);
+                        done();
+                    })
+                    .on('error',done);
+            }
+        });
+    });
+    it("builds unfiltered history of current incarnation including journal",function(done){
+        history.buildRunStream(prevDir,null,(err,rs)=>{
             if (err)
                 done(err);
             else {

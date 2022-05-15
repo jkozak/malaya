@@ -234,7 +234,7 @@ const findHashByPrefix = exports.findHashByPrefix = (prevDir,r)=>{
 
 const findHashByDate = exports.findHashByDate = (prevDir,r)=>{
     const index = getIndex(prevDir);
-    const     t = (r instanceof Date) ? r.getMilliseconds() : r;
+    const     t = (r instanceof Date) ? r.getTime() : r;
     const    hs = [];
     Object.keys(index.contents).forEach(h=>{
         const when = index.contents[h].when;
@@ -245,7 +245,7 @@ const findHashByDate = exports.findHashByDate = (prevDir,r)=>{
         const jf = path.join(prevDir,'state','journal');
         if (fs.existsSync(jf)) {
             const j = indexFile(jf);
-            if (j.when && (j.when[0]<=t && t<=j.when[1]))
+            if (j.when && j.when[0]<=t)
                 return 'journal';
         }
         return null;
@@ -263,6 +263,8 @@ const findHash = exports.findHash = (prevDir,r)=>{
         return findHashByDate(prevDir,r);
     else if (r.match(/^[0-9a-z]+$/))
         return findHashByPrefix(prevDir,r);
+    else if (r.match(/^[0-9]+\.[0-9]*$/))
+        return findHashByDate(prevDir,parseFloat(r));
     else if (r.match(/^[0-9]{4}-[0-9]{2}-[0-9]{2}t[0-9]{2}:[0-9]{2}:[0-9]{2}z/))
         return findHashByDate(prevDir,r);
     else
@@ -278,14 +280,19 @@ exports.buildRunStream = (prevalenceDir,r,cb)=>{ // !!! UNTESTED
     let  hash0 = null;
     let filter = null;
 
-    if ((typeof r)==='number') {
+    if (r===null) {
+        hash0 = 'journal';
+    } else if ((typeof r)==='number') {
         hash0  = findHashByDate(prevalenceDir,r);
         filter = js=>js[0]<=r;
     } else if (r instanceof Date) {
         hash0  = findHashByDate(prevalenceDir,r);
         filter = js=>js[0]<=r;
-    } else if (r.match(/^[0-9]{4}-[0-9]{2}-[0-9]{2}t[0-9]{2}:[0-9]{2}:[0-9]{2}z/)) {
-        r      = new Date(r).getMilliseconds();
+    } else if (r.match(/^[0-9]+\.[0-9]*$/)) {
+        hash0  = findHashByDate(prevalenceDir,r);
+        filter = js=>js[0]<=r;
+    } else if (r.match(/^[0-9]{4}-[0-9]{2}-[0-9]{2}t[0-9]{2}:[0-9]{2}:[0-9]{2}z$/)) {
+        r      = new Date(r).getTime();
         hash0  = findHashByDate(prevalenceDir,r);
         filter = js=>js[0]<=r;
     } else if (r.match(/^[0-9a-z]+$/)) {

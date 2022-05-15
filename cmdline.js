@@ -986,9 +986,9 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
             dst.pipe(process.stdout);
             return dst;
         };
-        const mkOut = ()=>{
+        const mkOut = out0=>{
             const      dst = mkDst();
-            const      out = new whiskey.LineStream(util.deserialise);
+            const      out = out0 || new whiskey.LineStream(util.deserialise);
             out1 = stream.PassThrough({objectMode:true}); // nasty side-effect
             checkDirectoriesExist();
             out.on('data',js=>{
@@ -1047,12 +1047,12 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
         }
         case 'history': {
             history.getIndex(prevalenceDir,{fix:true}); // +++ don't need whole history, just current
-            history.buildHistoryStream(
+            history.buildRunStream(
                 prevalenceDir,
-                run,
+                args.run,
                 (err,history)=>{
                     if (err) throw err;
-                    history.pipe(mkOut());
+                    history.pipe(mkOut(stream.PassThrough({objectMode:true})));
                 });
             break;
         }
@@ -1473,67 +1473,75 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
             plugins:    [[null,'dummy']],
             parameters: [] });
         const   JSON5 = require('json5');
-        const  byline = require('byline');
+        const whiskey = require('./whiskey.js');
         const     eng = _createEngine({
             businessLogic: args.source,
             ports:         {},
             debug:         args.debug
         });
-        if (args.run)
-            throw new Error(`NYI: --run`);
-        let  i = -1;
-        let ts = null;
-        byline(process.stdin)
-            .on('data',l=>{
-                const js = util.deserialise(l);
-                i++;
-                ts = js[0];
-                switch (js[1]) {
-                case 'init':
-                    if (i>0)
-                        throw new Error(`init must be first transaction`);
-                    eng._rng.seed = js[2].rngSeed || 0;
-                    eng._rng.engine.seed(js[2].rngSeed);
-                    eng._timestamp = ()=>ts;
-                    eng._bindGlobals();
-                    if (args.debug)
-                        traceChrjs(eng.chrjs,eng.chrjs.source);
-                    break;
-                case 'update':
-                    if (i===0)
-                        throw new Error(`first transaction must be init`);
-                    eng._nextTimestamp = js[0];
-                    eng.chrjs.update(js[2]);
-                    break;
-                }
-            })
-            .on('end',()=>{
-                if (args.output) {
-                    const  ws = args.output==='-' ? process.stdout : fs.createWriteStream(args.output);
-                    let   fmt = util.serialise;
-                    args.format = args.format!==null ?
-                        args.format :
-                        !ws.isTTY ? 'full' :
-                        'pretty';
-                    switch (args.format) {
-                    case 'full':
+        const  handle = historyStream=>{
+            let  i = -1;
+            let ts = null;
+            historyStream
+                .on('data',js=>{
+                    i++;
+                    ts = js[0];
+                    switch (js[1]) {
+                    case 'init':
+                        if (i>0)
+                            throw new Error(`init must be first transaction`);
+                        eng._rng.seed = js[2].rngSeed || 0;
+                        eng._rng.engine.seed(js[2].rngSeed);
+                        eng._timestamp = ()=>ts;
+                        eng._bindGlobals();
+                        if (args.debug)
+                            traceChrjs(eng.chrjs,eng.chrjs.source);
                         break;
-                    case 'json':
-                        fmt = JSON.stringify;
+                    case 'update':
+                        if (i===0)
+                            throw new Error(`first transaction must be init`);
+                        eng._nextTimestamp = js[0];
+                        eng.chrjs.update(js[2]);
                         break;
-                    case 'json5':
-                        fmt = JSON5.stringify;
-                        break;
-                    case 'pretty':
-                        fmt = fmtFact;
-                        break;
-                    default:
-                        throw new Error('SNO');
                     }
-                    eng.chrjs.orderedFacts.forEach(f=>ws.write(fmt(f)+'\n'));
-                    ws.end();
-                }
+                })
+                .on('end',()=>{
+                    if (args.output) {
+                        const  ws = args.output==='-' ? process.stdout :
+                              fs.createWriteStream(args.output);
+                        let   fmt = util.serialise;
+                        args.format = args.format!==null ?
+                            args.format :
+                            !ws.isTTY ? 'full' :
+                            'pretty';
+                        switch (args.format) {
+                        case 'full':
+                            break;
+                        case 'json':
+                            fmt = JSON.stringify;
+                            break;
+                        case 'json5':
+                            fmt = JSON5.stringify;
+                            break;
+                        case 'pretty':
+                            fmt = fmtFact;
+                            break;
+                        default:
+                            throw new Error('SNO');
+                        }
+                        eng.chrjs.orderedFacts.forEach(f=>ws.write(fmt(f)+'\n'));
+                        ws.end();
+                    }
+                });
+        }
+        if (args.run)
+            require('./history.js').buildRunStream(prevalenceDir,args.run,(err,hs)=>{
+                if (err)
+                    throw err;
+                handle(hs);
             });
+        else
+            handle(process.stdin.pipe(whiskey.LineStream(util.deserialise)));
     };
 
     subcommands.run.exec = function() {
