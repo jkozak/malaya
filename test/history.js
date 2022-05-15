@@ -21,15 +21,17 @@ function mkJournal(jss) {
     return jss.map(js=>util.serialise(js)+'\n').join('');
 }
 
-describe("history",function() {
+describe("history XXX",function() {
     const   prevDir = mkTempPrevDir();
     const hashStore = hash(util.hashAlgorithm).makeStore(path.join(prevDir,'hashes'));
+    const journalFn = path.join(prevDir,'state','journal');
     const    hashes = [];
     let       index;
     before(()=>{                // create some hashes
-        hashes.push(hashStore.putSync(mkJournal([[1,'init',{}]])));
-        hashes.push(hashStore.putSync(mkJournal([[2,'previous',hashes.slice(-1)[0],'']])));
-        hashes.push(hashStore.putSync(mkJournal([[3,'previous',hashes.slice(-1)[0],'']])));
+        hashes.push(hashStore.putSync(mkJournal([[10,'init',{}]])));
+        hashes.push(hashStore.putSync(mkJournal([[20,'previous',hashes.slice(-1)[0],''],
+                                                 [21,'update',['x',{}]] ])));
+        hashes.push(hashStore.putSync(mkJournal([[30,'previous',hashes.slice(-1)[0],'']])));
     });
     it("builds an index",function(){
         index = history.getIndex(prevDir,{fix:true});
@@ -60,14 +62,14 @@ describe("history",function() {
         assert.equal(index.contents[hashes[2]].last,true);
     });
     it("indexes embedded file times",function(){
-        assert.deepEqual(index.contents[hashes[0]].when,[1,1]);
-        assert.deepEqual(index.contents[hashes[1]].when,[2,2]);
-        assert.deepEqual(index.contents[hashes[2]].when,[3,3]);
+        assert.deepEqual(index.contents[hashes[0]].when,[10,10]);
+        assert.deepEqual(index.contents[hashes[1]].when,[20,21]);
+        assert.deepEqual(index.contents[hashes[2]].when,[30,30]);
     });
     it("adds another hash",function(){
         hashes.push(hashStore.putSync(mkJournal([
-            [4,'previous',hashes.slice(-1)[0],''],
-            [5,'term',{}]
+            [40,'previous',hashes.slice(-1)[0],''],
+            [50,'term',{}]
         ])));
     });
     it("detects index staleness",function(){
@@ -91,7 +93,7 @@ describe("history",function() {
         assert.equal(index.contents[hashes[3]].last,true);
     });
     it("index embedded file times updated",function(){
-        assert.deepEqual(index.contents[hashes[3]].when,[4,5]);
+        assert.deepEqual(index.contents[hashes[3]].when,[40,50]);
     });
     it("chains journals starting from end",function(done){
         history.journalChain(prevDir,hashes[3],(err,hs)=>{
@@ -125,10 +127,11 @@ describe("history",function() {
         }
         assert.equal(history.findHashByPrefix(prevDir,prefix),hashes[target]);
     });
+    it("finds hash by date explicitly",function(){
+        assert.equal(history.findHashByDate(prevDir,new Date(10)),hashes[0]);
+    });
     it("finds hash by date",function(){
-        const target = 1;
-        const      t = hashes[target][0];
-        assert.equal(history.findHash(prevDir,t),hashes[target]);
+        assert.equal(history.findHash(prevDir,new Date(10)),hashes[0]);
     });
     it("finds hash generically but by prefix",function(){
         const target = 3;
@@ -142,22 +145,30 @@ describe("history",function() {
         }
         assert.equal(history.findHash(prevDir,prefix),hashes[target]);
     });
-    it("finds hash generically but by date",function(){
-        const target = 2;
-        const      t = hashes[target][0];
-        assert.equal(history.findHash(prevDir,t),hashes[target]);
+    it("finds hash generically but by unwrapped date",function(){
+        assert.equal(history.findHash(prevDir,10),hashes[0]);
+    });
+    it("finds hash generically but by date - 1",function(){
+        assert.equal(history.findHash(prevDir,new Date(10)),hashes[0]);
+    });
+    it("finds hash generically but by date - 2",function(){
+        assert.equal(history.findHash(prevDir,new Date(20)),hashes[1]);
+    });
+    it("finds hash generically but by date - 3",function(){
+        assert.equal(history.findHash(prevDir,new Date(21)),hashes[1]);
+    });
+    it("finds hash generically but by date - 4",function(){
+        assert.equal(history.findHash(prevDir,new Date(30)),hashes[2]);
     });
     it("finds run generically but by date",function(){
-        const target = 2;
-        const      t = hashes[target][0];
-        assert.equal(history.findRun(prevDir,t),hashes.slice(-1)[0]);
+        assert.equal(history.findRun(prevDir,new Date(30)),hashes.slice(-1)[0]);
     });
     it("finds run generically but by prefix",function(){
         const target = 2;
         const prefix = hashes[target].slice(0,10);
         assert.equal(history.findRun(prevDir,prefix),hashes.slice(-1)[0]);
     });
-    it("accesses history via a readable stream",function(done){
+    it("accesses history via buildHistoryStream",function(done){
         history.buildHistoryStream(prevDir,hashes[3],(err,rs)=>{
             if (err)
                 done(err);
@@ -167,11 +178,165 @@ describe("history",function() {
                     .on('data',js=>objs.push(js))
                     .on('end',()=>{
                         assert.deepEqual(objs,[
-                            [1,'init',{}],
-                            [2,'previous',hashes[0],''],
-                            [3,'previous',hashes[1],''],
-                            [4,'previous',hashes[2],''],
-                            [5,'term',{}]
+                            [10,'init',{}],
+                            [20,'previous',hashes[0],''],
+                            [21,'update',  ['x',{}]],
+                            [30,'previous',hashes[1],''],
+                            [40,'previous',hashes[2],''],
+                            [50,'term',{}]
+                        ]);
+                        done();
+                    })
+                    .on('error',done);
+            }
+        });
+    });
+    it("accesses history via buildRunStream and hash",function(done){
+        history.buildRunStream(prevDir,hashes[0],(err,rs)=>{
+            if (err)
+                done(err);
+            else {
+                const objs = [];
+                rs
+                    .on('data',js=>objs.push(js))
+                    .on('end',()=>{
+                        assert.deepEqual(objs,[
+                            [10,'init',{}],
+                        ]);
+                        done();
+                    })
+                    .on('error',done);
+            }
+        });
+    });
+    it("accesses history via buildRunStream and date/time",function(done){
+        history.buildRunStream(prevDir,30,(err,rs)=>{
+            if (err)
+                done(err);
+            else {
+                const objs = [];
+                rs
+                    .on('data',js=>objs.push(js))
+                    .on('end',()=>{
+                        assert.deepEqual(objs,[
+                            [10,'init',{}],
+                            [20,'previous',hashes[0],''],
+                            [21,'update',  ['x',{}]],
+                            [30,'previous',hashes[1],''],
+                        ]);
+                        done();
+                    })
+                    .on('error',done);
+            }
+        });
+    });
+    it("accesses history via buildRunStream and date/time, splitting file",function(done){
+        history.buildRunStream(prevDir,20,(err,rs)=>{
+            if (err)
+                done(err);
+            else {
+                const objs = [];
+                rs
+                    .on('data',js=>objs.push(js))
+                    .on('end',()=>{
+                        assert.deepEqual(objs,[
+                            [10,'init',{}],
+                            [20,'previous',hashes[0],''],
+                        ]);
+                        done();
+                    })
+                    .on('error',done);
+            }
+        });
+    });
+    it("buildRunStream and date/time handle events before the world gracefully",function(done){
+        history.buildRunStream(prevDir,5,(err,rs)=>{
+            if (err)
+                done(err);
+            else {
+                const objs = [];
+                rs
+                    .on('data',js=>objs.push(js))
+                    .on('end',()=>{
+                        assert.deepEqual(objs,[]);
+                        done();
+                    })
+                    .on('error',done);
+            }
+        });
+    });
+    it("creates another, disjoint, run ending in live journal",function(){
+        assert.equal(hashes.length,4);
+        hashes.push(hashStore.putSync(mkJournal([[110,'init',{}]])));
+        hashes.push(hashStore.putSync(mkJournal([[120,'previous',hashes.slice(-1)[0],''],
+                                                 [121,'update',['x',{}]] ])));
+        hashes.push(hashStore.putSync(mkJournal([[130,'previous',hashes.slice(-1)[0],'']])));
+        fs.writeFileSync(journalFn,mkJournal([[150,'previous',hashes.slice(-1)[0],''],
+                                              [160,'update',['x',{}]] ]));
+    });
+    it("finds hash in journal by date/time",function(){
+        assert.equal(history.findHashByDate(prevDir,150),'journal')
+    });
+    it("builds history of run including journal - 1",function(done){
+        history.buildRunStream(prevDir,150,(err,rs)=>{
+            if (err)
+                done(err);
+            else {
+                const objs = [];
+                rs
+                    .on('data',js=>objs.push(js))
+                    .on('end',()=>{
+                        assert.deepEqual(objs,[
+                            [110,'init',{}],
+                            [120,'previous',hashes[4],''],
+                            [121,'update',['x',{}]],
+                            [130,'previous',hashes[5],''],
+                            [150,'previous',hashes[6],'']
+                        ]);
+                        done();
+                    })
+                    .on('error',done);
+            }
+        });
+    });
+    it("builds history of run including journal - 2",function(done){
+        history.buildRunStream(prevDir,155,(err,rs)=>{
+            if (err)
+                done(err);
+            else {
+                const objs = [];
+                rs
+                    .on('data',js=>objs.push(js))
+                    .on('end',()=>{
+                        assert.deepEqual(objs,[
+                            [110,'init',{}],
+                            [120,'previous',hashes[4],''],
+                            [121,'update',['x',{}]],
+                            [130,'previous',hashes[5],''],
+                            [150,'previous',hashes[6],'']
+                        ]);
+                        done();
+                    })
+                    .on('error',done);
+            }
+        });
+    });
+    it("builds history of run including journal - 3",function(done){
+        history.buildRunStream(prevDir,new Date(160),(err,rs)=>{
+            if (err)
+                done(err);
+            else {
+                const objs = [];
+                rs
+                    .on('data',js=>objs.push(js))
+                    .on('end',()=>{
+                        assert.deepEqual(objs,[
+                            [110,'init',{}],
+                            [120,'previous',hashes[4],''],
+                            [121,'update',['x',{}]],
+                            [130,'previous',hashes[5],''],
+                            [150,'previous',hashes[6],''],
+                            [160,'update',['x',{}]]
                         ]);
                         done();
                     })

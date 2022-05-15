@@ -424,6 +424,25 @@ subcommands.replay.add_argument(
 
 addSubcommand('revisit',{add_help:true});
 subcommands.revisit.add_argument(
+    '-f','--format',
+    {
+        action:  'store',
+        default: null,
+        type:    s=>s.toLowerCase(),
+        choices: ['full','json','json5','pretty'],
+        help:    "display format"
+    }
+);
+subcommands.revisit.add_argument(
+    '-r','--run',
+    {
+        action:  'store',
+        default: null,
+        type:    s=>s.toLowerCase(),
+        help:    "run id"
+    }
+);
+subcommands.revisit.add_argument(
     '-D','--debug',
     {
         action:  'store_true',
@@ -438,15 +457,6 @@ subcommands.revisit.add_argument(
         action:  'store',
         default: null,
         help:    "dump facts into this jsonl file at end of run"
-    }
-);
-subcommands.revisit.add_argument(
-    '-r','--run',
-    {
-        action:  'store',
-        default: null,
-        type:    s=>s.toLowerCase(),
-        help:    "run id"
     }
 );
 subcommands.revisit.add_argument(
@@ -1462,6 +1472,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
         require('./plugin.js').setOverrides({
             plugins:    [[null,'dummy']],
             parameters: [] });
+        const   JSON5 = require('json5');
         const  byline = require('byline');
         const     eng = _createEngine({
             businessLogic: args.source,
@@ -1498,9 +1509,29 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
             })
             .on('end',()=>{
                 if (args.output) {
-                    const fh = fs.openSync(args.output,'w');
-                    eng.chrjs.orderedFacts.forEach(f=>fs.writeSync(fh,JSON.stringify(f)+'\n'));
-                    fs.closeSync(fh);
+                    const  ws = args.output==='-' ? process.stdout : fs.createWriteStream(args.output);
+                    let   fmt = util.serialise;
+                    args.format = args.format!==null ?
+                        args.format :
+                        !ws.isTTY ? 'full' :
+                        'pretty';
+                    switch (args.format) {
+                    case 'full':
+                        break;
+                    case 'json':
+                        fmt = JSON.stringify;
+                        break;
+                    case 'json5':
+                        fmt = JSON5.stringify;
+                        break;
+                    case 'pretty':
+                        fmt = fmtFact;
+                        break;
+                    default:
+                        throw new Error('SNO');
+                    }
+                    eng.chrjs.orderedFacts.forEach(f=>ws.write(fmt(f)+'\n'));
+                    ws.end();
                 }
             });
     };

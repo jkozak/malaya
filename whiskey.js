@@ -248,3 +248,23 @@ exports.createBackFillStream = function(stream1,stream2,options) {
     });
     return output;
 };
+
+exports.FilterStream = function(predicate) {
+    return through2({readableObjectMode:true,
+                     writableObjectMode:true},function(obj,enc,cb){
+                         if (predicate(obj))
+                             this.push(obj);
+                         cb();
+                     } );
+};
+
+exports.EmptyStream = function() {
+    return new class extends stream.Readable {
+        constructor() {
+            super({objectMode:true});
+        }
+        _read(size) {
+            this.push(null);
+        }
+    }
+}

@@ -6,7 +6,10 @@ const          fs = require('fs');
 const        path = require('path');
 const        hash = require('./hash.js');
 const        util = require('./util.js');
+const     whiskey = require('./whiskey.js');
 const MultiStream = require('multistream');
+
+const indexVersion = 1;    // format version of index.json
 
 const makeHashes = exports.makeHashes = prevalenceDir=>
       hash(util.hashAlgorithm).makeStore(path.join(prevalenceDir,'hashes'));
@@ -97,7 +100,8 @@ const journalChain = exports.journalChain = (prevalenceDir,hash0,cb)=>{
     cb(null,ans);
 };
 
-exports.buildHistoryStream = (prevalenceDir,hash0,cb)=>{
+// this builds a character stream
+const buildHistoryStream = exports.buildHistoryStream = (prevalenceDir,hash0,cb)=>{
     const hashes = makeHashes(prevalenceDir);
     journalChain(prevalenceDir,
                  hash0,
@@ -133,17 +137,21 @@ function indexFile(filename) {
     }
 }
 
-const buildIndex = (prevDir)=>{
+const buildIndex = (prevDir,oldIndex)=>{
     const   hashes = hash('sha1').makeStore(path.join(prevDir,'hashes'));
     const contents = {};        // hash -> {type,init:BOOL,term:BOOL,prev:HASH,last:BOOL}
     const     runs = [];        // [hash,...]
     hashes.getHashes().forEach(h=>{
-        try {
-            contents[h] = indexFile(hashes.makeFilename(h));
-        } catch (e) {
-            //console.log(`!!! assuming blob:${h} ${e}`);
-            contents[h] = {type:'blob'};
-        }
+        if (oldIndex &&
+            oldIndex.version===indexVersion && oldIndex.contents[h])
+            contents[h] = oldIndex.contents[h];
+        else
+            try {
+                contents[h] = indexFile(hashes.makeFilename(h));
+            } catch (e) {
+                //console.log(`!!! assuming blob:${h} ${e}`);
+                contents[h] = {type:'blob'};
+            }
     });
     Object.keys(contents).forEach(h=>{
         const j = contents[h];
@@ -167,22 +175,24 @@ const buildIndex = (prevDir)=>{
     const index = {
         contents,
         runs,
-        hash: totalStoreHash(prevDir)
+        hash:    totalStoreHash(prevDir),
+        version: indexVersion
     };
     fs.writeFileSync(path.join(prevDir,'index.json'),JSON.stringify(index));
     return index;
 };
 
 const getIndex = exports.getIndex = (prevDir,opts)=>{
+    let index = null;
     opts = opts || {fix:true};
     try {
-        const index = JSON.parse(fs.readFileSync(path.join(prevDir,'index.json'),'utf8'));
+        index = JSON.parse(fs.readFileSync(path.join(prevDir,'index.json'),'utf8'));
         if (index.hash!==totalStoreHash(prevDir))
             throw new Error(`hash store index stale`);
         return index;
     } catch (e) {
         if (opts.fix)
-            return buildIndex(prevDir);
+            return buildIndex(prevDir,index);
         else
             throw e;
     }
@@ -224,14 +234,22 @@ const findHashByPrefix = exports.findHashByPrefix = (prevDir,r)=>{
 
 const findHashByDate = exports.findHashByDate = (prevDir,r)=>{
     const index = getIndex(prevDir);
-    const     t = new Date(r);
+    const     t = (r instanceof Date) ? r.getMilliseconds() : r;
     const    hs = [];
     Object.keys(index.contents).forEach(h=>{
         const when = index.contents[h].when;
-        if (when && (when[0]<=t && t<when[1]))
+        if (when && (when[0]<=t && t<=when[1]))
             hs.push(h);
     });
-    if (hs.length===1)
+    if (hs.length===0) {
+        const jf = path.join(prevDir,'state','journal');
+        if (fs.existsSync(jf)) {
+            const j = indexFile(jf);
+            if (j.when && (j.when[0]<=t && t<=j.when[1]))
+                return 'journal';
+        }
+        return null;
+    } else if (hs.length===1)
         return hs[0];
     else if (hs.length>1)
         throw new Error(`${r} ambiguous, matches: ${hs}`);
@@ -239,13 +257,13 @@ const findHashByDate = exports.findHashByDate = (prevDir,r)=>{
 
 
 const findHash = exports.findHash = (prevDir,r)=>{
-    if (r.match(/^[0-9a-z]+$/))
-        return findHashByPrefix(prevDir,r);
-    else if (r.match(/^[0-9]{4}-[0-9]{2}-[0-9]{2}t[0-9]{2}:[0-9]{2}:[0-9]{2}z/))
-        return findHashByDate(prevDir,r);
-    else if (r instanceof Date)
+    if (r instanceof Date)
         return findHashByDate(prevDir,r);
     else if ((typeof r)==='number')
+        return findHashByDate(prevDir,r);
+    else if (r.match(/^[0-9a-z]+$/))
+        return findHashByPrefix(prevDir,r);
+    else if (r.match(/^[0-9]{4}-[0-9]{2}-[0-9]{2}t[0-9]{2}:[0-9]{2}:[0-9]{2}z/))
         return findHashByDate(prevDir,r);
     else
         throw new Error(`don't know how to find run ${r}`);
@@ -253,6 +271,44 @@ const findHash = exports.findHash = (prevDir,r)=>{
 
 exports.findRun = (prevDir,r)=>{
     return findRunContainingHash(prevDir,findHash(prevDir,r));
+};
+
+// this builds an object stream
+exports.buildRunStream = (prevalenceDir,r,cb)=>{ // !!! UNTESTED
+    let  hash0 = null;
+    let filter = null;
+
+    if ((typeof r)==='number') {
+        hash0  = findHashByDate(prevalenceDir,r);
+        filter = js=>js[0]<=r;
+    } else if (r instanceof Date) {
+        hash0  = findHashByDate(prevalenceDir,r);
+        filter = js=>js[0]<=r;
+    } else if (r.match(/^[0-9]{4}-[0-9]{2}-[0-9]{2}t[0-9]{2}:[0-9]{2}:[0-9]{2}z/)) {
+        r      = new Date(r).getMilliseconds();
+        hash0  = findHashByDate(prevalenceDir,r);
+        filter = js=>js[0]<=r;
+    } else if (r.match(/^[0-9a-z]+$/)) {
+        hash0  = findHashByPrefix(prevalenceDir,r);
+    } else {
+        cb(new Error(`don't know how to find run ${r}`));
+        return;
+    }
+
+    if (hash0)
+        buildHistoryStream(prevalenceDir,hash0,(err,rs)=>{
+            if (err)
+                cb(err);
+            else if (filter===null)
+                cb(null,rs
+                   .pipe(whiskey.LineStream(util.deserialise)) );
+            else
+                cb(null,rs
+                   .pipe(whiskey.LineStream(util.deserialise))
+                   .pipe(whiskey.FilterStream(filter)) );
+        });
+    else
+        cb(null,whiskey.EmptyStream());
 };
 
 if (require.main===module) {
