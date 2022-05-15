@@ -1,6 +1,6 @@
 {
   "name": "malaya",
-  "version": "0.8.994",
+  "version": "0.8.995",
   "description": "Logic programming with JSON pattern matching",
   "dependencies": {
     "acorn": "^8.7.0",

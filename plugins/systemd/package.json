@@ -1,6 +1,6 @@
 {
   "name": "malaya-plugin-systemd",
-  "version": "0.8.994",
+  "version": "0.8.995",
   "description": "system liaison plugin for malaya",
   "peerDependencies": {
     "malaya": "../.."
