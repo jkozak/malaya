@@ -255,28 +255,7 @@ const findHashByDate = exports.findHashByDate = (prevDir,r)=>{
         throw new Error(`${r} ambiguous, matches: ${hs}`);
 };
 
-
-const findHash = exports.findHash = (prevDir,r)=>{
-    if (r instanceof Date)
-        return findHashByDate(prevDir,r);
-    else if ((typeof r)==='number')
-        return findHashByDate(prevDir,r);
-    else if (r.match(/^[0-9a-z]+$/))
-        return findHashByPrefix(prevDir,r);
-    else if (r.match(/^[0-9]+\.[0-9]*$/))
-        return findHashByDate(prevDir,parseFloat(r));
-    else if (r.match(/^[0-9]{4}-[0-9]{2}-[0-9]{2}t[0-9]{2}:[0-9]{2}:[0-9]{2}z/))
-        return findHashByDate(prevDir,r);
-    else
-        throw new Error(`don't know how to find run ${r}`);
-};
-
-exports.findRun = (prevDir,r)=>{
-    return findRunContainingHash(prevDir,findHash(prevDir,r));
-};
-
-// this builds an object stream
-exports.buildRunStream = (prevalenceDir,r,cb)=>{ // !!! UNTESTED
+const parseHash = exports.parseHash = (prevalenceDir,r)=>{
     let  hash0 = null;
     let filter = null;
 
@@ -298,24 +277,41 @@ exports.buildRunStream = (prevalenceDir,r,cb)=>{ // !!! UNTESTED
     } else if (r.match(/^[0-9a-z]+$/)) {
         hash0  = findHashByPrefix(prevalenceDir,r);
     } else {
-        cb(new Error(`don't know how to find run ${r}`));
-        return;
+        throw new Error(`don't know how to find run ${r}`);
     }
 
-    if (hash0)
-        buildHistoryStream(prevalenceDir,hash0,(err,rs)=>{
-            if (err)
-                cb(err);
-            else if (filter===null)
-                cb(null,rs
-                   .pipe(whiskey.LineStream(util.deserialise)) );
-            else
-                cb(null,rs
-                   .pipe(whiskey.LineStream(util.deserialise))
-                   .pipe(whiskey.FilterStream(filter)) );
-        });
-    else
-        cb(null,whiskey.EmptyStream());
+    return [hash0,filter];
+};
+
+const findHash = exports.findHash = (prevalenceDir,r)=>{
+    return parseHash(prevalenceDir,r)[0];
+};
+
+exports.findRun = (prevDir,r)=>{
+    return findRunContainingHash(prevDir,findHash(prevDir,r));
+};
+
+// this builds an object stream
+exports.buildRunStream = (prevalenceDir,r,cb)=>{
+    try {
+        const [hash0,filter] = parseHash(prevalenceDir,r);
+        if (hash0)
+            buildHistoryStream(prevalenceDir,hash0,(err,rs)=>{
+                if (err)
+                    cb(err);
+                else if (filter===null)
+                    cb(null,rs
+                       .pipe(whiskey.LineStream(util.deserialise)) );
+                else
+                    cb(null,rs
+                       .pipe(whiskey.LineStream(util.deserialise))
+                       .pipe(whiskey.FilterStream(filter)) );
+            });
+        else
+            cb(null,whiskey.EmptyStream());
+    } catch (e) {
+        cb(e);
+    }
 };
 
 if (require.main===module) {
