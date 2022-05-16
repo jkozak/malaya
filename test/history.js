@@ -21,7 +21,7 @@ function mkJournal(jss) {
     return jss.map(js=>util.serialise(js)+'\n').join('');
 }
 
-describe("history",function() {
+describe("history XXX",function() {
     const   prevDir = mkTempPrevDir();
     const hashStore = hash(util.hashAlgorithm).makeStore(path.join(prevDir,'hashes'));
     const journalFn = path.join(prevDir,'state','journal');
@@ -222,7 +222,6 @@ describe("history",function() {
                             [10,'init',{}],
                             [20,'previous',hashes[0],''],
                             [21,'update',  ['x',{}]],
-                            [30,'previous',hashes[1],''],
                         ]);
                         done();
                     })
@@ -231,7 +230,7 @@ describe("history",function() {
         });
     });
     it("accesses history via buildRunStream and date/time, splitting file",function(done){
-        history.buildRunStream(prevDir,20,(err,rs)=>{
+        history.buildRunStream(prevDir,20.5,(err,rs)=>{
             if (err)
                 done(err);
             else {
@@ -278,7 +277,7 @@ describe("history",function() {
         assert.equal(history.findHashByDate(prevDir,150),'journal')
     });
     it("builds history of run including journal - 1",function(done){
-        history.buildRunStream(prevDir,150,(err,rs)=>{
+        history.buildRunStream(prevDir,150.1,(err,rs)=>{
             if (err)
                 done(err);
             else {
@@ -322,7 +321,7 @@ describe("history",function() {
         });
     });
     it("builds history of run including journal - 3",function(done){
-        history.buildRunStream(prevDir,new Date(160),(err,rs)=>{
+        history.buildRunStream(prevDir,new Date(161),(err,rs)=>{
             if (err)
                 done(err);
             else {
@@ -337,6 +336,28 @@ describe("history",function() {
                             [130,'previous',hashes[5],''],
                             [150,'previous',hashes[6],''],
                             [160,'update',['x',{}]]
+                        ]);
+                        done();
+                    })
+                    .on('error',done);
+            }
+        });
+    });
+    it("builds history of run including journal - 4",function(done){
+        history.buildRunStream(prevDir,new Date(160),(err,rs)=>{
+            if (err)
+                done(err);
+            else {
+                const objs = [];
+                rs
+                    .on('data',js=>objs.push(js))
+                    .on('end',()=>{
+                        assert.deepEqual(objs,[
+                            [110,'init',{}],
+                            [120,'previous',hashes[4],''],
+                            [121,'update',['x',{}]],
+                            [130,'previous',hashes[5],''],
+                            [150,'previous',hashes[6],''],
                         ]);
                         done();
                     })

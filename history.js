@@ -284,17 +284,17 @@ exports.buildRunStream = (prevalenceDir,r,cb)=>{ // !!! UNTESTED
         hash0 = 'journal';
     } else if ((typeof r)==='number') {
         hash0  = findHashByDate(prevalenceDir,r);
-        filter = js=>js[0]<=r;
+        filter = js=>js[0]<r;
     } else if (r instanceof Date) {
         hash0  = findHashByDate(prevalenceDir,r);
-        filter = js=>js[0]<=r;
+        filter = js=>js[0]<r;
     } else if (r.match(/^[0-9]+\.[0-9]*$/)) {
         hash0  = findHashByDate(prevalenceDir,r);
-        filter = js=>js[0]<=r;
+        filter = js=>js[0]<r;
     } else if (r.match(/^[0-9]{4}-[0-9]{2}-[0-9]{2}t[0-9]{2}:[0-9]{2}:[0-9]{2}z$/)) {
         r      = new Date(r).getTime();
         hash0  = findHashByDate(prevalenceDir,r);
-        filter = js=>js[0]<=r;
+        filter = js=>js[0]<r;
     } else if (r.match(/^[0-9a-z]+$/)) {
         hash0  = findHashByPrefix(prevalenceDir,r);
     } else {
