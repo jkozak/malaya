@@ -93,6 +93,28 @@ const deserialise = function(v) {
         throw new Error(_util.format("unencoded: %s",v));
 };
 
+// k interop
+// better to use json at the moment, e.g. f:`j?'."\\malaya cat -fjson facts"
+const toK = exports.toK = v=>{
+    if (typeof v==='string')
+        return JSON.stringify(v);
+    else if (typeof v==='number')
+        return v;
+    else if (Array.isArray(v))
+        return '('+v.map(toK).join(';')+')';
+    else if (v===null || v===undefined) // !!! or should we drop the key? !!!
+        return '0N';
+    else if (typeof v==='object') {
+        const keys = Object.keys(v);
+        return keys.map(k=>'`'+`"${k}"`).join('')+'!'+toK(Object.values(v));
+    }
+    else if (v===true)
+        return '1';
+    else if (v===false)
+        return '0';
+    else throw new Error(`can't encode ${v} for k`);
+};
+
 exports.Fail = function(msg) {
     this.name    = 'Fail';
     this.message = msg;

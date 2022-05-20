@@ -110,7 +110,7 @@ subcommands.cat.add_argument(
         action:  'store',
         default: null,
         type:    s=>s.toLowerCase(),
-        choices: ['full','json','json5','pretty','raw','yaml'],
+        choices: ['full','json','json5','k','pretty','raw','yaml'],
         help:    "display format"
     }
 );
@@ -429,7 +429,7 @@ subcommands.revisit.add_argument(
         action:  'store',
         default: null,
         type:    s=>s.toLowerCase(),
-        choices: ['full','json','json5','pretty'],
+        choices: ['full','json','json5','k','pretty'],
         help:    "display format"
     }
 );
@@ -914,6 +914,8 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                 return new whiskey.StringifyJSONStream();
             case 'json5':
                 return new whiskey.StringifyObjectStream(JSON5.stringify);
+            case 'k':
+                return new whiskey.StringifyKStream();
             case 'pretty':
                 switch (what) {
                 case 'history':
@@ -1042,6 +1044,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                         }
                     }
                 });
+                jsps.on('end',()=>{dst.end();});
             }
             break;
         }
@@ -1508,7 +1511,9 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                 .on('end',()=>{
                     if (args.output) {
                         const  ws = args.output==='-' ? process.stdout :
-                              fs.createWriteStream(args.output);
+                              fs.createWriteStream(args.output,{
+                                  encoding: args.format==='k' ? 'ascii' : 'utf8'
+                              });
                         let   fmt = util.serialise;
                         args.format = args.format!==null ?
                             args.format :
@@ -1523,13 +1528,22 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                         case 'json5':
                             fmt = JSON5.stringify;
                             break;
+                        case 'k':
+                            fmt = util.toK;
+                            break;
                         case 'pretty':
                             fmt = fmtFact;
                             break;
                         default:
                             throw new Error('SNO');
                         }
-                        eng.chrjs.orderedFacts.forEach(f=>ws.write(fmt(f)+'\n'));
+                        if (args.format==='k') {
+                            const facts = eng.chrjs.orderedFacts;
+                            facts.forEach(f=>{
+                                ws.write(fmt(f)+'\n');
+                            });
+                        } else
+                            eng.chrjs.orderedFacts.forEach(f=>ws.write(fmt(f)+'\n'));
                         ws.end();
                     }
                 });

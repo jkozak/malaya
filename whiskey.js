@@ -6,6 +6,7 @@ const        stream = require('stream');
 const     _through2 = require('through2');
 const StringDecoder = require('string_decoder').StringDecoder;
 const        VError = require('verror');
+const          util = require('./util.js');
 
 const through2 = function(options,transform) {
     const pt = _through2.apply(this,arguments);
@@ -122,6 +123,24 @@ exports.StringifyJSONStream = function() {
         cb();
     });
     ans.setEncoding('utf8');
+    return ans;
+};
+
+// k output
+//  load with facts: .'.'"\\malaya cat facts"
+//  !!! still blows limit (max length to eval?) !!!
+exports.StringifyKStream = function() {
+    const ans = through2({writableObjectMode:true},function(chunk,encoding,cb) {
+        let s;
+        try {
+            s = util.toK(chunk);
+        } catch (err) {
+            this.emit('error',err);
+        }
+        this.push(s+'\n','ascii');
+        cb();
+    });
+    ans.setEncoding('ascii');
     return ans;
 };
 
