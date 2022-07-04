@@ -747,6 +747,24 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                 });
             }
         });
+        process.on('SIGUSR1',function() {
+            if (eng) {
+                if (traceOff) {
+                    traceOff();
+                    traceOff = null;
+                    process.stderr.write(`=== tracing off ===\n`);
+                }
+                else {
+                    try {
+                        // +++ this may be wrong for revisit +++
+                        traceChrjs(eng.chrjs,eng.chrjs.source);
+                        process.stderr.write(`=== tracing on ===\n`);
+                    } catch (e) {
+                        process.stderr.write(`!!! can't start trace: ${e}\n`);
+                    }
+                }
+            }
+        });
         process.on('exit',function(code) {
             if (eng)
                 eng.broadcast(['close',code],'admin');
@@ -811,7 +829,8 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
         });
     };
 
-    const traceChrjs = (chrjs,source)=>tracing.trace(chrjs,source,{long:args.long});
+    let     traceOff = null;
+    const traceChrjs = (chrjs,source)=>{traceOff=tracing.trace(chrjs,source,{long:args.long})};
 
     const _createEngine = opts.createEngine || function(options) {
         const engine = require('./engine.js');

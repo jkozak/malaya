@@ -118,13 +118,14 @@ exports.install = (server,path,source,opts)=>{
         }
     });
     const eng = new engine.Engine(Object.assign({
+        debug:           opts.debug||opts.trace,
         businessLogic:   source,
         ports:           {},
         httpIsLocal:     true,
         privateTestUrls: opts.debug,
     },opts||{} ));
     eng._bindGlobals();
-    if (opts.debug)
+    if (opts.debug && opts.trace)
         tracing.trace(eng.chrjs,source,Object.assign({},{long:false},opts.tracing||{}));
     if (opts.ports && Object.keys(opts.ports).length>0) {
         const  path = require('path');

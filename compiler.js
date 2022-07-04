@@ -104,6 +104,7 @@ function TEMPLATE_store() {
         var    obj = {
             on:   function(ev,cb) {ee.on(ev,cb);},
             once: function(ev,cb) {ee.once(ev,cb);},
+            off:  function(ev,cb) {ee.off(ev,cb);},
             get:  function(t) {assert.equal(typeof t,'string');return facts[t];},
             add:  function(fact) {
                 assert.strictEqual(adds.length,0);

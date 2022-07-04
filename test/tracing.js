@@ -93,3 +93,33 @@ describe("tracing of compiled code, discarding of output",function(){
         assert.equal(out,'');
     });
 });
+
+describe("tracing of compiled code,deactivation of output",function(){
+    const saveDebug = compiler.debug;
+    const saveChalk = chalk.enabled;
+    let          st;
+    let         off;
+    let         out = '';
+    before(()=>{compiler.debug=true;chalk.enabled=false;});
+    after(()=>{compiler.debug=saveDebug;chalk.enabled=saveChalk;});
+    before(()=>{st=require("./bl/pingpong.malaya");});
+    it("enables tracing",function(){
+        off = tracing.trace(st,'./bl/pingpong.malaya',{print:(...rest)=>{
+            out += util.format.apply(null,rest);
+        }});
+    });
+    it("traces execution",function(){
+        st.update(['ping',{p:'q'},{src:'?????port?????'}]);
+        assert(out.includes('?????port?????'));
+        assert(out.includes('ping'));
+        assert(out.includes('pong'));
+        out = '';
+    });
+    it("disables tracing",function(){
+        off();
+    });
+    it("doesn't trace execution",function(){
+        st.update(['ping',{p:'q'},{src:'?????port?????'}]);
+        assert.equal(out,'');
+    });
+});

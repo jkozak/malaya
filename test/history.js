@@ -21,7 +21,7 @@ function mkJournal(jss) {
     return jss.map(js=>util.serialise(js)+'\n').join('');
 }
 
-describe("history XXX",function() {
+describe("history",function() {
     const   prevDir = mkTempPrevDir();
     const hashStore = hash(util.hashAlgorithm).makeStore(path.join(prevDir,'hashes'));
     const journalFn = path.join(prevDir,'state','journal');

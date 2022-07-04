@@ -67,13 +67,18 @@ exports.trace = (chrjs,source_,opts={})=>{
     });
     let             provoker = null;
     let              borings = 0; // count of `add`s deemed not interesting
+    const             events = {};
+    const                 on = (name,fn)=>{
+        events[name] = fn;
+        chrjs.on(name,fn);
+    };
     opts.isKeyInteresting = opts.isKeyInteresting || (js=>true);
-    chrjs.on('queue-rule',(id,bindings)=>{
+    on('queue-rule',(id,bindings)=>{
         const firing = {id:id,done:false,dels:[],adds:[],outs:[],t:Date.now()};
         stack.push(firing);
         outQ.push(firing);
     });
-    chrjs.on('add',(t,f)=>{
+    on('add',(t,f)=>{
         if (stack.length>0)
             stack[stack.length-1].adds.push(f);
         else if (isAddInteresting(f)) {
@@ -88,7 +93,7 @@ exports.trace = (chrjs,source_,opts={})=>{
             provoker = f;
         }
     });
-    chrjs.on('del',(t,f)=>{
+    on('del',(t,f)=>{
         if (stack.length>0) {
             const adds = stack[stack.length-1].adds;
             for (let i=0;i<adds.length;i++)
@@ -101,7 +106,7 @@ exports.trace = (chrjs,source_,opts={})=>{
             stack[stack.length-1].dels.push(f);
         }
     });
-    chrjs.on('finish-rule',(id)=>{
+    on('finish-rule',(id)=>{
         const firing = stack.pop();
         assert.strictEqual(firing.id,id);
         firing.done = true;
@@ -130,4 +135,10 @@ exports.trace = (chrjs,source_,opts={})=>{
                 borings++;
         }
     });
+    return ()=>{
+        Object.keys(events).forEach(k=>{
+            chrjs.off(k,events[k]);
+            delete events[k];
+        });
+    };
 };
