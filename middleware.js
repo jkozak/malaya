@@ -117,6 +117,41 @@ exports.install = (server,path,source,opts)=>{
             }
         }
     });
+    let     traceOff = null;
+    const traceChrjs = ()=>{
+        traceOff = tracing.trace(eng.chrjs,eng.chrjs.source,Object.assign(
+            {},
+            {long:false},
+            opts.tracing||{} ))
+    };
+    const installSignalHandlers = function() {
+        /* eslint no-process-exit:0 */
+        process.on('SIGHUP',function() {
+            if (eng && eng.mode==='master') {
+                eng.stopPrevalence(false,function(err) {
+                    eng.startPrevalence();
+                });
+            }
+        });
+        process.on('SIGUSR1',function() {
+            if (eng) {
+                if (traceOff) {
+                    traceOff();
+                    traceOff = null;
+                    process.stderr.write(`=== tracing off ===\n`);
+                }
+                else {
+                    try {
+                        // +++ this may be wrong for revisit +++
+                        traceChrjs();
+                        process.stderr.write(`=== tracing on ===\n`);
+                    } catch (e) {
+                        process.stderr.write(`!!! can't start trace: ${e}\n`);
+                    }
+                }
+            }
+        });
+    };
     const eng = new engine.Engine(Object.assign({
         debug:           opts.debug||opts.trace,
         businessLogic:   source,
@@ -126,7 +161,7 @@ exports.install = (server,path,source,opts)=>{
     },opts||{} ));
     eng._bindGlobals();
     if (opts.debug && opts.trace)
-        tracing.trace(eng.chrjs,source,Object.assign({},{long:false},opts.tracing||{}));
+        traceChrjs();
     if (opts.ports && Object.keys(opts.ports).length>0) {
         const  path = require('path');
         const    fs = require('fs');
@@ -146,6 +181,8 @@ exports.install = (server,path,source,opts)=>{
         });
     }
     eng.start();
+    if (opts.signalHandlers || opts.debug)
+        installSignalHandlers();
     eng.become('master');
     server.on('close',()=>{
         eng.stopPrevalence(false,err=>{
