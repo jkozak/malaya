@@ -1510,7 +1510,6 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                     ts = js[0];
                     if (typeof ts!=='number')
                         throw new Error(`timestamp not a number: ${JSON.stringify(ts)}`);
-                    console.log(`*** handle: ${i} ${JSON.stringify(js)}`)
                     switch (js[1]) {
                     case 'init':
                         if (i>0)
