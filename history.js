@@ -123,18 +123,34 @@ function totalStoreHash(prevDir) {
 }
 
 function indexFile(filename) {
-    const    data = fs.readFileSync(filename,'utf8');
-    const   lines = data.split('\n').filter(l=>l.length>0);
-    const     nth = i=>util.deserialise(lines.slice(i)[0])
-    return {
-        type: 'journal',
-        init: nth( 0)[1]==='init',
-        term: nth(-1)[1]==='term',
-        prev: nth( 0)[1]==='previous' ? nth(0)[2] : null,
-        next: [],
-        last: nth(-1)[1]==='term' || undefined,
-        when: [nth(0)[0],nth(-1)[0]]
-    }
+    let prev = null;
+    let init = false;
+    let term = false;
+    let next = [];
+    let last = undefined;
+    let when = [null,null];
+    let    i = -1;
+    util.readFileLinesSync(filename,line=>{
+        const js = util.deserialise(line);
+        i++;
+        if (i===0)
+            when[0] = js[0];
+        when[1] = js[0];
+        switch (js[1]) {
+        case 'init':
+            init = true;
+            break;
+        case 'term':
+            term = true;
+            last = true;
+            break;
+        case 'previous':
+            prev = js[2];
+            break;
+        }
+        return true;
+    });
+    return {type:'journal',init,term,prev,next,last,when};
 }
 
 const buildIndex = (prevDir,oldIndex)=>{

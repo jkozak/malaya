@@ -1508,6 +1508,9 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                 .on('data',js=>{
                     i++;
                     ts = js[0];
+                    if (typeof ts!=='number')
+                        throw new Error(`timestamp not a number: ${JSON.stringify(ts)}`);
+                    console.log(`*** handle: ${i} ${JSON.stringify(js)}`)
                     switch (js[1]) {
                     case 'init':
                         if (i>0)
@@ -1525,6 +1528,15 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                         eng._nextTimestamp = js[0];
                         eng.chrjs.update(js[2]);
                         break;
+                    case 'previous':
+                    case 'code':
+                    case 'http':
+                    case 'transform':    // obsolete?
+                        if (i===0)
+                            throw new Error(`first transaction must be init`);
+                        break;
+                    default:
+                        throw new Error(`not a valid history item: ${JSON.stringify(js)}`);
                     }
                 })
                 .on('end',()=>{
