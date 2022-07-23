@@ -780,7 +780,6 @@ module.exports = store {
     });
 });
 
-
 describe("file read",function(){
     this.bail(true);
     let   eng;
@@ -813,15 +812,15 @@ module.exports = store {}
         eng.become('master');
     });
     it("data has been seen",function(done){
-        // +++ resolve hacky use of setImmediate [e494983e74a66ced] +++
-        setImmediate(()=>{
+        // +++ resolve hacky use of setTimeout [e494983e74a66ced] +++
+        setTimeout(()=>{
             assert.deepEqual(eng.chrjs.orderedFacts,[
                 ['test',{id:1},{src:'file'}],
                 ['test',{id:2},{src:'file'}],
                 ['test',{id:3},{src:'file'}]
             ]);
             done();
-        });
+        },10);
     });
 });
 

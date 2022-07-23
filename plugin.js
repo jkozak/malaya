@@ -14,16 +14,21 @@ const classes = {};
 const plugins = [];
 let overrides = {parameters:[],plugins:[]};
 
+const mySetImmediate = setImmediate; // capture this to avoid issues with sinon time-mockery
+
 class Plugin {
     static init(opts) {}
     constructor(opts) {
         const pl = this;
         pl.engine   = null;
-        pl.update   = ()=>{throw new Error("engine not ready yet");};
+        pl._update  = ()=>{throw new Error("engine not ready yet");};
         pl.name     = null;
         pl.chrjs    = null;              // updated when added to a store
         pl.opts     = opts;
         pl._depends = [];
+    }
+    update(js,addr,misc={}) {
+        mySetImmediate(()=>this._update(js,addr,misc));
     }
     depends(name) {
         const pl = this;
@@ -137,7 +142,7 @@ exports.registerEngine = eng=>{
     eng.on('mode',mode=>{
         if (mode==='master') {
             plugins.forEach(pl=>{
-                pl.update = (js,addr,misc={})=>{
+                pl._update = (js,addr,misc={})=>{
                     if (js.length!==2 && typeof js[0]!=='string' & typeof js[1]!=='object')
                         throw new Error(`bad update record type: ${JSON.stringify(js)}`);
                     let src = pl.name;
@@ -153,8 +158,6 @@ exports.registerEngine = eng=>{
                     else
                         throw new Error(`plugin ${pl.name} trying to send while not connected`);
                 };
-                if (pl.eps)             // back compat with 0.7.x
-                    pl.eps.update = pl.update;
                 pl._ready();
             });
         }
@@ -354,7 +357,7 @@ function setStandardClasses() {
                 const sd = pl.opts.shutdown;
                 if (typeof sd==='string' && sd.startsWith('SIG'))
                     process.on(sd,function() {
-                        pl.update(['shutdown',{reason:sd}]);
+                        pl._update(['shutdown',{reason:sd}]);
                     });
                 else
                     throw new Error(`unknown lifecycle.shutdown specifier: ${pl.opts.shutdown}`);
