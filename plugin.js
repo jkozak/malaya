@@ -395,7 +395,8 @@ function setStandardClasses() {
                 request
                     .post(`${s}${op}`)
                     .send(args)
-                    .then(()=>{});
+                    .then(()=>{})
+                    .catch(err=>{console.log(`notify failed`)}); // +++ CYB +++
             });
         }
     };

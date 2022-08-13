@@ -865,7 +865,7 @@ module.exports = store {
     });
 });
 
-describe("notify",function(){
+describe("notify XXX",function(){
     this.bail(true);
     let   eng;
     let   app;
@@ -917,4 +917,5 @@ module.exports = store {
         assert.deepEqual(rqs[0].body,  {p:1,q:2});
         rqs.length = 0;
     });
+    // +++ notify to non-existent server shouldn't crash malaya +++
 });
