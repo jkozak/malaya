@@ -74,7 +74,7 @@
     "url": "git+https://github.com/jkozak/malaya.git"
   },
   "scripts": {
-    "postinstall": "node for-sub-npm-modules.js \"npm install\" plugins",
+    "postinstall": "(cd plugins/fetch && npm install);(cd plugins/systemd && npm install)",
     "benchmark": "matcha -R plain benchmark/*.js",
     "eslint": "eslint -f compact .",
     "pretest": "npm run eslint --silent",

@@ -3,7 +3,7 @@
   "version": "0.8.996",
   "description": "system liaison plugin for malaya",
   "peerDependencies": {
-    "malaya": "../.."
+    "malaya": "0.8.996"
   },
   "dependencies": {
     "sd-notify": "^2.8.0",

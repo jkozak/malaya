@@ -3,7 +3,7 @@
   "version": "0.8.996",
   "description": "HTTP fetch plugin for malaya",
   "peerDependencies": {
-    "malaya": "../.."
+    "malaya": "0.8.996"
   },
   "dependencies": {
     "node-fetch": "^3.0.0",
