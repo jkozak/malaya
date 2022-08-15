@@ -37,7 +37,11 @@
     "vm2": "^3.9.5",
     "websocket": "^1.0.34",
     "websocket-stream": "^5.5.2",
-    "ws": "^7.5.6"
+    "ws": "^7.5.6",
+    "sd-notify": "^2.8.0",
+    "systemd": "^0.3.1",
+    "node-fetch": "^3.0.0",
+    "request": "^2.88.2"
   },
   "devDependencies": {
     "connect": "^3.7.0",
@@ -74,7 +78,6 @@
     "url": "git+https://github.com/jkozak/malaya.git"
   },
   "scripts": {
-    "postinstall": "node for-sub-npm-modules.js \"npm install\" plugins",
     "benchmark": "matcha -R plain benchmark/*.js",
     "eslint": "eslint -f compact .",
     "pretest": "npm run eslint --silent",
