@@ -8,6 +8,7 @@ const path = require('path');
 
 process.argv.slice(3).forEach(d=>{
     fs.readdirSync(d)
+        .filter(f=>!f.startsWith('.'))
         .map(f=>path.join(d,f))
         .filter(f=>fs.statSync(f).isDirectory())
         .filter(f=>fs.existsSync(path.join(f,'package.json')))
