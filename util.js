@@ -171,7 +171,7 @@ exports.readToEnd = (stream,cb)=>{
         bufs.push(chunk);
     });
     stream.on('end',err=>{
-        console.log("*** end");
+        //console.log("*** end");
         cb(err,Buffer.concat(bufs).toString());
     });
 };

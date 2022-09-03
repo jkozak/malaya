@@ -47,7 +47,7 @@ module.exports = store {
     });
     it("serves a 404 GET request",function(done) {
         request
-            .get(`http://localhost:${pl.port}/NotFound`)
+            .get(`http://127.0.0.1:${pl.port}/NotFound`)
             .end((err,res)=>{
                 assert(err);
                 assert.equal(err.status,404);
@@ -56,7 +56,7 @@ module.exports = store {
     });
     it("serves actual data via a GET request",function(done) {
         request
-            .get(`http://localhost:${pl.port}/SomeCrap`)
+            .get(`http://127.0.0.1:${pl.port}/SomeCrap`)
             .end((err,res)=>{
                 if (!err) {
                     assert.equal(res.status,200);

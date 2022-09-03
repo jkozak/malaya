@@ -394,6 +394,53 @@ subcommands.parse.add_argument(
     }
 );
 
+addSubcommand('query',{add_help:true});
+subcommands.query.add_argument(
+    '-e','--every',
+    {
+        action:  'store',
+        default: null,
+        type:    parseFloat,
+        help:    "repeat time in seconds"
+    }
+);
+subcommands.query.add_argument(
+    '-f','--format',
+    {
+        action:  'store',
+        default: null,
+        type:    s=>s.toLowerCase(),
+        choices: ['json','json5','pretty'],
+        help:    "display format"
+    }
+);
+subcommands.query.add_argument(
+    '-t','--update-count',
+    {
+        action:  'store_true',
+        default: false,
+        help:    "include update count in output",
+        dest:    'updateCount'
+    }
+);
+subcommands.query.add_argument(
+    'name',
+    {
+        action: 'store',
+        help:   'name of query'
+    }
+);
+subcommands.query.add_argument(
+    'argss',
+    {
+        action:  'store',
+        default: [],
+        nargs:   '?',
+        type:    JSON.parse,
+        help:    'args to query as a JSON array'
+    }
+);
+
 addSubcommand('replay',{add_help:true});
 subcommands.replay.add_argument(
     '-c','--command',
@@ -876,7 +923,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
         } else {
             const ports = JSON.parse(fs.readFileSync(path.join(prevalenceDir,'ports')),'utf8');
             const    WS = require('websocket-stream');
-            const    ws = new WS(`ws://localhost:${ports.http}/${what}`);
+            const    ws = new WS(`ws://127.0.0.1:${ports.http}/${what}`);
             return ws;
         }
     };
@@ -1320,6 +1367,71 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
             fs.writeFileSync(args.source+'.json',out);
     };
 
+    subcommands.query.exec = function() {
+        const        ws = mkClientStream('admin');
+        const     JSON5 = require('json5');
+        const prettyFmt = js=>{
+            if (Array.isArray(js)) {
+                return js
+                    .map(j=>JSON5.stringify(j))
+                    .join('\n');
+            } else if (typeof js.t==='number') {
+                return js.result
+                    .map(j=>`${chalk.yellow(js.t.toString().padStart(8))} ${fmtJSON(j)}`)
+                    .join('\n');
+            } else
+                throw new Error(`Array required for JSONL, not ${JSON.stringify(js)}`);
+        }
+        if (ws) {
+            const whiskey = require('./whiskey.js');
+            const    jsps = new whiskey.JSONParseStream();
+            const     fmt = args.format || (process.stdout.isTTY ? 'pretty' : 'json');
+            let        os;
+            switch (fmt) {
+            case 'pretty':
+                os = new whiskey.StringifyObjectStream(prettyFmt);
+                break;
+            case 'json5':
+                os = new whiskey.StringifyObjectStream(JSON5.stringify);
+                break;
+            case 'json':
+            default:
+                os = new whiskey.StringifyJSONStream();
+                break;
+            }
+            os.pipe(process.stdout);
+            ws.pipe(jsps);
+            jsps.on('readable',()=>{
+                let resp;
+                while ((resp=jsps.read())!==null) {
+                    switch (resp[0]) {
+                    case 'engine':
+                    case 'connection':
+                        break;
+                    case 'query':
+                        if (args.updateCount)
+                            os.write(resp[1].result);
+                        else
+                            os.write(resp[1].result.result);
+                        if (!args.every)
+                            ws.end();
+                        break;
+                    case 'error':
+                        throw new Error(`failed: ${resp[1].reason}`);
+                    default:
+                        throw new Error(`internal error: ${JSON.stringify(resp)}`);
+                    }
+                } });
+            const q = ()=>ws.write(JSON.stringify(['query',{
+                name: args.name,
+                args: args.argss[0]
+            }])+'\n');
+            if (args.every)
+                setInterval(q,args.every*1000);
+            else q();
+        }
+    };
+
     subcommands.replay.exec = function() {
         const   engine = require('./engine.js');
         const  history = require('./history.js');
@@ -1609,7 +1721,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
             console.log("%s listening on *:%s",protocol,port);
             if (args.adminUI && protocol==='http') {
                 execCP(util.format("chromium -disk-cache-dir=/dev/null -app='http://%s:%d/%s'",
-                                   'localhost',
+                                   '127.0.0.1',
                                    options.ports.http,
                                    "admin.html"),
                        function(err,stdout,stderr) {

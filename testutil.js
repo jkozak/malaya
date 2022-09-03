@@ -315,7 +315,7 @@ if (util.env==='test')  {
     };
     ExtServer.prototype._getFacts = function(cb) {
         const srv = this;
-        http.get(`http://localhost:${srv.port}/_private/facts`,res=>{
+        http.get(`http://127.0.0.1:${srv.port}/_private/facts`,res=>{
             if (res.statusCode!==200) {
                 cb(new Error(`_getFacts fails: ${res.statusCode}`));
                 res.resume();
@@ -346,7 +346,7 @@ if (util.env==='test')  {
         const ws = this;
         if (url instanceof ExtServer) {
             ws.srv = url;
-            url = `http://localhost:${url.port}/data`;
+            url = `http://127.0.0.1:${url.port}/data`;
         } else
             ws.srv = null;
         ws.queue = [];

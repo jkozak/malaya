@@ -58,7 +58,7 @@ module.exports = store {
             if (js[1].data[0]==='connect')
                 done();
         });
-        client = new WebSocket(`http://localhost:${pl.server.port}/`);
+        client = new WebSocket(`http://127.0.0.1:${pl.server.port}/`);
     });
     it("receives and replies to a message",function(done) {
         client.on('message',msg=>{

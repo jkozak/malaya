@@ -1342,7 +1342,22 @@ Engine.prototype.administer = function(port) {
                     });
                     io.o.write(accum);
                     break;
-                } }
+                }
+                case 'query':
+                    try {
+                        const res = ['query',{
+                            query:  js[1].name,
+                            args:   js[1].args,
+                            result: eng.chrjs.queries[js[1].name].apply(null,js[1].args)
+                        }];
+                        io.o.write(res);
+                    } catch (e) {
+                        io.o.write(['error',{
+                            query:  js[1].name,
+                            args:   js[1].args,
+                            reason: e}]);
+                    }
+                }
             } catch (e) {
                 console.log(e);
                 eng.closeConnection(port);

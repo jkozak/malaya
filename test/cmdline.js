@@ -208,7 +208,7 @@ describe("cmd line interface [slow]",function() {
     });
     it("inits prevalence store",function(done) {
         this.timeout(10000);
-        child.exec(`${CMD} init test/bl/restart.malaya`,
+        child.exec(`${CMD} init test/bl/query.malaya`,
                    {},
                    (code,stdout,stderr)=>{
                        if (code!==null)
@@ -298,7 +298,7 @@ describe("cmd line interface [slow]",function() {
     it("runs",function(done) {
         this.timeout(10000);
         let buf = '';
-        malaya = child.spawn("node",['malaya','-p',pdir,'run','-w0','test/bl/restart.malaya']);
+        malaya = child.spawn("node",['malaya','-p',pdir,'run','-w0','test/bl/query.malaya']);
         malaya.stdout.on('data',(data)=>{
             buf += data;
             const lines = buf.split('\n');
@@ -350,6 +350,19 @@ describe("cmd line interface [slow]",function() {
                        else {
                            const js = JSON.parse(stdout.trim());
                            assert.deepEqual(js,1);
+                           done();
+                       }
+                   });
+    });
+    it("evaluates an actual query on running server",function(done) {
+        child.exec(`${CMD} query getAB`,
+                   {},
+                   (code,stdout,stderr)=>{
+                       if (code!==null)
+                           done(new VError("`malaya query` fails: %j",code));
+                       else {
+                           const js = JSON.parse(stdout.trim());
+                           assert.deepEqual(js,[99]);
                            done();
                        }
                    });

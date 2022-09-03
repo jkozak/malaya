@@ -89,9 +89,9 @@ exports.findURL = function(p) {
         if (!ports.http)
             return null;
         else
-            return `http://localhost:${ports.http}/${p}`;
+            return `http://127.0.0.1:${ports.http}/${p}`;
     } else
-        return util.format("http://localhost:%d/%s",data.ports.http,p);
+        return util.format("http://127.0.0.1:%d/%s",data.ports.http,p);
 };
 
 if (require.main===module) {
