@@ -68,7 +68,7 @@ exports.install = (server,path,source,opts)=>{
                     client.onerror = err=>{
                         pl.update(['error',{port,err}]);
                     };
-                    pl.update(['connect',{port,query,cookies}]);
+                    pl.update(['connect',{port,query,cookies,realIP:req.headers['x-real-ip']}]);
                 } else {
                     client.close(); // is this right?
                 }
