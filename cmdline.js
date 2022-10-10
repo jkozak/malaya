@@ -367,6 +367,8 @@ subcommands.list.add_argument(
     }
 );
 
+addSubcommand('lock',{add_help:true});
+
 addSubcommand('parse',{add_help:true});
 subcommands.parse.add_argument(
     '-c','--stdout',
@@ -1349,6 +1351,15 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
         default:
             throw new Error(`unknown thing to list: ${args.what}`);
         }
+    };
+
+    subcommands.lock.exec = function() {
+        checkDirectoriesExist();
+        const lock = require("./lock.js");
+        const loop = ()=>setTimeout(loop,10000);
+        lock.lockSync(path.join(prevalenceDir,'lock'));
+        installSignalHandlers();
+        loop();
     };
 
     subcommands.parse.exec = function() {
