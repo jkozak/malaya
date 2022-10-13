@@ -1357,7 +1357,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
         checkDirectoriesExist();
         const lock = require("./lock.js");
         const loop = ()=>setTimeout(loop,10000);
-        lock.lockSync(path.join(prevalenceDir,'lock'));
+        lock.lockSync(path.join(prevalenceDir,'lock'),{locked:true});
         installSignalHandlers();
         loop();
     };
@@ -1796,15 +1796,19 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
             const    pWorld = path.join(prevalenceDir,'state','world');
             const   stWorld = fs.statSync(pWorld);
             const stJournal = fs.statSync(path.join(prevalenceDir,'state','journal'));
-            util.readFileLinesSync(pWorld,function(l) {
-                console.log("syshash: %s",util.deserialise(l));
-                return false;
-            });
-            console.log("server:\t running (pid %d) since %s",data.pid,moment(stLock.mtime).format(tfmt));
-            console.log("world:\t %d bytes, saved at %s",stWorld.size,  moment(stWorld.mtime).format(tfmt));
-            console.log("journal: %d bytes, updated %s",stJournal.size,moment(stJournal.mtime).format(tfmt));
-            for (const k in data.ports) {
-                console.log("%s:\t listening on *:%d",k,data.ports[k]);
+            if (data.locked) {
+                console.log("server:\t locked  (pid %d) since %s",data.pid,moment(stLock.mtime).format(tfmt));
+            } else {
+                util.readFileLinesSync(pWorld,function(l) {
+                    console.log("syshash: %s",util.deserialise(l));
+                    return false;
+                });
+                console.log("server:\t running (pid %d) since %s",data.pid,moment(stLock.mtime).format(tfmt));
+                console.log("world:\t %d bytes, saved at %s",stWorld.size,  moment(stWorld.mtime).format(tfmt));
+                console.log("journal: %d bytes, updated %s",stJournal.size,moment(stJournal.mtime).format(tfmt));
+                for (const k in data.ports) {
+                    console.log("%s:\t listening on *:%d",k,data.ports[k]);
+                }
             }
         }
     };
