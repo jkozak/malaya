@@ -14,7 +14,7 @@ const       path = require('path');
 const       temp = require('temp').track();
 const         fs = require('fs');
 
-describe("middleware",function() {
+describe("middleware XXX",function() {
     const       testDir = temp.mkdirSync();
     const prevalenceDir = path.join(testDir,'prevalence');
     before(function(done){
@@ -77,14 +77,54 @@ describe("middleware",function() {
         it("can set a reason for close",function(done){
             const ws = new WebSocket(`ws://127.0.0.1:${srv.address().port}/WebSocket?t=198`);
             ws.on('open',()=>{
-                ws.send(JSON.stringify(['bye',{code:4000,reason:"too tired"}]));
+                ws.send(JSON.stringify(['bye',{code:4100,reason:"too tired"}]));
             });
             ws.on('error',err=>{
                 done(err);
             });
             ws.on('close',(code,reason)=>{
-                assert.equal(code,4000);
+                assert.equal(code,4100);
                 assert.equal(reason,"too tired");
+                done();
+            });
+        });
+    });
+    describe("handles garbage gracefully",function() {
+        it("non JSON",function(done){
+            const ws = new WebSocket(`ws://127.0.0.1:${srv.address().port}/WebSocket?t=200`);
+            const nf = eng.chrjs.orderedFacts.length;
+            ws.on('open',()=>{
+                ws.send("garbage");
+            });
+            ws.on('error',err=>{
+                done(err);
+            });
+            ws.on('close',(code,reason)=>{ 
+                assert.equal(eng.chrjs.orderedFacts[nf][0],'connect');
+                assert.equal(eng.chrjs.orderedFacts[nf+1][0],'error');
+                assert.equal(eng.chrjs.orderedFacts[nf+1][1].err,"broken msg");
+                assert.equal(eng.chrjs.orderedFacts[nf+2][0],'disconnect');
+                assert.equal(code,middleware.WS_CLOSE.badJSON);
+                assert.equal(reason,"received: garbage");
+                done();
+            });
+        });
+        it("non fact",function(done){
+            const ws = new WebSocket(`ws://127.0.0.1:${srv.address().port}/WebSocket?t=201`);
+            const nf = eng.chrjs.orderedFacts.length;
+            ws.on('open',()=>{
+                ws.send("0");
+            });
+            ws.on('error',err=>{
+                done(err);
+            });
+            ws.on('close',(code,reason)=>{
+                assert.equal(eng.chrjs.orderedFacts[nf][0],'connect');
+                assert.equal(eng.chrjs.orderedFacts[nf+1][0],'error');
+                assert.equal(eng.chrjs.orderedFacts[nf+1][1].err,"broken msg");
+                assert.equal(eng.chrjs.orderedFacts[nf+2][0],'disconnect');
+                assert.equal(code,middleware.WS_CLOSE.badFact);
+                assert.equal(reason,"received: 0");
                 done();
             });
         });

@@ -23,6 +23,11 @@ const    WebSocket = require('ws');
 
 const objectFromEntries = kvs=>Object.assign({},...Array.from(kvs,([k,v])=>({[k]:v})));
 
+const WS_CLOSE = exports.WS_CLOSE = {
+    badJSON: 4000,
+    badFact: 4001
+};
+
 // +++ verifyClient see https://github.com/websockets/ws/issues/377#issuecomment-462152231 +++
 //                   (don't use the verifyClient parameter)
 
@@ -55,10 +60,17 @@ exports.install = (server,path,source,opts)=>{
                 if (port) {
                     pl.connections[port] = client;
                     client.onmessage = m=>{
-                        const js = JSON.parse(m.data);
-                        if (!Array.isArray(js) || js.length!==2)
-                            throw new Error(`bad ws msg: ${m.data}`);
-                        pl.update(js,[port]);
+                        try {
+                            const js = JSON.parse(m.data);
+                            if (!Array.isArray(js) || js.length!==2 || (typeof js[0])!=='string') {
+                                pl.update(['error',{port,err:"broken msg",msg:m.data}]);
+                                client.close(WS_CLOSE.badFact,`received: ${JSON.stringify(js)}`);
+                            } else
+                                pl.update(js,[port]);
+                        } catch {
+                            pl.update(['error',{port,err:"broken msg",msg:m.data}]);
+                            client.close(WS_CLOSE.badJSON,`received: ${m.data}`);
+                        }
                     };
                     client.onclose = ev=>{
                         pl.update(['disconnect',{port,code:ev.code,reason:ev.reason}]);
