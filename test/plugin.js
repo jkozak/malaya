@@ -865,7 +865,7 @@ module.exports = store {
     });
 });
 
-describe("notify XXX",function(){
+describe("notify",function(){
     this.bail(true);
     let   eng;
     let   app;
