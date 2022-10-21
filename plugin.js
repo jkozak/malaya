@@ -197,8 +197,9 @@ exports.require = name=>{
                 const pkg = require(`./plugins/${name}/package.json`);
                 require(`./plugins/${name}/${pkg.main}`).init(malaya);
             } catch (e2) {
-                //console.log(e2);
-                require(`malaya-plugin-${name}`).init(malaya);
+                // !!! this is terrible !!!
+                // !!! try npm app-root-path? !!!
+                require(`${process.cwd()}/node_modules/malaya-plugin-${name}`).init(malaya);
             }
         }
     }
