@@ -195,7 +195,7 @@ exports.install = (server,path,source,opts)=>{
     eng.start();
     if (opts.signalHandlers || opts.debug)
         installSignalHandlers();
-    eng.become('master');
+    eng.become(opts.mode||'master');
     server.on('close',()=>{
         eng.stopPrevalence(false,err=>{
             if (err)
