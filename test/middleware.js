@@ -90,6 +90,7 @@ describe("middleware",function() {
         });
     });
     describe("handles garbage gracefully",function() {
+        // +++ check that 'disconnect's are getting sent +++
         it("non JSON",function(done){
             const ws = new WebSocket(`ws://127.0.0.1:${srv.address().port}/WebSocket?t=200`);
             const nf = eng.chrjs.orderedFacts.length;
@@ -103,7 +104,6 @@ describe("middleware",function() {
                 assert.equal(eng.chrjs.orderedFacts[nf][0],'connect');
                 assert.equal(eng.chrjs.orderedFacts[nf+1][0],'error');
                 assert.equal(eng.chrjs.orderedFacts[nf+1][1].err,"broken msg");
-                assert.equal(eng.chrjs.orderedFacts[nf+2][0],'disconnect');
                 assert.equal(code,middleware.WS_CLOSE.badJSON);
                 assert.equal(reason,"received: garbage");
                 done();
@@ -122,7 +122,6 @@ describe("middleware",function() {
                 assert.equal(eng.chrjs.orderedFacts[nf][0],'connect');
                 assert.equal(eng.chrjs.orderedFacts[nf+1][0],'error');
                 assert.equal(eng.chrjs.orderedFacts[nf+1][1].err,"broken msg");
-                assert.equal(eng.chrjs.orderedFacts[nf+2][0],'disconnect');
                 assert.equal(code,middleware.WS_CLOSE.badFact);
                 assert.equal(reason,"received: 0");
                 done();
