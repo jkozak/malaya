@@ -940,6 +940,8 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
 
     subcommands.cat.exec = function() {
         args.pipeline = args.pipeline || [];
+        if (args.what==='updates')
+            args.pipeline = [['filter',"j[1]==='update'"],['map',"j[2]"],...args.pipeline];
         args.format = args.format!==null ?
             args.format :
             !process.stdout.isTTY ? 'full' :
@@ -986,6 +988,8 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                 return new whiskey.StringifyKStream();
             case 'pretty':
                 switch (what) {
+                case 'updates':
+                    return new whiskey.StringifyObjectStream(fmtFact);
                 case 'history':
                 case 'journal':
                     return new whiskey.StringifyObjectStream(
@@ -1116,6 +1120,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
             }
             break;
         }
+        case 'updates':
         case 'history': {
             history.getIndex(prevalenceDir,{fix:true}); // +++ don't need whole history, just current
             history.buildRunStream(

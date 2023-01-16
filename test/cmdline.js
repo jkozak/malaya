@@ -406,6 +406,32 @@ describe("cmd line interface [slow]",function() {
                        }
                    });
     });
+    it("queries updates",function(done){
+        child.exec(`${CMD} cat -f json updates`,
+                   {},
+                   (code,stdout,stderr)=>{
+                       if (code!==null)
+                           done(new VError("`malaya cat updates` fails: %j",code));
+                       else {
+                           const js = JSON.parse(stdout.trim());
+                           assert.deepEqual(js,['restart',{},{src:'restart'}]);
+                           done();
+                       }
+                   });
+    });
+    it("queries updates with additional pipeline element",function(done){
+        child.exec(`${CMD} cat -f json -F "j[0]==='restart'" updates`,
+                   {},
+                   (code,stdout,stderr)=>{
+                       if (code!==null)
+                           done(new VError("`malaya cat updates` fails: %j",code));
+                       else {
+                           const js = JSON.parse(stdout.trim());
+                           assert.deepEqual(js,['restart',{},{src:'restart'}]);
+                           done();
+                       }
+                   });
+    });
     it("queries history",function(done){
         child.exec(`${CMD} cat -f json -F "j[1]==='update' && j[2][0]==='restart'" history`,
                    {},
