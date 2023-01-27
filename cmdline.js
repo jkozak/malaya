@@ -692,7 +692,7 @@ subcommands.wait.add_argument(
     'state',
     {
         action:  'store',
-        choices: ['stop'],
+        choices: ['start','stop'],
         default: 'master',
         help:    "event to await"
     }
@@ -1928,6 +1928,21 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                     clearInterval(interval);
                 }
             },1000);
+            break;
+        }
+        case 'start': {
+            const t0 = Date.now();
+            const interval = setInterval(()=>{
+                const lock = require("./lock.js");
+                const data = lock.lockDataSync(path.join(prevalenceDir,'lock'));
+                if (data!==null && data.pid!==null) {
+                    clearInterval(interval);
+                } else if (args.timeout!==null && Date.now()-t0>args.timeout) {
+                    console.log(`wait stop: timeout`);
+                    clearInterval(interval);
+                }
+            },1000);
+            break;
         }
         }
     };
