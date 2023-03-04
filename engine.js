@@ -125,7 +125,9 @@ const Engine = exports.Engine = function(options) {
 
     compiler.debug     = options.debug;
 
-    eng.prevalenceDir  = options.prevalenceDir || path.join(options.dir,'.prevalence');
+    eng.prevalenceDir  = options.prevalenceDir ||
+        process.env.MALAYA_PREVALENCE_DIRECTORY ||
+        path.join(options.dir,'.prevalence');
     eng.syshash        = null;
     eng.sources        = {};
     eng.sandbox        = null;

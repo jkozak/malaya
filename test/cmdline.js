@@ -185,6 +185,7 @@ describe("cmdline",function() {
 describe("cmd line interface [slow]",function() {
     const   dir = temp.mkdirSync();
     const  pdir = path.join(dir,'.prevalence');
+    const p2dir = path.join(dir,'.prevalence2');
     const   CMD = `node malaya -p ${pdir}`;
     let  malaya;
     const ports = {};
@@ -228,6 +229,65 @@ describe("cmd line interface [slow]",function() {
                            done(new VError("`malaya init` didn't detect extant prevalence dir"));
                        else
                            done();
+                   });
+    });
+    it("ignores subsequent init if asked",function(done) {
+        this.timeout(10000);
+        child.exec(`${CMD} init --only-if-absent test/bl/restart.malaya`,
+                   {},
+                   (code,stdout,stderr)=>{
+                       if (code===null)
+                           done();
+                       else {
+                           done(new VError("`malaya init --only-if-absent` objected spuriously %s",code));
+                       }
+                   });
+    });
+    it("ignores subsequent init if asked, discarding stdin",function(done) {
+        this.timeout(10000);
+        child.exec(`echo wibble wibble|${CMD} init -d - --only-if-absent test/bl/restart.malaya`,
+                   {},
+                   (code,stdout,stderr)=>{
+                       if (code===null)
+                           done();
+                       else {
+                           done(new VError("`malaya init --only-if-absent` objected spuriously %s",code));
+                       }
+                   });
+    });
+    it("inits another prevalence store using env var ",function(done) {
+        this.timeout(10000);
+        child.exec(`MALAYA_PREVALENCE_DIRECTORY=${p2dir} node malaya init test/bl/query.malaya`,
+                   {},
+                   (code,stdout,stderr)=>{
+                       if (code!==null)
+                           done(new VError("`malaya init` failed code: %j",code));
+                       else if (!fs.statSync(p2dir).isDirectory())
+                           done(new VError("prevalence dir not created"));
+                       else
+                           done();
+                   });
+    });
+    it("rejects attempts to init twice via env var",function(done) {
+        this.timeout(10000);
+        child.exec(`MALAYA_PREVALENCE_DIRECTORY=${p2dir} node malaya init test/bl/restart.malaya`,
+                   {},
+                   (code,stdout,stderr)=>{
+                       if (code===null)
+                           done(new VError("`malaya init` didn't detect extant prevalence dir"));
+                       else
+                           done();
+                   });
+    });
+    it("ignores subsequent init via env var if asked",function(done) {
+        this.timeout(10000);
+        child.exec(`MALAYA_PREVALENCE_DIRECTORY=${p2dir} node malaya init --only-if-absent test/bl/restart.malaya`,
+                   {},
+                   (code,stdout,stderr)=>{
+                       if (code===null)
+                           done();
+                       else
+                           done(new VError("`malaya init -only-ifdef-absent` objected spuriously"));
                    });
     });
     let stashedHash;

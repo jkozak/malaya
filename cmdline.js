@@ -29,7 +29,7 @@ argparse.add_argument('-l','--long-lines',
 argparse.add_argument('-p','--prevalence-directory',
                      {
                          action:  'store',
-                         default: '.prevalence',
+                         default: process.env.MALAYA_PREVALENCE_DIRECTORY || '.prevalence',
                          help:    "prevalence directory",
                          metavar: 'dir'
                      });
@@ -309,6 +309,14 @@ subcommands.init.add_argument(
     {
         action:  'store',
         help:    "use the prevalence branch of named repo"
+    }
+);
+subcommands.init.add_argument(
+    '--only-if-absent',
+    {
+        action:  'store_true',
+        default: false,
+        help:    "don't error if directory exists"
     }
 );
 subcommands.init.add_argument(
@@ -1292,33 +1300,46 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
         args.source = args.source || findSource();
         if ((args.git || args.clone) && args.overwrite)
             throw new VError("git/clone and overwrite don't mix");
-        const eng = createEngine({
+        if (args.only_if_absent && args.overwrite)
+            throw new VError("only-if-absent and overwrite don't mix");
+        if (args.only_if_absent && fs.existsSync(prevalenceDir)) {
+            checkDirectoriesExist();
+            if (args.data==='-') {
+                const cb = findCallback();
+                // discard stdin
+                process.stdin.resume();
+                process.stdin.on('data',b=>{});
+                process.stdin.on('end',cb);
+            }
+        } else {
+            const eng = createEngine({
             businessLogic:path.resolve(args.source),
             git:          args.git,
             rngSeed:      seed,
             overwrite:    args.overwrite});
-        const  cb = findCallback();
-        if (args.clone)
-            eng.initFromRepo(args.clone);
-        else {
-            eng.init();
-            eng.start();
-            if (args.data) {
-                eng.startPrevalence(function(err1) {
-                    if (err1)
-                        cb(err1);
-                    else
-                        eng.loadData(args.data,function(err2) {
-                            if (err2)
-                                cb(err2);
-                            else {
-                                eng.chrjs.checkAllInvariants();
-                                eng.stopPrevalence(false,function(err3) {
-                                    cb(err3);
-                                });
-                            }
-                        });
-                });
+            const  cb = findCallback();
+            if (args.clone)
+                eng.initFromRepo(args.clone);
+            else {
+                eng.init();
+                eng.start();
+                if (args.data) {
+                    eng.startPrevalence(function(err1) {
+                        if (err1)
+                            cb(err1);
+                        else
+                            eng.loadData(args.data,function(err2) {
+                                if (err2)
+                                    cb(err2);
+                                else {
+                                    eng.chrjs.checkAllInvariants();
+                                    eng.stopPrevalence(false,function(err3) {
+                                        cb(err3);
+                                    });
+                                }
+                            });
+                    });
+                }
             }
         }
     };
