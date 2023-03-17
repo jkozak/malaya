@@ -32,7 +32,7 @@ exports.init = malaya=>{
         out([op,args],name,addr) {
             switch (op) {
             case 'ready':
-                notify.read();
+                notify.ready();
                 break;
             case 'watchdog':
                 notify.watchdog();
