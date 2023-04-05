@@ -1357,7 +1357,8 @@ Engine.prototype.administer = function(port) {
                         io.o.write(['error',{
                             query:  js[1].name,
                             args:   js[1].args,
-                            reason: e}]);
+                            code:   e.name,
+                            reason: e.message}]);
                     }
                 }
             } catch (e) {

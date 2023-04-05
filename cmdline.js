@@ -1454,7 +1454,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                             ws.end();
                         break;
                     case 'error':
-                        throw new Error(`failed: ${resp[1].reason}`);
+                        throw new Error(`failed ${resp[1].name}: ${resp[1].reason}`);
                     default:
                         throw new Error(`internal error: ${JSON.stringify(resp)}`);
                     }
