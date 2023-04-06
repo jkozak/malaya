@@ -1959,7 +1959,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                 if (data!==null && data.pid!==null) {
                     clearInterval(interval);
                 } else if (args.timeout!==null && Date.now()-t0>args.timeout) {
-                    console.log(`wait stop: timeout`);
+                    console.log(`wait start: timeout`);
                     clearInterval(interval);
                 }
             },1000);
