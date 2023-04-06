@@ -445,7 +445,7 @@ subcommands.query.add_argument(
     {
         action:  'store',
         default: [],
-        nargs:   '?',
+        nargs:   '*',
         type:    JSON.parse,
         help:    'args to query as a JSON array'
     }
@@ -1461,7 +1461,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                 } });
             const q = ()=>ws.write(JSON.stringify(['query',{
                 name: args.name,
-                args: args.argss[0]
+                args: args.argss
             }])+'\n');
             if (args.every)
                 setInterval(q,args.every*1000);
