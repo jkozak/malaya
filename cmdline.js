@@ -289,6 +289,20 @@ addSubcommand('fsck',{add_help:true});
 
 addSubcommand('init',{add_help:true});
 subcommands.init.add_argument(
+    '-c','--config',
+    {
+        action:  'append',
+        type:    s=>{
+            const p = s.split('=');
+            if (p.length!=2)
+                throw new Error(`bad config item: ${s}`);
+            return [p[0],JSON.parse(p[1])];
+        },
+        dest:    'config',
+        help:    "config fact k/v pair"
+    }
+);
+subcommands.init.add_argument(
     '-d','--data',
     {
         action:  'store',
@@ -1297,6 +1311,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
     subcommands.init.exec = function() {
         const crypto = require('crypto');
         const   seed = args.rngSeed===null ? crypto.randomInt(256*256*256*256) : args.rngSeed;
+        args.config = args.config || [];
         args.source = args.source || findSource();
         if ((args.git || args.clone) && args.overwrite)
             throw new VError("git/clone and overwrite don't mix");
@@ -1338,6 +1353,19 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                                     });
                                 }
                             });
+                    });
+                }
+                if (args.config.length>0) {
+                    eng.startPrevalence(function(err1) {
+                        if (err1)
+                            cb(err1);
+                        else {
+                            eng.update(['config',Object.fromEntries(args.config)]);
+                            eng.chrjs.checkAllInvariants();
+                            eng.stopPrevalence(false,function(err4) {
+                                cb(err4);
+                            });
+                        }
                     });
                 }
             }

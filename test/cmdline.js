@@ -187,6 +187,7 @@ describe("cmd line interface [slow]",function() {
     const  pdir = path.join(dir,'.prevalence');
     const p2dir = path.join(dir,'.prevalence2');
     const   CMD = `node malaya -p ${pdir}`;
+    const  CMD2 = `node malaya -p ${p2dir}`;
     let  malaya;
     const ports = {};
     //N.B. use "node malaya" in these tests (rather than ./malaya) to
@@ -287,7 +288,21 @@ describe("cmd line interface [slow]",function() {
                        if (code===null)
                            done();
                        else
-                           done(new VError("`malaya init -only-ifdef-absent` objected spuriously"));
+                           done(new VError("`malaya init --only-ifdef-absent` objected spuriously"));
+                   });
+    });
+    it("inits specifying config items",function(done) {
+        this.timeout(10000);
+        child.exec(`${CMD2} init --overwrite -c first=1 -c second=\\"two\\"`,
+                   {},
+                   (code,stdout,stderr)=>{
+                       if (code===null) {
+                           const world = util.deserialise(fs.readFileSync(path.join(p2dir,"state","world"),'utf8').split('\n')[1]);
+                           assert.deepEqual(world.chrjs.facts[1],
+                                            ['config',{first:1,second:"two"}] );
+                           done();
+                       } else
+                           done(new Error(`${stderr}`));
                    });
     });
     let stashedHash;

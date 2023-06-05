@@ -1,0 +1,6 @@
+module.exports = store{
+    ['a',{b:99}];
+    query getAB() [b where
+                   ['a',{b}] ];
+}
+    .plugin('restart');
