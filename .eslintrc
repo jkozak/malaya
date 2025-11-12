@@ -13,6 +13,9 @@
         "MalayaDate": "readable",
         "MalayaMath": "readable"
     },
+    "parserOptions": {
+        "ecmaVersion": "latest"
+    },
     "rules": {
         "no-console": 0,        // !!! review this later !!!
         "no-unused-vars": [2, {"vars": "all", "args": "none"}],
