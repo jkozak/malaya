@@ -24,6 +24,12 @@ module.exports = store {
           +['response',{id,statusCode:404},{dst:'http'}] );
     rule (-['request',{id,method:'GET',url:'/SomeCrap',...},{src:'http'}],
           +['response',{id,statusCode:200,body:'"SomeCrap"',headers:{'Content-Type':'application/json'}},{dst:'http'}] );
+    rule (-['request',{id,method:'POST',url:'/MoreCrap',body,...},{src:'http'}],
+          +['response',{id,statusCode:200,body,headers:{'Content-Type':'application/json'}},{dst:'http'}] );
+    rule (-['request',{id,method:'GET',url:'/StillCrap',cookies:{crap:"yesItIs"},...},{src:'http'}],
+          +['response',{id,statusCode:200},{dst:'http'}] );
+    rule (-['request',{id,method:'GET',url:'/StillCrap',...},{src:'http'}],
+          +['response',{id,statusCode:404},{dst:'http'}] );
 }
     .plugin('http',{port:0});
 `);
@@ -61,6 +67,29 @@ module.exports = store {
                 if (!err) {
                     assert.equal(res.status,200);
                     assert.equal(res.body,'SomeCrap');
+                }
+                done(err);
+            });
+    });
+    it("turns round body via a POST request",function(done) {
+        request
+            .post(`http://127.0.0.1:${pl.port}/MoreCrap`)
+            .send('"MoreCrap"')
+            .end((err,res)=>{
+                if (!err) {
+                    assert.equal(res.status,200);
+                    assert.equal(res.body,'MoreCrap');
+                }
+                done(err);
+            });
+    });
+    it("handles a cookie via a GET request",function(done) {
+        request
+            .get(`http://127.0.0.1:${pl.port}/StillCrap`)
+            .set('Cookie','crap=yesItIs')
+            .end((err,res)=>{
+                if (!err) {
+                    assert.equal(res.status,200);
                 }
                 done(err);
             });

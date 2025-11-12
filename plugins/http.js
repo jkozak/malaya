@@ -4,6 +4,35 @@ const  plugin = require('../plugin.js');
 
 const    http = require('http');
 
+// Parse a Cookie header string → { name: value, ... }
+function parseCookieHeader(header = '') {
+  const out = {};
+  if (!header) return out;
+
+  // Split on ; and trim pieces
+  const parts = header.split(';');
+  for (const part of parts) {
+    if (!part) continue;
+    const [rawK, ...rest] = part.split('=');
+    if (!rawK) continue;
+    const k = rawK.trim();
+    // cookie value may contain '=' characters; join them back
+    const vRaw = rest.join('=').trim();
+
+    // RFC allows quoted-values; strip quotes if present
+    const vStripped = vRaw.startsWith('"') && vRaw.endsWith('"')
+      ? vRaw.slice(1, -1)
+      : vRaw;
+
+    // Try URI-decode (many libs store URL-encoded values)
+    let v = vStripped;
+    try { v = decodeURIComponent(vStripped); } catch { /* keep as-is */ }
+
+    if (k) out[k] = v;
+  }
+  return out;
+}
+
 exports.http = plugin.add('http',class extends plugin.Plugin {
     constructor({port=3000}) {
         super();
@@ -27,10 +56,18 @@ exports.http = plugin.add('http',class extends plugin.Plugin {
         const pl = this;
         pl.using('port',pl.port);
         pl.server.on('request',(req,res)=>{
-            pl.reqs[++pl.index] = [req,res];
-            pl.update(['request',{
-                id:pl.index,
-                method:req.method,path:req.path,headers:req.headers,url:req.url} ]);
+            const id = ++pl.index;
+            let  buf = '';
+            pl.reqs[id] = [req,res];
+            req.on('data',chunk=>{buf+=chunk;});
+            req.on('end',()=>{
+                pl.update(['request',{
+                    id,
+                    method:req.method,headers:req.headers,url:req.url,
+                    cookies:parseCookieHeader(req.headers.cookie),
+                    body:buf
+                }]);
+            });
         });
     }
     stop(cb) {
