@@ -51,6 +51,7 @@ module.exports = store {
         assert(pl.server);                            // the plugin
         assert(pl.server.server);                     // the http server
         assert.equal(typeof pl.server.port,'number'); // we know its port
+        assert.notEqual(pl.server.port,0);            // and it's a real one
     });
     it("makes a connection",function(done) {
         plugin.get('dummy').reader.once('data',js=>{
@@ -62,6 +63,8 @@ module.exports = store {
     });
     it("receives and replies to a message",function(done) {
         client.on('message',msg=>{
+            const js = JSON.parse(msg.toString());
+            assert.deepEqual(js,['pong',{test:555}]);
             done();
         });
         client.send(JSON.stringify(['ping',{test:555}]));

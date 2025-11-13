@@ -13,7 +13,7 @@ function makeHttpPortName(req) {
 }
 
 exports.ws = plugin.add('ws',class extends plugin.Plugin {
-    constructor({server,port}) {
+    constructor({server,port,jsony=true}) {
         super();
         if ((server && port) || !(server || port))
             throw new Error("plugin ws: specify one of 'server' or 'port'");
@@ -21,6 +21,8 @@ exports.ws = plugin.add('ws',class extends plugin.Plugin {
         pl.port0       = port;
         pl.port        = null;
         pl.server      = server && pl.depends(server); // the http(s?) server plugin
+        pl.encode      = jsony ? JSON.stringify : x=>x;
+        pl.decode      = jsony ? JSON.parse     : x=>x;
         pl.wss         = null;
         pl.connections = {};
     }
@@ -38,7 +40,7 @@ exports.ws = plugin.add('ws',class extends plugin.Plugin {
             pl.update(['connect',{request:{url:req.url},port:portName}]);
             pl.connections[portName] = ws;
             ws.on('message',msg=>{
-                pl.update(JSON.parse(msg),[portName]);
+                pl.update(pl.decode(msg),[portName]);
             });
             ws.once('close',ws=>{
                 pl.update(['disconnect',{port:portName}]);
@@ -62,6 +64,6 @@ exports.ws = plugin.add('ws',class extends plugin.Plugin {
     out(js,name,addr) {
         const pl = this;
         // +++ disconnect instruction to plugin +++
-        pl.connections[addr].send(js);
+        pl.connections[addr].send(pl.encode(js));
     }
 });

@@ -86,7 +86,13 @@ exports.http = plugin.add('http',class extends plugin.Plugin {
             res.statusMessage = args.statusMessage;
             if (args.headers)
                 Object.keys(args.headers).forEach(k=>res.setHeader(k,args.headers[k]));
-            if (args.body)
+            if (typeof args.body==='object') {
+                if (args.body.hash) 
+                    // !!! would be better as a stream+pipe !!!
+                    res.write(pl.engine.hashes.getSync(args.body.hash));
+                else
+                    throw new Error("don't know how to send as a body",args.body);    
+            } else if (args.body)
                 res.write(args.body);
             res.end();
             break;
