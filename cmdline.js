@@ -278,6 +278,16 @@ subcommands.exec.add_argument(
     }
 );
 subcommands.exec.add_argument(
+    '--no-web-port',
+    {
+        action:  'store_const',
+        const:   null,
+        dest:    'webPort',
+        help:    "no runtime http port",
+        metavar: "port"
+    }
+);
+subcommands.exec.add_argument(
     'source',
     {
         action: 'store',
@@ -613,6 +623,16 @@ subcommands.run.add_argument(
         metavar: "port"
     });
 subcommands.run.add_argument(
+    '--no-web-port',
+    {
+        action:  'store_const',
+        const:   null,
+        dest:    'webPort',
+        help:    "no runtime http port",
+        metavar: "port"
+    }
+);
+subcommands.run.add_argument(
     '-u','--master-url',
     {
         action:  'store',
@@ -645,6 +665,15 @@ addSubcommand('save',{add_help:true});
 addSubcommand('status',{add_help:true});
 
 addSubcommand('tac',{add_help:true});
+subcommands.tac.add_argument(
+    '--add-fact',
+    {
+        action:  'store_true',
+        default: false,
+        dest:    'addFact',
+        help:    "add ['file',{name,hash}] to the store"
+    }
+);
 subcommands.tac.add_argument(
     'file',
     {
@@ -1870,9 +1899,14 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
     subcommands.tac.exec = function() {
         const   hash = require('./hash.js');
         const hashes = hash(util.hashAlgorithm).makeStore(path.join(prevalenceDir,'hashes'));
-        if (args.file)
-            process.stdout.write(hashes.putFileSync(args.file));
-        else {
+        if (args.file) {
+            if (args.addFact)
+                throw new Error('NYI');
+            const hash = hashes.putFileSync(args.file);
+            process.stdout.write(hash);
+        } else {
+            if (args.addFact)
+                throw new Error("can't add fact for stdin source");
             const ws = hashes.createWriteStream();
             ws.on('stored',h=>process.stdout.write(h));
             process.stdin.pipe(ws);
