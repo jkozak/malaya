@@ -1,4 +1,4 @@
-// compiler-based CHR for JS
+// scompiler-based CHR for JS
 // optimisations presume 'tab' format: [<table>,{<column>:<value>,...},...] is used.
 //
 //N.B. this file parses itself: top-level functions whose names start with
@@ -23,7 +23,7 @@ const  plugin = require('./plugin.js');
 const templates       = {};
 const template_marker = 'TEMPLATE_';
 
-const b = (function() {
+const b =  (function() {
     const b = recast.types.builders;
     // +++ add `attrs` to more things if needed +++
     return Object.assign({},b,{
@@ -320,6 +320,7 @@ var chrGlobalVars = {           // only javascript globals allowed in CHRjs
     console:    {ext:true,mutable:false,type:'function'},
     __dirname:  {ext:true,mutable:false,type:'string'},
     Error:      {ext:true,mutable:false,type:'function'},
+    RegExp:     {ext:true,mutable:false,type:'function'},
 };
 if (util.env==='test')
     chrGlobalVars = Object.assign(chrGlobalVars,
@@ -687,7 +688,10 @@ function annotateParse2(chrjs) {        // poor man's attribute grammar - pass t
 
 function mangleIdentifier(name) {
     assert.strictEqual(typeof name,'string');
-    return name+'_';
+    if (name[0]==='#')
+        return name.slice(1);
+    else
+        return name+'_';
 }
 function unmangleIdentifier(id) {
     return (id.attrs && id.attrs.was) ? id.attrs.was : id.name; // allow for genned ids without attrs

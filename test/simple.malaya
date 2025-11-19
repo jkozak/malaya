@@ -366,7 +366,6 @@ describe("output function",function(){
     });
 });
 
-
 describe("invariant statement",function(){
     it("compiles unflinchingly",function(){
         var st = store {
@@ -423,6 +422,54 @@ describe("invariant statement",function(){
         };
         assert.throws(function(){st.checkAllInvariants();});
     });
+});
+
+describe("regexps",function(){
+    it("matches simplest case - minimal",function(){
+        var st = store {
+            rule (-['a',/123./]);
+        };
+        st.add(['a','1234']);
+        assert.equal(st.size,0);
+    });
+    it("matches simplest case - excess",function(){
+        var st = store {
+            rule (-['a',/123./]);
+        };
+        st.add(['a','1234r']);
+        assert.equal(st.size,0);
+    });
+    it("rejects simplest case I",function(){
+        var st = store {
+            rule (-['a',/123./]);
+        };
+        st.add(['a','123']);
+        assert.equal(st.size,1);
+    });
+    it("rejects simplest case II",function(){
+        var st = store {
+            rule (-['a',/123./]);
+        };
+        st.add(['a','123']);
+        assert.equal(st.size,1);
+    });
+    it("matches and captures",function(){
+        var st = store {
+            rule (-['a',/(?<p>[0-9]+)::(?<q>[0-9]+)/],
+                  +['b',[p,q]] );
+        };
+        st.add(['a','123::456']);
+        assert.equal(st.size,1);
+        assert.deepEqual(st._private.orderedFacts[0],['b',['123','456']])
+    });
+//    it("matches and captures and matches",function(){
+//        var st = store {
+//            rule (-['a',/(?<p>[0-9]+)::(?<p>[0-9]+)/] );
+//        };
+//        st.add(['a','123::123']);
+//        assert.equal(st.size,1);
+//    });
+
 });
 
 describe("regression tests",function() {

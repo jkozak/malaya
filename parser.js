@@ -1,7 +1,8 @@
 "use strict";
 
-const  acorn = require("acorn");
-const recast = require('recast');
+const   acorn = require("acorn");
+const  recast = require('recast');
+const XRegExp = require('xregexp');
 
 const acornParser = acorn.Parser.extend(
     require('./acorn-plugin.js')
@@ -30,7 +31,7 @@ const visit = exports.visit = (function() {
         .field('items',[def('ItemExpression')]);
     def("ItemExpression")
         .bases('Expression')
-        .build('op','expr')
+        .build('op','expr','t','rank')
         .field('op',   or('+','-','M','=','?'))
         .field('expr', def('Expression'))
         .field('t',    or(def('Identifier'),null))
@@ -86,9 +87,80 @@ const namedTypes = exports.namedTypes = require('recast').types.namedTypes;
 
 const parse = (s,opts)=>acornParser.parse(s,{ecmaVersion:2022}); // ignore opts
 
+const b =  (function(attrs) {
+    const b = recast.types.builders;
+    // +++ add `attrs` to more things if needed +++
+    return Object.assign({},b,{
+        identifier:     function(id)      {return Object.assign({attrs},b.identifier(id));},
+        itemExpression: function(o,e,t,r) {return Object.assign({attrs},b.itemExpression(o,e,t,r));}
+    });
+})({});
+
 exports.parse = LEGACY ? (s,opts)=>{
     const prog = parse(s,opts);
-    const    b = recast.types.builders;
+    visit(prog,{
+        regexps: [],
+        visitRuleStatement(path) {
+            this.traverse(path);
+        },
+        visitItemExpression(path) {
+            if (this.regexps.length!==0) throw new Error('SNO');
+            if ('M-'.includes(path.node.op)) {
+                this.regexps.length = 0;
+                this.traverse(path);
+                for (let i=0;i<this.regexps.length;i++) {
+                    const   r = this.regexps[i];
+                    const   n = `#rgx_${i}`;
+                    const   m = `#rgx_match_${i}`;
+                    const  xr = new XRegExp(r.regex.pattern,r.regex.flags);
+                    const cns = xr.xregexp.captureNames
+                    if (cns)
+                        for (let j=cns.length-1;j>=0;j--) {
+                            const name = cns[j];
+                            path.insertAfter(b.itemExpression('=',
+                                b.assignmentExpression('=',
+                                                       b.identifier(name),
+                                                       b.memberExpression(b.identifier(m),
+                                                                          b.literal(j+1),
+                                                                          true ) ),
+                                null,null));
+                        }                 
+                    path.insertAfter(b.itemExpression('?',b.identifier(m),null,null));
+                    // +++ remove the capture names from the source regexp +++
+                    // +++ s/\(\?<.*>)/(?/ - but better +++
+                    // +++ really need a proper regwxp parser +++ 
+                    path.insertAfter(b.itemExpression('=',
+                        b.assignmentExpression(
+                            '=',
+                            b.identifier(m),
+                            b.callExpression(
+                                b.memberExpression(
+                                    b.identifier(n),
+                                    b.identifier('match'),
+                                    false),
+                                [b.newExpression(
+                                    b.identifier('RegExp'),
+                                    [b.literal(r.regex.pattern),b.literal(r.regex.flags)] )]) ),
+                        null,null));
+                }
+                this.regexps.length = 0;
+            } else
+                return false;
+        },
+        visitProperty(path) {
+            this.traverse(path);
+        },
+        visitLiteral(path) {
+            if (path.node.regex) {
+                const id = b.identifier(`#rgx_${this.regexps.length}`);
+                // +++ remove name tag from regexps +++
+                // +++ moan about use of g flag +++
+                this.regexps.push(path.node);
+                path.replace(id);
+            }
+            return false;
+        }
+    });
     visit(prog,{
         context: [],
         visitObjectExpression(path) {
