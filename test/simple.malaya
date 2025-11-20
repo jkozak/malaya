@@ -469,7 +469,18 @@ describe("regexps",function(){
 //        st.add(['a','123::123']);
 //        assert.equal(st.size,1);
 //    });
+});
 
+describe("template strings",function(){
+    it("interpolates output strings",function(){
+        var st = store {
+    	rule (-['a',{a,b}],
+    		  +['b',{text:`${a}  ${b}`}] );
+        };
+        st.add(['a',{a:17,b:89}]);
+        assert.equal(st.size,1);
+        assert.deepEqual(st._private.orderedFacts[0],['b',{text:"17  89"}])
+    });
 });
 
 describe("regression tests",function() {

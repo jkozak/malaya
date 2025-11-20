@@ -163,6 +163,23 @@ exports.parse = LEGACY ? (s,opts)=>{
     });
     visit(prog,{
         context: [],
+        visitTemplateLiteral(path) {     // template literals expanded here
+            if (path.node.quasis.length!==path.node.expressions.length+1)
+                throw new Error('SNO');
+            const n = path.node.expressions.length;
+            let sub = b.literal(path.node.quasis[n].value.raw);
+            for (let i=n-1;i>=0;i--) {
+                sub = b.binaryExpression(
+                    '+',
+                    b.literal(path.node.quasis[i].value.raw),
+                    b.binaryExpression(
+                        '+',
+                        path.node.expressions[i],
+                        sub));
+            }
+            path.replace(sub);
+            return false;
+        },
         visitObjectExpression(path) {
             this.context.push('object');
             this.traverse(path);
