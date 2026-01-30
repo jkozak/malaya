@@ -45,6 +45,20 @@ argparse.add_argument('-v','--verbose',
                          default: 1,
                          help:    "be more verbose"
                      });
+argparse.add_argument('-T','--tui',
+                     {
+                         action:  'store_true',
+                         default: false,
+                         help:    "enable terminal user interface"
+                     });
+argparse.add_argument('-S','--scrollback',
+                     {
+                         action:  'store',
+                         type:    parseInt,
+                         default: 10000,
+                         help:    "TUI scrollback buffer size (lines)",
+                         metavar: 'lines'
+                     });
 argparse.add_argument('-P','--plugin',
                      {
                          action:  'append',
@@ -792,6 +806,15 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
     exports.verbosity = args.verbose-args.quiet;
     exports.args      = args;
 
+    let tui = null;
+    if (args.tui) {
+        if (!process.stdout.isTTY)
+            throw new util.Fail("--tui requires a terminal");
+        const TUI = require('./tui.js');
+        tui = new TUI({long: args.long, maxLines: args.scrollback});
+    }
+    exports.tui = tui;
+
     if (args.plugin && args.plugin.length>0)
         throw new util.Fail("plugins must be specified as the first arguments");
 
@@ -825,18 +848,21 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
     const installSignalHandlers = function(eng) {
         /* eslint no-process-exit:0 */
         process.on('SIGINT',function() {
+            if (tui) tui.stop();
             process.stderr.write(' interrupt\n');
             if (eng)
                 eng.stopPrevalence(false,function(){eng.stop();});
             process.exit(1);
         });
         process.on('SIGQUIT',function() {
+            if (tui) tui.stop();
             process.stderr.write(' quit\n');
             if (eng)
                 eng.stopPrevalence(true,function(){eng.stop();});
             process.exit(1);
         });
         process.on('SIGTERM',function() {
+            if (tui) tui.stop();
             process.stderr.write(' term\n');
             process.exit(1);
         });
@@ -930,7 +956,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
     };
 
     let     traceOff = null;
-    const traceChrjs = (chrjs,source)=>{traceOff=tracing.trace(chrjs,source,{long:args.long})};
+    const traceChrjs = (chrjs,source,opts={})=>{traceOff=tracing.trace(chrjs,source,{long:args.long,...opts})};
 
     const _createEngine = opts.createEngine || function(options) {
         const engine = require('./engine.js');
@@ -1810,6 +1836,13 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                           privateTestUrls: args.privateTestUrls};
         const      eng = createEngine(options);
         const    ports = {};
+
+        // Start TUI if enabled
+        if (tui) {
+            tui.setEngine(eng);
+            tui.start();
+        }
+
         eng._bindGlobals();
         eng.on('listen',function(protocol,port) {
             console.log("%s listening on *:%s",protocol,port);
@@ -1838,6 +1871,7 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                 fs.writeFileSync(path.join(eng.prevalenceDir,'ports'),JSON.stringify(ports));
         });
         process.on('exit',()=>{
+            if (tui) tui.stop();
             fs.unlinkSync(path.join(eng.prevalenceDir,'ports'));
         });
         eng.on('saved',function(syshash,worldHash,journalHash) {
@@ -1849,7 +1883,11 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
         eng.start();
         if (args.debug) {
             sanityCheckChrjsAdds(eng.chrjs,source);
-            traceChrjs(eng.chrjs,source);
+            if (tui) {
+                traceChrjs(eng.chrjs,source,{print:tui.createPrintFunction()});
+            } else {
+                traceChrjs(eng.chrjs,source);
+            }
             //N.B. set up out tracking here if desired.  Currently we
             // do this by pairing adds and dels in tracing.js.  This
             // is quite a robust heuristic, but maybe Do It Properly?
