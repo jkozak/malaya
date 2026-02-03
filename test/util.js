@@ -103,6 +103,36 @@ describe("string utils",function() {
     });
 });
 
+describe("nCalls",function(){
+    it("fires immediately for zero then fails",function(){
+        let   ok = false;
+        const nc = util.nCalls(0,()=>{ok=true;});
+        assert(ok);
+        assert.throws(function(){nc();});
+        assert.throws(function(){nc();});
+    });
+    it("fires first time for one then fails",function(){
+        let    n = 0;
+        const nc = util.nCalls(1,()=>{n++;});
+        assert.equal(n,0);
+        nc();
+        assert.equal(n,1);
+        assert.throws(function(){nc();});
+        assert.throws(function(){nc();});
+        assert.equal(n,1);
+    });
+    it("fires second time for two then fails",function(){
+        let    n = 0;
+        const nc = util.nCalls(2,()=>{n++;});
+        assert.equal(n,0);
+        nc();
+        nc();
+        assert.equal(n,1);
+        assert.throws(function(){nc();});
+        assert.equal(n,1);
+    });
+});
+
 describe("eval",function(){
     it("does sums",function(){
         assert.equal(util.eval("2+2"),4);

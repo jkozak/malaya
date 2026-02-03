@@ -400,7 +400,7 @@ describe("Engine",function() {
             const   dir = temp.mkdirSync();
             const   eng = new Engine({dir:dir});
             const    hs = [];
-            const done2 = _.after(2,done);
+            const done2 = util.nCalls(2,done);
             eng.init();
             eng.start();
             eng.startPrevalence(function(e1) {
@@ -521,7 +521,7 @@ describe("Engine",function() {
             const io3 = createIO();
             let     n = 0;
             let  err1 = null;
-            const dun = _.after(3,()=>eng.stopPrevalence(true,(e)=>{
+            const dun = util.nCalls(3,()=>eng.stopPrevalence(true,(e)=>{
                 if (!err1)
                     assert.strictEqual(n,3);
                 done(err1);

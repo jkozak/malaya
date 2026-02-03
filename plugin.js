@@ -293,20 +293,12 @@ exports.instantiateReadStream = s=>{   // JSON -> chars
 };
 
 exports.start = (cb=()=>{})=>{
-    if (plugins.length===0)
-        cb();
-    else {
-        const done = _.after(plugins.length,cb);
-        plugins.forEach(pl=>pl._start(done));
-    }
+    const done = util.nCalls(plugins.length,cb);
+    plugins.forEach(pl=>pl._start(done));
 };
 exports.stop = (cb=()=>{})=>{
-    if (plugins.length===0)
-        cb();
-    else {                      // stop plugins in reverse order to starting them
-        const done = _.after(plugins.length,cb);
-        plugins.slice().reverse().forEach(pl=>pl._stop(done));
-    }
+    const done = util.nCalls(plugins.length,cb);
+    plugins.slice().reverse().forEach(pl=>pl._stop(done));
 };
 
 function setStandardClasses() {

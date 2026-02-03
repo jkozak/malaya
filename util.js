@@ -171,11 +171,27 @@ exports.readToEnd = (stream,cb)=>{
         bufs.push(chunk);
     });
     stream.on('end',err=>{
-        //console.log("*** end");
         cb(err,Buffer.concat(bufs).toString());
     });
 };
 
+exports.nCalls = (n,fn)=>{
+    if (n===0) {
+        fn();
+        return ()=>{
+            throw new Error(`should not be called`);
+        };
+    }
+    else {
+        let i = 0;
+        return ()=>{
+            if (i>=n)
+                throw new Error(`called more than ${n} times`);
+            else if (++i===n)
+                fn();
+        };
+    }
+}; 
 
 // environmental stuff
 

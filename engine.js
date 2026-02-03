@@ -859,7 +859,7 @@ Engine.prototype._become = function(mode,cb) {
         case 'idle': {
             switch (eng.mode) {
             case 'master': {
-                const done = _.after(1+1+eng.options.endpoints.length,err=>{
+                const done = util.nCalls(1+1+eng.options.endpoints.length,err=>{
                     if (err)
                         cb(err);
                     else
@@ -951,7 +951,7 @@ Engine.prototype.journalise = function(type,data,cb) {
     if (eng.mode==='idle' && eng.journal===null)
         console.log("discarded idle log item: %j",data);
     else {
-        const done = _.after(2,function() {
+        const done = util.nCalls(2,function() {
             if (err)
                 eng.breaks(new VError(err,"journal write fails: "));
             if (cb) cb(err);
@@ -974,11 +974,10 @@ Engine.prototype.broadcast = function(js,type,cb) {
     cb   = cb || function(){};
     const   eng = this;
     const ports = eng.connIndex[type] || [];
-    const  done = _.after(1+ports.length,cb);
+    const  done = util.nCalls(ports.length,cb);
     ports.forEach(function(port) {
         eng.conns[port].o.write(js,done);
     });
-    done();                     // for when ports.length===0 as _.after won't callback then
 };
 
 Engine.prototype.out = function(dest,json) {
@@ -1036,7 +1035,7 @@ Engine.prototype.out = function(dest,json) {
 Engine.prototype.update = function(data,cb) {
     const   eng = this;
     let     res;
-    const done2 = _.after(2,function() {
+    const done2 = util.nCalls(2,function() {
         eng._nextTimestamp = null;
         eng.active         = null;
         if (cb) cb(null,res);
@@ -1110,7 +1109,7 @@ Engine.prototype.replicateFile = function(filename,url,opts,callback) {
 Engine.prototype.initReplication = function(url,init,callback) {
     const     eng = this;
     let       err = null;
-    const gotFile = _.after(2,function() {
+    const gotFile = util.nCalls(2,function() {
         callback(err);
     });
     eng.replicateFile(path.join(eng.prevalenceDir,'state','world'),url+'replication/state/world',{},function(e) {
