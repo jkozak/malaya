@@ -57,7 +57,7 @@ exports.ws = plugin.add('ws',class extends plugin.Plugin {
             super.stop(cb);
         });
         Object.values(pl.connections).forEach(ws=>ws.close());
-        pl.wss.close(cb);
+        pl.wss.close();
         pl.wss  = null;
         pl.port = null;
     }

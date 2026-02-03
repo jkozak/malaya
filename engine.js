@@ -284,7 +284,8 @@ Engine.prototype.stopPrevalence = function(quick,cb) {
             if (cb) cb();
         });
         journal.end();
-    }
+    } else if (cb)
+        cb();
 };
 
 Engine.prototype.stop = function(unlock,cb) {
