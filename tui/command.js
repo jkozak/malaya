@@ -160,11 +160,14 @@ class CommandPopup {
             displayCursorPos = this.cursorPos - start;
         }
 
+        // Pad to fill the line with background color
+        const contentLen = 1 + displayInput.length;  // prompt + input
+        const padding = ' '.repeat(Math.max(0, this.width - contentLen));
+
         stream.write(
             ansi.moveCursor(this.row, 1) +
             ansi.clearLine() +
-            chalk.yellow(prompt) +
-            displayInput +
+            chalk.bgBlue.white(prompt + displayInput + padding) +
             ansi.moveCursor(this.row, 2 + displayCursorPos) +
             ansi.showCursor()
         );

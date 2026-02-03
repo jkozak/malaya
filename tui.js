@@ -31,6 +31,26 @@ class TUI {
 
         // Formatting options
         this._long = options.long || false;
+
+        // Custom commands and keybindings from plugins
+        this._customCommands = {};
+        this._customKeys = {};
+    }
+
+    registerCommand(name, handler) {
+        this._customCommands[name] = handler;
+    }
+
+    registerKey(key, handler) {
+        this._customKeys[key] = handler;
+    }
+
+    getCustomCommand(name) {
+        return this._customCommands[name];
+    }
+
+    getCustomKey(key) {
+        return this._customKeys[key];
     }
 
     setEngine(engine) {
@@ -223,6 +243,17 @@ class TUI {
         const parts = cmd.split(/\s+/);
         const name = parts[0];
         const args = parts.slice(1);
+
+        // Check for custom command first
+        const customCmd = this.getCustomCommand(name);
+        if (customCmd) {
+            try {
+                customCmd(args);
+            } catch (e) {
+                this.appendOutput(chalk.red(`Command error: ${e.message}`));
+            }
+            return;
+        }
 
         switch (name) {
         case 'q':

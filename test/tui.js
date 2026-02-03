@@ -385,5 +385,23 @@ describe("TUI", function() {
             tui._hideHelp();
             assert.strictEqual(tui.isHelpVisible(), false);
         });
+
+        it("registers custom commands", function() {
+            const tui = new TUI();
+            let called = false;
+            tui.registerCommand('test', (args) => { called = true; });
+            assert.ok(tui.getCustomCommand('test'));
+            tui.getCustomCommand('test')([]);
+            assert.strictEqual(called, true);
+        });
+
+        it("registers custom keybindings", function() {
+            const tui = new TUI();
+            let called = false;
+            tui.registerKey('x', () => { called = true; });
+            assert.ok(tui.getCustomKey('x'));
+            tui.getCustomKey('x')();
+            assert.strictEqual(called, true);
+        });
     });
 });

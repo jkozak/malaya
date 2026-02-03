@@ -181,6 +181,18 @@ class KeyBindings {
     }
 
     _handleNormalChar(ch) {
+        // Check for custom keybinding first
+        const customKey = this.tui.getCustomKey(ch);
+        if (customKey) {
+            this._clearPending();
+            try {
+                customKey();
+            } catch (e) {
+                this.tui.appendOutput(`Key error: ${e.message}`);
+            }
+            return;
+        }
+
         switch (ch) {
         case 'q':
             this.tui.quit();
@@ -197,6 +209,10 @@ class KeyBindings {
         case 'g':
             // Start pending sequence for gg/ge
             this._setPending('g');
+            break;
+
+        case 'h':
+            this.tui._showHelp();
             break;
 
         case ':':
