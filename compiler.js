@@ -35,6 +35,7 @@ let currentFilename = null;
 
 function TEMPLATE_store() {
     (function() {
+        var   STASH = '%%STASH';
         var   store = this;
         var plugins = {};
         var  assert = require('assert');
@@ -139,8 +140,7 @@ function TEMPLATE_store() {
             },
 
             get __file__() {return __file__;},
-
-
+            
             plugin: function(plugin,name,opts) {
                 malayaPlugin.require(plugin);
                 const pl = malayaPlugin.instantiate(plugin,name,opts);
@@ -149,6 +149,40 @@ function TEMPLATE_store() {
                     throw new Error("plugin name duplicated: "+pl.name);
                 plugins[pl.name] = pl;
                 return obj;     // can be chained
+            },
+            stash: function(data,name) {
+                const     ti = t++;
+                const t_fact = ''+ti; 
+                const   dels = [];
+                // !!! this is a bit squalid !!!
+                // !!! better to just do a store.update !!!
+                // !!! and have a std prelude to contain !!!
+                // !!! rules to get rid of old versions !!! 
+                if (index[STASH]===undefined)
+                    index[STASH] = [];
+                index[STASH].forEach(tj=>{
+                    if (facts[tj][2].owner==name) {
+                        delete facts[tj];
+                        dels.push(tj);
+                    }
+                });
+                index[STASH] = index[STASH].filter(t=>!dels.includes[t]);
+                facts[t_fact] = [STASH,data,{owner:name}];
+                index[STASH].push(ti); 
+            },
+            unstash: function(name,keep) {
+                let ans;
+                if (index[STASH])
+                    index[STASH].forEach(t=>{
+                        if (facts[t][2].owner===name) {
+                            ans = facts[t][1];
+                            if (!keep) {
+                                index[STASH].splice(_.indexOf(index[STASH],t,true),1);
+                                delete facts[t];
+                            }
+                        }
+                });
+                return ans;
             },
 
             // business logic protocol
@@ -187,6 +221,7 @@ function TEMPLATE_store() {
                 get orderedFacts() {
                     return obj.orderedFacts;
                 },
+                STASH: STASH,
                 facts: function(sel){
                     switch (typeof sel) {
                     case 'string':

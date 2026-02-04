@@ -673,6 +673,39 @@ describe("fail statement",function(){
     });
 });
 
+describe("stash/unstash XXX",function(){
+    let st;
+    let STASH;
+    it("create a store",function() {
+        var js = compile("store {};");
+        st = eval(recast.print(js).code);
+        assert.deepEqual(st.orderedFacts,[]);
+        STASH = st._private.STASH;
+    });
+    it("stashes into it",function(){
+        st.stash({p:1,q:2},'binky');
+        assert.deepEqual(st.orderedFacts,[[STASH,{p:1,q:2},{owner:'binky'}]]);
+    });
+    it("unstashes from it",function(){
+        const stash = st.unstash('binky');
+        assert.deepEqual(st.orderedFacts,[]);
+        assert.deepEqual(stash,{p:1,q:2});
+    });
+    it("stashes into it again",function(){
+        st.stash({p:3,q:4},'binky');
+        assert.deepEqual(st.orderedFacts,[[STASH,{p:3,q:4},{owner:'binky'}]]);
+    });
+    it("unstashes from it",function(){
+        const stash = st.unstash('binky',true);
+        assert.deepEqual(st.orderedFacts,[[STASH,{p:3,q:4},{owner:'binky'}]]);
+        assert.deepEqual(stash,{p:3,q:4});
+    });
+    it("stashes into it again,replacing the existing one",function(){
+        st.stash({p:5,q:6},'binky');
+        assert.deepEqual(st.orderedFacts,[[STASH,{p:5,q:6},{owner:'binky'}]]);
+    });
+});
+
 describe("compile hook",function() {
     var tdir = temp.mkdirSync();
     it("should be run when a chrjs file is compiled",function() {

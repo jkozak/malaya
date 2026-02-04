@@ -841,7 +841,12 @@ Engine.prototype._become = function(mode,cb) {
                         if (err2)
                             cb(err2);
                         else
-                            plugin.start(cb);
+                            plugin.unstash(e=>{
+                                if (e)
+                                    cb(e);
+                                else
+                                    plugin.start(cb);
+                            });
                     });
             });
             break;
@@ -869,7 +874,12 @@ Engine.prototype._become = function(mode,cb) {
                     eng.http.close();
                 eng.closeAllConnections('replication',done);
                 eng.options.endpoints.forEach(ep=>eng.closeAllConnections(ep,done));
-                plugin.stop(done);
+                plugin.stop(e=>{
+                    if (e)
+                        done(e);
+                    else
+                        plugin.stash(done);
+                });
                 break;
             }
             case 'slave':

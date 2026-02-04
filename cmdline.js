@@ -851,17 +851,13 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
             if (tui) tui.stop();
             process.stderr.write(' interrupt\n');
             if (eng)
-                eng.stopPrevalence(false,function(){
-                    eng.stop(true,()=>process.exit(1));
-                });
+                eng.stop(true,()=>process.exit(1));
         });
         process.on('SIGQUIT',function() {
             if (tui) tui.stop();
             process.stderr.write(' quit\n');
             if (eng)
-                eng.stopPrevalence(true,function(){
-                    eng.stop(true,()=>process.exit(1));
-                });
+                eng.stop(true,()=>process.exit(1));
         });
         process.on('SIGTERM',function() {
             if (tui) tui.stop();

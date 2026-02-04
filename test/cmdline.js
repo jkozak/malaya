@@ -29,7 +29,7 @@ const fillDirWithSomeData = function(dir,data,cb) {
 };
 
 describe("utility functions for this test file",function() {
-    describe('fillDirWithSomeData XXX',function() {
+    describe('fillDirWithSomeData',function() {
         it("does what it says on the tin",function(done) {
             const dir = temp.mkdirSync();
             fillDirWithSomeData(dir,[['pp',{}],['qq',{}]],function(err0) {

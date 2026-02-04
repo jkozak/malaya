@@ -81,7 +81,15 @@ class Plugin {
             throw new Error(`using: don't know about resource type: ${type}`);
         }
     }
-}
+    stash() {}         // return value to be stashed or undefined for no stashing
+    unstash(data) {}   // not called if data would be undefined
+    wantStash(){
+        const   pl = this;
+        const data = pl.stash();
+        if (data!==undefined)
+            pl.chrjs.stash(data,pl.name);
+    }
+} 
 exports.Plugin = Plugin;
 
 class StreamPlugin extends Plugin {
@@ -292,6 +300,15 @@ exports.instantiateReadStream = s=>{   // JSON -> chars
         return new s();
 };
 
+exports.unstash = (cb=()=>{})=>{
+    const done = util.nCalls(plugins.length,cb);
+    plugins.forEach(pl=>{
+        const data = pl.chrjs.unstash(pl.name,true);
+        if (data!==undefined)
+            pl.unstash(data);
+        done();
+    });
+};
 exports.start = (cb=()=>{})=>{
     const done = util.nCalls(plugins.length,cb);
     plugins.forEach(pl=>pl._start(done));
@@ -299,6 +316,15 @@ exports.start = (cb=()=>{})=>{
 exports.stop = (cb=()=>{})=>{
     const done = util.nCalls(plugins.length,cb);
     plugins.slice().reverse().forEach(pl=>pl._stop(done));
+};
+exports.stash = (cb=()=>{})=>{
+    const done = util.nCalls(plugins.length,cb);
+    plugins.forEach(pl=>{
+        const data = pl.stash();
+        if (data!==undefined)
+            pl.chrjs.stash(data,pl.name);
+        done();
+    });
 };
 
 function setStandardClasses() {
