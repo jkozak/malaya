@@ -218,6 +218,20 @@ subcommands.client.add_argument(
     }
 );
 subcommands.client.add_argument(
+    '-C','--cookie',
+    {
+        action:  'append',
+        default: [],
+        type:    s=>{
+            const m = s.match(/^([^=]+)=(.*)$/);
+            if (!m)
+                throw new Error(`bad cookie spec: ${s}`);
+            return [m[1],m[2]];
+        },
+        help:    "set cookie NAME=VALUE in request"
+    }
+);
+subcommands.client.add_argument(
     '-n','--noninteractive',
     {
         action:  'store_true',
@@ -2093,10 +2107,11 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
             throw new VError("can't find a server to connect to");
         if (util.startsWith(url,'ws')) // allow as alternate protocol part
             url = 'http'+url.slice(2);
+        const cookies = args.cookie || [];
         if (args.noninteractive)
-            client.nonInteractive(url);
+            client.nonInteractive(url,cookies);
         else
-            client.repl(url);
+            client.repl(url,cookies);
     };
 
     if (opts.tweakSubcommands)

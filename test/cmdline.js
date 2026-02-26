@@ -68,6 +68,45 @@ describe("cmdline",function() {
     });
     describe("parse",function() {
     });
+    describe("client cookie parsing",function() {
+        it("parses single cookie correctly",function() {
+            process.argv = [null,null,'client','-C','foo=bar','http://example.com'];
+            const args = cmdline.argparse.parse_args(process.argv.slice(2));
+            assert.deepEqual(args.cookie,[['foo','bar']]);
+        });
+        it("parses multiple cookies correctly",function() {
+            process.argv = [null,null,'client','-C','foo=bar','-C','baz=qux','http://example.com'];
+            const args = cmdline.argparse.parse_args(process.argv.slice(2));
+            assert.deepEqual(args.cookie,[['foo','bar'],['baz','qux']]);
+        });
+        it("parses cookie with equals in value",function() {
+            process.argv = [null,null,'client','-C','token=abc=def=','http://example.com'];
+            const args = cmdline.argparse.parse_args(process.argv.slice(2));
+            assert.deepEqual(args.cookie,[['token','abc=def=']]);
+        });
+        it("rejects malformed cookie",function() {
+            process.argv = [null,null,'client','-C','malformed','http://example.com'];
+            assert.throws(()=>cmdline.argparse.parse_args(process.argv.slice(2)));
+        });
+    });
+    describe("client cookie encoding",function() {
+        it("formats cookies with proper encoding",function() {
+            // Test the encoding logic directly
+            const cookies = [['session','abc;def'],['token','x y']];
+            const formatted = cookies.map(c=>`${encodeURIComponent(c[0])}=${encodeURIComponent(c[1])}`).join('; ');
+            assert.strictEqual(formatted,'session=abc%3Bdef; token=x%20y');
+        });
+        it("encodes cookie names with special characters",function() {
+            const cookies = [['my name','value']];
+            const formatted = cookies.map(c=>`${encodeURIComponent(c[0])}=${encodeURIComponent(c[1])}`).join('; ');
+            assert.strictEqual(formatted,'my%20name=value');
+        });
+        it("handles multiple cookies with special characters",function() {
+            const cookies = [['a','b=c'],['d','e;f'],['g','h i']];
+            const formatted = cookies.map(c=>`${encodeURIComponent(c[0])}=${encodeURIComponent(c[1])}`).join('; ');
+            assert.strictEqual(formatted,'a=b%3Dc; d=e%3Bf; g=h%20i');
+        });
+    });
     describe("init",function() {
         it("builds the prevalence directory structure",function() {
             const dir = temp.mkdirSync();

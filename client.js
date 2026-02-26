@@ -12,8 +12,15 @@ const       fs = require('fs');
 const     util = require('./util.js');
 const     lock = require('./lock.js');
 
-exports.repl = function(url) {
-    const sock = new SockJS(url);
+exports.repl = function(url,cookies) {
+    cookies = cookies || [];
+    const options = {};
+    if (cookies.length>0) {
+        options.headers = {
+            'Cookie': cookies.map(c=>`${encodeURIComponent(c[0])}=${encodeURIComponent(c[1])}`).join('; ')
+        };
+    }
+    const sock = new SockJS(url,options);
 
     const write = function(js) {
         sock.send(JSON.stringify(js)+'\n');
@@ -73,8 +80,15 @@ exports.repl = function(url) {
     };
 };
 
-exports.nonInteractive = function(url) {
-    const sock = new SockJS(url);
+exports.nonInteractive = function(url,cookies) {
+    cookies = cookies || [];
+    const options = {};
+    if (cookies.length>0) {
+        options.headers = {
+            'Cookie': cookies.map(c=>`${encodeURIComponent(c[0])}=${encodeURIComponent(c[1])}`).join('; ')
+        };
+    }
+    const sock = new SockJS(url,options);
 
     sock.onmessage = function(e) {
         process.stdout.write(e.data);
