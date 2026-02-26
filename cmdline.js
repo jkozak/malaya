@@ -850,8 +850,11 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
         process.on('SIGINT',function() {
             if (tui) tui.stop();
             process.stderr.write(' interrupt\n');
-            if (eng)
-                eng.stop(true,()=>process.exit(1));
+            if (eng && eng.mode==='master') {
+                eng.stopPrevalence(false,function(err) {
+                    process.exit(1);
+                });
+            }
         });
         process.on('SIGQUIT',function() {
             if (tui) tui.stop();
