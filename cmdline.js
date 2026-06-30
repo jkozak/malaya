@@ -232,6 +232,25 @@ subcommands.client.add_argument(
     }
 );
 subcommands.client.add_argument(
+    '--max-redirects',
+    {
+        action:  'store',
+        type:    parseInt,
+        default: 10,
+        dest:    'maxRedirects',
+        help:    "maximum number of redirects to follow"
+    }
+);
+subcommands.client.add_argument(
+    '--no-check-certificate',
+    {
+        action:  'store_true',
+        default: false,
+        dest:    'noCheckCert',
+        help:    "ignore certificate validation failures"
+    }
+);
+subcommands.client.add_argument(
     '-n','--noninteractive',
     {
         action:  'store_true',
@@ -2108,10 +2127,15 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
         if (util.startsWith(url,'ws')) // allow as alternate protocol part
             url = 'http'+url.slice(2);
         const cookies = args.cookie || [];
+        const options = {
+            cookies,
+            maxRedirects: args.maxRedirects,
+            noCheckCert: args.noCheckCert
+        };
         if (args.noninteractive)
-            client.nonInteractive(url,cookies);
+            client.nonInteractive(url,options);
         else
-            client.repl(url,cookies);
+            client.repl(url,options);
     };
 
     if (opts.tweakSubcommands)

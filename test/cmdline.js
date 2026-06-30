@@ -107,6 +107,18 @@ describe("cmdline",function() {
             assert.strictEqual(formatted,'a=b%3Dc; d=e%3Bf; g=h%20i');
         });
     });
+    describe("client redirect handling",function() {
+        it("parses max-redirects option",function() {
+            process.argv = [null,null,'client','--max-redirects','5','http://example.com'];
+            const args = cmdline.argparse.parse_args(process.argv.slice(2));
+            assert.strictEqual(args.maxRedirects,5);
+        });
+        it("defaults max-redirects to 10",function() {
+            process.argv = [null,null,'client','http://example.com'];
+            const args = cmdline.argparse.parse_args(process.argv.slice(2));
+            assert.strictEqual(args.maxRedirects,10);
+        });
+    });
     describe("init",function() {
         it("builds the prevalence directory structure",function() {
             const dir = temp.mkdirSync();
