@@ -89,7 +89,6 @@
   "bin": [
     "malaya",
     "client.js",
-    "dump.js",
-    "repl.js"
+    "dump.js"
   ]
 }
