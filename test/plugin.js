@@ -290,6 +290,12 @@ module.exports = store {
     it("NoneSuch plugin msg lodged in store", function() {
         assert.deepEqual(eng.chrjs.orderedFacts,[['peng',{test:999},{dst:'NoneSuch'}]]);
     });
+    it("rejects an update whose second element is not an object", function() {
+        assert.throws(()=>pl._update(['x',5]),/bad update record type/);
+    });
+    it("rejects an update carrying spoofed extra metadata", function() {
+        assert.throws(()=>pl._update(['x',{},{spoofed:true}]),/bad update record type/);
+    });
 });
 
 describe("instantiateReadStream",function() {
@@ -918,4 +924,42 @@ module.exports = store {
         rqs.length = 0;
     });
     // +++ notify to non-existent server shouldn't crash malaya +++
+});
+
+describe("standalone listener plugins bind the configured port",function(){
+    const       net = require('net');
+    const WebSocket = require('ws');
+    require('../plugins/tcp.js');
+    require('../plugins/ws.js');
+    afterEach(()=>{
+        sinon.restore();
+        plugin._private.reset();
+    });
+    it("tcp listens on the configured port",function(done){
+        const fake = {
+            listen(port,cb){fake._port=port;cb();},
+            address()      {return {port:fake._port};}
+        };
+        sinon.stub(net,'createServer').returns(fake);
+        const pl = plugin.instantiate('tcp',{port:4242});
+        pl.start(err=>{
+            assert.ifError(err);
+            assert.equal(pl.port,4242);
+            done();
+        });
+    });
+    it("ws records its port from address() once listening",function(done){
+        const fake = {
+            on()          {return fake;},
+            once(ev,cb)   {if (ev==='listening') cb(); return fake;},
+            address()     {return {port:5353};}
+        };
+        sinon.stub(WebSocket,'Server').returns(fake);
+        const pl = plugin.instantiate('ws',{port:5353});
+        pl.start(err=>{
+            assert.ifError(err);
+            assert.equal(pl.port,5353);
+            done();
+        });
+    });
 });

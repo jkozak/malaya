@@ -704,6 +704,11 @@ describe("stash/unstash XXX",function(){
         st.stash({p:5,q:6},'binky');
         assert.deepEqual(st.orderedFacts,[[STASH,{p:5,q:6},{owner:'binky'}]]);
     });
+    it("unstashes the replacement without tripping over the replaced entry",function(){
+        const stash = st.unstash('binky');
+        assert.deepEqual(stash,{p:5,q:6});
+        assert.deepEqual(st.orderedFacts,[]);
+    });
 });
 
 describe("compile hook",function() {

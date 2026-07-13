@@ -167,11 +167,11 @@ exports.parse = LEGACY ? (s,opts)=>{
             if (path.node.quasis.length!==path.node.expressions.length+1)
                 throw new Error('SNO');
             const n = path.node.expressions.length;
-            let sub = b.literal(path.node.quasis[n].value.raw);
+            let sub = b.literal(path.node.quasis[n].value.cooked);
             for (let i=n-1;i>=0;i--) {
                 sub = b.binaryExpression(
                     '+',
-                    b.literal(path.node.quasis[i].value.raw),
+                    b.literal(path.node.quasis[i].value.cooked),
                     b.binaryExpression(
                         '+',
                         path.node.expressions[i],

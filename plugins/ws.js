@@ -30,17 +30,29 @@ exports.ws = plugin.add('ws',class extends plugin.Plugin {
         const pl = this;
         if (pl.server)
             pl.wss = new WebSocket.Server({server:pl.server.server});
-        else if (pl.port0) {
-            pl.wss  = new WebSocket.Server({port:pl.port0});
-            pl.port = pl.wss.address.port;
-        } else
+        else if (pl.port0)
+            pl.wss = new WebSocket.Server({port:pl.port0});
+        else
             throw new Error('SNO');
         pl.wss.on('connection',(ws,req)=>{
             const portName = makeHttpPortName(req,req.url);
             pl.update(['connect',{request:{url:req.url},port:portName}]);
             pl.connections[portName] = ws;
             ws.on('message',msg=>{
-                pl.update(pl.decode(msg),[portName]);
+                let js;
+                try {
+                    js = pl.decode(msg);
+                } catch (e) {   // malformed frame: drop the offending client, don't crash
+                    console.log("dud input (bad JSON) from %s: %s",portName,e.message);
+                    ws.close(plugin.WS_CLOSE.badJSON,'bad JSON');
+                    return;
+                }
+                if (!plugin.isWellFormedFact(js)) {
+                    console.log("dud input from %s: %j",portName,js);
+                    ws.close(plugin.WS_CLOSE.badFact,'bad fact');
+                    return;
+                }
+                pl.update(js,[portName]);
             });
             ws.once('close',ws=>{
                 pl.update(['disconnect',{port:portName}]);
@@ -48,6 +60,8 @@ exports.ws = plugin.add('ws',class extends plugin.Plugin {
             });
         });
         pl.wss.once('listening',()=>{
+            if (pl.port0)
+                pl.port = pl.wss.address().port;
             super.start(cb);
         });
     }

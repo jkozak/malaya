@@ -16,6 +16,17 @@ let overrides = {parameters:[],plugins:[]};
 
 const mySetImmediate = setImmediate; // capture this to avoid issues with sinon time-mockery
 
+// a store fact is `[name,{fields}]`; this is the contract `_update` enforces
+// and the shape network plugins must check before feeding untrusted input in.
+const isWellFormedFact = exports.isWellFormedFact = js=>
+    Array.isArray(js) && js.length===2 && typeof js[0]==='string' && typeof js[1]==='object';
+
+// WebSocket close codes for rejecting malformed client input (also used by middleware.js)
+exports.WS_CLOSE = {
+    badJSON: 4000,
+    badFact: 4001
+};
+
 class Plugin {
     static init(opts) {}
     constructor(opts) {
@@ -151,7 +162,7 @@ exports.registerEngine = eng=>{
         if (mode==='master') {
             plugins.forEach(pl=>{
                 pl._update = (js,addr,misc={})=>{
-                    if (js.length!==2 && typeof js[0]!=='string' & typeof js[1]!=='object')
+                    if (!isWellFormedFact(js))
                         throw new Error(`bad update record type: ${JSON.stringify(js)}`);
                     let src = pl.name;
                     if (typeof addr==='string')
@@ -464,7 +475,7 @@ function setStandardClasses() {
                 pl.rs = exports.instantiateWriteStream(pl.Reader);
                 rfs.pipe(pl.rs);
                 pl.rs.on('data',js=>{
-                    if (!Array.isArray(js) || js.length!==2 || typeof js[0]!=='string' || typeof js[1]!=='object')
+                    if (!isWellFormedFact(js))
                         throw new Error(`dud input: ${JSON.stringify(js)}`);
                     else
                         pl.update(js);

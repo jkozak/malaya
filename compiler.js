@@ -166,7 +166,7 @@ function TEMPLATE_store() {
                         dels.push(tj);
                     }
                 });
-                index[STASH] = index[STASH].filter(t=>!dels.includes[t]);
+                index[STASH] = index[STASH].filter(t=>!dels.includes(t));
                 facts[t_fact] = [STASH,data,{owner:name}];
                 index[STASH].push(ti); 
             },

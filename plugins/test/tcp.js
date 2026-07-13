@@ -69,4 +69,17 @@ module.exports = store {
         });
         client.end();
     });
+    it("drops a client that sends malformed JSON without crashing",function(done) {
+        const c = net.createConnection({port:pl.port},()=>{
+            c.write("this is not json\n");
+        });
+        c.on('error',()=>{});   // ignore RST from the server destroying us
+        c.on('close',()=>done());
+    });
+    it("still serves valid clients after a malformed one",function(done) {
+        const c = net.createConnection({port:pl.port});
+        c.on('error',()=>{});
+        c.on('data',()=>{c.end();done();});
+        c.write(JSON.stringify(['ping',{test:556}])+'\n');
+    });
 });
