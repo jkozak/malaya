@@ -19,7 +19,7 @@ plugin.add('tcp',class extends plugin.Plugin {
     start(cb) {
         const pl = this;
         pl.server = net.createServer({});
-        pl.server.listen(pl.portReq,()=>{
+        pl.server.listen(pl.port0,()=>{
             pl.port = pl.server.address().port;
             super.start(cb);
         });
@@ -37,11 +37,15 @@ plugin.add('tcp',class extends plugin.Plugin {
             socket.pipe(rs);
             ws.pipe(socket);
             rs.on('data',js=>{
-                if (!Array.isArray(js) || js.length!==2 || typeof js[0]!=='string' || typeof js[1]!=='object') {
+                if (!plugin.isWellFormedFact(js)) {
                     console.log("dud input: %j",js);
                 } else {
                     pl.update(js,[portName]);
                 }
+            });
+            rs.on('error',err=>{             // malformed JSON: drop the offending client
+                console.log("dud input (bad JSON) from %s: %s",portName,err.message);
+                socket.destroy();
             });
             pl.update(['connect',{port:portName}]);
             pl.connections[portName] = {socket,rs,ws};

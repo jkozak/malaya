@@ -77,4 +77,21 @@ module.exports = store {
         });
         client.close();
     });
+    it("drops a client that sends a malformed frame without crashing",function(done) {
+        const c = new WebSocket(`http://127.0.0.1:${pl.server.port}/`);
+        c.on('open',()=>c.send("this is not json"));
+        c.on('close',code=>{
+            assert.equal(code,4000);   // WS_CLOSE.badJSON
+            done();
+        });
+    });
+    it("still serves valid clients after a malformed one",function(done) {
+        const c = new WebSocket(`http://127.0.0.1:${pl.server.port}/`);
+        c.on('open',()=>c.send(JSON.stringify(['ping',{test:556}])));
+        c.on('message',msg=>{
+            assert.deepEqual(JSON.parse(msg.toString()),['pong',{test:556}]);
+            c.close();
+            done();
+        });
+    });
 });

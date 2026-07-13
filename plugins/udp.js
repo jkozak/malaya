@@ -18,15 +18,7 @@ plugin.add('udp',class extends plugin.Plugin {
         pl.type        = type;
         pl.socket      = null;
         pl.interface   = null;
-        pl.Reader      = class extends stream.Transform {
-            constructor() {
-                super({objectMode:true});
-            }
-            _transform(msg,env,cb) {
-                this.push(encoder.unpack(msg));
-                cb();
-            }
-        };
+        pl.encoder     = encoder;
         pl.Writer      = class extends stream.Transform {
             constructor() {
                 super({objectMode:true});
@@ -42,7 +34,6 @@ plugin.add('udp',class extends plugin.Plugin {
         const pl = this;
         pl.socket = dgram.createSocket({type:pl.type});
         pl.writer = plugin.instantiateWriteStream(pl.Writer);
-        pl.reader = plugin.instantiateReadStream( pl.Reader);
         pl.socket.on('listening',()=>{
             pl.port = pl.socket.address().port;
             super.start(cb);
@@ -56,10 +47,19 @@ plugin.add('udp',class extends plugin.Plugin {
             pl.update(['error',{err}]);
         });
         pl.socket.on('message',(msg,remoteAddress)=>{
-            pl.reader.once('data',data=>{
-                pl.update(data,[remoteAddress.address,remoteAddress.port]);
-            });
-            pl.reader.write(msg);
+            const addr = [remoteAddress.address,remoteAddress.port];
+            let    js;
+            try {
+                js = pl.encoder.unpack(msg);
+            } catch (e) {   // malformed datagram: drop it, don't crash
+                console.log("dud input (bad packet) from %j: %s",addr,e.message);
+                return;
+            }
+            if (!plugin.isWellFormedFact(js)) {
+                console.log("dud input from %j: %j",addr,js);
+                return;
+            }
+            pl.update(js,addr);
         });
     }
     stop(cb) {

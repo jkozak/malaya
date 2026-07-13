@@ -23,10 +23,7 @@ const    WebSocket = require('ws');
 
 const objectFromEntries = kvs=>Object.assign({},...Array.from(kvs,([k,v])=>({[k]:v})));
 
-const WS_CLOSE = exports.WS_CLOSE = {
-    badJSON: 4000,
-    badFact: 4001
-};
+const WS_CLOSE = exports.WS_CLOSE = plugin.WS_CLOSE;
 
 // +++ verifyClient see https://github.com/websockets/ws/issues/377#issuecomment-462152231 +++
 //                   (don't use the verifyClient parameter)

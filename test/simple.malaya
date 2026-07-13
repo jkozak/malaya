@@ -481,6 +481,15 @@ describe("template strings",function(){
         assert.equal(st.size,1);
         assert.deepEqual(st._private.orderedFacts[0],['b',{text:"17  89"}])
     });
+    it("cooks escape sequences rather than emitting them raw",function(){
+        var st = store {
+    	rule (-['a',{a}],
+    		  +['b',{text:`x\n${a}\ty`}] );
+        };
+        st.add(['a',{a:5}]);
+        assert.equal(st.size,1);
+        assert.deepEqual(st._private.orderedFacts[0],['b',{text:"x\n5\ty"}])
+    });
 });
 
 describe("regression tests",function() {
