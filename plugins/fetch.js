@@ -1,30 +1,24 @@
 "use strict";
 
-const request = require('request');
+const  plugin = require('../plugin.js');
+const request = require('superagent');
 
-exports.init = malaya=>{
-    malaya.plugin.add('fetch',class extends malaya.Plugin {
-        out([op,args],name,addr) {
-            const   pl = this;
-            const auth = args.auth ? {
-                user: args.auth.user,
-                pass: args.auth.pass} : undefined;
-            request({
-                method: op.toUpperCase() || 'GET',
-                url:    args.url,
-                auth,
-            },
-                    (err,resp,body)=>{
-                        if (err)
-                            setImmediate(()=>
-                                pl.update(['error',{id:args.id,error:err.toString()}],addr) );
-                        else
-                            pl.update(['response',{
-                                id:         args.id,
-                                statusCode: resp.statusCode,
-                                body:       JSON.parse(body)
-                            }],addr);
-                    });
-        }
-    });
-};
+plugin.add('fetch',class extends plugin.Plugin {
+    out([op,args],name,addr) {
+        const pl = this;
+        let   rq = request(op.toUpperCase() || 'GET',args.url).ok(()=>true);
+        if (args.auth)
+            rq = rq.auth(args.auth.user,args.auth.pass);
+        rq.end((err,resp)=>{
+            if (resp)
+                pl.update(['response',{
+                    id:         args.id,
+                    statusCode: resp.status,
+                    body:       resp.body
+                }],addr);
+            else
+                setImmediate(()=>
+                    pl.update(['error',{id:args.id,error:(err||new Error('no response')).toString()}],addr) );
+        });
+    }
+});

@@ -5,7 +5,7 @@ const _util = require('util');
 const shell = require('shelljs');
 const    os = require('os');
 const    fs = require('fs');
-const    VM = require('vm2').VM;
+const    vm = require('vm');
 
 exports.verbosity     = 3;
 exports.hashAlgorithm = 'sha1';
@@ -227,13 +227,11 @@ exports.env = (function() {
 
 exports.inspect = _util.inspect;
 
-exports.eval = (code,{sandbox,timeout}={sandbox:{},timeout:100})=>{
-    const vm = new VM({
-        timeout,
-        sandbox
-    });
-    return vm.run(code);
-};
+// NB: node:vm is not a security sandbox and does not contain hostile code.
+// The eval callers (admin channel, replay/debug) must be authenticated — see
+// the security findings in doc/code-review.md.
+exports.eval = (code,{sandbox,timeout}={sandbox:{},timeout:100})=>
+    vm.runInContext(code,vm.createContext(sandbox),{timeout});
 
 if (exports.env==='test')
     exports._private = {
