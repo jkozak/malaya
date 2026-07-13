@@ -671,3 +671,26 @@ describe("cmd line interface [slow]",function() {
         });
     });
 });
+
+describe("SIGINT handling",function(){
+    this.timeout(20000);
+    it("`malaya lock` exits on SIGINT instead of hanging",function(done){
+        const base = temp.mkdirSync();
+        const  dir = path.join(base,'.prevalence');
+        const  dfn = path.join(base,'data.json');
+        fs.writeFileSync(dfn,'[]');
+        const init = child.spawn('node',['malaya','-p',dir,'init','-d',dfn]);
+        init.once('error',done);
+        init.once('exit',code=>{
+            if (code!==0) { done(new Error(`init exited ${code}`)); return; }
+            const proc = child.spawn('node',['malaya','-p',dir,'lock']);
+            let finished   = false;
+            let signalSent = false;
+            const finish = e=>{ if (!finished) { finished=true; done(e); } };
+            proc.once('error',finish);
+            proc.once('exit',()=>finish(signalSent ? undefined : new Error('lock exited before SIGINT')));
+            // give the lock process time to acquire the lock and install handlers, then interrupt
+            setTimeout(()=>{ signalSent=true; proc.kill('SIGINT'); },2000);
+        });
+    });
+});

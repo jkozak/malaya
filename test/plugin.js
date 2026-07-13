@@ -963,3 +963,14 @@ describe("standalone listener plugins bind the configured port",function(){
         });
     });
 });
+
+describe("plugin.require",function(){
+    afterEach(()=>{plugin._private.reset();});
+    it("loads a built-in plugin that subclasses another (https)",function(){
+        const cls = plugin.require('https');
+        assert.equal(typeof cls,'function');
+    });
+    it("errors clearly (naming the plugin) when it genuinely can't be found",function(){
+        assert.throws(()=>plugin.require('no-such-plugin-xyz'),/no-such-plugin-xyz/);
+    });
+});

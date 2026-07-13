@@ -198,6 +198,7 @@ exports.add = (name,cl)=>{
         get verbosity()     {return cmdline.verbosity;},
         package:            require('./package.json').name
     });
+    return cl;                  // so a plugin can subclass another (see https.js)
 };
 
 exports.require = name=>{
@@ -208,9 +209,15 @@ exports.require = name=>{
     });
     let cl = classes[name];
     if (!cl) {
+        let builtin = null;
         try {
-            require(`./plugins/${name}.js`);
-        } catch (e1) {
+            builtin = require.resolve(`./plugins/${name}.js`);
+        } catch (e0) {
+            builtin = null;                 // not a built-in plugin
+        }
+        if (builtin!==null)
+            require(builtin);               // real load errors propagate, not masked as "missing"
+        else {
             const malaya = require('./index.js');
             try {
                 const pkg = require(`./plugins/${name}/package.json`);

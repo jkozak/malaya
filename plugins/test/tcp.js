@@ -47,6 +47,23 @@ module.exports = store {
     it("has a port",function() {
         assert.equal(typeof pl.port,'number');
     });
+    it("emits exactly one connect fact per connection",function(done) {
+        let       connects = 0;
+        const        dummy = plugin.get('dummy');
+        const     listener = js=>{
+            if (js[0]!=='rcve') return;
+            if (js[1].data[0]==='connect')
+                connects++;
+            else if (js[1].data[0]==='disconnect') {
+                dummy.reader.removeListener('data',listener);
+                assert.equal(connects,1);
+                done();
+            }
+        };
+        dummy.reader.on('data',listener);
+        const c = net.createConnection({port:pl.port},()=>setTimeout(()=>c.end(),50));
+        c.on('error',()=>{});
+    });
     it("makes a connection",function(done) {
         plugin.get('dummy').reader.once('data',js=>{
             assert.equal(js[0],'rcve');

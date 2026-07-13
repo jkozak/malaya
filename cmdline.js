@@ -100,14 +100,6 @@ const addSubcommand = exports.addSubcommand = function(name,opts) {
     return subcommands[name];
 };
 
-addSubcommand('browse',{add_help:true});
-subcommands.browse.add_argument(
-    'what',
-    {
-        action:  'store',
-        help:    "path of URL"
-    }
-);
 
 addSubcommand('cat',{add_help:true});
 subcommands.cat.add_argument(
@@ -887,7 +879,8 @@ exports.run = function(opts={},argv2=process.argv.slice(2)) {
                 eng.stopPrevalence(false,function(err) {
                     process.exit(1);
                 });
-            }
+            } else            // slave/idle, or no engine (e.g. `malaya lock`)
+                process.exit(1);
         });
         process.on('SIGQUIT',function() {
             if (tui) tui.stop();

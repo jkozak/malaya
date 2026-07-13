@@ -54,7 +54,6 @@ plugin.add('tcp',class extends plugin.Plugin {
                 delete pl.connections[portName];
                 pl.update(['disconnect',{port:portName}],[portName]);
             });
-            pl.update(['connect',{port:portName}]);
         });
     }
     stop(cb) {
