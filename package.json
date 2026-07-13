@@ -36,7 +36,7 @@
     "underscore": "^1.13.2",
     "verror": "^1.10.1",
     "websocket": "^1.0.34",
-    "websocket-stream": "^5.5.2",
+    "websocket-stream": "5.3.0",
     "ws": "^7.5.6",
     "xregexp": "^5.1.2"
   },
@@ -49,10 +49,12 @@
     "eslint-plugin-security": "^1.4.0",
     "immutable": "^4.0.0",
     "jsverify": "^0.8.4",
-    "matcha": "^0.7.0",
     "mocha": "^10.0.0",
     "resumer": "0.0.0",
     "sinon": "^14.0.0"
+  },
+  "overrides": {
+    "serialize-javascript": "^7.0.7"
   },
   "engineStrict": true,
   "engines": {
@@ -74,7 +76,6 @@
     "url": "git+https://github.com/jkozak/malaya.git"
   },
   "scripts": {
-    "benchmark": "matcha -R plain benchmark/*.js",
     "eslint": "eslint -f compact .",
     "pretest": "npm run eslint --silent",
     "test:js": "cross-env NODE_ENV=test mocha --exit -C test/*.js plugins/test/*.js examples/test/*.js",
