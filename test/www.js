@@ -10,7 +10,17 @@ const       fs = require('fs');
 const     path = require('path');
 const     util = require('../util.js');
 const   VError = require('verror');
-const  request = require('request');
+const     http = require('http');
+
+// minimal request(url,cb) shim: cb(err,resp,body) with body as a string
+const  request = (url,cb)=>{
+    http.get(url,resp=>{
+        let body = '';
+        resp.setEncoding('utf8');
+        resp.on('data',c=>{body += c;});
+        resp.on('end',()=>cb(null,resp,body));
+    }).on('error',err=>cb(err));
+};
 
 describe("web server",function() {
     const  dir = temp.mkdirSync();
